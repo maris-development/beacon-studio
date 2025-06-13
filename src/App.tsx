@@ -3,6 +3,7 @@ import HomePage from "./app/home/page"
 import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.scss';
 import MapPage from "./app/map/page";
+import ParquetTable from "./app/table/page";
 
 
 export default function App() {
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/table" element={<ParquetTable />} />
           </Routes>
         </main>
       </div>
