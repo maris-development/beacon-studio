@@ -1,11 +1,40 @@
-import LoginPage from "./app/connect/page"
+import LoginPage from "./app/login/page"
+import HomePage from "./app/home/page"
+import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import './App.scss';
+import MapPage from "./app/map/page";
 
-function App() {
+
+export default function App() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-svh w-full">
-      <LoginPage />
-    </div>
-  )
-}
+    <Router>
+      <div className="app-container">
+        
+        <nav className="nav-bar">
+          <ul className="nav-list">
+            <li className="nav-item">
+              <Link to="/">Home</Link>
+            </li>
+            <li className="nav-item">
+              <Link to="/map">Map</Link>
+            </li>
+            <li className="nav-item">
+              <Link to="/login">Login</Link>
+            </li>
+          </ul>
+        </nav>
 
-export default App
+
+
+
+        <main className="main-content">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/map" element={<MapPage />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
