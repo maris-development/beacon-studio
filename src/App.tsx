@@ -4,13 +4,14 @@ import { HashRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import './App.scss';
 import MapPage from "./app/map/page";
 import ParquetTable from "./app/table/page";
+import { DeckGLMap } from "./app/deckgl_map/page";
 
 
 export default function App() {
   return (
     <Router>
       <div className="app-container">
-        
+
         <nav className="nav-bar">
           <ul className="nav-list">
             <li className="nav-item">
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/map" element={<MapPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/table" element={<ParquetTable />} />
+            <Route path="/deckgl" element={<DeckGLMap />} />
           </Routes>
         </main>
       </div>

@@ -85,6 +85,7 @@ export default function ParquetTable() {
 
         try {
             const buffer = await file.arrayBuffer();
+            
             const parquet_file = await readParquet(new Uint8Array(buffer));
             const table = arrow.tableFromIPC(parquet_file.intoIPCStream());
             console.log(table.schema.toString());
