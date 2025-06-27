@@ -39,7 +39,7 @@ export class Result<Ok, Err> {
 
     unwrapErr(): Err {
         if (!this.inner.ok) {
-            return this.inner.error;
+            return (this.inner as { ok: false; error: Err }).error;
         }
         throw new Error("Tried to unwrapErr an Ok value");
     }
@@ -48,12 +48,12 @@ export class Result<Ok, Err> {
         if (this.inner.ok) {
             return Result.Ok(fn(this.inner.value));
         }
-        return Result.Err(this.inner.error);
+        return Result.Err((this.inner as { ok: false; error: Err }).error);
     }
 
     mapErr<NewErr>(fn: (error: Err) => NewErr): Result<Ok, NewErr> {
         if (!this.inner.ok) {
-            return Result.Err(fn(this.inner.error));
+            return Result.Err(fn((this.inner as { ok: false; error: Err }).error));
         }
         return Result.Ok(this.inner.value);
     }
