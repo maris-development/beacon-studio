@@ -4,7 +4,9 @@
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import FrameIcon from '@lucide/svelte/icons/frame';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
+	import FolderSearchIcon from '@lucide/svelte/icons/folder-search';
 	import MapIcon from '@lucide/svelte/icons/map';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
@@ -28,14 +30,14 @@
 					},
 					{
 						title: 'Editor',
-						url: '#'
+						url: 'query-editor'
 					}
 				]
 			},
 			{
 				title: 'Data Browser',
 				url: '#',
-				icon: SquareTerminalIcon,
+				icon: FolderSearchIcon,
 				isActive: true,
 				items: [
 					{
@@ -45,63 +47,23 @@
 					{
 						title: 'Data Tables',
 						url: '#'
-					},
-					{
-						title: 'Settings',
-						url: '#'
 					}
 				]
 			},
 			{
 				title: 'Map Viewer',
 				url: '#',
-				icon: BotIcon
+				icon: MapIcon
 			},
 			{
 				title: 'System Info',
 				url: '#',
-				icon: BookOpenIcon,
-				items: [
-					{
-						title: 'Version',
-						url: '#'
-					},
-					{
-						title: 'Get Started',
-						url: '#'
-					},
-					{
-						title: 'Tutorials',
-						url: '#'
-					},
-					{
-						title: 'Changelog',
-						url: '#'
-					}
-				]
+				icon: InfoIcon
 			},
 			{
 				title: 'Settings',
 				url: '#',
-				icon: Settings2Icon,
-				items: [
-					{
-						title: 'General',
-						url: '#'
-					},
-					{
-						title: 'Team',
-						url: '#'
-					},
-					{
-						title: 'Billing',
-						url: '#'
-					},
-					{
-						title: 'Limits',
-						url: '#'
-					}
-				]
+				icon: Settings2Icon
 			}
 		],
 		navSecondary: [

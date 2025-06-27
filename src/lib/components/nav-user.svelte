@@ -50,16 +50,13 @@
 				align="end"
 				sideOffset={4}
 			>
-				<DropdownMenu.Label class="p-0 font-normal">
-					<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-						<DatabaseIcon />
-						<div class="grid flex-1 text-left text-sm leading-tight">
-							<span class="truncate font-medium">{instance.name}</span>
-							<span class="truncate text-xs">v1.0.3</span>
-							<span class="truncate text-xs">Community Edition</span>
-						</div>
+				<DropdownMenu.Item>
+					<DatabaseIcon />
+					<div class="grid flex-1 text-left text-sm leading-tight">
+						<span class="truncate font-medium">{instance.name}</span>
+						<span class="truncate text-xs">v1.0.3 - Community Edition</span>
 					</div>
-				</DropdownMenu.Label>
+				</DropdownMenu.Item>
 				<DropdownMenu.Separator />
 				<DropdownMenu.Group>
 					<DropdownMenu.Item>
