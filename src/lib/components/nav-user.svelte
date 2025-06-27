@@ -6,7 +6,7 @@
 	import CreditCardIcon from '@lucide/svelte/icons/credit-card';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
 	import SparklesIcon from '@lucide/svelte/icons/sparkles';
-
+	import DatabaseIcon from '@lucide/svelte/icons/database';
 	import * as Avatar from '$lib/components/ui/avatar/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
@@ -35,9 +35,7 @@
 						size="lg"
 						class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
 					>
-						<Avatar.Root class="size-8 rounded-lg">
-							<Avatar.Fallback class="rounded-lg">BI</Avatar.Fallback>
-						</Avatar.Root>
+						<DatabaseIcon class="size-2" />
 						<div class="grid flex-1 text-left text-sm leading-tight">
 							<span class="truncate font-medium">{instance.name}</span>
 							<span class="truncate text-xs">{instance.host}</span>
@@ -54,12 +52,11 @@
 			>
 				<DropdownMenu.Label class="p-0 font-normal">
 					<div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-						<Avatar.Root class="size-8 rounded-lg">
-							<Avatar.Fallback class="rounded-lg">BI</Avatar.Fallback>
-						</Avatar.Root>
+						<DatabaseIcon />
 						<div class="grid flex-1 text-left text-sm leading-tight">
 							<span class="truncate font-medium">{instance.name}</span>
-							<span class="truncate text-xs">{instance.host}</span>
+							<span class="truncate text-xs">v1.0.3</span>
+							<span class="truncate text-xs">Community Edition</span>
 						</div>
 					</div>
 				</DropdownMenu.Label>
