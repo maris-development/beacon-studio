@@ -1,6 +1,7 @@
 <script>
     import {beaconInstances} from '$lib/stores/config';
     import { onMount } from 'svelte';
+    import { Button } from "$lib/components/ui/button/index.js";
 
     const beaconInstanceArray = $beaconInstances;
 
@@ -17,7 +18,7 @@
 </svelte:head>
 
 <div class="page-container">
-	<h1>Welcome to Beacon Studio</h1>
+	<h1 class="text-red-100">Welcome to Beacon Studio</h1>
 
 	<p>
 		Visit <a href="https://maris-development.github.io/beacon/">maris-development.github.io/beacon/</a> to read the documentation.
@@ -25,14 +26,11 @@
 
     <h2>Beacon instances</h2>
 
-    <a href="/add-instance" class="btn">
+    <Button href="/add-instance">
         Add instance
-    </a>
+    </Button>
 
     <p>Here are the currently configured Beacon instances:</p>
-
-
-
 
     <div class="beacon-instances">
         {#each beaconInstanceArray as instance}

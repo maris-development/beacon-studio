@@ -19,6 +19,10 @@ const config = {
 			precompress: false,
 			strict: true
 		}),
+		 alias: {
+			// when you write `@/foo` → load from `./src/lib/foo`
+			'@/*': './src/lib/*'
+		}
 	}
 };
 
