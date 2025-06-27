@@ -1,29 +1,22 @@
 <script lang="ts">
+	import LoadingSpinner from '$lib/components/ui/loading-spinner.svelte';
 	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import wasmInit, { readParquet } from 'parquet-wasm';
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
 	import type { PickingInfo } from '@deck.gl/core';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
-	import * as arrow from 'apache-arrow';
 	import {
 		Table,
 		tableFromIPC,
-		Schema,
-		Vector,
-		makeVector,
-		RecordBatch,
 		vectorFromArray,
 		type TypeMap,
 		tableFromArrays,
-
-		makeTable
-
 	} from 'apache-arrow';
 
 	import * as d3 from 'd3';
-	import { interpolateViridis, interpolateBrBG } from 'd3-scale-chromatic';
-	import { scaleSequential, scaleOrdinal } from 'd3-scale';
+	import {  interpolateBrBG } from 'd3-scale-chromatic';
+	import { scaleSequential } from 'd3-scale';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -31,6 +24,7 @@
 	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
 	let map;
+	let loading = true;
 	let table: Table | null = null;
 	let onClickInfo: PickingInfo | null = null;
 	let onClickClose: boolean = false;
@@ -42,7 +36,8 @@
 
 		await wasmInit(PARQUET_WASM_URL);
 
-		table = await fetchData(new Request(PARQUET_WASM_URL), true);
+		table = await fetchData(new Request(GEOARROW_POINT_DATA), true);
+
 
 		map = new maplibregl.Map({
 			container: 'deck-gl-map',
@@ -100,8 +95,19 @@
 			]
 		});
 
+		loading = false;
+
 		map.addControl(deckOverlay);
 		map.addControl(new maplibregl.NavigationControl());
+
+		const tableBounds = getTableGeometryBounds(table);
+
+		setTimeout(() => {
+			map.fitBounds(tableBounds, {
+				padding: { top: 50, bottom: 50, left: 50, right: 50 },
+			});
+		}, 300);
+		
 	});
 
 	async function loadParquetFile<T extends TypeMap = any>(
@@ -131,6 +137,34 @@
 		}
 
 		return deduplicateTable<T>(table);
+	}
+
+
+	function getTableGeometryBounds<T extends TypeMap = any>(
+		table: Table<T>
+	): [[number, number], [number, number]] {
+		const latCol = table.getChild('Latitude');
+		const lonCol = table.getChild('Longitude');
+		if (!latCol || !lonCol) {
+			throw new Error('Table must contain Latitude and Longitude columns');
+		}
+		let minLat = Infinity;
+		let maxLat = -Infinity;
+		let minLon = Infinity;
+		let maxLon = -Infinity;
+		for (let i = 0; i < table.numRows; i++) {
+			const lat = latCol.get(i);
+			const lon = lonCol.get(i);
+			if (lat < minLat) minLat = lat;
+			if (lat > maxLat) maxLat = lat;
+			if (lon < minLon) minLon = lon;
+			if (lon > maxLon) maxLon = lon;
+		}
+
+		return [
+			[minLon, minLat],
+			[maxLon, maxLat]
+		];
 	}
 
 
@@ -184,6 +218,7 @@
 		// console.log('Deduplicated table schema:', deduped.schema);
 
 		
+		
 		return deduped; //ignore ts errors
 
 	}
@@ -193,10 +228,48 @@
 	<title>Map - Beacon Studio</title>
 </svelte:head>
 
-<div id="deck-gl-map"></div>
 
-<style>
-	#deck-gl-map {
+<div class="map-wrapper">
+	<div id="deck-gl-map" class="map rounded-xl"></div>
+	{#if loading}
+		<div class="loading-overlay">
+			<LoadingSpinner></LoadingSpinner>
+			<h3>Loading...</h3>
+
+		</div>
+	{/if}
+</div>
+
+
+
+<style lang="scss">
+
+	.map-wrapper {
 		flex-grow: 1;
+		position: relative;
+		width: 100%;
+		height: 100%;
+
+		.map {
+			z-index: 9;
+			height: 100%;
+			width: 100%;
+		}
+
+		.loading-overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			align-items: center;
+			justify-content: center;
+
+			background-color: rgba(255, 255, 255, 0.5);
+			z-index: 10; // Ensure it overlays the map
+		}
 	}
 </style>

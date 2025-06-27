@@ -9,12 +9,19 @@
 </head>
 
 <body data-sveltekit-preload-data="hover">
-	%sveltekit.body%
+	<div>
+  		%sveltekit.body%
+	</div>
 </body>
+
 <style global lang="scss">
 	@import "src/tailwind.css";
-
 	@import "src/app.scss";
+
+	body > div {
+		display: contents
+	}
+
 </style>
 
 </html>
