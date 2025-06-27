@@ -1,147 +1,137 @@
 <script lang="ts" module>
-	import BookOpenIcon from "@lucide/svelte/icons/book-open";
-	import BotIcon from "@lucide/svelte/icons/bot";
-	import ChartPieIcon from "@lucide/svelte/icons/chart-pie";
-	import FrameIcon from "@lucide/svelte/icons/frame";
-	import LifeBuoyIcon from "@lucide/svelte/icons/life-buoy";
-	import MapIcon from "@lucide/svelte/icons/map";
-	import SendIcon from "@lucide/svelte/icons/send";
-	import Settings2Icon from "@lucide/svelte/icons/settings-2";
-	import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
+	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import BotIcon from '@lucide/svelte/icons/bot';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import FrameIcon from '@lucide/svelte/icons/frame';
+	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
+	import MapIcon from '@lucide/svelte/icons/map';
+	import SendIcon from '@lucide/svelte/icons/send';
+	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	const data = {
-		user: {
-			name: "shadcn",
-			email: "m@example.com",
-			avatar: "/avatars/shadcn.jpg",
+		instance: {
+			host: 'https://beacon-argo.maris.nl',
+			name: 'Beacon Euro Argo',
+			description: 'Beacon Instance running on top of the Euro Argo Fleet collection'
 		},
 		navMain: [
 			{
-				title: "Playground",
-				url: "#",
+				title: 'Queries',
+				url: '#',
 				icon: SquareTerminalIcon,
 				isActive: true,
 				items: [
 					{
-						title: "History",
-						url: "#",
+						title: 'Builder',
+						url: '#'
 					},
 					{
-						title: "Starred",
-						url: "#",
-					},
-					{
-						title: "Settings",
-						url: "#",
-					},
-				],
+						title: 'Editor',
+						url: '#'
+					}
+				]
 			},
 			{
-				title: "Models",
-				url: "#",
-				icon: BotIcon,
+				title: 'Data Browser',
+				url: '#',
+				icon: SquareTerminalIcon,
+				isActive: true,
 				items: [
 					{
-						title: "Genesis",
-						url: "#",
+						title: 'Datasets',
+						url: '#'
 					},
 					{
-						title: "Explorer",
-						url: "#",
+						title: 'Data Tables',
+						url: '#'
 					},
 					{
-						title: "Quantum",
-						url: "#",
-					},
-				],
+						title: 'Settings',
+						url: '#'
+					}
+				]
 			},
 			{
-				title: "Documentation",
-				url: "#",
+				title: 'Map Viewer',
+				url: '#',
+				icon: BotIcon
+			},
+			{
+				title: 'System Info',
+				url: '#',
 				icon: BookOpenIcon,
 				items: [
 					{
-						title: "Introduction",
-						url: "#",
+						title: 'Version',
+						url: '#'
 					},
 					{
-						title: "Get Started",
-						url: "#",
+						title: 'Get Started',
+						url: '#'
 					},
 					{
-						title: "Tutorials",
-						url: "#",
+						title: 'Tutorials',
+						url: '#'
 					},
 					{
-						title: "Changelog",
-						url: "#",
-					},
-				],
+						title: 'Changelog',
+						url: '#'
+					}
+				]
 			},
 			{
-				title: "Settings",
-				url: "#",
+				title: 'Settings',
+				url: '#',
 				icon: Settings2Icon,
 				items: [
 					{
-						title: "General",
-						url: "#",
+						title: 'General',
+						url: '#'
 					},
 					{
-						title: "Team",
-						url: "#",
+						title: 'Team',
+						url: '#'
 					},
 					{
-						title: "Billing",
-						url: "#",
+						title: 'Billing',
+						url: '#'
 					},
 					{
-						title: "Limits",
-						url: "#",
-					},
-				],
-			},
+						title: 'Limits',
+						url: '#'
+					}
+				]
+			}
 		],
 		navSecondary: [
 			{
-				title: "Support",
-				url: "#",
-				icon: LifeBuoyIcon,
+				title: 'Documentation',
+				url: '#',
+				icon: BookOpenIcon
 			},
 			{
-				title: "Feedback",
-				url: "#",
-				icon: SendIcon,
-			},
-		],
-		projects: [
-			{
-				name: "Design Engineering",
-				url: "#",
-				icon: FrameIcon,
+				title: 'Support',
+				url: '#',
+				icon: LifeBuoyIcon
 			},
 			{
-				name: "Sales & Marketing",
-				url: "#",
-				icon: ChartPieIcon,
-			},
-			{
-				name: "Travel",
-				url: "#",
-				icon: MapIcon,
-			},
-		],
+				title: 'Feedback',
+				url: '#',
+				icon: SendIcon
+			}
+		]
 	};
 </script>
 
 <script lang="ts">
-	import NavMain from "./nav-main.svelte";
-	import NavProjects from "./nav-projects.svelte";
-	import NavSecondary from "./nav-secondary.svelte";
-	import NavUser from "./nav-user.svelte";
-	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
-	import CommandIcon from "@lucide/svelte/icons/command";
-	import type { ComponentProps } from "svelte";
+	import NavMain from './nav-main.svelte';
+	import NavProjects from './nav-projects.svelte';
+	import NavSecondary from './nav-secondary.svelte';
+	import NavUser from './nav-user.svelte';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import DatabaseZapIcon from '@lucide/svelte/icons/database-zap';
+	import type { ComponentProps } from 'svelte';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
@@ -156,11 +146,11 @@
 							<div
 								class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
 							>
-								<CommandIcon class="size-4" />
+								<DatabaseZapIcon class="size-4" />
 							</div>
 							<div class="grid flex-1 text-left text-sm leading-tight">
-								<span class="truncate font-medium">Acme Inc</span>
-								<span class="truncate text-xs">Enterprise</span>
+								<span class="truncate font-medium">Beacon Studio</span>
+								<span class="truncate text-xs">Community</span>
 							</div>
 						</a>
 					{/snippet}
@@ -170,10 +160,10 @@
 	</Sidebar.Header>
 	<Sidebar.Content>
 		<NavMain items={data.navMain} />
-		<NavProjects projects={data.projects} />
+		<!-- <NavProjects projects={data.projects} /> -->
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser user={data.user} />
+		<NavUser instance={data.instance} />
 	</Sidebar.Footer>
 </Sidebar.Root>
