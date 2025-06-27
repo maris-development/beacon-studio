@@ -1,0 +1,58 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/font/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+}
+
+:root {
+    --color-light-background: #f6f9fc;
+    --color-dark-background: #0b132b;
+    --color-primary: #00d4ff;
+    --color-secondairy: #1768ac;
+    --color-tertiary: #2541b2;
+    --color-quaternary: #0b132b;
+
+    --font-primary: 'Open Sans', arial, sans-serif;
+    --bg-button-gradient: linear-gradient(135deg, var(--color-secondairy), var(--color-tertiary));
+    --bg-gradient-animation: gradientAnimation 10s ease infinite;
+}
+
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* base template */
+body,
+html {
+    font-family: var(--font-primary);
+    font-size: 0.95em;
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    background-color: #f4f4f4;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.page-container {
+    padding: 1rem;
+}
+

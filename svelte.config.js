@@ -13,13 +13,13 @@ const config = {
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter({
 			// If you navigate directly to /login, serve index.html
-      		fallback: 'index.html',
+			fallback: 'index.html',
 			pages: 'build',
 			assets: 'build',
 			precompress: false,
 			strict: true
 		}),
-		 alias: {
+		alias: {
 			// when you write `@/foo` → load from `./src/lib/foo`
 			'@/*': './src/lib/*'
 		}
