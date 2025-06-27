@@ -1,19 +1,19 @@
 <script lang="ts">
+	import AppSidebar from '$lib/components/app-sidebar.svelte';
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import { Separator } from '$lib/components/ui/separator/index.js';
+	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 </script>
 
-<nav class="nav-bar">
-	<ul class="nav-list">
-		<li class="nav-item"><a href="/">Home</a></li>
-		<li class="nav-item"><a href="/map">Map</a></li>
-		<li class="nav-item"><a href="/login">Login</a></li>
-		<li class="nav-item"><a href="/table">Table</a></li>
-	</ul>
-</nav>
-
-<main class="main-content">
-	<!-- this is where the current page’s +page.svelte will render -->
-	<slot />
-</main>
+<Sidebar.Provider>
+	<AppSidebar />
+	<Sidebar.Inset>
+		<main class="main-content">
+			<!-- this is where the current page’s +page.svelte will render -->
+			<slot />
+		</main>
+	</Sidebar.Inset>
+</Sidebar.Provider>
 
 <style lang="scss">
 	.nav-bar {
