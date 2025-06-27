@@ -1,7 +1,3 @@
-<script>
-
-// no imports needed unless you pull in shared components
-</script>
 
 <style lang="scss">
 

@@ -1,0 +1,23 @@
+import { persisted } from 'svelte-local-storage-store';
+
+// Gebruik:
+// import { currentBeaconConfig } from '$lib/stores/config';
+// import { get }   from 'svelte/store';
+
+// currentBeaconConfig.set({}); -> update the value in storage (and svelte store)
+
+// console.log(get(currentBeaconConfig)); // 'http://db.example.com' -> get the current value
+
+
+export const currentBeaconInstance = persisted<BeaconInstance>('current-beacon-instance', null);
+export const beaconInstances = persisted<Array<BeaconInstance>>('beacon-instances', []);
+
+
+export type BeaconInstance = {
+    id: string; //uuid
+    name: string; // human readable name
+    url: string; // url to the beacon instance
+    description?: string; // optional description
+    createdAt?: Date; // date when the instance was created
+    updatedAt?: Date; // date when the instance was last updated
+};
