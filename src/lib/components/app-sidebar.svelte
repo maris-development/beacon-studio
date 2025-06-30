@@ -13,9 +13,9 @@
 
 	const data = {
 		instance: {
-			host: 'https://beacon-argo.maris.nl',
-			name: 'Beacon Euro Argo',
-			description: 'Beacon Instance running on top of the Euro Argo Fleet collection'
+			host: 'https://beacon-ihm.maris.nl',
+			name: 'Beacon IHM',
+			description: 'Beacon Instance running on top of the IHM platform'
 		},
 		navMain: [
 			{
