@@ -23,7 +23,7 @@
 	const GEOARROW_POINT_DATA = '/rws4.parquet';
 	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
-	let map;
+	let map: maplibregl.Map | null = null;
 	let loading = true;
 	let table: Table | null = null;
 	let onClickInfo: PickingInfo | null = null;
@@ -37,7 +37,6 @@
 		await wasmInit(PARQUET_WASM_URL);
 
 		table = await fetchData(new Request(GEOARROW_POINT_DATA), true);
-
 
 		map = new maplibregl.Map({
 			container: 'deck-gl-map',

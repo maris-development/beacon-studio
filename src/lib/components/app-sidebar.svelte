@@ -1,11 +1,14 @@
 <script lang="ts" module>
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
-	import MapIcon from '@lucide/svelte/icons/map';
+	import BotIcon from '@lucide/svelte/icons/bot';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import FrameIcon from '@lucide/svelte/icons/frame';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
+	import MapIcon from '@lucide/svelte/icons/map';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
-
+	
 	const data = {
 		instance: {
 			host: 'https://beacon-argo.maris.nl',
@@ -51,8 +54,8 @@
 			},
 			{
 				title: 'Map Viewer',
-				url: '/map',
-				icon: MapIcon
+				url: '#',
+				icon: BotIcon
 			},
 			{
 				title: 'System Info',
@@ -161,6 +164,8 @@
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser instance={data.instance} />
+		<NavUser/>
 	</Sidebar.Footer>
 </Sidebar.Root>
+
+

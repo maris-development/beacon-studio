@@ -73,18 +73,12 @@
 			Token (if required)
 			<input type="text" bind:value={token} />
 		</label>
-
-		
-		
-
 	</form>
 
 	<div slot="footer">
 		<Button type="button" variant="destructive" onclick={onClose}>Cancel</Button>
-		<Button type="submit">Save</Button>
+		<Button type="submit" onclick={submit}>Save</Button>
 	</div>
-
-		
 		
 </Modal>
 

@@ -1,31 +1,34 @@
 <script lang="ts">
-  import { cn } from '$lib/utils';
-
-  /**
-   * Props definition
-   */
-  export let className: string = '';
+  export let wrapperClassName: string = '';
   export let ringColor: string | null = 'gray';
   export let ringSegmentColor: string | null = 'black';
-  export let size: number | string | null = 16;
+  export let size: string | null = '4rem';
 
-  // Compute the spinner border style reactively
-  let borderStyle = cn(
-    'border-4 rounded-full animate-spin myspinner',
-  );
-
-  // Compute the spinner size style reactively
-  let sizeStyle = `h-${size} w-${size}`;
 </script>
 
 <style>
-.myspinner {
+.my-spinner {
+
+  width: var(--size, 8px);
+  height: var(--size, 8px);
+  border: 4px solid;
   border-color: var(--ring-color, #e5e7eb) transparent;
   border-top-color: var(--ring-segment-color, #000);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
 
 
-<div class={cn(sizeStyle, className)} {...$$restProps}>
-  <div class={cn(borderStyle, sizeStyle)} style="--ring-color: {ringColor}; --ring-segment-color: {ringSegmentColor}"></div>
+<div class="{wrapperClassName}">
+  <div class="my-spinner" style="--ring-color: {ringColor}; --ring-segment-color: {ringSegmentColor}; --size: {size}"></div>
 </div>

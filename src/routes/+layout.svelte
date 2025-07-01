@@ -3,6 +3,20 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import PlusIcon from '@lucide/svelte/icons/plus';
+
+	// Example data: 3 rows, each with 4 cards
+	const rows = Array.from({ length: 4 }, (_, rowIndex) => ({
+		id: rowIndex,
+		cards: Array.from({ length: 4 }, (_, cardIndex) => ({
+			id: cardIndex,
+			title: `Card ${rowIndex * 4 + cardIndex + 1}`,
+			description: `Description for card ${rowIndex * 4 + cardIndex + 1}`
+		}))
+	}));
 </script>
 
 <Sidebar.Provider>
@@ -16,31 +30,6 @@
 </Sidebar.Provider>
 
 <style lang="scss">
-	.nav-bar {
-		background-color: #222;
-		padding: 1rem;
-
-		.nav-list {
-			list-style: none;
-			display: flex;
-			gap: 1.5rem;
-			margin: 0;
-			padding: 0;
-
-			.nav-item {
-				a {
-					color: #fff;
-					text-decoration: none;
-					font-weight: 500;
-
-					&:hover {
-						text-decoration: underline;
-					}
-				}
-			}
-		}
-	}
-
 	.main-content {
 		flex-grow: 1;
 		display: flex;

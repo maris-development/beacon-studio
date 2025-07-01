@@ -9,7 +9,7 @@
 </head>
 
 <body data-sveltekit-preload-data="hover">
-	<div>
+	<div id="svelte-body">
   		%sveltekit.body%
 	</div>
 </body>
@@ -18,10 +18,10 @@
 	@import "src/tailwind.css";
 	@import "src/app.scss";
 
-	body > div {
-		display: contents
-	}
 
+	#svelte-body {
+		display: contents;
+	}
 </style>
 
 </html>
