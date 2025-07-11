@@ -8,7 +8,7 @@
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
-	
+
 	const data = {
 		instance: {
 			host: 'https://beacon-argo.maris.nl',
@@ -24,11 +24,11 @@
 				items: [
 					{
 						title: 'Builder',
-						url: '#'
+						url: '/query-builder'
 					},
 					{
 						title: 'Editor',
-						url: '#'
+						url: '/query-editor'
 					}
 				]
 			},
@@ -45,10 +45,6 @@
 					{
 						title: 'Data Tables',
 						url: '#'
-					},
-					{
-						title: 'Settings',
-						url: '#'
 					}
 				]
 			},
@@ -60,48 +56,12 @@
 			{
 				title: 'System Info',
 				url: '#',
-				icon: BookOpenIcon,
-				items: [
-					{
-						title: 'Version',
-						url: '#'
-					},
-					{
-						title: 'Get Started',
-						url: '#'
-					},
-					{
-						title: 'Tutorials',
-						url: '#'
-					},
-					{
-						title: 'Changelog',
-						url: '#'
-					}
-				]
+				icon: FrameIcon
 			},
 			{
 				title: 'Settings',
 				url: '#',
-				icon: Settings2Icon,
-				items: [
-					{
-						title: 'General',
-						url: '#'
-					},
-					{
-						title: 'Team',
-						url: '#'
-					},
-					{
-						title: 'Billing',
-						url: '#'
-					},
-					{
-						title: 'Limits',
-						url: '#'
-					}
-				]
+				icon: Settings2Icon
 			}
 		],
 		navSecondary: [
@@ -164,8 +124,6 @@
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser/>
+		<NavUser />
 	</Sidebar.Footer>
 </Sidebar.Root>
-
-
