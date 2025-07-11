@@ -44,7 +44,7 @@
 					{
 						title: 'Data Tables',
 						url: '/data-browser/data-tables'
-					},
+					}
 					// { // not needed for now
 					// 	title: 'Settings',
 					// 	url: '/data-browser/settings'
@@ -58,29 +58,29 @@
 			},
 			{
 				title: 'System Info',
-				url: '#',
+				url: '/system-info',
 				icon: FrameIcon
-			},
-			{
-				title: 'Settings',
-				url: '#',
-				icon: Settings2Icon
 			}
+			// {
+			// 	title: 'Settings',
+			// 	url: '#',
+			// 	icon: Settings2Icon
+			// }
 		],
 		navSecondary: [
 			{
 				title: 'Documentation',
-				url: '#',
+				url: 'https://maris-development.github.io/beacon/',
 				icon: BookOpenIcon
 			},
 			{
 				title: 'Support',
-				url: '#',
+				url: 'https://github.com/maris-development/beacon',
 				icon: LifeBuoyIcon
 			},
 			{
 				title: 'Feedback',
-				url: '#',
+				url: 'https://github.com/maris-development/beacon/issues',
 				icon: SendIcon
 			}
 		]
