@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { Utils } from "@/utils";
 	import { onMount } from "svelte";
+	
  
 	/** Parent passes these in to handle save/close; optionally an instance for editing */
 	export let onClose: () => void;
@@ -7,7 +9,7 @@
 	export let title: string = '';
 	export let width: string = '500px';
 
-	let shortRandomString = crypto.randomUUID().slice(0, 8);
+	let shortRandomString = Utils.uuidv4().slice(0, 8);
 
 	function closeModalOnEscape(event: KeyboardEvent) {
 		if (event.key === 'Escape') {

@@ -11,32 +11,89 @@
 		tableFromIPC,
 		vectorFromArray,
 		type TypeMap,
-		tableFromArrays,
+		tableFromArrays
 	} from 'apache-arrow';
-
 	import * as d3 from 'd3';
-	import {  interpolateBrBG } from 'd3-scale-chromatic';
+	import { interpolateBrBG } from 'd3-scale-chromatic';
 	import { scaleSequential } from 'd3-scale';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
+	import BeaconMapQueryModal from '@/components/modals/BeaconMapQueryModal.svelte';
+	import { QueryControl } from '@/components/map-controls/query-control/QueryControl';
+	import { add } from 'date-fns';
 
 	const GEOARROW_POINT_DATA = '/rws4.parquet';
 	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
 	let map: maplibregl.Map | null = null;
-	let loading = true;
+	let deckOverlay: DeckOverlay | null = null;
+	let loading = $state(true);
 	let table: Table | null = null;
 	let onClickInfo: PickingInfo | null = null;
 	let onClickClose: boolean = false;
+	let showQueryModal = $state(false);
+	let beaconQuery = $state({
+		query_parameters: [
+			{
+				column_name: '',
+				alias: 'Value'
+			},
+			{
+				column_name: '',
+				alias: 'Time'
+			},
+			{
+				column_name: '',
+				alias: 'Depth'
+			},
+			{
+				column_name: '',
+				alias: 'Latitude'
+			},
+			{
+				column_name: '',
+				alias: 'Longitude'
+			}
+		],
+		filters: [
+			{
+				for_query_parameter: 'Time',
+				min: 1577836800, // Example min timestamp (2020-01-01)
+				max: Date.now() / 1000 // Use current time as max
+			},
+			{
+				for_query_parameter: 'Depth',
+				min: 0,
+				max: 5
+			}
+		],
+		output: {
+			format: {
+				geoparquet: {
+					longitude_column: 'Longitude',
+					latitude_column: 'Latitude'
+				}
+			}
+		}
+	});
 
 	const colorScale = scaleSequential(interpolateBrBG).domain([40, -5]);
 
-	onMount(async () => {
+	onMount(() => {
+		onAsyncMount();
+
+		return () => {
+			if (map) {
+				map.remove();
+				map = null;
+			}
+		};
+	});
+
+	async function onAsyncMount() {
 		if (!browser) return;
 
 		await wasmInit(PARQUET_WASM_URL);
-
-		table = await fetchData(new Request(GEOARROW_POINT_DATA), true);
 
 		map = new maplibregl.Map({
 			container: 'deck-gl-map',
@@ -47,67 +104,100 @@
 			pitch: 0
 		});
 
-		const deckOverlay = new DeckOverlay({
+		const editQueryControl = new QueryControl({
+			onEditClick: () => {
+				showQueryModal = !showQueryModal;
+			},
+			onReRunClick: () => {
+				// Handle re-run click
+			}
+		});
+
+		map.addControl(editQueryControl);
+		map.addControl(new maplibregl.NavigationControl());
+		map.once('load', () => {
+			addGeoArrowLayer();
+		});
+	}
+
+
+	async function addGeoArrowLayer() {
+		console.log('Adding GeoArrow layer to map...');
+		
+		let layer = await createGeoArrowLayer();
+
+		deckOverlay = new DeckOverlay({
 			interleaved: true,
 			layers: [
-				new GeoArrowScatterplotLayer({
-					id: 'geoarrow-points',
-					data: table,
-					// Pre-computed colors in the original table
-					opacity: 1,
-					radiusUnits: 'meters',
-
-					getFillColor: (d) => {
-						const row = d.data.data.get(d.index);
-						if (!row) {
-							return [0, 0, 0, 0]; // Default to transparent black if row is undefined
-						}
-
-						const value = row['Waarde'];
-						// Check if value if a number
-						if (typeof value !== 'number' || isNaN(value)) {
-							return [0, 0, 0, 0]; // Default to transparent black if value is not a number
-						}
-						const color = d3.color(colorScale(value))?.rgb(); // returns RGB object
-						// console.log('Color for value', value, ':', color);
-						if (!color) {
-							return [0, 0, 0, 0]; // Default to black if color is not defined
-						}
-						return [color.r, color.g, color.b, 255];
-					},
-					getRadius: 50000,
-					radiusMaxPixels: 10,
-					pickable: true,
-					autoHighlight: true,
-					highlightColor: [255, 255, 0, 128], // Yellow highlight color
-					onClick: (info) => {
-						console.log('Clicked on point:', info);
-						if (!info.object) {
-							onClickInfo = null;
-							onClickClose = false;
-							return;
-						}
-						onClickClose = true;
-						onClickInfo = info;
-					}
-				})
+				layer
 			]
 		});
 
-		loading = false;
-
 		map.addControl(deckOverlay);
-		map.addControl(new maplibregl.NavigationControl());
 
 		const tableBounds = getTableGeometryBounds(table);
 
 		setTimeout(() => {
+			
 			map.fitBounds(tableBounds, {
-				padding: { top: 50, bottom: 50, left: 50, right: 50 },
+				padding: { top: 50, bottom: 50, left: 50, right: 50 }
 			});
-		}, 300);
-		
-	});
+			
+			loading = false;
+
+		}, 150);
+
+	}
+
+	async function createGeoArrowLayer(): Promise<GeoArrowScatterplotLayer> {
+		table = await fetchData(new Request(GEOARROW_POINT_DATA), true);
+
+		if (!table) {
+			throw new Error('Table is not loaded');
+		}
+
+		return new GeoArrowScatterplotLayer({
+			id: 'geoarrow-points',
+			data: table,
+			// Pre-computed colors in the original table
+			opacity: 1,
+			radiusUnits: 'meters',
+
+			getFillColor: (d) => {
+				const row = d.data.data.get(d.index);
+				if (!row) {
+					return [0, 0, 0, 0]; // Default to transparent black if row is undefined
+				}
+
+				const value = row['Waarde'];
+				// Check if value if a number
+				if (typeof value !== 'number' || isNaN(value)) {
+					return [0, 0, 0, 0]; // Default to transparent black if value is not a number
+				}
+				const color = d3.color(colorScale(value))?.rgb(); // returns RGB object
+				// console.log('Color for value', value, ':', color);
+				if (!color) {
+					return [0, 0, 0, 0]; // Default to black if color is not defined
+				}
+				return [color.r, color.g, color.b, 255];
+			},
+			getRadius: 50000,
+			radiusMaxPixels: 10,
+			pickable: true,
+			autoHighlight: true,
+			highlightColor: [255, 255, 0, 128], // Yellow highlight color
+			onClick: (info) => {
+				console.log('Clicked on point:', info);
+				if (!info.object) {
+					onClickInfo = null;
+					onClickClose = false;
+					return;
+				}
+				onClickClose = true;
+				onClickInfo = info;
+			}
+		});
+	}
 
 	async function loadParquetFile<T extends TypeMap = any>(
 		url: string | URL | Request,
@@ -138,15 +228,23 @@
 		return deduplicateTable<T>(table);
 	}
 
-
 	function getTableGeometryBounds<T extends TypeMap = any>(
-		table: Table<T>
+		table: Table<T> | null
 	): [[number, number], [number, number]] {
+		if (!table) {
+			//return world bounds:
+			return [
+				[-180, -90],
+				[180, 90]
+			];
+		}
 		const latCol = table.getChild('Latitude');
 		const lonCol = table.getChild('Longitude');
+
 		if (!latCol || !lonCol) {
 			throw new Error('Table must contain Latitude and Longitude columns');
 		}
+
 		let minLat = Infinity;
 		let maxLat = -Infinity;
 		let minLon = Infinity;
@@ -166,13 +264,11 @@
 		];
 	}
 
-
 	function deduplicateTable<T extends TypeMap = any>(
 		table: Table<T>,
 		latitudeColumn: string = 'Latitude',
 		longitudeColumn: string = 'Longitude'
 	): Table<T> {
-
 		console.log('Deduplicating table:', table.schema);
 
 		const latCol = table.getChild(latitudeColumn);
@@ -207,7 +303,7 @@
 			const col = table.getChild(name)!;
 			const values = keepIndexes.map((idx) => col.get(idx));
 			// For every row‐index in keepIdx, pull out col.get(idx)
-			dedupColumns[name] = (vectorFromArray(values, field.type))
+			dedupColumns[name] = vectorFromArray(values, field.type);
 		}
 
 		const deduped = tableFromArrays(dedupColumns);
@@ -216,17 +312,15 @@
 
 		// console.log('Deduplicated table schema:', deduped.schema);
 
-		
-		
 		return deduped; //ignore ts errors
-
 	}
+
+	$inspect('Beacon query: ', beaconQuery);
 </script>
 
 <svelte:head>
 	<title>Map - Beacon Studio</title>
 </svelte:head>
-
 
 <div class="map-wrapper">
 	<div id="deck-gl-map" class="map rounded-xl"></div>
@@ -234,15 +328,15 @@
 		<div class="loading-overlay">
 			<LoadingSpinner></LoadingSpinner>
 			<h3>Loading...</h3>
-
 		</div>
+	{/if}
+
+	{#if showQueryModal}
+		<BeaconMapQueryModal bind:query={beaconQuery} onClose={() => (showQueryModal = false)} />
 	{/if}
 </div>
 
-
-
 <style lang="scss">
-
 	.map-wrapper {
 		flex-grow: 1;
 		position: relative;

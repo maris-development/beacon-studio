@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '$lib/stores/config';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import { Utils } from '@/utils';
 
 	/** Parent passes these in to handle save/close; optionally an instance for editing */
 	export let onSave: (instance: BeaconInstance) => void;
@@ -15,6 +16,7 @@
 	let url = '';
 	let description = '';
 	let token = '';
+	let input: boolean = false;
 
 	/** Initialize form if editing */
 	onMount(() => {
@@ -30,20 +32,39 @@
 		return () => document.removeEventListener('keydown', handleKeydown);
 	});
 
+	function addBeaconClose(){
+		// Reset form fields		
+		if(input) {
+			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
+			if (!confirmation) {
+				return;
+			}
+
+
+		} 
+
+		onClose();
+	}
+
 	/** Close when Escape is pressed */
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') onClose();
+		if (event.key === 'Escape') {
+			addBeaconClose();
+			return;
+		} 
+
+		input = true;
 	}
 
 	function submit() {
 		const now = new Date();
 
 		const newInstance: BeaconInstance = {
-			id: instance?.id ?? crypto.randomUUID(),
+			id: instance?.id ?? Utils.uuidv4(),
 			name: name.trim(),
 			url: url.trim(),
-			description: description.trim() || undefined,
-			token: token.trim() || undefined,
+			description: description.trim() || '',
+			token: token.trim() || '',
 			createdAt: instance?.createdAt ?? now,
 			updatedAt: now
 		};
@@ -52,7 +73,7 @@
 	}
 </script>
 
-<Modal title={instance ? 'Edit Beacon instance' : 'Add Beacon instance'} onClose={onClose}>
+<Modal title={instance ? 'Edit Beacon instance' : 'Add Beacon instance'} onClose={addBeaconClose}>
 	<form on:submit|preventDefault={submit}>
 		<label>
 			Name *
@@ -76,7 +97,7 @@
 	</form>
 
 	<div slot="footer">
-		<Button type="button" variant="destructive" onclick={onClose}>Cancel</Button>
+		<Button type="button" variant="destructive" onclick={addBeaconClose}>Cancel</Button>
 		<Button type="submit" onclick={submit}>Save</Button>
 	</div>
 		
@@ -89,19 +110,6 @@
 			display: block;
 			margin-bottom: 0.75rem;
 			font-weight: 500;
-
-			input,
-			textarea {
-				width: 100%;
-				padding: 0.5rem;
-				margin-top: 0.25rem;
-				border: 1px solid #ccc;
-				border-radius: 0.25rem;
-				font: inherit;
-			}
-			textarea {
-				resize: vertical;
-			}
 		}
 	}
 </style>

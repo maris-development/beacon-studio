@@ -16,7 +16,7 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			precompress: false,
-			strict: true
+			strict: false,
 		}),
 		alias: {
 			// when you write `@/foo` → load from `./src/lib/foo`

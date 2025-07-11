@@ -17,17 +17,23 @@ html {
 }
 
 body {
-    background-color: #f4f4f4;
+    background-color: var(--sidebar);
     color: #333;
     display: flex;
     flex-direction: column;
     height: 100vh;
-    // overflow: hidden;
 }
 
 .page-container {
     padding: 1rem;
 }
+
+
+#svelte-body {
+    display: contents;
+}
+
+
 
 $standard-margin: 0.5rem;
 
@@ -98,4 +104,23 @@ p {
             text-decoration: underline;
         }
     }
+}
+
+select,
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="email"],
+input[type="text"],
+input[type="search"],
+textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 0.5rem;
+    font: inherit;
+    margin-bottom: 0.5rem;
+}
+textarea {
+    resize: vertical;
 }
