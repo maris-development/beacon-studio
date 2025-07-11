@@ -1,10 +1,9 @@
 <script lang="ts" module>
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
 	import BotIcon from '@lucide/svelte/icons/bot';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import MapIcon from '@lucide/svelte/icons/map';
 	import FrameIcon from '@lucide/svelte/icons/frame';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
-	import MapIcon from '@lucide/svelte/icons/map';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
@@ -34,28 +33,28 @@
 			},
 			{
 				title: 'Data Browser',
-				url: '#',
+				url: '/data-browser',
 				icon: SquareTerminalIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Datasets',
-						url: '#'
+						url: '/data-browser/datasets'
 					},
 					{
 						title: 'Data Tables',
-						url: '#'
+						url: '/data-browser/data-tables'
 					},
-					{
-						title: 'Settings',
-						url: '#'
-					}
+					// { // not needed for now
+					// 	title: 'Settings',
+					// 	url: '/data-browser/settings'
+					// }
 				]
 			},
 			{
 				title: 'Map Viewer',
-				url: '#',
-				icon: BotIcon
+				url: '/map',
+				icon: MapIcon
 			},
 			{
 				title: 'System Info',

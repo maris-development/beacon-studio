@@ -1,4 +1,4 @@
-<!-- src/lib/components/AddBeaconModal.svelte -->
+<!-- src/lib/components/ChooseBeaconModal.svelte -->
 <script lang="ts">
 	import {beaconInstances, currentBeaconInstance} from '$lib/stores/config';
 	import Modal from '$lib/components/modals/Modal.svelte';

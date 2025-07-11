@@ -7,7 +7,6 @@ import GroupLabel from "./sidebar-group-label.svelte";
 import Group from "./sidebar-group.svelte";
 import Header from "./sidebar-header.svelte";
 import Input from "./sidebar-input.svelte";
-import Inset from "./sidebar-inset.svelte";
 import MenuAction from "./sidebar-menu-action.svelte";
 import MenuBadge from "./sidebar-menu-badge.svelte";
 import MenuButton from "./sidebar-menu-button.svelte";
@@ -32,7 +31,6 @@ export {
 	GroupLabel,
 	Header,
 	Input,
-	Inset,
 	Menu,
 	MenuAction,
 	MenuBadge,
@@ -56,7 +54,6 @@ export {
 	GroupLabel as SidebarGroupLabel,
 	Header as SidebarHeader,
 	Input as SidebarInput,
-	Inset as SidebarInset,
 	Menu as SidebarMenu,
 	MenuAction as SidebarMenuAction,
 	MenuBadge as SidebarMenuBadge,
