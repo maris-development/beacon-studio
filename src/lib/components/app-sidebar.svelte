@@ -7,7 +7,7 @@
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
-	
+
 	const data = {
 		instance: {
 			host: 'https://beacon-argo.maris.nl',
@@ -23,11 +23,11 @@
 				items: [
 					{
 						title: 'Builder',
-						url: '#'
+						url: '/query-builder'
 					},
 					{
 						title: 'Editor',
-						url: '#'
+						url: '/query-editor'
 					}
 				]
 			},
@@ -44,7 +44,7 @@
 					{
 						title: 'Data Tables',
 						url: '/data-browser/data-tables'
-					},
+					}
 					// { // not needed for now
 					// 	title: 'Settings',
 					// 	url: '/data-browser/settings'
@@ -58,65 +58,29 @@
 			},
 			{
 				title: 'System Info',
-				url: '#',
-				icon: BookOpenIcon,
-				items: [
-					{
-						title: 'Version',
-						url: '#'
-					},
-					{
-						title: 'Get Started',
-						url: '#'
-					},
-					{
-						title: 'Tutorials',
-						url: '#'
-					},
-					{
-						title: 'Changelog',
-						url: '#'
-					}
-				]
-			},
-			{
-				title: 'Settings',
-				url: '#',
-				icon: Settings2Icon,
-				items: [
-					{
-						title: 'General',
-						url: '#'
-					},
-					{
-						title: 'Team',
-						url: '#'
-					},
-					{
-						title: 'Billing',
-						url: '#'
-					},
-					{
-						title: 'Limits',
-						url: '#'
-					}
-				]
+				url: '/system-info',
+				icon: FrameIcon
 			}
+			// {
+			// 	title: 'Settings',
+			// 	url: '#',
+			// 	icon: Settings2Icon
+			// }
 		],
 		navSecondary: [
 			{
 				title: 'Documentation',
-				url: '#',
+				url: 'https://maris-development.github.io/beacon/',
 				icon: BookOpenIcon
 			},
 			{
 				title: 'Support',
-				url: '#',
+				url: 'https://github.com/maris-development/beacon',
 				icon: LifeBuoyIcon
 			},
 			{
 				title: 'Feedback',
-				url: '#',
+				url: 'https://github.com/maris-development/beacon/issues',
 				icon: SendIcon
 			}
 		]
@@ -163,8 +127,6 @@
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<NavUser/>
+		<NavUser />
 	</Sidebar.Footer>
 </Sidebar.Root>
-
-
