@@ -1,6 +1,8 @@
 <script lang="ts">
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import '../app.scss';
+	import '../tailwind.css';
 </script>
 
 <Sidebar.Provider>
@@ -11,8 +13,9 @@
 	</main>
 </Sidebar.Provider>
 
-<style lang="scss">
-	.main-content {
+<style global lang="scss">
+
+	main.main-content {
 		flex-grow: 1;
 		display: flex;
 		flex-direction: column;

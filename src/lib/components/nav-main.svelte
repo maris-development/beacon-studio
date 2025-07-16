@@ -4,8 +4,10 @@
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
 	let {
+		title,
 		items,
 	}: {
+		title: string;
 		items: {
 			title: string;
 			url: string;
@@ -22,7 +24,7 @@
 </script>
 
 <Sidebar.Group>
-	<Sidebar.GroupLabel>Platform</Sidebar.GroupLabel>
+	<Sidebar.GroupLabel>{title}</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each items as mainItem (mainItem.title)}
 			<Collapsible.Root open={mainItem.isActive}>

@@ -1,12 +1,13 @@
 <script lang="ts" module>
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
-	import BotIcon from '@lucide/svelte/icons/bot';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import FrameIcon from '@lucide/svelte/icons/frame';
+	import Table2Icon from '@lucide/svelte/icons/table-2';
+	import DatabaseZapIcon from '@lucide/svelte/icons/database-zap';
+	import DatabaseIcon from '@lucide/svelte/icons/database';
+	import EyeIcon from '@lucide/svelte/icons/eye';
+	import CpuIcon from '@lucide/svelte/icons/cpu';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
-	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	const data = {
 		instance: {
@@ -14,27 +15,11 @@
 			name: 'Beacon Euro Argo',
 			description: 'Beacon Instance running on top of the Euro Argo Fleet collection'
 		},
-		navMain: [
-			{
-				title: 'Queries',
-				url: '#',
-				icon: SquareTerminalIcon,
-				isActive: true,
-				items: [
-					{
-						title: 'Builder',
-						url: '/query-builder'
-					},
-					{
-						title: 'Editor',
-						url: '/query-editor'
-					}
-				]
-			},
+		nodeContent: [
 			{
 				title: 'Data Browser',
 				url: '/data-browser',
-				icon: SquareTerminalIcon,
+				icon: Table2Icon,
 				isActive: true,
 				items: [
 					{
@@ -50,22 +35,53 @@
 					// 	url: '/data-browser/settings'
 					// }
 				]
+			}
+		],
+		dataAccess: [
+			{
+				title: 'Queries',
+				url: '#',
+				icon: DatabaseIcon,
+				isActive: true,
+				items: [
+					{
+						title: 'Builder',
+						url: '/query-builder'
+					},
+					{
+						title: 'Editor',
+						url: '/query-editor'
+					}
+				]
 			},
 			{
-				title: 'Map Viewer',
-				url: '/map',
-				icon: MapIcon
+				title: 'Visualizations',
+				url: '#',
+				icon: EyeIcon,
+				isActive: true,
+				items: [
+					{
+						title: 'Map Viewer',
+						url: '/map',
+					},
+					{
+						title: 'Table Explorer',
+						url: '/table-explorer'
+					}
+				]
 			},
+		],
+		nodeManagement: [
 			{
 				title: 'System Info',
 				url: '/system-info',
-				icon: FrameIcon
+				icon: CpuIcon
+			},
+			{
+				title: 'Settings',
+				url: '/settings',
+				icon: Settings2Icon
 			}
-			// {
-			// 	title: 'Settings',
-			// 	url: '#',
-			// 	icon: Settings2Icon
-			// }
 		],
 		navSecondary: [
 			{
@@ -89,11 +105,9 @@
 
 <script lang="ts">
 	import NavMain from './nav-main.svelte';
-	import NavProjects from './nav-projects.svelte';
 	import NavSecondary from './nav-secondary.svelte';
-	import NavUser from './nav-user.svelte';
+	import NavInstance from './nav-instance.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
-	import DatabaseZapIcon from '@lucide/svelte/icons/database-zap';
 	import type { ComponentProps } from 'svelte';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
@@ -101,6 +115,7 @@
 
 <Sidebar.Root bind:ref variant="inset" {...restProps}>
 	<Sidebar.Header>
+
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
@@ -120,13 +135,22 @@
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>
 		</Sidebar.Menu>
+
+		<NavInstance />
+
 	</Sidebar.Header>
+
+
 	<Sidebar.Content>
-		<NavMain items={data.navMain} />
+		<NavMain title="Node Content" items={data.nodeContent} />
+		<NavMain title="Data Access" items={data.dataAccess} />
+		<NavMain title="Node Management" items={data.nodeManagement} />
 		<!-- <NavProjects projects={data.projects} /> -->
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
+
+
 	<Sidebar.Footer>
-		<NavUser />
+
 	</Sidebar.Footer>
 </Sidebar.Root>

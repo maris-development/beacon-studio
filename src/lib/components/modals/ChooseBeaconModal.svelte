@@ -7,6 +7,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import AddBeaconModal from './AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import CheckIcon from '@lucide/svelte/icons/check';
 
 	export let onClose: () => void;
 
@@ -92,7 +93,7 @@
                     {/if}
                 </h3>
                 <p>URL: <a href={instance.url} target="_blank">{instance.url}</a></p>
-                {#if instance.description.length > 0 }
+                {#if instance.description && instance.description.length > 0 }
                     <p>{instance.description}</p>                   
                 {/if}
                 <p>Last update: {instance.updatedAt}</p>
@@ -102,10 +103,22 @@
         {/each}
     </div>
 
-	<Button onclick={() => openBeaconFormModal(null)}>
-        Add instance
-		<PlusIcon class="ml-2" />
-    </Button>
+    <div slot="footer" class="footer-content">
+        
+        
+        <Button onclick={() => openBeaconFormModal(null)}>
+            Add instance
+            <PlusIcon class="ml-2" />
+        </Button>
+
+        <Button variant="outline" onclick={onClose}>
+            Done
+            <CheckIcon class="ml-2" />
+        </Button>
+    </div>
+	
+
+    
 </Modal>
 
 {#if showFormModal}
@@ -115,6 +128,12 @@
 
 
 <style lang="scss">
+
+    .footer-content {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+    }
 	.beacon-instances {
         display: flex;
         flex-wrap: wrap;

@@ -23,22 +23,7 @@ export class BeaconClient {
         return client;
     }
 
-    private getAuthHeaders(
-        json_content: boolean = false,
-        existing_headers: Record<string, string> = {}
-    ): Record<string, string> {
-        const headers: Record<string, string> = { ...existing_headers };
-
-        if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-
-        if (json_content) {
-            headers['Content-Type'] = 'application/json';
-        }
-
-        return headers;
-    }
+    
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
         const endpoint = `${this.host}/api/query`;
@@ -46,7 +31,7 @@ export class BeaconClient {
         // Create a request to the Beacon API using fetch
         const request_info: RequestInit = {
             method: 'POST',
-            headers: this.getAuthHeaders(true),
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(query),
             cache: 'no-cache',
         }
@@ -95,48 +80,31 @@ export class BeaconClient {
         }
     }
 
-    async explainQuery(query: CompiledQuery): Promise<unknown[]> {
+    async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
         const url = new URL(`${this.host}/api/query/explain`);
 
         const request_info: RequestInit = {
             method: 'POST',
-            headers: this.getAuthHeaders(true),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(query),
             cache: 'no-cache',
         };
 
-        const response = await fetch(url, request_info);
+        const response = await this.fetch<Record<string, unknown>>(url, request_info);
 
-        if (!response.ok) {
-            const error_message = await response.text();
-            throw new Error(`Error explaining query: ${response.status} ${response.statusText} - ${error_message}`);
-        }
-
-        return response.json();
+        return response;
     }
 
     async getQueryMetrics(query_id: string): Promise<QueryMetricsResult> {
         const url = new URL(`${this.host}/api/query/metrics/${query_id}`);
 
-        const response: QueryMetricsResult = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<QueryMetricsResult>);
+        const response: QueryMetricsResult = await this.fetch(url)
 
         return response;
     }
 
     async getQueryFunctions(): Promise<Array<FunctionNameObject>> {
-        const request: Array<FunctionNameObject> = await fetch(
-            `${this.host}/api/query/functions`,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Array<FunctionNameObject>>);
+        const request: Array<FunctionNameObject> = await this.fetch(`${this.host}/api/query/functions`);
 
         return request;
     }
@@ -154,13 +122,7 @@ export class BeaconClient {
             url.searchParams.append('limit', limit.toString());
         }
 
-        const response: Array<string> = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Array<string>>);
+        const response: Array<string> = await this.fetch(url);
 
         return response;
     }
@@ -170,13 +132,7 @@ export class BeaconClient {
 
         url.searchParams.append('file', file);
 
-        const response: Schema = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Schema>);
+        const response: Schema = await this.fetch(url);
 
         return response;
     }
@@ -184,40 +140,21 @@ export class BeaconClient {
     async getTotalDatasets(): Promise<number> {
         const url = new URL(`${this.host}/api/total-datasets`);
 
-        const response: number = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<number>);
+        const response: number = await this.fetch(url);
 
         return response;
     }
 
     async getTables(): Promise<Array<string>> {
         const url = new URL(`${this.host}/api/tables`);
-        const response: Array<string> = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Array<string>>);
-
+        const response: Array<string> = await this.fetch(url);
         return response;
     }
 
     async getDefaultTable(): Promise<string> {
         const url = new URL(`${this.host}/api/default-table`);
 
-        const response: string = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<string>);
+        const response: string = await this.fetch(url);
 
         return response;
     }
@@ -227,13 +164,7 @@ export class BeaconClient {
 
         url.searchParams.append('table_name', table);
 
-        const response: Schema = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Schema>);
+        const response: Schema = await this.fetch(url);
 
         return response;
     }
@@ -247,13 +178,7 @@ export class BeaconClient {
             return cacheResult;
         }
 
-        const response: Schema = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Schema>);
+        const response: Schema = await this.fetch(url);
 
         if (response) {
             this.memCache.set<Schema>(url.toString(), response);
@@ -264,15 +189,12 @@ export class BeaconClient {
 
 
     async getTableExtensions(table: string): Promise<Array<TableExtension>> {
+
         const url = new URL(`${this.host}/api/table-extensions`);
+
         url.searchParams.append('table_name', table);
-        const response: Array<TableExtension> = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<Array<TableExtension>>);
+
+        const response: Array<TableExtension> = await this.fetch(url);
 
         return response;
     }
@@ -282,18 +204,60 @@ export class BeaconClient {
 
         url.searchParams.append('table_name', table);
 
-        const response: TableDefinition = await fetch(
-            url,
-            {
-                headers: this.getAuthHeaders(),
-            }
-        )
-            .then(BeaconClient.responseToJsonOrError<TableDefinition>);
+        const response: TableDefinition = await this.fetch(url);
 
         return response;
     }
 
-    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    fetch<T>(
+        input: string | URL | globalThis.Request,
+        init?: RequestInit,
+    ): Promise<T> {
+
+        if(!init) init = {};
+
+        //merge headers with auth headers:
+        init.headers = {
+            ...new Headers(this.getAuthHeaders(init.headers)),
+        };
+
+        return fetch(input, init).then(BeaconClient.responseToJsonOrError<T>);
+    }
+
+    getAuthHeaders(
+        existing_headers: HeadersInit = {}
+    ): HeadersInit {
+        const headers = new Headers(existing_headers);
+
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+
+        return headers;
+    }
+
+
+    static responseToJsonOrError<T = unknown>(response: Response): Promise<T|null> {
+        if (!response.ok) {
+            return response.text().then(text => {
+                // Wrap whatever you want—here I’m embedding the server message
+                throw new Error(`HTTP ${response.status} ${response.statusText}\n${text}`);
+            });
+        }
+        
+        return response.text().then(content => {
+            
+            if( content === '') {
+                return null; // Handle empty content gracefully
+            }
+
+            const json = content ? JSON.parse(content) : {};
+
+            return json;
+        });    
+    }
+
+        static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
         try {
             const wasmTable = readParquet(buffer);
             return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
@@ -311,24 +275,6 @@ export class BeaconClient {
         }
     }
 
-    static responseToJsonOrError<T = unknown>(response: Response): Promise<T|null> {
-        if (!response.ok) {
-            return response.json().then(errBody => {
-                // Wrap whatever you want—here I’m embedding the server message
-                throw new Error(errBody.message || `HTTP ${response.status}`);
-            });
-        }
-        
-        return response.text().then(content => {
-            
-            if( content === '') {
-                return null; // Handle empty content gracefully
-            }
-
-            const json = content ? JSON.parse(content) : {};
-            return json;
-        });    
-    }
 
 }
 

@@ -81,5 +81,5 @@
 			</Card.Root>
 		</div>
 	</div>
-	<div class="bg-muted m-4 min-h-[100vh] flex-1 rounded-xl md:min-h-min"></div>
+	<!-- <div class="bg-muted m-4 min-h-[100vh] flex-1 rounded-xl md:min-h-min"></div> -->
 </div>
