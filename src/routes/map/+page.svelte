@@ -14,7 +14,13 @@
 		tableFromArrays
 	} from 'apache-arrow';
 	import * as d3 from 'd3';
-	import { interpolateBrBG } from 'd3-scale-chromatic';
+	import {
+		interpolateBrBG,
+		interpolatePuOr,
+		interpolateRdYlBu,
+		interpolateViridis,
+		interpolateMagma
+	} from 'd3-scale-chromatic';
 	import { scaleSequential } from 'd3-scale';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
@@ -22,7 +28,7 @@
 	import { QueryControl } from '@/components/map-controls/query-control/QueryControl';
 	import { add } from 'date-fns';
 
-	const GEOARROW_POINT_DATA = '/rws4.parquet';
+	const GEOARROW_POINT_DATA = '/era5.geoparquet';
 	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
 	let map: maplibregl.Map | null = null;
@@ -77,7 +83,7 @@
 		}
 	});
 
-	const colorScale = scaleSequential(interpolateBrBG).domain([40, -5]);
+	const colorScale = scaleSequential(interpolatePuOr).domain([273, 313]);
 
 	onMount(() => {
 		onAsyncMount();
@@ -97,9 +103,9 @@
 
 		map = new maplibregl.Map({
 			container: 'deck-gl-map',
-			style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+			style: 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json',
 			center: [0.45, 51.47],
-			zoom: 4,
+			zoom: 1,
 			bearing: 0,
 			pitch: 0
 		});
@@ -120,37 +126,33 @@
 		});
 	}
 
-
 	async function addGeoArrowLayer() {
 		console.log('Adding GeoArrow layer to map...');
-		
+
 		let layer = await createGeoArrowLayer();
 
 		deckOverlay = new DeckOverlay({
 			interleaved: true,
-			layers: [
-				layer
-			]
+			layers: [layer]
 		});
 
 		map.addControl(deckOverlay);
 
-		const tableBounds = getTableGeometryBounds(table);
+		// const tableBounds = getTableGeometryBounds(table);
 
-		setTimeout(() => {
-			
-			map.fitBounds(tableBounds, {
-				padding: { top: 50, bottom: 50, left: 50, right: 50 }
-			});
-			
-			loading = false;
+		// setTimeout(() => {
+		// 	map.fitBounds(tableBounds, {
+		// 		padding: { top: 50, bottom: 50, left: 50, right: 50 }
+		// 	});
 
-		}, 150);
-
+		// 	loading = false;
+		// }, 150);
+		loading = false;
+		console.log('GeoArrow layer added successfully');
 	}
 
 	async function createGeoArrowLayer(): Promise<GeoArrowScatterplotLayer> {
-		table = await fetchData(new Request(GEOARROW_POINT_DATA), true);
+		table = await fetchData(new Request(GEOARROW_POINT_DATA), false);
 
 		if (!table) {
 			throw new Error('Table is not loaded');
@@ -169,7 +171,7 @@
 					return [0, 0, 0, 0]; // Default to transparent black if row is undefined
 				}
 
-				const value = row['Waarde'];
+				const value = row['t2m'];
 				// Check if value if a number
 				if (typeof value !== 'number' || isNaN(value)) {
 					return [0, 0, 0, 0]; // Default to transparent black if value is not a number
@@ -179,12 +181,12 @@
 				if (!color) {
 					return [0, 0, 0, 0]; // Default to black if color is not defined
 				}
-				return [color.r, color.g, color.b, 255];
+				return [color.r, color.g, color.b, 192];
 			},
 			getRadius: 50000,
-			radiusMaxPixels: 10,
-			pickable: true,
-			autoHighlight: true,
+			radiusMaxPixels: 2,
+			pickable: false,
+			autoHighlight: false,
 			highlightColor: [255, 255, 0, 128], // Yellow highlight color
 			onClick: (info) => {
 				console.log('Clicked on point:', info);

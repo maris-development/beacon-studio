@@ -6,6 +6,7 @@ import { readParquet } from 'parquet-wasm/esm';
 import { tableFromIPC } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
+import type { PresetTableType } from './models/preset_table';
 
 
 export class BeaconClient {
@@ -23,7 +24,7 @@ export class BeaconClient {
         return client;
     }
 
-    
+
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
         const endpoint = `${this.host}/api/query`;
@@ -209,12 +210,33 @@ export class BeaconClient {
         return response;
     }
 
+    async getPresetTables(): Promise<Array<TableDefinition>> {
+        let table_names = await this.getTables();
+
+        if (table_names.length === 0) {
+            return [];
+        }
+
+        // Filter the tables to only include preset tables
+        let preset_tables: Array<TableDefinition> = [];
+        for (const table_name of table_names) {
+            let table_definition = await this.getTableConfig(table_name);
+
+            // Check if the table is a preset table
+            if ('preset' in table_definition.table_type) {
+                preset_tables.push(table_definition);
+            }
+        }
+
+        return preset_tables;
+    }
+
     fetch<T>(
         input: string | URL | globalThis.Request,
         init?: RequestInit,
     ): Promise<T> {
 
-        if(!init) init = {};
+        if (!init) init = {};
 
         //merge headers with auth headers:
         init.headers = {
@@ -237,27 +259,27 @@ export class BeaconClient {
     }
 
 
-    static responseToJsonOrError<T = unknown>(response: Response): Promise<T|null> {
+    static responseToJsonOrError<T = unknown>(response: Response): Promise<T | null> {
         if (!response.ok) {
             return response.text().then(text => {
                 // Wrap whatever you want—here I’m embedding the server message
                 throw new Error(`HTTP ${response.status} ${response.statusText}\n${text}`);
             });
         }
-        
+
         return response.text().then(content => {
-            
-            if( content === '') {
+
+            if (content === '') {
                 return null; // Handle empty content gracefully
             }
 
             const json = content ? JSON.parse(content) : {};
 
             return json;
-        });    
+        });
     }
 
-        static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
         try {
             const wasmTable = readParquet(buffer);
             return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
@@ -325,10 +347,9 @@ export interface TableDefinition {
     table_extensions: TableExtension[];
 }
 
-export interface TableType {
-    logical?: LogicalType;
-    // extend with other table_type variants if needed
-}
+export type TableType =
+    | { logical: LogicalType }
+    | { preset: PresetTableType }
 
 export interface LogicalType {
     logical_table: LogicalTable;

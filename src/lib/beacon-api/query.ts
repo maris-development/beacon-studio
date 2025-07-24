@@ -1,8 +1,10 @@
+import type { from } from "arquero";
 import { Err, Ok, Result } from "../util/result";
 
 export class QueryBuilder {
     selects: Select[] = []
     filters: Filter[] = []
+    from: From = null
     output: Output | null = null
 
     constructor() {
@@ -16,6 +18,11 @@ export class QueryBuilder {
 
     addFilter(filter: Filter): QueryBuilder {
         this.filters.push(filter);
+        return this;
+    }
+
+    setFrom(from: From): QueryBuilder {
+        this.from = from;
         return this;
     }
 
@@ -34,6 +41,7 @@ export class QueryBuilder {
         }
 
         return Ok({
+            from: this.from,
             query_parameters: this.selects,
             filters: this.filters,
             output: this.output
@@ -44,6 +52,7 @@ export class QueryBuilder {
 export type CompiledQuery = {
     query_parameters: Select[],
     filters: Filter[],
+    from: From,
     output: Output
 };
 
@@ -62,3 +71,15 @@ export type Output =
     | { format: 'netcdf' }
     | { format: { 'geoparquet': { longitude_column: string, latitude_column: string } }, }
     | { format: 'parquet' };
+
+export type From =
+    | null
+    | String
+    | { format: Format }
+
+export type Format =
+    | { "arrow": { path: string } }
+    | { "parquet": { path: string } }
+    | { "netcdf": { path: string } }
+    | { "odv": { path: string } }
+    | { "csv": { path: string, delimiter: string, infer_schema_records: number } }

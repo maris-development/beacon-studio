@@ -6,6 +6,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
 </script>
 
 <div class="h-full">
@@ -38,18 +39,8 @@
 						</Card.Description>
 					</Card.Header>
 					<Card.Content class="grid gap-6">
-						<!-- <div class="grid gap-3">
-							<Label for="tabs-demo-name">Name</Label>
-							<Input id="tabs-demo-name" value="Pedro Duarte" />
-						</div>
-						<div class="grid gap-3">
-							<Label for="tabs-demo-username">Username</Label>
-							<Input id="tabs-demo-username" value="@peduarte" />
-						</div> -->
+						<EasyQueryBuilder />
 					</Card.Content>
-					<Card.Footer>
-						<Button>Query</Button>
-					</Card.Footer>
 				</Card.Root>
 			</Tabs.Content>
 			<Tabs.Content value="advanced-builder">
