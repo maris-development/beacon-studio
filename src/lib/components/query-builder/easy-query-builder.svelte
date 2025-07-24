@@ -12,6 +12,7 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
+	import Parameter from './parameter.svelte';
 
 	const output_formats = ['Parquet', 'CSV', 'JSON', 'Arrow', 'NetCDF'];
 
@@ -23,6 +24,9 @@
 	const selected_table_content_name = $derived(
 		easy_tables.find((t) => t.table_name === selected_table_name)?.table_name ?? 'Select a table'
 	);
+	const selected_table_description = $derived(
+		easy_tables.find((t) => t.table_name === selected_table_name)?.description ?? ''
+	);
 
 	const selected_preset_table_type: PresetTableType = $derived.by(() => {
 		let easy_table_type = easy_tables.find((t) => t.table_name === selected_table_name)?.table_type;
@@ -31,6 +35,7 @@
 		}
 		if ('preset' in easy_table_type) {
 			// ‣ here TS knows table: { preset: PresetTableType }
+			console.log('Selected Preset Table Type:', easy_table_type.preset);
 			return easy_table_type.preset;
 		}
 		// extract preset table type from the easy_table_type
@@ -78,8 +83,10 @@
 		</Select.Group>
 	</Select.Content>
 </Select.Root>
+{#if selected_table_name && selected_table_description}
+	<p class="text-sm text-gray-500">{selected_table_description}</p>
+{/if}
 <div>
-	<h2 class="text-lg font-medium">Query Parameters</h2>
 	{#if selected_preset_table_type === null}
 		<div class="mt-4 text-sm text-gray-500">
 			<p>Select a table to see available query parameters.</p>
@@ -96,38 +103,14 @@
 						<span class="sr-only">Toggle</span>
 					</Collapsible.Trigger>
 				</div>
-				<Collapsible.Content class="space-y-2">
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@huntabyte/bits-ui</div>
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@melt-ui/melt-ui</div>
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@sveltejs/svelte</div>
-				</Collapsible.Content>
+				<Collapsible.Content class="space-y-2"></Collapsible.Content>
 			</Collapsible.Root>
 
-			{#each selected_preset_table_type.data_columns as param (param.column_name)}
-				<div class="flex items-center gap-2">
-					<Label
-						class="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950"
-					>
-						<Checkbox
-							id={param.column_name}
-							class="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-						/>
-						<div class="grid gap-2">
-							<Label for={param.column_name} class="text-lg font-medium"
-								>{param.alias}
-								{#each Object.entries(param) as [field, value] (field)}
-									{#if field !== 'alias' && field !== 'column_name'}
-										<div class="text-sm text-gray-500">
-											<strong>{field}:</strong>
-											{value}
-										</div>
-									{/if}
-								{/each}
-							</Label>
-						</div>
-					</Label>
-				</div>
-			{/each}
+			<div class="grid grid-cols-2 gap-4">
+				{#each selected_preset_table_type.data_columns as param (param.column_name)}
+					<Parameter column={param} />
+				{/each}
+			</div>
 
 			<Collapsible.Root class="w-[350px] space-y-2">
 				<div class="flex items-center justify-between">
@@ -139,43 +122,24 @@
 						<span class="sr-only">Toggle</span>
 					</Collapsible.Trigger>
 				</div>
-				<Collapsible.Content class="space-y-2">
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@huntabyte/bits-ui</div>
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@melt-ui/melt-ui</div>
-					<div class="rounded-md border px-4 py-3 font-mono text-sm">@sveltejs/svelte</div>
-				</Collapsible.Content>
+				<Collapsible.Content class="space-y-2"></Collapsible.Content>
 			</Collapsible.Root>
 
-			<Collapsible.Root>
+			<!-- <Collapsible.Root>
 				<Collapsible.Trigger>Metadata Columns</Collapsible.Trigger>
 				<Collapsible.Content>
-					{#each selected_preset_table_type.metadata_columns as param (param.column_name)}
-						<div class="flex items-center gap-2">
-							<Label
-								class="hover:bg-accent/50 flex items-start gap-3 rounded-lg border p-3 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950"
-							>
-								<Checkbox
-									id={param.column_name}
-									class="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-								/>
-								<div class="grid gap-2">
-									<Label for={param.column_name} class="text-lg font-medium"
-										>{param.alias}
-										{#each Object.entries(param) as [field, value] (field)}
-											{#if field !== 'alias' && field !== 'column_name'}
-												<span class="text-sm text-gray-500">
-													<strong>{field}:</strong>
-													{value}
-												</span>
-											{/if}
-										{/each}
-									</Label>
-								</div>
-							</Label>
-						</div>
+					{#each selected_preset_table_type.metadata_columns as param}
+						<Parameter column={param} />
 					{/each}
 				</Collapsible.Content>
 			</Collapsible.Root>
+			 -->
+
+			<div class="grid grid-cols-2 gap-4">
+				{#each selected_preset_table_type.metadata_columns as param (param)}
+					<Parameter column={param} />
+				{/each}
+			</div>
 		</div>
 	{/if}
 

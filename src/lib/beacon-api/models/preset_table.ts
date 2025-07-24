@@ -1,48 +1,35 @@
 import { Err, Ok, type Result } from "@/util/result";
 
 export interface PresetTableType {
-    data_columns: DataColumn[];
-    metadata_columns: MetadataColumn[];
-    preset_filter_columns: FilterColumn[];
+    data_columns: PresetColumn[];
+    metadata_columns: PresetColumn[];
 }
 
-export interface DataColumn {
-    column_name: string;
-    alias: string;
-    description: string;
-
-    // <— “catch‑all” for any other string→string pair that are metadata
-    [key: string]: string;
-}
-
-export interface MetadataColumn {
-    column_name: string;
-    alias: string;
-    description: string;
-    [key: string]: string;  // captures any extra metadata fields too
-}
-
-// base
-interface BaseFilterColumn {
-    column_name: string;
-}
-
-// 1) range
-export interface RangeFilterColumn extends BaseFilterColumn {
+export interface RangeFilterColumn {
     min?: string | number;
     max?: string | number;
 }
 
-// 2) exact values
-export interface OptionsFilterColumn extends BaseFilterColumn {
+export interface OptionsFilterColumn {
     values: Array<string | number>;
 }
 
-// 3) no filters
-export interface EmptyFilterColumn extends BaseFilterColumn { }
+export interface AnyFilterColumn { }
 
 // union type
 export type FilterColumn =
     | RangeFilterColumn
     | OptionsFilterColumn
-    | EmptyFilterColumn;
+    | AnyFilterColumn;
+
+
+type BasePresetColumn = {
+    filter: FilterColumn;
+    column_name: string;
+    alias: string;
+    description: string;
+};
+
+export type PresetColumn = BasePresetColumn & {
+    [K in Exclude<string, keyof BasePresetColumn>]?: string;
+};

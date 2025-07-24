@@ -345,6 +345,7 @@ export interface TableDefinition {
     table_name: string;
     table_type: TableType;
     table_extensions: TableExtension[];
+    description?: string;
 }
 
 export type TableType =
