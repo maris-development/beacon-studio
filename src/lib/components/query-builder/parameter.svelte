@@ -2,31 +2,23 @@
 	import type { PresetColumn } from '@/beacon-api/models/preset_table';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
-	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
-	import { buttonVariants } from '$lib/components/ui/button/index.js';
 
-	import Calendar from '$lib/components/ui/calendar/calendar.svelte';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import { getLocalTimeZone } from '@internationalized/date';
-	import type { CalendarDate } from '@internationalized/date';
 	import Separator from '../ui/separator/separator.svelte';
 	import Filter from './filters/filter.svelte';
 
-	let openFrom = $state(false);
-	let openTo = $state(false);
-	let valueFrom = $state<CalendarDate | undefined>();
-	let valueTo = $state<CalendarDate | undefined>();
+	let {
+		column = $bindable(),
+		is_selected = $bindable()
+	}: { column: PresetColumn; is_selected: boolean } = $props();
 
-	const id = $props.id();
-	const { column } = $props<{
-		column: PresetColumn;
-	}>();
+	let filter_state = $state(column.filter || null);
 
-	let is_selected = $state(false); // Track checkbox state
+	$effect(() => {
+		if (filter_state && filter_state !== column.filter) {
+			column.filter = filter_state;
+			column = { ...column }; // Notify parent of change
+		}
+	});
 </script>
 
 <Label
@@ -40,17 +32,17 @@
 	<div class="flex w-full flex-row items-center justify-between gap-1">
 		<div class="flex flex-col gap-1">
 			<Label for={column.column_name} class="text-sm font-normal">{column.alias}</Label>
-			{#if column.description}
+			{#each Object.entries(column).filter(([key, _]) => !['filter', 'alias', 'column_name'].includes(key)) as [key, value]}
 				<Separator />
 				<div class="text-muted-foreground justify-end text-xs">
-					<strong>Description:</strong>
-					{column.description}
+					<strong>{key}:</strong>
+					{value}
 				</div>
-			{/if}
+			{/each}
 		</div>
 
-		{#if column.filter}
-			<Filter filter={column.filter} />
+		{#if filter_state}
+			<Filter bind:filter={filter_state} />
 		{/if}
 	</div>
 </Label>

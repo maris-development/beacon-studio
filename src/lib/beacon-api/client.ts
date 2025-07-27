@@ -24,7 +24,45 @@ export class BeaconClient {
         return client;
     }
 
+    async queryToDownload(query: CompiledQuery): Promise<void> {
+        const endpoint = `${this.host}/api/query`;
 
+        const request_info: RequestInit = {
+            method: 'POST',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(query),
+            cache: 'no-cache',
+        };
+
+        const response = await fetch(endpoint, request_info);
+
+        if (!response.ok) {
+            const error_message = await response.text();
+            throw new Error(`Download failed: ${response.status} ${response.statusText} - ${error_message}`);
+        }
+
+        const blob = await response.blob();
+
+        // Try to get the filename from the headers
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = 'download';
+
+        const match = contentDisposition?.match(/filename="([^"]+)"/);
+        if (match) {
+            filename = match[1];
+        } else {
+            filename = `download.blob`;
+        }
+
+        // Trigger download
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
         const endpoint = `${this.host}/api/query`;

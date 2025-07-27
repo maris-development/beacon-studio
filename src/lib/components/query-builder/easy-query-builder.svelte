@@ -2,17 +2,16 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient, type TableDefinition } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import type { PresetTableType } from '@/beacon-api/models/preset_table';
+	import type { PresetColumn, PresetTableType } from '@/beacon-api/models/preset_table';
 
-	// import * as Form from '$lib/components/ui/form/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Parameter from './parameter.svelte';
+	import { QueryBuilder } from '@/beacon-api/query';
 
 	const output_formats = ['Parquet', 'CSV', 'JSON', 'Arrow', 'NetCDF'];
 
@@ -21,15 +20,12 @@
 	let easy_tables = $state<Array<TableDefinition>>([]);
 	let selected_table_name = $state('');
 
-	const selected_table_content_name = $derived(
-		easy_tables.find((t) => t.table_name === selected_table_name)?.table_name ?? 'Select a table'
-	);
-	const selected_table_description = $derived(
-		easy_tables.find((t) => t.table_name === selected_table_name)?.description ?? ''
-	);
+	const selected_table = $derived.by(() => {
+		return easy_tables.find((t) => t.table_name === selected_table_name) || null;
+	});
 
-	const selected_preset_table_type: PresetTableType = $derived.by(() => {
-		let easy_table_type = easy_tables.find((t) => t.table_name === selected_table_name)?.table_type;
+	let selected_preset_table_type: PresetTableType = $derived.by(() => {
+		let easy_table_type = selected_table?.table_type;
 		if (easy_table_type === undefined || easy_table_type === null) {
 			return null;
 		}
@@ -42,19 +38,30 @@
 		return null;
 	});
 
+	let data_parameters: { selected: boolean; column: PresetColumn }[] = $state([]);
+	let metadata_parameters: { selected: boolean; column: PresetColumn }[] = $state([]);
+
+	$effect(() => {
+		if (!selected_preset_table_type) return;
+
+		data_parameters = selected_preset_table_type.data_columns.map((column) => ({
+			selected: false,
+			column
+		}));
+
+		metadata_parameters = selected_preset_table_type.metadata_columns.map((column) => ({
+			selected: false,
+			column
+		}));
+	});
+
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
-	onMount(() => {
+	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
-		onAsyncMount();
-
-		return () => {};
-	});
-
-	async function onAsyncMount() {
 		let preset_tables = await client.getPresetTables();
 
 		easy_tables = preset_tables;
@@ -63,14 +70,48 @@
 		if (easy_tables.length > 0) {
 			selected_table_name = easy_tables[0].table_name;
 		}
+	});
+
+	async function handleSubmit() {
+		let builder = new QueryBuilder();
+
+		// get all the selected parameters
+		let selected_data_parameters = data_parameters.filter((p) => p.selected).map((p) => p.column);
+		let selected_metadata_parameters = metadata_parameters
+			.filter((p) => p.selected)
+			.map((p) => p.column);
+
+		let all_parameters = [...selected_data_parameters, ...selected_metadata_parameters];
+		all_parameters.forEach((parameter) => {
+			builder.addSelect({ column: parameter.alias, alias: null });
+
+			if (parameter.filter) {
+				let filter = parameter.filter;
+				if ('min' in filter && 'max' in filter) {
+					builder.addFilter({
+						for_query_parameter: parameter.alias,
+						min: filter.min,
+						max: filter.max
+					});
+				}
+			}
+		});
+
+		builder.setFrom(selected_table_name);
+		builder.setOutput({ format: 'parquet' });
+
+		let compiled_query = builder.compile().unwrap();
+
+		console.debug('Compiled Query:', compiled_query);
+
+		await client.queryToDownload(compiled_query);
 	}
 </script>
 
-<h1>Beacon Query Builder</h1>
 <Label for="dataCollection">Selected Data Collection</Label>
 <Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
 	<Select.Trigger class="w-[180px]">
-		{selected_table_name}
+		{selected_table?.table_name ?? 'Select a table'}
 	</Select.Trigger>
 	<Select.Content>
 		<Select.Group>
@@ -83,8 +124,8 @@
 		</Select.Group>
 	</Select.Content>
 </Select.Root>
-{#if selected_table_name && selected_table_description}
-	<p class="text-sm text-gray-500">{selected_table_description}</p>
+{#if selected_table}
+	<p class="text-sm text-gray-500">{selected_table.description}</p>
 {/if}
 <div>
 	{#if selected_preset_table_type === null}
@@ -93,7 +134,7 @@
 		</div>
 	{:else}
 		<div class="mt-4 grid gap-4">
-			<Collapsible.Root class="w-[350px] space-y-2" open>
+			<Collapsible.Root class="space-y-2" open>
 				<div class="flex items-center justify-between">
 					<h4 class="text-sm font-semibold">Data Columns</h4>
 					<Collapsible.Trigger
@@ -103,16 +144,19 @@
 						<span class="sr-only">Toggle</span>
 					</Collapsible.Trigger>
 				</div>
-				<Collapsible.Content class="space-y-2"></Collapsible.Content>
+				<Collapsible.Content class="space-y-2">
+					<div class="grid grid-cols-2 gap-4">
+						{#each data_parameters as _, i}
+							<Parameter
+								bind:column={data_parameters[i].column}
+								bind:is_selected={data_parameters[i].selected}
+							/>
+						{/each}
+					</div>
+				</Collapsible.Content>
 			</Collapsible.Root>
 
-			<div class="grid grid-cols-2 gap-4">
-				{#each selected_preset_table_type.data_columns as param (param.column_name)}
-					<Parameter column={param} />
-				{/each}
-			</div>
-
-			<Collapsible.Root class="w-[350px] space-y-2">
+			<Collapsible.Root class="space-y-2">
 				<div class="flex items-center justify-between">
 					<h4 class="text-sm font-semibold">Metadata Columns</h4>
 					<Collapsible.Trigger
@@ -122,36 +166,19 @@
 						<span class="sr-only">Toggle</span>
 					</Collapsible.Trigger>
 				</div>
-				<Collapsible.Content class="space-y-2"></Collapsible.Content>
-			</Collapsible.Root>
-
-			<!-- <Collapsible.Root>
-				<Collapsible.Trigger>Metadata Columns</Collapsible.Trigger>
-				<Collapsible.Content>
-					{#each selected_preset_table_type.metadata_columns as param}
-						<Parameter column={param} />
-					{/each}
+				<Collapsible.Content class="space-y-2">
+					<div class="grid grid-cols-2 gap-4">
+						{#each metadata_parameters as _, i}
+							<Parameter
+								bind:column={metadata_parameters[i].column}
+								bind:is_selected={metadata_parameters[i].selected}
+							/>
+						{/each}
+					</div>
 				</Collapsible.Content>
 			</Collapsible.Root>
-			 -->
-
-			<div class="grid grid-cols-2 gap-4">
-				{#each selected_preset_table_type.metadata_columns as param (param)}
-					<Parameter column={param} />
-				{/each}
-			</div>
 		</div>
 	{/if}
-
-	<!-- <div class="mt-8 flex items-start gap-4">
-		<Checkbox id="terms-2" checked={false} />
-		<div class="grid gap-2">
-			<Label for="terms-2">Temperature</Label>
-			<p class="text-muted-foreground text-sm">
-				By clicking this checkbox, you agree to the terms and conditions.
-			</p>
-		</div>
-	</div> -->
 </div>
 <Label for="dataCollection">Selected Output Format</Label>
 <Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
@@ -171,7 +198,7 @@
 </Select.Root>
 
 <div class="flex flex-row gap-2">
-	<Button>Run Query</Button>
+	<Button onclick={handleSubmit}>Run Query</Button>
 	<Button>Explore Data</Button>
 	<Button>Visualize on Map</Button>
 </div>
