@@ -2,6 +2,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 
 	import { beaconInstances, currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import ChooseBeaconModal from '@/components/modals/ChooseBeaconModal.svelte';
 	import { onMount } from 'svelte';
 
@@ -53,6 +54,8 @@
 <svelte:head>
 	<title>Beacon Studio</title>
 </svelte:head>
+
+<Cookiecrumb />
 
 <div class="page-container">
 	<h1 class="">Welcome to Beacon Studio</h1>

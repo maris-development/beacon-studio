@@ -5,6 +5,7 @@
 	import { onMount } from 'svelte';
 	import DataTable, { AffixString, type Column } from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 
 	
 
@@ -100,6 +101,8 @@
 <svelte:head>
 	<title>Data Tables - Beacon Studio</title>
 </svelte:head>
+
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Data tables', href: '/data-browser/data-tables' }]} />
 
 <div class="page-container">
 	<h1>Data Tables</h1>

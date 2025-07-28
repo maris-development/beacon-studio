@@ -27,6 +27,7 @@
 	import BeaconMapQueryModal from '@/components/modals/BeaconMapQueryModal.svelte';
 	import { QueryControl } from '@/components/map-controls/query-control/QueryControl';
 	import { add } from 'date-fns';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 
 	const GEOARROW_POINT_DATA = '/era5.geoparquet';
 	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
@@ -324,8 +325,13 @@
 	<title>Map - Beacon Studio</title>
 </svelte:head>
 
+<Cookiecrumb crumbs={[
+	{ label: 'Visualisations', href: '/visualisations' },
+	{ label: 'Map viewer', href: '/visualisations/map-viewer' }
+]} />
+
 <div class="map-wrapper">
-	<div id="deck-gl-map" class="map rounded-xl"></div>
+	<div id="deck-gl-map" class="map"></div>
 	{#if loading}
 		<div class="loading-overlay">
 			<LoadingSpinner></LoadingSpinner>
@@ -349,6 +355,7 @@
 			z-index: 9;
 			height: 100%;
 			width: 100%;
+			border-radius: 0 0  calc(0.625rem + 4px) calc(0.625rem + 4px);
 		}
 
 		.loading-overlay {

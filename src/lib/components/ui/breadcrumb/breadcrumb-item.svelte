@@ -13,8 +13,20 @@
 <li
 	bind:this={ref}
 	data-slot="breadcrumb-item"
-	class={cn("inline-flex items-center gap-1.5", className)}
+	class={cn("breadcrumb-item inline-flex items-center gap-1.5", className)}
 	{...restProps}
 >
 	{@render children?.()}
 </li>
+
+<style lang="scss">
+
+.breadcrumb-item {
+	&:not(:first-of-type) {
+		&::before {
+  			content: '\203A';			
+		}
+	}
+}
+
+</style>

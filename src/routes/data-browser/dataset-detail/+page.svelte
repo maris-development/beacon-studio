@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import DataTable, { VirtualPaginationData, type Column } from '$lib/components/data-table.svelte';
 	import { Utils } from '@/utils';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 
     
     const file = page.url.searchParams.get('file') || '';
@@ -116,6 +117,8 @@
 <svelte:head>
 	<title>Dataset {file} - Beacon Studio</title>
 </svelte:head>
+
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Datasets', href: '/data-browser/datasets' }, { label: `Dataset ${file}`, href: '#' }]} />
 
 <div class="page-container">
 	<h1>Dataset {file} ({totalRows} fields)</h1>

@@ -7,6 +7,7 @@
 	import { onMount } from 'svelte';
 	import DataTable, { VirtualPaginationData, type Column } from '$lib/components/data-table.svelte';
 	import { Utils } from '@/utils';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
@@ -114,6 +115,8 @@
 	<title>Table {tableName} - Beacon Studio</title>
 </svelte:head>
 
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Data tables', href: '/data-browser/data-tables' }, { label: `Table ${tableName}`, href: '' }]} />
+
 <div class="page-container">
 	<h1>Table '{tableName}' ({totalRows} fields)</h1>
 
@@ -130,8 +133,8 @@
 		{isLoading}
 	/>
 
-
 </div>
 
 <style lang="scss">
+    
 </style>

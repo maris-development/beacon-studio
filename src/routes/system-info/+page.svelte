@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 </script>
+
+<Cookiecrumb crumbs={[{ label: 'System Info', href: '/system-info' }]} />
 
 <div class="@container/main flex flex-1 flex-col gap-2">
 	<div class="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

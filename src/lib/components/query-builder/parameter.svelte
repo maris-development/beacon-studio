@@ -11,14 +11,7 @@
 		is_selected = $bindable()
 	}: { column: PresetColumn; is_selected: boolean } = $props();
 
-	let filter_state = $state(column.filter || null);
 
-	$effect(() => {
-		if (filter_state && filter_state !== column.filter) {
-			column.filter = filter_state;
-			column = { ...column }; // Notify parent of change
-		}
-	});
 </script>
 
 <Label
@@ -41,8 +34,8 @@
 			{/each}
 		</div>
 
-		{#if filter_state}
-			<Filter bind:filter={filter_state} />
+		{#if column.filter}
+			<Filter bind:filter={column.filter} />
 		{/if}
 	</div>
 </Label>

@@ -6,6 +6,7 @@
 	import DataTable, { VirtualPaginationData, type Column } from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
 	import { Utils } from '@/utils';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 
 	type Dataset = {
 		dataset: string;
@@ -120,6 +121,8 @@
 <svelte:head>
 	<title>Datasets - Beacon Studio</title>
 </svelte:head>
+
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Datasets', href: '/data-browser/datasets' }]} />
 
 <div class="page-container">
 	<h1>Datasets</h1>

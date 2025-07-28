@@ -40,33 +40,33 @@
 		dataAccess: [
 			{
 				title: 'Queries',
-				url: '#',
+				url: '/queries',
 				icon: DatabaseIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Builder',
-						url: '/query-builder'
+						url: '/queries/query-builder'
 					},
 					{
 						title: 'Editor',
-						url: '/query-editor'
+						url: '/queries/query-editor'
 					}
 				]
 			},
 			{
 				title: 'Visualizations',
-				url: '#',
+				url: '/visualisations',
 				icon: EyeIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Map Viewer',
-						url: '/map',
+						url: '/visualisations/map-viewer',
 					},
 					{
 						title: 'Table Explorer',
-						url: '/table-explorer'
+						url: '/visualisations/table-explorer'
 					}
 				]
 			},

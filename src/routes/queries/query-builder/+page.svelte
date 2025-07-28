@@ -1,28 +1,18 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
 	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+
 </script>
 
 <div class="h-full">
-	<div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
-		<Breadcrumb.Root>
-			<Breadcrumb.List>
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href="/">Queries</Breadcrumb.Link>
-				</Breadcrumb.Item>
-				<Breadcrumb.Separator />
-				<Breadcrumb.Item>
-					<Breadcrumb.Link href="/docs/components">Builder</Breadcrumb.Link>
-				</Breadcrumb.Item>
-			</Breadcrumb.List>
-		</Breadcrumb.Root>
-	</div>
+	<Cookiecrumb crumbs={[
+		{ label: 'Queries', href: '/queries' },
+		{ label: 'Query Builder', href: '/queries/query-builder' }
+	]} />
+		
 
 	<div class="flex w-full flex-col gap-6 p-4">
 		<Tabs.Root value="easy-builder" class="w-full">

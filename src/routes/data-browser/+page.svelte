@@ -2,6 +2,7 @@
 	import { BeaconClient } from "@/beacon-api/client";
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { onMount } from "svelte";
+	import Cookiecrumb from "@/components/cookiecrumb/cookiecrumb.svelte";
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
@@ -45,6 +46,8 @@
 <svelte:head>
 	<title>Data Browser - Beacon Studio</title>
 </svelte:head>
+
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }]} />
 
 <div class="page-container">
 	<h1>Data Browser</h1>
