@@ -1,5 +1,4 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card/index.js';
 
 	import { beaconInstances, currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';

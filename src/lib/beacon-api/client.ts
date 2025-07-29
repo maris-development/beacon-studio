@@ -6,7 +6,7 @@ import { readParquet } from 'parquet-wasm/esm';
 import { tableFromIPC } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { PresetTableType } from './models/preset_table';
+import type { BeaconSystemInfo, FunctionNameObject, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './models/misc';
 
 
 export class BeaconClient {
@@ -87,7 +87,7 @@ export class BeaconClient {
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
         if (typeof query.output.format === 'object' && 'geoparquet' in query.output.format) {
-            const geoOutput = query.output as Extract<Output, { format: { geoparquet: any } }>;
+            const geoOutput = query.output as Extract<Output, { format: { geoparquet: unknown } }>;
             const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
             if (!longitude_column || !latitude_column) {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
@@ -249,16 +249,16 @@ export class BeaconClient {
     }
 
     async getPresetTables(): Promise<Array<TableDefinition>> {
-        let table_names = await this.getTables();
+        const table_names = await this.getTables();
 
         if (table_names.length === 0) {
             return [];
         }
 
         // Filter the tables to only include preset tables
-        let preset_tables: Array<TableDefinition> = [];
+        const preset_tables: Array<TableDefinition> = [];
         for (const table_name of table_names) {
-            let table_definition = await this.getTableConfig(table_name);
+            const table_definition = await this.getTableConfig(table_name);
 
             // Check if the table is a preset table
             if ('preset' in table_definition.table_type) {
@@ -269,17 +269,49 @@ export class BeaconClient {
         return preset_tables;
     }
 
+    async getSystemInfo(): Promise<BeaconSystemInfo> {
+        const url = new URL(`${this.host}/api/info`);
+
+        const response: BeaconSystemInfo = await this.fetch(url);
+
+        return response;
+    }
+
+    async getStatus(): Promise<string> {
+
+        const url = new URL(`${this.host}/api/status`);
+
+        const response: string = await this.fetch(url, {}, 'text');
+
+        return response;
+    }
+
+       // Overload #1 - JSON default
+    fetch<T>(input: string | URL | Request, init?: RequestInit): Promise<T>;
+
+    // Overload #2 - Explicit text
+    fetch(input: string | URL | Request, init: RequestInit | undefined, responseType: 'text'): Promise<string>;
+
+    // Overload #3 - Explicit JSON
+    fetch<T>(input: string | URL | Request, init: RequestInit | undefined, responseType: 'json'): Promise<T>;
+
+
     fetch<T>(
         input: string | URL | globalThis.Request,
         init?: RequestInit,
-    ): Promise<T> {
-
+        responseType?: 'json' | 'text' 
+    ): Promise<unknown> { // use overloads for typing
+        if(!responseType) responseType = 'json';
         if (!init) init = {};
 
         //merge headers with auth headers:
         init.headers = {
             ...new Headers(this.getAuthHeaders(init.headers)),
         };
+
+        if (responseType === 'text') {
+            return fetch(input, init).then(BeaconClient.responseToTextOrError);
+        }
 
         return fetch(input, init).then(BeaconClient.responseToJsonOrError<T>);
     }
@@ -296,6 +328,18 @@ export class BeaconClient {
         return headers;
     }
 
+
+    static responseToTextOrError(response: Response): Promise<string> {
+        if (!response.ok) {
+            return response.text().then(text => {
+                // Wrap whatever you want—here I’m embedding the server message
+                throw new Error(`HTTP ${response.status} ${response.statusText}\n${text}`);
+            });
+        }
+        return response.text().then(content => {
+            return content;
+        });
+    }
 
     static responseToJsonOrError<T = unknown>(response: Response): Promise<T | null> {
         if (!response.ok) {
@@ -336,90 +380,4 @@ export class BeaconClient {
     }
 
 
-}
-
-//  TYPES AND INTERFACES
-
-type QueryResponse =
-    | { kind: 'error'; error_message: string }
-    | { kind: 'json' | 'csv' | 'netcdf'; buffer: Uint8Array }
-    | { kind: 'parquet' | 'arrow'; arrow_table: arrow_table.Table }
-    | { kind: 'geoparquet'; arrow_table: arrow_table.Table };
-
-
-export interface FunctionNameObject {
-    function_name: string;
-}
-
-export interface Schema {
-    fields: Field[];
-    metadata: Record<string, unknown>;
-}
-
-export interface Field {
-    name: string;
-    data_type: DataType;
-    nullable: boolean;
-    dict_id: number;
-    dict_is_ordered: boolean;
-    metadata: Record<string, unknown>;
-}
-
-export type PrimitiveType =
-    | 'Int32'
-    | 'Utf8'
-    | 'Float32'
-    | 'Float64'
-    | 'Int8';
-
-export interface TimestampDataType {
-    Timestamp: [string, string | null];
-}
-
-export type DataType = PrimitiveType | TimestampDataType;
-
-
-export interface TableDefinition {
-    table_name: string;
-    table_type: TableType;
-    table_extensions: TableExtension[];
-    description?: string;
-}
-
-export type TableType =
-    | { logical: LogicalType }
-    | { preset: PresetTableType }
-
-export interface LogicalType {
-    logical_table: LogicalTable;
-}
-
-export interface LogicalTable {
-    table_name: string;
-    paths: string[];
-    file_format: string;
-}
-
-// Placeholder for future extensions; adjust the type as needed
-export type TableExtension = string;
-
-export interface NodeMetrics {
-    operator: string;
-    metrics: Metrics;
-    children: NodeMetrics[];
-}
-
-export type Metrics = Record<string, unknown>;
-
-export interface QueryMetricsResult {
-    input_rows: number;
-    input_bytes: number;
-    result_num_rows: number;
-    result_size_in_bytes: number;
-    file_paths: string[];
-    query: Record<string, unknown>; // opaque query object
-    query_id: string;
-    parsed_logical_plan: unknown[]; // opaque plan nodes
-    optimized_logical_plan: unknown[];
-    node_metrics: NodeMetrics;
 }

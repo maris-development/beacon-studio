@@ -1,4 +1,3 @@
-import { Err, Ok, type Result } from "@/util/result";
 
 export interface PresetTableType {
     data_columns: PresetColumn[];
@@ -14,7 +13,7 @@ export interface OptionsFilterColumn {
     values: Array<string | number>;
 }
 
-export interface AnyFilterColumn { }
+export type AnyFilterColumn = Record<string, unknown>;
 
 // union type
 export type FilterColumn =

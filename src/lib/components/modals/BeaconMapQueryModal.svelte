@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { BeaconClient, type Schema, type Field } from '@/beacon-api/client';
+	import { BeaconClient } from '@/beacon-api/client';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { format } from 'date-fns';
 	import TomSelect from 'tom-select';
