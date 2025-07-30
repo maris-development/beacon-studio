@@ -315,7 +315,7 @@
 
 		// console.log('Deduplicated table schema:', deduped.schema);
 
-		return deduped; //ignore ts errors
+		return (deduped as unknown as Table<T>); //ignore ts errors
 	}
 
 	$inspect('Beacon query: ', beaconQuery);

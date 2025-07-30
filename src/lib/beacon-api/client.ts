@@ -1,6 +1,6 @@
 
 import * as arrow_table from 'apache-arrow';
-import type { CompiledQuery, Output } from './query';
+import type { CompiledQuery, GeoParquetOutputFormat } from './query';
 import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
 import { tableFromIPC } from 'apache-arrow';
@@ -24,7 +24,7 @@ export class BeaconClient {
         return client;
     }
 
-    async queryToDownload(query: CompiledQuery): Promise<void> {
+    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string  = '.blob'): Promise<void> {
         const endpoint = `${this.host}/api/query`;
 
         const request_info: RequestInit = {
@@ -41,6 +41,7 @@ export class BeaconClient {
             throw new Error(`Download failed: ${response.status} ${response.statusText} - ${error_message}`);
         }
 
+
         const blob = await response.blob();
 
         // Try to get the filename from the headers
@@ -51,7 +52,7 @@ export class BeaconClient {
         if (match) {
             filename = match[1];
         } else {
-            filename = `download.blob`;
+            filename = `download.${unknownDispositionExtension}`;
         }
 
         // Trigger download
@@ -87,7 +88,7 @@ export class BeaconClient {
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
         if (typeof query.output.format === 'object' && 'geoparquet' in query.output.format) {
-            const geoOutput = query.output as Extract<Output, { format: { geoparquet: unknown } }>;
+            const geoOutput = query.output as { format: GeoParquetOutputFormat};
             const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
             if (!longitude_column || !latitude_column) {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");

@@ -1,4 +1,3 @@
-import type { from } from "arquero";
 import { Err, Ok, Result } from "../util/result";
 
 export class QueryBuilder {
@@ -65,16 +64,15 @@ export type Filter =
     | { or: Filter[] }
     | { and: Filter[] };
 
-export type Output =
-    | { format: 'csv' }
-    | { format: 'arrow' | 'ipc' }
-    | { format: 'netcdf' }
-    | { format: { 'geoparquet': { longitude_column: string, latitude_column: string } }, }
-    | { format: 'parquet' };
+export type Output = { format: OutputFormat };
+
+export type OutputFormat = 'csv' | 'arrow' | 'netcdf' | 'parquet' | 'ipc' | GeoParquetOutputFormat;
+
+export type GeoParquetOutputFormat = { 'geoparquet': { longitude_column: string, latitude_column: string } };
 
 export type From =
     | null
-    | String
+    | string
     | { format: Format }
 
 export type Format =

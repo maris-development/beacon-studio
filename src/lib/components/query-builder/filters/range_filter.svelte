@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { RangeFilterColumn } from '@/beacon-api/models/preset_table';
 	import Input from '@/components/ui/input/input.svelte';
 
 	let {

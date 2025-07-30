@@ -17,7 +17,7 @@ export type AnyFilterColumn = Record<string, unknown>;
 
 // union type
 export type FilterColumn =
-    | RangeFilterColumn
+    RangeFilterColumn
     | OptionsFilterColumn
     | AnyFilterColumn;
 

@@ -29,7 +29,7 @@
 					{/snippet}
 
 					{#snippet content()}
-						<div slot="content" class="grid gap-6">
+						<div slot="content" >
 							<EasyQueryBuilder />
 						</div>
 					{/snippet}
@@ -47,7 +47,7 @@
 					{/snippet}
 
 					{#snippet content()}
-						<div slot="content" class="grid gap-6">
+						<div slot="content">
 							<EasyQueryBuilder />
 						</div>
 					{/snippet}
