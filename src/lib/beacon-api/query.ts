@@ -6,6 +6,8 @@ export class QueryBuilder {
     filters: Filter[] = []
     from: From = null
     output: Output | null = null
+    limit?: number
+    offset?: number
 
     constructor() {
 
@@ -23,6 +25,22 @@ export class QueryBuilder {
 
     setFrom(from: From): QueryBuilder {
         this.from = from;
+        return this;
+    }
+
+    setLimit(limit: number): QueryBuilder {
+        if (limit < 0) {
+            throw new Error("Limit must be a non-negative number");
+        }
+        this.limit = limit;
+        return this;
+    }
+
+    setOffset(offset: number): QueryBuilder {
+        if (offset < 0) {
+            throw new Error("Offset must be a non-negative number");
+        }
+        this.offset = offset;
         return this;
     }
 
@@ -44,7 +62,9 @@ export class QueryBuilder {
             from: this.from,
             query_parameters: this.selects,
             filters: this.filters,
-            output: this.output
+            output: this.output,
+            limit: this.limit,
+            offset: this.offset
         });
     }
 }
@@ -53,7 +73,9 @@ export type CompiledQuery = {
     query_parameters: Select[],
     filters: Filter[],
     from: From,
-    output: Output
+    output: Output,
+    limit?: number,
+    offset?: number
 };
 
 export type Select = { column: string, alias: string | null };
