@@ -12,6 +12,8 @@
 	import type { RangeFilterColumn } from '@/beacon-api/models/preset_table';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import AdvancedParameter from './advanced-parameter.svelte';
+	import type { SelectedFilterType } from './add-advanced-filter.svelte';
+	import { QueryBuilder } from '@/beacon-api/query';
 
 	let {
 		table_name,
@@ -20,29 +22,53 @@
 		table_name: string;
 		client: BeaconClient;
 	} = $props();
+	let previous_table_name = '';
 
 	const output_formats = ['Parquet', 'CSV', 'JSON', 'Arrow', 'NetCDF'];
 
 	let selected_output_format = $state(output_formats[0]);
 	let fields: { name: string; type: DataType }[] = $state([]);
-	let selected_fields: { name: string; type: DataType }[] = $state([]);
+	let selected_fields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
+		$state([]);
 
 	$effect(() => {
-		if (table_name && client) {
+		if (table_name && client && table_name !== previous_table_name) {
+			console.log('Fetching schema for table:', table_name);
 			client.getTableSchema(table_name).then((schema) => {
+				previous_table_name = table_name;
 				fields = schema.fields.map((field) => {
 					return {
 						name: field.name,
 						type: field.data_type
 					};
 				});
+				selected_fields = [];
 			});
 		} else {
 			fields = []; // Reset fields if no table or client is available
+			selected_fields = []; // Reset selected fields
 		}
 	});
 
 	let open = $state(false);
+
+	function SubmitQuery() {
+		let builder = new QueryBuilder();
+
+		for (const field of selected_fields) {
+			builder.addSelect({ column: field.name, alias: null });
+			for (const filter of field.selected_filters) {
+				let bfilter = Utils.parameterFilterTypeToFilter(filter.filter_value, field.name);
+				if (bfilter) {
+					builder.addFilter(bfilter);
+				}
+			}
+		}
+
+		builder.setOutput({ format: 'parquet' });
+
+		console.log('Submitting query with selected fields:', builder.compile().unwrap());
+	}
 </script>
 
 <!-- <svelte:document onkeydown={handleKeydown} /> -->
@@ -63,7 +89,7 @@
 					value={field.name}
 					onclick={() => {
 						console.log('Selected field:', field.name);
-						selected_fields.push({ name: field.name, type: field.type });
+						selected_fields.push({ name: field.name, type: field.type, selected_filters: [] });
 						open = false;
 						console.log('Selected fields:', selected_fields);
 					}}
@@ -104,7 +130,7 @@
 </Select.Root>
 
 <div class="flex flex-row gap-2">
-	<Button>Run Query</Button>
+	<Button onclick={SubmitQuery}>Run Query</Button>
 	<Button>Explore Data</Button>
 	<Button>Visualize on Map</Button>
 </div>

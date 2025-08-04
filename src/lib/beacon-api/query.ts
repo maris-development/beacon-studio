@@ -62,6 +62,12 @@ export type Filter =
     | { for_query_parameter: string, min: number | string, max: number | string }
     | { for_query_parameter: string, eq: number | string }
     | { for_query_parameter: string, neq: number | string }
+    | { for_query_parameter: string, gt: number | string }
+    | { for_query_parameter: string, gt_eq: number | string }
+    | { for_query_parameter: string, lt: number | string }
+    | { for_query_parameter: string, lt_eq: number | string }
+    | { is_not_null: { for_query_parameter: string } }
+    | { is_null: { for_query_parameter: string } }
     | { or: Filter[] }
     | { and: Filter[] };
 
