@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import { BeaconClient, type TableDefinition } from '@/beacon-api/client';
+	import { BeaconClient } from '@/beacon-api/client';
+	import type { TableDefinition } from '@/beacon-api/models/misc';
 	import { onMount } from 'svelte';
 	import type { PresetColumn, PresetTableType } from '@/beacon-api/models/preset_table';
 
@@ -88,6 +89,7 @@
 			if (parameter.filter) {
 				let filter = parameter.filter;
 				if ('min' in filter && 'max' in filter) {
+					// ToDo: fix this to use the correct types
 					builder.addFilter({
 						for_query_parameter: parameter.alias,
 						min: filter.min,
