@@ -132,7 +132,9 @@ export type CompiledQuery = {
     query_parameters: Select[],
     filters: Filter[],
     from: From,
-    output: Output
+    output: Output,
+    limit?: number,
+    offset?: number
 };
 
 export type Select = { column: string, alias: string | null };
