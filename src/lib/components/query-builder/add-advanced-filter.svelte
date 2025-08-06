@@ -5,7 +5,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Separator from '../ui/separator/separator.svelte';
-	import type { DataType } from '@/beacon-api/models/misc';
+	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import type { ParameterFilterType } from './advanced-parameter-filter.svelte';
 

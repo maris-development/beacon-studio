@@ -6,10 +6,10 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { onMount } from 'svelte';
 	import { BeaconClient } from '@/beacon-api/client';
-	import type { DataType } from '@/beacon-api/models/misc';
+	import type { DataType } from '@/beacon-api/types';
 	import { util } from 'apache-arrow';
 	import { Utils } from '@/utils';
-	import type { RangeFilterColumn } from '@/beacon-api/models/preset_table';
+	import type { RangeFilterColumn } from '@/beacon-api/types';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import AdvancedParameter from './advanced-parameter.svelte';
 	import type { SelectedFilterType } from './add-advanced-filter.svelte';
@@ -74,7 +74,7 @@
 </script>
 
 <!-- <svelte:document onkeydown={handleKeydown} /> -->
-<div class="flex flex-row justify-between">
+<div class="mt-8 flex flex-row items-center justify-between">
 	<h4>Query Parameters</h4>
 	<Button variant="outline" size="sm" class="w-fit" onclick={() => (open = true)}>
 		<PlusIcon class="mr-2 size-4" />
@@ -105,7 +105,7 @@
 	</Command.List>
 </Command.Dialog>
 
-<div class="flex flex-col gap-2">
+<div class="mt-4 flex flex-col gap-2">
 	<Label for="dataCollection">Selected Fields</Label>
 	<div class="grid grid-cols-1 gap-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
 		{#each selected_fields as field (field.name)}
@@ -114,24 +114,26 @@
 	</div>
 </div>
 
-<Label for="dataCollection">Selected Output Format</Label>
-<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
-	<Select.Trigger class="w-[180px]">
-		{selected_output_format}
-	</Select.Trigger>
-	<Select.Content>
-		<Select.Group>
-			<Select.Label>Tables</Select.Label>
-			{#each output_formats as format (format)}
-				<Select.Item value={format} label={format}>
-					{format}
-				</Select.Item>
-			{/each}
-		</Select.Group>
-	</Select.Content>
-</Select.Root>
+<Label for="dataCollection" class="mt-8">Selected Output Format</Label>
+<div class="mt-8">
+	<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
+		<Select.Trigger class="w-[180px]">
+			{selected_output_format}
+		</Select.Trigger>
+		<Select.Content>
+			<Select.Group>
+				<Select.Label>Tables</Select.Label>
+				{#each output_formats as format (format)}
+					<Select.Item value={format} label={format}>
+						{format}
+					</Select.Item>
+				{/each}
+			</Select.Group>
+		</Select.Content>
+	</Select.Root>
+</div>
 
-<div class="flex flex-row gap-2">
+<div class="mt-8 flex flex-row gap-2">
 	<Button onclick={SubmitQuery}>Run Query</Button>
 	<Button>Explore Data</Button>
 	<Button>Visualize on Map</Button>

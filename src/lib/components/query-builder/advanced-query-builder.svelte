@@ -27,20 +27,22 @@
 </script>
 
 <Label for="dataCollection">Selected Data Table</Label>
-<Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
-	<Select.Trigger class="w-[180px]">
-		{selected_table_name ?? 'Select a table'}
-	</Select.Trigger>
-	<Select.Content>
-		<Select.Group>
-			<Select.Label>Tables</Select.Label>
-			{#each table_names as table_name}
-				<Select.Item value={table_name} label={table_name}>
-					{table_name}
-				</Select.Item>
-			{/each}
-		</Select.Group>
-	</Select.Content>
-</Select.Root>
+<div class="mt-4">
+	<Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
+		<Select.Trigger class="w-[180px]">
+			{selected_table_name ?? 'Select a table'}
+		</Select.Trigger>
+		<Select.Content>
+			<Select.Group>
+				<Select.Label>Tables</Select.Label>
+				{#each table_names as table_name}
+					<Select.Item value={table_name} label={table_name}>
+						{table_name}
+					</Select.Item>
+				{/each}
+			</Select.Group>
+		</Select.Content>
+	</Select.Root>
+</div>
 
 <AdvancedQueryBuilderBlock table_name={selected_table_name} {client} />

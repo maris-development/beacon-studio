@@ -5,7 +5,7 @@
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 
 	import Separator from '../ui/separator/separator.svelte';
-	import type { DataType } from '@/beacon-api/models/misc';
+	import type { DataType } from '@/beacon-api/types';
 	import Button from '../ui/button/button.svelte';
 	import AddAdvancedFilter, { type SelectedFilterType } from './add-advanced-filter.svelte';
 	import AdvancedParameterFilter from './advanced-parameter-filter.svelte';

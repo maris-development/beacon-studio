@@ -42,7 +42,7 @@
 					<p class="description">Use this advanced form to build more complex queries.</p>
 				{/snippet}
 
-				<EasyQueryBuilder />
+				<AdvancedQueryBuilder />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>
