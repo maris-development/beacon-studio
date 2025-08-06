@@ -1,114 +1,80 @@
-<script context="module" lang="ts">
-	export type SortDirection = 'asc' | 'desc';
-	export type Column = { key: string; header: string; sortable: boolean, rawHtml?: boolean };
-	export class AffixString {
-		prefix: string;
-		main: string | null;
-		suffix: string;
-
-		constructor(main: string | null, prefix: string = '', suffix: string = '') {
-			this.prefix = prefix;
-			this.main = main;
-			this.suffix = suffix;
-		}
-
-		toString(): string {
-			return `${this.prefix}${this.main ?? ''}${this.suffix}`;
-		}
-	};
-	export class VirtualPaginationData<T = any>{
-		
-		originalData: T[];
-		data: T[];
-		length: number;
-
-		constructor(data: T[]) {
-			this.originalData = data;
-			this.data = data;
-			this.length = data.length;
-		}
-
-		getData(offset: number, limit: number): T[] {
-			return this.data.slice(offset, offset + limit);
-		}
-
-		setData(data: T[]) {
-			this.originalData = data;
-			this.data = data;
-			this.length = data.length;
-		}
-
-		filter(predicate: (item: T) => boolean): number {
-			this.data = this.originalData.filter(predicate);
-			this.length = this.data.length;
-			return this.length;
-		}
-
-		resetFilter(): number {
-			this.data = this.originalData;
-			this.length = this.data.length;
-			return this.length;
-		}
-	}
-</script>
 
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import LoadingSpinner from '$lib/components/ui/loading-spinner.svelte';
+	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
+	import type { Column, SortDirection } from '@/utils';
+	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
+	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';
 
-	export let onChangeSort: (column: string, direction: SortDirection) => void = () => {};
-	export let onPageChange: (page: number) => void = () => {};
-	export let onCellClick: (row: Record<string, any>, column: Column) => void = () => {};
 
-	export let defaultSort: { column: string | null; direction: SortDirection } = {
-		column: null,
-		direction: 'asc'
+
+	type Props = {
+		onChangeSort?: (column: string, direction: SortDirection) => void;
+		onPageChange?: (page: number) => void;
+		onCellClick?: (row: Record<string, any>, column: Column) => void;
+		columns: Column[];
+		rows: Record<string, any>[];
+		pageSize?: number;
+		pageIndex?: number;
+		totalRows?: number;
+		isLoading?: boolean;
+		rowClass?: string;
 	};
-	export let columns: Column[];
-	export let rows: Record<string, any>[];
-	export let pageSize: number = 10;
-	export let pageIndex: number = 1;
-	export let totalRows: number = 0;
-	export let isLoading: boolean = false;
-	export let rowClass: string = '';
 
-	$: pageCount = Math.ceil(totalRows / pageSize);
+	let {
+		onChangeSort = () => {},
+		onPageChange = () => {},
+		onCellClick = () => {},
+		columns,
+		rows,
+		pageSize = 10,
+		pageIndex = 1,
+		totalRows = 0,
+		isLoading = false,
+		rowClass = ''
+	}: Props = $props();
 
-	let currentSortColumn: string = defaultSort.column ?? (columns.length > 0 ? columns[0].key : '');
-	let currentSortDirection: SortDirection = 'asc';
+	let pageCount: number = $state(0);
 
-	function _changeSort() {
-		console.log('_changeSort', this);
+	$effect(() => {
+		pageCount = Math.ceil(totalRows / pageSize);
+	})
+
+
+	function _changeSort(column: Column) {
+		const columnRef = column.ref;
+
+		console.log('_changeSort', columnRef);
 
 		//invert direction:
-		if (currentSortColumn === this.dataset.key) {
+		if (column.isSorted == true) {
 			// If the same column is clicked, toggle the direction
-			this.dataset.sort = this.dataset.sort === 'asc' ? 'desc' : 'asc';
+			column.sortDirection = column.sortDirection === 'asc' ? 'desc' : 'asc';
+
+		} else {
+			columns.forEach(col => {
+				col.isSorted = false;
+				col.sortDirection = undefined;
+			});
+
+			column.isSorted = true;
+			column.sortDirection = 'asc'; // default to ascending
 		}
 
-		currentSortDirection = this.dataset.sort;
-		currentSortColumn = this.dataset.key;
-
-		onChangeSort(currentSortColumn, currentSortDirection);
+		onChangeSort(column.key, column.sortDirection);
 	}
 
-	onMount(() => {
-		onChangeSort(currentSortColumn, currentSortDirection);
-	});
-
 	function toString(value): string {
-
 		//check if value is an object and has no toString method
-		if (  typeof value === 'object' && value !== null ) {
-			if( typeof value.toString === 'function' ) {
+		if (typeof value === 'object' && value !== null) {
+			if (typeof value.toString === 'function') {
 				// If it has a toString method, use it
 				const stringValue = value.toString();
 
-				if(stringValue !== '[object Object]') {
+				if (stringValue !== '[object Object]') {
 					return stringValue;
 				}
-
-
 			}
 			// If it's an object without a toString method, return a JSON string
 			return JSON.stringify(value, null, 2);
@@ -118,60 +84,82 @@
 	}
 </script>
 
-<div class="table-wrapper">
-	<table class="dataset-table">
-		<thead>
-			<tr>
-				{#each columns as column}
-					{#if column.sortable}
-						<th data-key={column.key} onclick={_changeSort} data-sort={defaultSort.direction}>
-							{column.header}
-						</th>
-
-					{:else}
-						<th data-key={column.key}>{column.header}</th>
-					{/if}
-				{/each}
-			</tr>
-		</thead>
-		<tbody>
-			{#if rows.length === 0 && !isLoading}
+<div class="data-table-wrapper">
+	<div class="table-wrapper">
+		<table class="dataset-table">
+			<thead>
 				<tr>
-					<td colspan={columns.length} class="no-data">No data available</td>
+					{#each columns as column}
+						{#if column.sortable}
+							<th class:sortable={column.sortable} data-key={column.key} onclick={() => _changeSort(column)} bind:this={column.ref} data-sort="">
+								{column.header}
+								{#if column.sortable == true}
+									 {#if (column.isSorted == true)}
+										{#if (column.sortDirection === 'asc')}
+											<span class="sort-indicator asc">
+												<ChrevonUpIcon />
+											</span>
+										{/if}
+										{#if (column.sortDirection === 'desc')}
+											<span class="sort-indicator desc">
+												<ChrevonDownIcon />
+											</span>
+										{/if}
+									{:else}
+										<span class="sort-indicator none">
+											<ChrevonUpDownIcon />
+										</span>
+									{/if}
+								{/if}
+								
+							</th>
+						{:else}
+							<th data-key={column.key}>{column.header}</th>
+						{/if}
+					{/each}
 				</tr>
-
-			{:else if rows.length === 0}
-				<tr>
-					<td colspan={columns.length} class="no-data">
-						<LoadingSpinner></LoadingSpinner>
-						<span>Loading data...</span>
-					</td>
-				</tr>
-
-			{:else}
-				{#each rows as row}
-					<tr class={rowClass}>
-						{#each columns as column}
-							{#if column.rawHtml === true}
-								<td onclick={() => onCellClick(row, column)}>{@html toString(row[column.key])}</td>
-
-							{:else}
-								<td onclick={() => onCellClick(row, column)}>{toString(row[column.key])}</td>
-
-							{/if}
-						{/each}
+			</thead>
+			<tbody>
+				{#if rows.length === 0 && !isLoading}
+					<tr>
+						<td colspan={columns.length} class="no-data">No data available</td>
 					</tr>
-				{/each}
-
-			{/if}
-		</tbody>
-	</table>
-
+				{:else if rows.length === 0}
+					<tr>
+						<td colspan={columns.length} class="no-data">
+							<LoadingSpinner></LoadingSpinner>
+							<span>Loading data...</span>
+						</td>
+					</tr>
+				{:else}
+					{#each rows as row}
+						<tr class={rowClass}>
+							{#each columns as column}
+								{#if column.rawHtml === true}
+									<td onclick={() => onCellClick(row, column)}>{@html toString(row[column.key])}</td
+									>
+								{:else}
+									<td onclick={() => onCellClick(row, column)}>{toString(row[column.key])}</td>
+								{/if}
+							{/each}
+						</tr>
+					{/each}
+				{/if}
+			</tbody>
+		</table>
+	</div>
 	<div class="pagination">
 		<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
 			Previous
 		</button>
-		<span>Page {pageIndex} of {pageCount}</span>
+		<div class="page-info">
+			Page 
+			<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
+			of {pageCount}
+
+			
+
+		</div>
 		<button
 			disabled={pageIndex >= pageCount}
 			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>Next</button
@@ -180,7 +168,7 @@
 </div>
 
 <style lang="scss">
-	.table-wrapper {
+	.data-table-wrapper {
 		border: 1px solid #ddd;
 		border-radius: 8px;
 		overflow: hidden;
@@ -188,49 +176,78 @@
 
 		margin-bottom: 1rem;
 
-		.dataset-table {
-			width: 100%;
-			border-collapse: collapse;
-
-			thead {
-				background-color: #f9f9f9;
-
-				th {
-					padding: 0.75rem 1rem;
-					text-align: left;
-					font-size: 0.875rem;
-					font-weight: 600;
-					text-transform: uppercase;
-					color: #666;
-					border-bottom: 1px solid #ddd;
+		.table-wrapper {
+			overflow-x: auto;
+			//nice scrollbar
+			&::-webkit-scrollbar {
+    				display: none;
 				}
-			}
+				-ms-overflow-style: none;
+				scrollbar-width: none;
+			table.dataset-table {
+				width: 100%;
+				border-collapse: collapse;
+				
 
-			tbody {
-				tr {
-					&:nth-child(even) {
-						background-color: #fcfcfc;
-					}
+				thead {
+					background-color: #f9f9f9;
 
-					td {
+					th {
 						padding: 0.75rem 1rem;
+						text-align: left;
 						font-size: 0.875rem;
-						color: #555;
-						border-bottom: 1px solid #eee;
+						font-weight: 600;
+						text-transform: uppercase;
+						color: #666;
+						border-bottom: 1px solid #ddd;
 
-						&.no-data {
-							display: table-cell;
-								text-align: center;
+						&.sortable {
+							cursor: pointer;
 
-							> * {
-								display: inline-block;
-								margin: 0 auto;
+							&:hover {
+								background-color: darken(#f9f9f9, 5%);
 							}
 						}
-					}
 
-					&:hover {
-						background-color: #f1f1f1;
+						.sort-indicator {
+							margin-left: 0.5rem;
+							display: inline-block;
+							vertical-align: middle;
+
+							&.none {
+								opacity: 0.5;
+							}
+
+						}
+					}
+				}
+
+				tbody {
+					tr {
+						&:nth-child(even) {
+							background-color: #fcfcfc;
+						}
+
+						td {
+							padding: 0.75rem 1rem;
+							font-size: 0.875rem;
+							color: #555;
+							border-bottom: 1px solid #eee;
+
+							&.no-data {
+								display: table-cell;
+								text-align: center;
+
+								> * {
+									display: inline-block;
+									margin: 0 auto;
+								}
+							}
+						}
+
+						&:hover {
+							background-color: #f1f1f1;
+						}
 					}
 				}
 			}
@@ -269,12 +286,10 @@
 				}
 			}
 
-			span {
+			.page-info {
 				font-size: 0.875rem;
 				color: var(--foreground);
 			}
 		}
-
-		
 	}
 </style>

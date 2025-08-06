@@ -3,9 +3,10 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import DataTable, { AffixString, type Column } from '$lib/components/data-table.svelte';
+	import DataTable from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import { AffixString, type Column } from '@/utils';
 
 	
 
@@ -38,7 +39,7 @@
 	}
 	
 	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.log('Sorting by', column, 'in', direction, 'order');
+		console.log('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
 	}
 
 	function onPageChange(page: number) {
@@ -81,7 +82,7 @@
 
 			rows = _rows;
 
-			console.log('Updated rows:', rows);
+			// console.log('Updated rows:', rows);
 			
 		}
 	}
@@ -111,7 +112,6 @@
 
 	<DataTable
 		rowClass="arrow-row"
-		defaultSort={{ column: 'table', direction: 'asc' }}
 		
 		{onChangeSort}
 		{onPageChange}

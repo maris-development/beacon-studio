@@ -1,4 +1,5 @@
 import { Err, Ok, Result } from "../util/result";
+import type { CompiledQuery, Filter, From, Output, Select } from "./types";
 
 export class QueryBuilder {
     selects: Select[] = []
@@ -48,36 +49,3 @@ export class QueryBuilder {
     }
 }
 
-export type CompiledQuery = {
-    query_parameters: Select[],
-    filters: Filter[],
-    from: From,
-    output: Output
-};
-
-export type Select = { column: string, alias: string | null };
-
-export type Filter =
-    | { for_query_parameter: string, min: number | string, max: number | string }
-    | { for_query_parameter: string, eq: number | string }
-    | { for_query_parameter: string, neq: number | string }
-    | { or: Filter[] }
-    | { and: Filter[] };
-
-export type Output = { format: OutputFormat };
-
-export type OutputFormat = 'csv' | 'arrow' | 'netcdf' | 'parquet' | 'ipc' | GeoParquetOutputFormat;
-
-export type GeoParquetOutputFormat = { 'geoparquet': { longitude_column: string, latitude_column: string } };
-
-export type From =
-    | null
-    | string
-    | { format: Format }
-
-export type Format =
-    | { "arrow": { path: string } }
-    | { "parquet": { path: string } }
-    | { "netcdf": { path: string } }
-    | { "odv": { path: string } }
-    | { "csv": { path: string, delimiter: string, infer_schema_records: number } }

@@ -1,13 +1,14 @@
 <script lang="ts">
 
     import { page } from '$app/state';
-	import { BeaconClient, type Schema, type Field } from '@/beacon-api/client';
+	import { BeaconClient } from '@/beacon-api/client';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
     import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import DataTable, { VirtualPaginationData, type Column } from '$lib/components/data-table.svelte';
-	import { Utils } from '@/utils';
+	import DataTable from '$lib/components/data-table.svelte';
+	import { Utils, VirtualPaginationData, type Column } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import type { SchemaField, Schema } from '@/beacon-api/types';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
@@ -26,8 +27,8 @@
         { key: 'dict_is_ordered', header: 'Is Ordered', sortable: false },
         { key: 'metadata', header: 'Metadata', sortable: false }
     ];
-    let virtualSchemaData: VirtualPaginationData<Field> = new VirtualPaginationData<Field>([]);
-	let rows: Field[] = $state([]);
+    let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
+	let rows: SchemaField[] = $state([]);
 
 	let totalRows: number = $state(0);
     let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
@@ -61,14 +62,14 @@
     function getPage() {
         offset = (pageIndex - 1) * pageSize;
 
-        const data = virtualSchemaData.getData(offset, pageSize);
+        const data = virtualSchemaData.getPageData(offset, pageSize);
         
         setData(data);
 
         Utils.setPageUrlParameter(pageIndex);
     }
 
-    function setData(fields: Field[]) {
+    function setData(fields: SchemaField[]) {
         rows = fields;
 
         isLoading = false;
@@ -90,7 +91,7 @@
         }
 
 
-        totalRows = virtualSchemaData.filter(function(field: Field) {
+        totalRows = virtualSchemaData.filter(function(field: SchemaField) {
 
             for(const [_, value] of Object.entries(field)) {
                 if (typeof value === 'string') {
@@ -123,7 +124,6 @@
     <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
 
     <DataTable
-		defaultSort={{ column: 'name', direction: 'asc' }}
         {onPageChange}
 		{columns}
 		{rows}

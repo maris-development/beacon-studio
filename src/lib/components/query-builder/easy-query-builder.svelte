@@ -2,7 +2,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import type { PresetColumn, PresetTableType } from '@/beacon-api/models/preset_table';
+	import type { PresetColumn, PresetTableType } from '@/beacon-api/types';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -10,8 +10,8 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Parameter from './parameter.svelte';
-	import { QueryBuilder, type CompiledQuery, type OutputFormat } from '@/beacon-api/query';
-	import type { TableDefinition } from '@/beacon-api/models/misc';
+	import { QueryBuilder } from '@/beacon-api/query';
+	import type { CompiledQuery, OutputFormat, TableDefinition } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
@@ -19,6 +19,9 @@
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+
+	import { addToast } from '@/stores/toasts';
+	import { goto } from '$app/navigation';
 
 
 
@@ -94,7 +97,7 @@
 		}
 	});
 
-	function compileQuery(): CompiledQuery {
+	function compileQuery(): null|CompiledQuery {
 		let builder = new QueryBuilder();
 
 		// get all the selected parameters
@@ -122,11 +125,21 @@
 		builder.setFrom(selected_table_name);
 		builder.setOutput({ format: selected_output_format as OutputFormat });
 
-		let compiled_query = builder.compile().unwrap();
+		let compiled_query = builder.compile();
+
+		if(compiled_query.isErr()){
+			let errorMessage = compiled_query.unwrapErr();
+			console.error('Error compiling query:', errorMessage);
+			addToast({
+				message: `Error compiling query: ${errorMessage}`,
+				type: 'error'
+			})
+			return null;
+		}
 
 		console.debug('Compiled Query:', compiled_query);
 
-		return compiled_query;
+		return compiled_query.unwrap();
 	}
 
 	async function handleSubmit() {
@@ -136,15 +149,36 @@
 	}
 
 	async function handleMapVisualise(){
+		let compiled_query = compileQuery();
 
+		if(!compiled_query) return;
+
+		const gzippedQuery = Utils.objectToGzipString(compiled_query);
+
+		goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 	}
 
 	async function handleTableVisualise(){
+		let compiled_query = compileQuery();
 
+		if(!compiled_query) return;
+
+		const gzippedQuery = Utils.objectToGzipString(compiled_query);
+		
+		goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 	}
+
 	async function handleCopyQuery(){
-		let compiled_qury = compileQuery();
-		let query_json = JSON.stringify(compiled_qury, null, 2);
+		let compiled_query = compileQuery();
+
+		if(!compiled_query) return;
+
+		let query_json = JSON.stringify(compiled_query, null, 2);
+
+		addToast({
+			message: 'Query JSON copied to clipboard',
+			type: 'success',
+		});
 
 		Utils.copyToClipboard(query_json);
 	}
@@ -168,18 +202,19 @@
 		</Select.Content>
 	</Select.Root>
 	{#if selected_table}
-		<p class="text-sm text-gray-500">{selected_table.description}</p>
+		<h3>Collection Description</h3>
+		<p>{selected_table.description ?? 'No description available.'}</p>
 	{/if}
 	<div>
 		{#if selected_preset_table_type === null}
-			<div class="mt-4 text-sm text-gray-500">
+			<div class="mt-4  text-gray-500">
 				<p>Select a table to see available query parameters.</p>
 			</div>
 		{:else}
 			<div class="mt-4 grid gap-4">
 				<Collapsible.Root class="space-y-2" open>
 					<div class="flex items-center justify-between">
-						<h4 class="text-sm font-semibold">Select data columns</h4>
+						<h3 class=" font-semibold">Select data columns</h3>
 						<Collapsible.Trigger
 							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
 						>
@@ -188,7 +223,7 @@
 						</Collapsible.Trigger>
 					</div>
 					<Collapsible.Content class="space-y-2">
-						<div class="grid grid-cols-2 gap-4">
+						<div class="parameter-grid">
 							{#each data_parameters as _, i}
 								<Parameter
 									bind:column={data_parameters[i].column}
@@ -201,7 +236,7 @@
 
 				<Collapsible.Root class="space-y-2">
 					<div class="flex items-center justify-between">
-						<h4 class="text-sm font-semibold">Select metadata columns</h4>
+						<h3 class=" font-semibold">Select metadata columns</h3>
 						<Collapsible.Trigger
 							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
 						>
@@ -210,7 +245,7 @@
 						</Collapsible.Trigger>
 					</div>
 					<Collapsible.Content class="space-y-2">
-						<div class="grid grid-cols-2 gap-4">
+						<div class="parameter-grid">
 							{#each metadata_parameters as _, i}
 								<Parameter
 									bind:column={metadata_parameters[i].column}
@@ -265,5 +300,16 @@
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+
+		.parameter-grid {
+			display: grid;
+			gap: 1rem;
+			grid-template-columns: 1fr 1fr;
+
+			@media (max-width: 960px) {
+				grid-template-columns: 1fr;
+			}
+
+		}
 	}
 </style>

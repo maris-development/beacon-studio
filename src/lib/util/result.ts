@@ -7,12 +7,14 @@ export function Err<E>(error: E): Result<never, E> {
     return Result.Err(error);
 }
 
+type ErrorInner<Err> = { ok: false; error: Err };
+type OkInner<Ok> = { ok: true; value: Ok };
+type Inner<Ok, Err> = OkInner<Ok> | ErrorInner<Err>;
+
 export class Result<Ok, Err> {
-    private constructor(
-        private readonly inner:
-            | { ok: true; value: Ok }
-            | { ok: false; error: Err }
-    ) { }
+
+    private constructor(private inner: Inner<Ok, Err>) {
+    }
 
     static Ok<T>(value: T): Result<T, never> {
         return new Result({ ok: true, value });
@@ -22,11 +24,11 @@ export class Result<Ok, Err> {
         return new Result({ ok: false, error });
     }
 
-    isOk(): this is { inner: { ok: true; value: Ok } } {
+    isOk(): this is Result<Ok, never> {
         return this.inner.ok;
     }
 
-    isErr(): this is { inner: { ok: false; error: Err } } {
+    isErr(): this is Result<never, Err> {
         return !this.inner.ok;
     }
 
@@ -39,7 +41,7 @@ export class Result<Ok, Err> {
 
     unwrapErr(): Err {
         if (!this.inner.ok) {
-            return (this.inner as { ok: false; error: Err }).error;
+            return (this.inner as ErrorInner<Err>).error;
         }
         throw new Error("Tried to unwrapErr an Ok value");
     }
@@ -48,12 +50,12 @@ export class Result<Ok, Err> {
         if (this.inner.ok) {
             return Result.Ok(fn(this.inner.value));
         }
-        return Result.Err((this.inner as { ok: false; error: Err }).error);
+        return Result.Err((this.inner as ErrorInner<Err>).error);
     }
 
     mapErr<NewErr>(fn: (error: Err) => NewErr): Result<Ok, NewErr> {
         if (!this.inner.ok) {
-            return Result.Err(fn((this.inner as { ok: false; error: Err }).error));
+            return Result.Err(fn((this.inner as ErrorInner<Err>).error));
         }
         return Result.Ok(this.inner.value);
     }

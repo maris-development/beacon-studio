@@ -2,29 +2,27 @@
 	import { createEventDispatcher } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import SuccessIcon from '@lucide/svelte/icons/check';
-    import ErrorIcon from '@lucide/svelte/icons/circle-alert';
-    import InfoIcon from '@lucide/svelte/icons/info';
-    import CloseIcon from '@lucide/svelte/icons/x';
-	import type { ToastType } from './types';
+	import ErrorIcon from '@lucide/svelte/icons/circle-alert';
+	import InfoIcon from '@lucide/svelte/icons/info';
+	import CloseIcon from '@lucide/svelte/icons/x';
+	import type { ToastType } from '@/stores/toasts';
 
 	const dispatch = createEventDispatcher();
-
-	
-
-
 
 	export let type: ToastType;
 	export let dismissible = true;
 </script>
 
 <article class={type} role="alert" transition:fade>
-	{#if type === 'success'}
-		<SuccessIcon width="1.1em" />
-	{:else if type === 'error'}
-		<ErrorIcon width="1.1em" />
-	{:else}
-		<InfoIcon width="1.1em" />
-	{/if}
+	<div class="icon">
+		{#if type === 'success'}
+			<SuccessIcon width="1.1rem" />
+		{:else if type === 'error'}
+			<ErrorIcon width="1.1rem" />
+		{:else}
+			<InfoIcon width="1.1rem" />
+		{/if}
+	</div>
 
 	<div class="text">
 		<slot />
@@ -37,16 +35,20 @@
 	{/if}
 </article>
 
-<style lang="postcss">
+<style lang="scss">
 	article {
 		color: white;
-		padding: 0.75rem 1.5rem;
-		border-radius: 0.2rem;
+		padding: 0.5rem;
+		border-radius: 0.5rem;
 		display: flex;
-		align-items: center;
-		margin: 0 auto 0.5rem auto;
-		width: 20rem;
+		  align-items: flex-start;
+		margin: 0 auto;
+		margin-bottom: 1rem;
+		width: 40vw;
+		min-width: 300px;
+		gap: 0.5rem;
 	}
+	
 	.error {
 		background: IndianRed;
 	}
@@ -56,16 +58,19 @@
 	.info {
 		background: SkyBlue;
 	}
+
 	.text {
-		margin-left: 1rem;
+		flex: 1;
+	}
+	.icon {
+		font-size: 1.1rem;
 	}
 	button {
 		color: white;
 		background: transparent;
 		border: 0 none;
 		padding: 0;
-		margin: 0 0 0 auto;
 		line-height: 1;
-		font-size: 1rem;
+		font-size: 1.1rem;
 	}
 </style>

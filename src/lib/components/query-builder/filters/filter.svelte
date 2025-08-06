@@ -1,14 +1,17 @@
 <script lang="ts">
-	import type { FilterColumn } from '@/beacon-api/models/preset_table';
+	import type { AnyFilterColumn, FilterColumn, OptionsFilterColumn } from '@/beacon-api/types';
 	import RangeFilter from './range_filter.svelte';
 	import OptionsFilter from './options_filter.svelte';
 	import AnyFilter from './any_filter.svelte';
 
 	let { filter = $bindable() }: { filter: FilterColumn } = $props();
 
+	let min_value: number = $state(0);
+	let max_value: number = $state(0);
+
 	if ('min' in filter && 'max' in filter) {
-		var min_value = $state(filter.min);
-		var max_value = $state(filter.max);
+		min_value = (filter.min as number);
+		max_value = (filter.max as number);
 	}
 
 	$effect(() => {
@@ -28,8 +31,8 @@
 	<RangeFilter bind:max_value bind:min_value />
 {:else if 'values' in filter}
 	<!-- Options Filter -->
-	<OptionsFilter {filter} />
+	<OptionsFilter filter={(filter as OptionsFilterColumn)} />
 {:else}
 	<!-- Any Filter -->
-	<AnyFilter {filter} />
+	<AnyFilter filter={(filter as AnyFilterColumn)} />
 {/if}

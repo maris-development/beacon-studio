@@ -1,13 +1,14 @@
 
-import * as arrow_table from 'apache-arrow';
-import type { CompiledQuery, GeoParquetOutputFormat } from './query';
+import * as ApacheArrow from 'apache-arrow';
+import wasmInit from 'parquet-wasm';
+
 import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
-import { tableFromIPC } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, FunctionNameObject, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './models/misc';
+import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
 
+const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
 export class BeaconClient {
     host: string;
@@ -41,7 +42,6 @@ export class BeaconClient {
             throw new Error(`Download failed: ${response.status} ${response.statusText} - ${error_message}`);
         }
 
-
         const blob = await response.blob();
 
         // Try to get the filename from the headers
@@ -62,10 +62,13 @@ export class BeaconClient {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
         URL.revokeObjectURL(link.href);
     }
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
+        await wasmInit(PARQUET_WASM_URL);
+
         const endpoint = `${this.host}/api/query`;
 
         // Create a request to the Beacon API using fetch
@@ -105,7 +108,13 @@ export class BeaconClient {
 
         switch (query.output.format) {
             case 'parquet': {
-                throw new Error("Parquet format not implemented yet");
+                // Return the arrow table with geoparquet format
+                return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
+                    return {
+                        kind: 'parquet',
+                        arrow_table: arrow_table,
+                    }
+                });
             }
             case 'arrow':
             case 'ipc': {
@@ -362,18 +371,21 @@ export class BeaconClient {
         });
     }
 
-    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
         try {
-            const wasmTable = readParquet(buffer);
+            const wasmTable = readParquet(buffer, {
+                batchSize: 128000
+            });
             return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
-        } catch {
+        } catch (error){
+            console.error(error);
             return Err("Failed to read buffer as Parquet");
         }
     }
 
-    static readArrowAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    static readArrowAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
         try {
-            const jsTable = tableFromIPC(buffer);
+            const jsTable = ApacheArrow.tableFromIPC(buffer);
             return Ok(jsTable);
         } catch {
             return Err("Failed to read buffer as Arrow");
