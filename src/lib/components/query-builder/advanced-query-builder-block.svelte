@@ -52,7 +52,7 @@
 
 	let open = $state(false);
 
-	function SubmitQuery() {
+	async function SubmitQuery() {
 		let builder = new QueryBuilder();
 
 		for (const field of selected_fields) {
@@ -64,10 +64,12 @@
 				}
 			}
 		}
-
+		builder.setFrom(table_name);
 		builder.setOutput({ format: 'parquet' });
 
-		console.log('Submitting query with selected fields:', builder.compile().unwrap());
+		let query = builder.compile().unwrap();
+		console.log('Compiled Query:', query);
+		await client.queryToDownload(query);
 	}
 </script>
 
