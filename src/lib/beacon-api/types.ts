@@ -7,7 +7,7 @@ export type QueryResponse = ErrorQueryResponse | JsonQueryResponse | CsvQueryRes
 
 
 export type GeoParquetQueryResponse = { kind: 'geoparquet'; arrow_table: ApacheArrow.Table };
-export type ParquetQueryResponse = { kind: 'parquet'|'arrow'; arrow_table: ApacheArrow.Table };
+export type ParquetQueryResponse = { kind: 'parquet' | 'arrow'; arrow_table: ApacheArrow.Table };
 export type ArrowQueryResponse = ParquetQueryResponse;
 export type JsonQueryResponse = { kind: 'json'; buffer: Uint8Array };
 export type CsvQueryResponse = { kind: 'csv'; buffer: Uint8Array };
@@ -94,38 +94,38 @@ export interface QueryMetricsResult {
 }
 
 export interface BeaconSystemInfo {
-  beacon_version: string;
-  system_info: {
-    global_cpu_usage: number;
-    cpus: {
-      cpu_usage: number;
-      name: string;
-      vendor_id: string;
-      brand: string;
-      frequency: number;
-    }[];
-    physical_core_count: number;
-    total_memory: number;
-    free_memory: number;
-    available_memory: number;
-    used_memory: number;
-    total_swap: number;
-    free_swap: number;
-    used_swap: number;
-    uptime: number;
-    boot_time: number;
-    load_average: {
-      one: number;
-      five: number;
-      fifteen: number;
-    };
-    name: string;
-    kernel_version: string;
-    os_version: string;
-    long_os_version: string;
-    distribution_id: string;
-    host_name: string;
-  } | null;
+    beacon_version: string;
+    system_info: {
+        global_cpu_usage: number;
+        cpus: {
+            cpu_usage: number;
+            name: string;
+            vendor_id: string;
+            brand: string;
+            frequency: number;
+        }[];
+        physical_core_count: number;
+        total_memory: number;
+        free_memory: number;
+        available_memory: number;
+        used_memory: number;
+        total_swap: number;
+        free_swap: number;
+        used_swap: number;
+        uptime: number;
+        boot_time: number;
+        load_average: {
+            one: number;
+            five: number;
+            fifteen: number;
+        };
+        name: string;
+        kernel_version: string;
+        os_version: string;
+        long_os_version: string;
+        distribution_id: string;
+        host_name: string;
+    } | null;
 };
 
 export type CompiledQuery = {
@@ -143,6 +143,12 @@ export type Filter =
     | { for_query_parameter: string, min: number | string, max: number | string }
     | { for_query_parameter: string, eq: number | string }
     | { for_query_parameter: string, neq: number | string }
+    | { for_query_parameter: string, gt: number | string }
+    | { for_query_parameter: string, gt_eq: number | string }
+    | { for_query_parameter: string, lt: number | string }
+    | { for_query_parameter: string, lt_eq: number | string }
+    | { is_not_null: { for_query_parameter: string } }
+    | { is_null: { for_query_parameter: string } }
     | { or: Filter[] }
     | { and: Filter[] };
 

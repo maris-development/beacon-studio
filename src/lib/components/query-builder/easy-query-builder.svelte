@@ -23,9 +23,6 @@
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 
-
-
-
 	const output_formats: Record<string, string> = {
 		Parquet: 'parquet',
 		CSV: 'csv',
@@ -97,7 +94,7 @@
 		}
 	});
 
-	function compileQuery(): null|CompiledQuery {
+	function compileQuery(): null | CompiledQuery {
 		let builder = new QueryBuilder();
 
 		// get all the selected parameters
@@ -113,6 +110,7 @@
 			if (parameter.filter) {
 				let filter = parameter.filter;
 				if ('min' in filter && 'max' in filter) {
+					// ToDo: fix this to use the correct types
 					builder.addFilter({
 						for_query_parameter: parameter.alias,
 						min: filter.min as string | number,
@@ -127,13 +125,13 @@
 
 		let compiled_query = builder.compile();
 
-		if(compiled_query.isErr()){
+		if (compiled_query.isErr()) {
 			let errorMessage = compiled_query.unwrapErr();
 			console.error('Error compiling query:', errorMessage);
 			addToast({
 				message: `Error compiling query: ${errorMessage}`,
 				type: 'error'
-			})
+			});
 			return null;
 		}
 
@@ -148,43 +146,43 @@
 		await client.queryToDownload(compiled_query, output_format_extensions[selected_output_format]);
 	}
 
-	async function handleMapVisualise(){
+	async function handleMapVisualise() {
 		let compiled_query = compileQuery();
 
-		if(!compiled_query) return;
+		if (!compiled_query) return;
 
 		const gzippedQuery = Utils.objectToGzipString(compiled_query);
 
 		goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 	}
 
-	async function handleTableVisualise(){
+	async function handleTableVisualise() {
 		let compiled_query = compileQuery();
 
-		if(!compiled_query) return;
+		if (!compiled_query) return;
 
 		const gzippedQuery = Utils.objectToGzipString(compiled_query);
-		
+
 		goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 	}
 
-	async function handleCopyQuery(){
+	async function handleCopyQuery() {
 		let compiled_query = compileQuery();
 
-		if(!compiled_query) return;
+		if (!compiled_query) return;
 
 		let query_json = JSON.stringify(compiled_query, null, 2);
 
 		addToast({
 			message: 'Query JSON copied to clipboard',
-			type: 'success',
+			type: 'success'
 		});
 
 		Utils.copyToClipboard(query_json);
 	}
 </script>
 
-<div id="easy-query-builder"  >
+<div id="easy-query-builder">
 	<Label for="dataCollection">Selected Data Collection</Label>
 	<Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
 		<Select.Trigger>
@@ -207,7 +205,7 @@
 	{/if}
 	<div>
 		{#if selected_preset_table_type === null}
-			<div class="mt-4  text-gray-500">
+			<div class="mt-4 text-gray-500">
 				<p>Select a table to see available query parameters.</p>
 			</div>
 		{:else}
@@ -267,7 +265,7 @@
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
 				{#each Object.entries(output_formats) as [label, value]}
-					<Select.Item {label} {value}/>
+					<Select.Item {label} {value} />
 				{/each}
 			</Select.Group>
 		</Select.Content>
@@ -276,24 +274,22 @@
 	<div class="flex flex-row gap-2">
 		<Button onclick={handleSubmit}>
 			Run query
-			<DownloadIcon size=1rem />
-
+			<DownloadIcon size="1rem" />
 		</Button>
 		<Button onclick={handleTableVisualise}>
 			Explore data
-			<SheetIcon size=1rem />
+			<SheetIcon size="1rem" />
 		</Button>
 		<Button onclick={handleMapVisualise}>
 			Visualize on map
-			<MapIcon size=1rem />
+			<MapIcon size="1rem" />
 		</Button>
 		<Button onclick={handleCopyQuery}>
 			Copy query JSON
-			<FileJson2Icon size=1rem />
+			<FileJson2Icon size="1rem" />
 		</Button>
 	</div>
 </div>
-
 
 <style lang="scss">
 	#easy-query-builder {
@@ -309,7 +305,6 @@
 			@media (max-width: 960px) {
 				grid-template-columns: 1fr;
 			}
-
 		}
 	}
 </style>

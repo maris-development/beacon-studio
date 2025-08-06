@@ -3,6 +3,7 @@
 	import Card from '@/components/card/card.svelte';
 	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
 </script>
 
 <svelte:head>
@@ -41,7 +42,7 @@
 					<p class="description">Use this advanced form to build more complex queries.</p>
 				{/snippet}
 
-				<EasyQueryBuilder />
+				<AdvancedQueryBuilder />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>

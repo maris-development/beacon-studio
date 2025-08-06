@@ -4,13 +4,15 @@ import { clsx, type ClassValue } from "clsx";
 import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
+import type { DataType, Filter } from "./beacon-api/types";
+import type { ParameterFilterType } from "./components/query-builder/advanced-parameter-filter.svelte";
 import * as Navigation from "$app/navigation";
 
 
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
 
- 
+
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -30,7 +32,7 @@ export class Utils {
         const url = new URL(window.location.href);
 
         const currentValue = url.searchParams.get(parameterName);
-        
+
         if (currentValue === String(pageIndex)) {
             return; // No change needed
         }
@@ -42,6 +44,87 @@ export class Utils {
 
     static uuidv4() {
         return uuidv4();
+    }
+
+    static isNumericDataType(datatype: DataType): boolean {
+        return ['Int32', 'Int8', 'Float32', 'Float64'].includes(datatype as string);
+    }
+
+    static isStringDataType(datatype: DataType): boolean {
+        return datatype === 'Utf8';
+    }
+
+    static isTimestampDataType(datatype: DataType): boolean {
+        return typeof datatype === 'object' && 'Timestamp' in datatype;
+    }
+
+    static parameterFilterTypeToFilter(filter: ParameterFilterType, column: string): Filter {
+        switch (filter.type) {
+            case "range_numeric": return {
+                for_query_parameter: column,
+                min: filter.min,
+                max: filter.max
+            };
+            case "equals_numeric":
+                return { for_query_parameter: column, eq: filter.value };
+            case "not_equals_numeric":
+                return { for_query_parameter: column, neq: filter.value };
+            case "greater_than_numeric":
+                return { for_query_parameter: column, gt: filter.value };
+            case "greater_than_or_equals_numeric":
+                return { for_query_parameter: column, gt_eq: filter.value };
+            case "less_than_numeric":
+                return { for_query_parameter: column, lt: filter.value };
+            case "less_than_or_equals_numeric":
+                return { for_query_parameter: column, lt_eq: filter.value };
+            case "range_string":
+                return {
+                    for_query_parameter: column,
+                    min: filter.min,
+                    max: filter.max
+                };
+            case "equals_string":
+                return { for_query_parameter: column, eq: filter.value };
+            case "not_equals_string":
+                return { for_query_parameter: column, neq: filter.value };
+            case "greater_than_string":
+                return { for_query_parameter: column, gt: filter.value };
+            case "greater_than_or_equals_string":
+                return { for_query_parameter: column, gt_eq: filter.value };
+            case "less_than_string":
+                return { for_query_parameter: column, lt: filter.value };
+            case "less_than_or_equals_string":
+                return { for_query_parameter: column, lt_eq: filter.value };
+
+            case "range_timestamp":
+                return {
+                    for_query_parameter: column,
+                    min: filter.min.toString(),
+                    max: filter.max.toString()
+                };
+            case "equals_timestamp":
+                return { for_query_parameter: column, eq: filter.value.toString() };
+
+            case "not_equals_timestamp":
+                return { for_query_parameter: column, neq: filter.value.toString() };
+
+            case "greater_than_timestamp":
+                return { for_query_parameter: column, gt: filter.value.toString() };
+
+            case "greater_than_or_equals_timestamp":
+                return { for_query_parameter: column, gt_eq: filter.value.toString() };
+
+            case "less_than_timestamp":
+                return { for_query_parameter: column, lt: filter.value.toString() };
+
+            case "less_than_or_equals_timestamp":
+                return { for_query_parameter: column, lt_eq: filter.value.toString() };
+
+            case "is_null":
+                return { is_null: { for_query_parameter: column } };
+            case "is_not_null":
+                return { is_not_null: { for_query_parameter: column } };
+        }
     }
 
     static copyToClipboard(text: string): boolean {
@@ -115,47 +198,47 @@ export class ApacheArrowUtils {
      * @throws If the table does not contain the specified latitude and longitude columns.
      */
     static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
-		table: ApacheArrow.Table<T> | null,
+        table: ApacheArrow.Table<T> | null,
         latitudeColumnName: string = 'Latitude',
         longitudeColumnName: string = 'Longitude'
-	): [[number, number], [number, number]] {
+    ): [[number, number], [number, number]] {
         console.log('getTableGeometryBounds', table);
 
 
-		if (!table) {
-			//return world bounds:
-			return [
-				[-180, -90],
-				[180, 90]
-			];
-		}
+        if (!table) {
+            //return world bounds:
+            return [
+                [-180, -90],
+                [180, 90]
+            ];
+        }
 
-		const latCol = table.getChild(latitudeColumnName);
-		const lonCol = table.getChild(longitudeColumnName);
+        const latCol = table.getChild(latitudeColumnName);
+        const lonCol = table.getChild(longitudeColumnName);
 
-		if (!latCol || !lonCol) {
-			throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
-		}
+        if (!latCol || !lonCol) {
+            throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
+        }
 
-		let minLat = Infinity;
-		let maxLat = -Infinity;
-		let minLon = Infinity;
-		let maxLon = -Infinity;
-		
-		for (let i = 0; i < table.numRows; i++) {
-			const lat = latCol.get(i);
-			const lon = lonCol.get(i);
-			if (lat < minLat) minLat = lat;
-			if (lat > maxLat) maxLat = lat;
-			if (lon < minLon) minLon = lon;
-			if (lon > maxLon) maxLon = lon;
-		}
+        let minLat = Infinity;
+        let maxLat = -Infinity;
+        let minLon = Infinity;
+        let maxLon = -Infinity;
 
-		return [
-			[minLon, minLat],
-			[maxLon, maxLat]
-		];
-	}
+        for (let i = 0; i < table.numRows; i++) {
+            const lat = latCol.get(i);
+            const lon = lonCol.get(i);
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+        }
+
+        return [
+            [minLon, minLat],
+            [maxLon, maxLat]
+        ];
+    }
 
     /**
      * Converts a typed value to its string representation based on the provided Apache Arrow type.
@@ -180,7 +263,7 @@ export class ApacheArrowUtils {
         switch ((type as any).typeId) {
             case ApacheArrow.Type.Utf8:
                 return String(value);
-                
+
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
                 return String(value);
@@ -189,7 +272,7 @@ export class ApacheArrowUtils {
                 return value ? 'true' : 'false';
 
             case ApacheArrow.Type.Timestamp:
-            // case ApacheArrow.Type.TimestampNanosecond:
+                // case ApacheArrow.Type.TimestampNanosecond:
                 return new Date(value as number).toISOString();
 
             default:
@@ -215,8 +298,7 @@ export class ApacheArrowUtils {
     static getColumnMinMax<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
         column: string
-    ): {min: number, max: number} 
-    {
+    ): { min: number, max: number } {
         const colIndex = table.schema.fields.map(field => field.name).indexOf(column);
 
         if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
@@ -226,14 +308,14 @@ export class ApacheArrowUtils {
 
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch((colVec.type as any).typeId) {
+        switch ((colVec.type as any).typeId) {
             case ApacheArrow.Type.Timestamp:
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
                 break;
             default:
                 console.warn(`Unsupported column type for min/max calculation: ${colVec.type.typeId} (${column})`);
-                return {min: NaN, max: NaN}; // Return NaN for unsupported
+                return { min: NaN, max: NaN }; // Return NaN for unsupported
         }
 
 
@@ -246,7 +328,7 @@ export class ApacheArrowUtils {
             if (value > max) max = value;
         }
 
-        return {min, max};
+        return { min, max };
     }
 
 
@@ -293,7 +375,7 @@ export class ApacheArrowUtils {
         let sortedIndices: number[];
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch((sortColumn.type as any).typeId) {
+        switch ((sortColumn.type as any).typeId) {
             // case ApacheArrow.Type.Timestamp: 
             //     // Timestamp sorting
             //     sortedIndices = indexedArray.sort((a, b) => {
@@ -305,8 +387,8 @@ export class ApacheArrowUtils {
             //         return direction === 'asc' ? valA - valB : valB - valA;
             //     }).map(item => item.index);
             //     break;
-            case ApacheArrow.Type.Timestamp: 
-            case ApacheArrow.Type.Int: 
+            case ApacheArrow.Type.Timestamp:
+            case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
                 // Numeric sorting
                 sortedIndices = indexedArray.sort((a, b) => {
@@ -348,24 +430,24 @@ export class ApacheArrowUtils {
                 return table; // Return original table if type is unsupported
         }
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const sortedColumns: Record<string, any> = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sortedColumns: Record<string, any> = {};
 
 
         for (const field of table.schema.fields) {
-			const name = field.name;
-			const col = table.getChild(name)!;
+            const name = field.name;
+            const col = table.getChild(name)!;
             const values = sortedIndices.map((idx) => col.get(idx));
             // For every row‐index in sortedIndices, pull out col.get(idx)
             sortedColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
         }
 
         const sortedTable = ApacheArrow.tableFromArrays(sortedColumns);
-            
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (sortedTable as any).schema = table.schema;
 
-		return sortedTable as unknown as ApacheArrow.Table<T>; //ignore ts errors
+        return sortedTable as unknown as ApacheArrow.Table<T>; //ignore ts errors
 
     }
 
@@ -386,61 +468,61 @@ export class ApacheArrowUtils {
      * @returns A new Apache Arrow Table with duplicate rows (based on latitude and longitude) removed.
      */
     static deduplicateTable<T extends ApacheArrow.TypeMap>(
-		table: ApacheArrow.Table<T>,
+        table: ApacheArrow.Table<T>,
         latitudeColumnName: string = 'Latitude',
         longitudeColumnName: string = 'Longitude',
         amountOfRows: number = undefined,
 
-	): ApacheArrow.Table<T> {
+    ): ApacheArrow.Table<T> {
 
-        if(!amountOfRows) {
+        if (!amountOfRows) {
             amountOfRows = table.numRows;
         }
 
-		console.log(`Deduplicating ${amountOfRows} rows based on ${latitudeColumnName} and ${longitudeColumnName}`, table);
+        console.log(`Deduplicating ${amountOfRows} rows based on ${latitudeColumnName} and ${longitudeColumnName}`, table);
 
-		const latCol = table.getChild(latitudeColumnName);
-		const lonCol = table.getChild(longitudeColumnName);
+        const latCol = table.getChild(latitudeColumnName);
+        const lonCol = table.getChild(longitudeColumnName);
 
-		const seen = new Set<string>();
-		const keepIndexes: number[] = [];
+        const seen = new Set<string>();
+        const keepIndexes: number[] = [];
 
-		// Efficiently iterate column-wise
-		for (let i = 0; i < amountOfRows; i++) {
-			const lat: number = latCol?.get(i);
-			const lon: number = lonCol?.get(i);
+        // Efficiently iterate column-wise
+        for (let i = 0; i < amountOfRows; i++) {
+            const lat: number = latCol?.get(i);
+            const lon: number = lonCol?.get(i);
 
-			// Optional: round coordinates to avoid floating-point noise
-			const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+            // Optional: round coordinates to avoid floating-point noise
+            const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
 
-			if (!seen.has(key)) {
-				seen.add(key);
-				keepIndexes.push(i);
-			}
-		}
+            if (!seen.has(key)) {
+                seen.add(key);
+                keepIndexes.push(i);
+            }
+        }
 
-		console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows`, );
+        console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows`,);
 
-		// 3. Rebuild each column as a JS array of the kept values
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const dedupColumns: Record<string, any> = {};
+        // 3. Rebuild each column as a JS array of the kept values
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const dedupColumns: Record<string, any> = {};
 
-		for (const field of table.schema.fields) {
-			const name = field.name;
-			const col = table.getChild(name)!;
-			const values = keepIndexes.map((idx) => col.get(idx));
-			// For every row‐index in keepIdx, pull out col.get(idx)
-			dedupColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
-		}
+        for (const field of table.schema.fields) {
+            const name = field.name;
+            const col = table.getChild(name)!;
+            const values = keepIndexes.map((idx) => col.get(idx));
+            // For every row‐index in keepIdx, pull out col.get(idx)
+            dedupColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
+        }
 
-		const deduped = ApacheArrow.tableFromArrays(dedupColumns);
+        const deduped = ApacheArrow.tableFromArrays(dedupColumns);
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(deduped as any).schema = table.schema; // Preserve original schema
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (deduped as any).schema = table.schema; // Preserve original schema
 
 
-		return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
-	}
+        return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
+    }
 
 }
 
@@ -562,6 +644,6 @@ export class VirtualPaginationArrowTableData {
             direction
         );
 
-        
+
     }
 }
