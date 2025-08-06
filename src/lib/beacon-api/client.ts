@@ -1,13 +1,14 @@
 
-import * as arrow_table from 'apache-arrow';
-import type { CompiledQuery, Output } from './query';
+import * as ApacheArrow from 'apache-arrow';
+import wasmInit from 'parquet-wasm';
+
 import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
-import { tableFromIPC } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, FunctionNameObject, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './models/misc';
+import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
 
+const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
 export class BeaconClient {
     host: string;
@@ -24,7 +25,7 @@ export class BeaconClient {
         return client;
     }
 
-    async queryToDownload(query: CompiledQuery): Promise<void> {
+    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string  = '.blob'): Promise<void> {
         const endpoint = `${this.host}/api/query`;
 
         const request_info: RequestInit = {
@@ -51,7 +52,7 @@ export class BeaconClient {
         if (match) {
             filename = match[1];
         } else {
-            filename = `download.blob`;
+            filename = `download.${unknownDispositionExtension}`;
         }
 
         // Trigger download
@@ -61,10 +62,13 @@ export class BeaconClient {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
         URL.revokeObjectURL(link.href);
     }
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
+        await wasmInit(PARQUET_WASM_URL);
+
         const endpoint = `${this.host}/api/query`;
 
         // Create a request to the Beacon API using fetch
@@ -87,7 +91,7 @@ export class BeaconClient {
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
         if (typeof query.output.format === 'object' && 'geoparquet' in query.output.format) {
-            const geoOutput = query.output as Extract<Output, { format: { geoparquet: unknown } }>;
+            const geoOutput = query.output as { format: GeoParquetOutputFormat};
             const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
             if (!longitude_column || !latitude_column) {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
@@ -104,7 +108,13 @@ export class BeaconClient {
 
         switch (query.output.format) {
             case 'parquet': {
-                throw new Error("Parquet format not implemented yet");
+                // Return the arrow table with geoparquet format
+                return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
+                    return {
+                        kind: 'parquet',
+                        arrow_table: arrow_table,
+                    }
+                });
             }
             case 'arrow':
             case 'ipc': {
@@ -361,18 +371,21 @@ export class BeaconClient {
         });
     }
 
-    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
         try {
-            const wasmTable = readParquet(buffer);
+            const wasmTable = readParquet(buffer, {
+                batchSize: 128000
+            });
             return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
-        } catch {
+        } catch (error){
+            console.error(error);
             return Err("Failed to read buffer as Parquet");
         }
     }
 
-    static readArrowAsArrowTable(buffer: Uint8Array): Result<arrow_table.Table, string> {
+    static readArrowAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
         try {
-            const jsTable = tableFromIPC(buffer);
+            const jsTable = ApacheArrow.tableFromIPC(buffer);
             return Ok(jsTable);
         } catch {
             return Err("Failed to read buffer as Arrow");

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { OptionsFilterColumn } from '@/beacon-api/models/preset_table';
+	import type { OptionsFilterColumn } from '@/beacon-api/types';
 
 	const { filter } = $props<{
 		filter: OptionsFilterColumn;

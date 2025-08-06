@@ -1,107 +1,88 @@
 <script lang="ts">
-	import LoadingSpinner from '$lib/components/ui/loading-spinner.svelte';
 	import { browser } from '$app/environment';
-	import { onMount } from 'svelte';
-	import wasmInit, { readParquet } from 'parquet-wasm';
+	import { onDestroy, onMount } from 'svelte';
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
 	import type { PickingInfo } from '@deck.gl/core';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
-	import {
-		Table,
-		tableFromIPC,
-		vectorFromArray,
-		type TypeMap,
-		tableFromArrays
-	} from 'apache-arrow';
 	import * as d3 from 'd3';
-	import {
-		interpolateBrBG,
-		interpolatePuOr,
-		interpolateRdYlBu,
-		interpolateViridis,
-		interpolateMagma
-	} from 'd3-scale-chromatic';
-	import { scaleSequential } from 'd3-scale';
+	import { interpolatePuOr } from 'd3-scale-chromatic';
+	import { scaleSequential, type ScaleSequential } from 'd3-scale';
 	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import BeaconMapQueryModal from '@/components/modals/BeaconMapQueryModal.svelte';
-	import { QueryControl } from '@/components/map-controls/query-control/QueryControl';
-	import { add } from 'date-fns';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
+	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
+	import { addToast } from '@/stores/toasts';
+	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { BeaconClient } from '@/beacon-api/client';
+	import { page } from '$app/state';
+	import { ApacheArrowUtils, Utils } from '@/utils';
+	import * as ApacheArrow from 'apache-arrow';
+	import type { CompiledQuery, GeoParquetOutputFormat, QueryResponse, QueryResponseKind, Select as QuerySelect } from '@/beacon-api/types';
+	import MapInfo from '@/components/map-info.svelte';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { ArrowWorkerManager } from '@/workers/ArrowWorkerManagager';
+	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend.svelte';
+	
+	const arrowWorker: ArrowWorkerManager = new ArrowWorkerManager();
+	
 
-	const GEOARROW_POINT_DATA = '/era5.geoparquet';
-	const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
-
+	let query: CompiledQuery | undefined = $state(undefined);
+	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+	let client: BeaconClient;
 	let map: maplibregl.Map | null = null;
+	let layer: GeoArrowScatterplotLayer | null = null;
 	let deckOverlay: DeckOverlay | null = null;
-	let loading = $state(true);
-	let table: Table | null = null;
 	let onClickInfo: PickingInfo | null = null;
 	let onClickClose: boolean = false;
-	let showQueryModal = $state(false);
-	let beaconQuery = $state({
-		query_parameters: [
-			{
-				column_name: '',
-				alias: 'Value'
-			},
-			{
-				column_name: '',
-				alias: 'Time'
-			},
-			{
-				column_name: '',
-				alias: 'Depth'
-			},
-			{
-				column_name: '',
-				alias: 'Latitude'
-			},
-			{
-				column_name: '',
-				alias: 'Longitude'
-			}
-		],
-		filters: [
-			{
-				for_query_parameter: 'Time',
-				min: 1577836800, // Example min timestamp (2020-01-01)
-				max: Date.now() / 1000 // Use current time as max
-			},
-			{
-				for_query_parameter: 'Depth',
-				min: 0,
-				max: 5
-			}
-		],
-		output: {
-			format: {
-				geoparquet: {
-					longitude_column: 'Longitude',
-					latitude_column: 'Latitude'
-				}
-			}
+	let originalTable: ApacheArrow.Table | null = null; //current data table that is being displayed
+	let table: ApacheArrow.Table | null = null; //current data table that is being displayed
+	let table_kind: QueryResponseKind | null = $state(null);
+	let amountOfRows: number = $state(0);
+	let isLoading = $state(true);
+	let firstLoad = $state(true);
+	let editQueryModalOpen = $state(false);
+	let editQueryString = $state('');
+	let availableColumnNames: string[] = $state([]);
+	let selectedDataColumnName: string = $state(undefined);
+	let latitudeColumnName = 'latitude';
+	let longitudeColumnName = 'longitude';
+
+	let colorScaleMin: number = $state(-1000);
+	let colorScaleMax: number = $state(1000);
+
+	let colorScale: ScaleSequential<number, never> = $state(scaleSequential(interpolatePuOr).domain([-1000, 1000]));
+
+	$effect(() =>{
+		if(colorScale && layer) {
+			layer.setNeedsRedraw();
 		}
 	});
 
-	const colorScale = scaleSequential(interpolatePuOr).domain([273, 313]);
-
-	onMount(() => {
-		onAsyncMount();
-
-		return () => {
-			if (map) {
-				map.remove();
-				map = null;
-			}
-		};
+	$effect(() => {
+		if(selectedDataColumnName){
+			addGeoArrowLayer();
+		}
 	});
 
-	async function onAsyncMount() {
+
+	onMount(async () => {
 		if (!browser) return;
 
-		await wasmInit(PARQUET_WASM_URL);
+		currentBeaconInstanceValue = $currentBeaconInstance;
+		client = BeaconClient.new(currentBeaconInstanceValue);
 
+		initMap();
+	});
+
+	onDestroy(() => {
+		if (map) {
+			map.remove();
+			map = null;
+		}
+	});
+
+	function initMap(){
 		map = new maplibregl.Map({
 			container: 'deck-gl-map',
 			style: 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json',
@@ -111,26 +92,190 @@
 			pitch: 0
 		});
 
-		const editQueryControl = new QueryControl({
-			onEditClick: () => {
-				showQueryModal = !showQueryModal;
-			},
-			onReRunClick: () => {
-				// Handle re-run click
-			}
-		});
-
-		map.addControl(editQueryControl);
 		map.addControl(new maplibregl.NavigationControl());
+
 		map.once('load', () => {
-			addGeoArrowLayer();
+			getUrlSuppliedQuery();
 		});
 	}
 
-	async function addGeoArrowLayer() {
-		console.log('Adding GeoArrow layer to map...');
+	function getUrlSuppliedQuery() {
+		const urlSuppliedQuery = page.url.searchParams.get('query');
 
-		let layer = await createGeoArrowLayer();
+		if (urlSuppliedQuery) {
+			try {
+				query = Utils.gzipStringToObject(urlSuppliedQuery);
+				query.output.format = 'parquet';
+			} catch (error) {
+				console.error('Failed to decode query:', error);
+			}
+		}
+
+		if (query) {
+			// Use the decoded query for your logic
+			executeAndDisplayQuery();
+		} else {
+			// TODO: Ask user for query json
+			isLoading = false;
+			editQueryString = '{ "message": "Enter a JSON query" }';
+			editQueryModalOpen = true;
+		}
+	}
+
+	async function executeAndDisplayQuery() {
+		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+
+		firstLoad = false;
+		isLoading = true;
+
+		try {
+			changeQueryOutputToGeoparquet();
+			await executeQuery();
+			await prepareTableForDisplay();
+		} catch (error) {
+			console.error(error);
+			isLoading = false;
+			addToast({
+				type: 'error',
+				message: `Failed to execute query: ${error.message}`
+			});
+		}
+		
+	}
+
+	function changeQueryOutputToGeoparquet(){
+		
+		availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
+			return param.alias ?? param.column;
+		});
+
+		let latitudeColumnSelect = query.query_parameters.find((param: QuerySelect) => {
+			return (param.alias ?? param.column).toLowerCase().includes('latitude');
+		});
+
+		let longitudeColumnSelect = query.query_parameters.find((param: QuerySelect) => {
+			return (param.alias ?? param.column).toLowerCase().includes('longitude');
+		});
+
+		if (!latitudeColumnSelect || !longitudeColumnSelect) {
+			throw new Error('Query must contain Latitude and Longitude columns (or columns containing these words (case insensitive))');
+		}
+
+		let newOutputFormat: GeoParquetOutputFormat = {
+			geoparquet: {
+				latitude_column: latitudeColumnSelect.alias ?? latitudeColumnSelect.column,
+				longitude_column: longitudeColumnSelect.alias ?? longitudeColumnSelect.column
+			}
+		};
+
+		latitudeColumnName= newOutputFormat.geoparquet.latitude_column;
+		longitudeColumnName = newOutputFormat.geoparquet.longitude_column;
+
+		console.log('changeQueryOutputToGeoparquet', {
+			latitudeColumnName,
+			longitudeColumnName,
+		});
+
+		query.output.format = newOutputFormat;
+	}
+
+
+	async function executeQuery() {
+
+		const result = await client.query(query);
+
+		if (result.isErr()) {
+			console.error(result.unwrapErr());
+			addToast({
+				type: 'error',
+				message: `Failed to execute query: ${result.unwrapErr()}`
+			});
+		}
+
+		const queryResponse: QueryResponse = result.unwrap();
+
+		if (queryResponse.kind == 'error') {
+			console.error(queryResponse.error_message);
+			addToast({
+				type: 'error',
+				message: `Failed to execute query: ${queryResponse.error_message}`
+			});
+			return;
+		}
+
+		if (!('arrow_table' in queryResponse)) {
+			console.error('Unexpected query result format:', queryResponse);
+			addToast({
+				type: 'error',
+				message: `Unexpected query result format`
+			});
+			return;
+		}
+		
+		originalTable = queryResponse.arrow_table;
+		amountOfRows = originalTable.numRows;
+		table_kind = queryResponse.kind;
+
+		
+
+		// console.log('Query result received successfully.', queryResponse.arrow_table.schema);
+	}
+
+
+	async function prepareTableForDisplay(){
+		if(!originalTable){
+			addToast({
+				type: 'error',
+				message: 'No table data available to display.'
+			});
+			return;
+		}
+
+		try {
+			table = await arrowWorker.deduplicateTable(originalTable, latitudeColumnName, longitudeColumnName, amountOfRows);
+
+		} catch(error) {
+			addToast({
+				type: 'error',
+				message: `Failed to group dataset by lat/lon: ${error.message}`
+			});
+			return;
+		}
+
+		isLoading = false;
+
+		if(!selectedDataColumnName){
+			addToast({
+				type: 'info',
+				message: 'Select a data column to display on the map.'
+			});
+		}
+	
+	}
+
+	let currentDataColumnName: string | undefined = undefined;
+
+	async function addGeoArrowLayer() {
+
+		if(!selectedDataColumnName) return;
+
+		if(selectedDataColumnName === currentDataColumnName) {
+			console.log('Selected data column is the same as before, skipping layer update.');
+			return;
+		} else {
+			currentDataColumnName = selectedDataColumnName;
+		}
+
+		console.log('Adding GeoArrow layer to map...', selectedDataColumnName);
+
+		isLoading = true;
+
+		if (deckOverlay) {
+			map.removeControl(deckOverlay);
+			deckOverlay = null;
+		}
+
+		layer = await createGeoArrowLayer();
 
 		deckOverlay = new DeckOverlay({
 			interleaved: true,
@@ -139,24 +284,27 @@
 
 		map.addControl(deckOverlay);
 
-		// const tableBounds = getTableGeometryBounds(table);
+		const tableBounds = ApacheArrowUtils.getTableGeometryBounds(table, latitudeColumnName, longitudeColumnName);
 
-		// setTimeout(() => {
-		// 	map.fitBounds(tableBounds, {
-		// 		padding: { top: 50, bottom: 50, left: 50, right: 50 }
-		// 	});
+		map.fitBounds(tableBounds, {
+			padding: { top: 50, bottom: 50, left: 50, right: 50 }
+		});
 
-		// 	loading = false;
-		// }, 150);
-		loading = false;
+		isLoading = false;
+
 		console.log('GeoArrow layer added successfully');
 	}
 
 	async function createGeoArrowLayer(): Promise<GeoArrowScatterplotLayer> {
-		table = await fetchData(new Request(GEOARROW_POINT_DATA), false);
 
 		if (!table) {
 			throw new Error('Table is not loaded');
+		}
+
+		if(selectedDataColumnName && colorScaleMin == SCALE_DEFAULT_MIN && colorScaleMax == SCALE_DEFAULT_MAX){
+			const minMax = await arrowWorker.getColumnMinMax(originalTable, selectedDataColumnName);
+			colorScaleMin = minMax.min;
+			colorScaleMax = minMax.max;
 		}
 
 		return new GeoArrowScatterplotLayer({
@@ -164,30 +312,13 @@
 			data: table,
 			// Pre-computed colors in the original table
 			opacity: 1,
+			radiusMinPixels: 3,
 			radiusUnits: 'meters',
-
-			getFillColor: (d) => {
-				const row = d.data.data.get(d.index);
-				if (!row) {
-					return [0, 0, 0, 0]; // Default to transparent black if row is undefined
-				}
-
-				const value = row['t2m'];
-				// Check if value if a number
-				if (typeof value !== 'number' || isNaN(value)) {
-					return [0, 0, 0, 0]; // Default to transparent black if value is not a number
-				}
-				const color = d3.color(colorScale(value))?.rgb(); // returns RGB object
-				// console.log('Color for value', value, ':', color);
-				if (!color) {
-					return [0, 0, 0, 0]; // Default to black if color is not defined
-				}
-				return [color.r, color.g, color.b, 192];
-			},
-			getRadius: 50000,
-			radiusMaxPixels: 2,
-			pickable: false,
-			autoHighlight: false,
+			getFillColor: getFillColor,
+			getRadius: 100,
+			radiusMaxPixels: 20,
+			pickable: true,
+			autoHighlight: true,
 			highlightColor: [255, 255, 0, 128], // Yellow highlight color
 			onClick: (info) => {
 				console.log('Clicked on point:', info);
@@ -198,149 +329,128 @@
 				}
 				onClickClose = true;
 				onClickInfo = info;
+			},
+			updateTriggers: {
+				getFillColor: [colorScale, selectedDataColumnName]
 			}
 		});
 	}
 
-	async function loadParquetFile<T extends TypeMap = any>(
-		url: string | URL | Request,
-		init: RequestInit = null
-	): Promise<Table<T>> {
-		const data = await fetch(url, init);
-		const databuffer = await data.arrayBuffer();
-		const parquet_file = await readParquet(new Uint8Array(databuffer), {
-			batchSize: 128 * 1024
-		});
-		const arrow_stream = parquet_file.intoIPCStream();
-		const table: Table<T> = tableFromIPC<T>(arrow_stream);
 
-		return table;
+	function getFillColor(d){
+		const row = d.data.data.get(d.index);
+		if (!row) {
+			return [0, 0, 0, 0]; // Default to transparent black if row is undefined
+		}
+
+		const value = row[selectedDataColumnName];
+
+		// Check if value if a number
+		if (typeof value !== 'number' || isNaN(value)) {
+			return [0, 0, 0, 0]; // Default to transparent black if value is not a number
+		}
+
+		const color = d3.color(colorScale(value))?.rgb(); // returns RGB object
+
+		if (!color) {
+			return [0, 0, 0, 0]; // Default to black if color is not defined
+		}
+
+		return [color.r, color.g, color.b, 192];
 	}
 
-	async function fetchData<T extends TypeMap = any>(
-		url: string | URL | Request,
-		dedupe: boolean = true
-	): Promise<Table<T>> {
-		const table = await loadParquetFile<T>(url);
 
-		// return table;
-		if (!dedupe) {
-			return table;
-		}
+	function updateQuery(newQuery) {
+		query = newQuery;
+		
+		firstLoad = true;
+		isLoading = true;
 
-		return deduplicateTable<T>(table);
+		executeAndDisplayQuery();
 	}
 
-	function getTableGeometryBounds<T extends TypeMap = any>(
-		table: Table<T> | null
-	): [[number, number], [number, number]] {
-		if (!table) {
-			//return world bounds:
-			return [
-				[-180, -90],
-				[180, 90]
-			];
-		}
-		const latCol = table.getChild('Latitude');
-		const lonCol = table.getChild('Longitude');
-
-		if (!latCol || !lonCol) {
-			throw new Error('Table must contain Latitude and Longitude columns');
-		}
-
-		let minLat = Infinity;
-		let maxLat = -Infinity;
-		let minLon = Infinity;
-		let maxLon = -Infinity;
-		for (let i = 0; i < table.numRows; i++) {
-			const lat = latCol.get(i);
-			const lon = lonCol.get(i);
-			if (lat < minLat) minLat = lat;
-			if (lat > maxLat) maxLat = lat;
-			if (lon < minLon) minLon = lon;
-			if (lon > maxLon) maxLon = lon;
-		}
-
-		return [
-			[minLon, minLat],
-			[maxLon, maxLat]
-		];
+	function openEditQueryModal() {
+		editQueryString = JSON.stringify(query, null, 2);
+		editQueryModalOpen = true;
 	}
 
-	function deduplicateTable<T extends TypeMap = any>(
-		table: Table<T>,
-		latitudeColumn: string = 'Latitude',
-		longitudeColumn: string = 'Longitude'
-	): Table<T> {
-		console.log('Deduplicating table:', table.schema);
+	function closeEditQueryModal(save = true) {
+		editQueryModalOpen = false;
 
-		const latCol = table.getChild(latitudeColumn);
-		const lonCol = table.getChild(longitudeColumn);
-
-		const seen = new Set<string>();
-		const keepIndexes: number[] = [];
-
-		console.log(`Deduplicating ${table.numRows} rows based on Latitude and Longitude`);
-
-		// Efficiently iterate column-wise
-		for (let i = 0; i < table.numRows; i++) {
-			const lat: number = latCol?.get(i);
-			const lon: number = lonCol?.get(i);
-
-			// Optional: round coordinates to avoid floating-point noise
-			const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
-
-			if (!seen.has(key)) {
-				seen.add(key);
-				keepIndexes.push(i);
+		if (!save) {
+			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
+			if (confirmation) {
+				return;
 			}
 		}
 
-		console.log(`Deduplicated from ${table.numRows} to ${keepIndexes.length} rows`);
-
-		// 3. Rebuild each column as a JS array of the kept values
-		const dedupColumns: Record<string, any> = {};
-
-		for (const field of table.schema.fields) {
-			const name = field.name;
-			const col = table.getChild(name)!;
-			const values = keepIndexes.map((idx) => col.get(idx));
-			// For every row‐index in keepIdx, pull out col.get(idx)
-			dedupColumns[name] = vectorFromArray(values, field.type);
+		try {
+			const parsedQuery = JSON.parse(editQueryString);
+			updateQuery(parsedQuery);
+		} catch (error) {
+			addToast({
+				type: 'error',
+				message: `Failed to parse query JSON: ${error.message}`
+			});
+			return;
 		}
-
-		const deduped = tableFromArrays(dedupColumns);
-
-		(deduped as any).schema = table.schema; // Preserve original schema
-
-		// console.log('Deduplicated table schema:', deduped.schema);
-
-		return deduped; //ignore ts errors
 	}
 
-	$inspect('Beacon query: ', beaconQuery);
 </script>
 
 <svelte:head>
 	<title>Map - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[
-	{ label: 'Visualisations', href: '/visualisations' },
-	{ label: 'Map viewer', href: '/visualisations/map-viewer' }
-]} />
+<Cookiecrumb
+	crumbs={[
+		{ label: 'Visualisations', href: '/visualisations' },
+		{ label: 'Map viewer', href: '/visualisations/map-viewer' }
+	]}
+/>
 
 <div class="map-wrapper">
 	<div id="deck-gl-map" class="map"></div>
-	{#if loading}
+
+	<div class="map-info-wrapper">
+		<MapInfo onEditClick={openEditQueryModal}>
+			<p>Rows: {amountOfRows}</p>
+
+			<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
+				<Select.Trigger>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Label>Available columns</Select.Label>
+						{#each availableColumnNames as column}
+							<Select.Item value={column} label={column}>
+								{column}
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+
+			<br>
+
+			<Legend
+				bind:colorScaleMin
+				bind:colorScaleMax
+				bind:colorScale
+			/>
+
+
+		</MapInfo>
+	</div>
+
+	{#if isLoading}
 		<div class="loading-overlay">
 			<LoadingSpinner></LoadingSpinner>
 			<h3>Loading...</h3>
 		</div>
 	{/if}
 
-	{#if showQueryModal}
-		<BeaconMapQueryModal bind:query={beaconQuery} onClose={() => (showQueryModal = false)} />
+	{#if editQueryModalOpen}
+		<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
 	{/if}
 </div>
 
@@ -351,11 +461,19 @@
 		width: 100%;
 		height: 100%;
 
+		.map-info-wrapper {
+			position: absolute;
+			top: 0;
+			left: 0;
+			overflow-y: auto;
+			z-index: 10; // Ensure it overlays the map
+		}
+
 		.map {
 			z-index: 9;
 			height: 100%;
 			width: 100%;
-			border-radius: 0 0  calc(0.625rem + 4px) calc(0.625rem + 4px);
+			border-radius: 0 0 calc(0.625rem + 4px) calc(0.625rem + 4px);
 		}
 
 		.loading-overlay {

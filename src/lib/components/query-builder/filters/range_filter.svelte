@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { RangeFilterColumn } from '@/beacon-api/models/preset_table';
 	import Input from '@/components/ui/input/input.svelte';
 
 	let {
@@ -52,32 +51,32 @@
 		<p class="text-muted-foreground text-sm">From:</p>
 		{#if is_timestamp_filter}
 			<Input
-				class="w-fit"
+				class="w-[200px]"
 				type="datetime-local"
 				bind:value={timestamp_min_value}
 				onchange={(e) => (min_value = toUTCString(e.target.value))}
 			/>
 		{:else if is_number_filter}
-			<Input type="number" lang="en" step="any" bind:value={min_value} />
+			<Input type="number" lang="en" step="any" bind:value={min_value} class="w-[200px]" />
 		{:else if is_string_filter}
-			<Input type="text" bind:value={min_value} placeholder="Enter text" />
+			<Input type="text" bind:value={min_value} placeholder="Enter text" class="w-[200px]" />
 		{/if}
 	</div>
 	<div class="flex justify-between gap-4">
 		<p class="text-muted-foreground text-sm">To:</p>
 		{#if is_timestamp_filter}
 			<Input
-				class="w-fit"
+				class="w-[200px]"
 				type="datetime-local"
 				bind:value={timestamp_max_value}
 				onchange={(e) => (max_value = toUTCString(e.target.value))}
 			/>
 		{:else if is_number_filter}
 			<div>
-				<Input type="number" step="any" bind:value={max_value} />
+				<Input type="number" step="any" bind:value={max_value} class="w-[200px]"/>
 			</div>
 		{:else if is_string_filter}
-			<Input type="text" bind:value={max_value} placeholder="Enter text" />
+			<Input type="text" bind:value={max_value} placeholder="Enter text" class="w-[200px]"/>
 		{/if}
 	</div>
 </div>

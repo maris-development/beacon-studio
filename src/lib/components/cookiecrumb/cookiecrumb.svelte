@@ -30,6 +30,3 @@
         {/each}
     </Breadcrumb.List>
 </Breadcrumb.Root>
-
-<style lang="scss">
-</style>

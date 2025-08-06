@@ -3,9 +3,9 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import DataTable, { VirtualPaginationData, type Column } from '$lib/components/data-table.svelte';
+	import DataTable from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
-	import { Utils } from '@/utils';
+	import { Utils, VirtualPaginationData, type Column } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 
 	type Dataset = {
@@ -54,7 +54,7 @@
     function getPage() {
         offset = (pageIndex - 1) * pageSize;
 
-        const data = virtualSchemaData.getData(offset, pageSize);
+        const data = virtualSchemaData.getPageData(offset, pageSize);
         
         setData(data);
 
@@ -112,7 +112,7 @@
 
 	
 	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.log('Sorting by', column, 'in', direction, 'order');
+		console.log('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
 	}
 
 
@@ -133,7 +133,6 @@
 
 	<DataTable
 		rowClass="arrow-row"
-		defaultSort={{ column: 'dataset', direction: 'asc' }}
 		
 		{onChangeSort}
 		{onPageChange}

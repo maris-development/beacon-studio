@@ -5,14 +5,13 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import Card from '@/components/card/card.svelte';
 	import { onMount } from 'svelte';
-	import type { BeaconSystemInfo } from '@/beacon-api/models/misc';
+	import type { BeaconSystemInfo } from '@/beacon-api/types';
 
 	const UPDATE_INTERVAL = 1000; // 5 seconds
 
 	let currentBeaconInstanceValue: BeaconInstance | null = null;
 	let client: BeaconClient;
 	let systemInfo: BeaconSystemInfo | undefined = $state(undefined);
-	// $inspect(systemInfo);
 
 	onMount(() => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
