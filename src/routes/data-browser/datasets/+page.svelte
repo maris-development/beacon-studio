@@ -5,8 +5,9 @@
 	import { onMount } from 'svelte';
 	import DataTable from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
-	import { Utils, VirtualPaginationData, type Column } from '@/utils';
+	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import type { Column } from '@/util-types';
 
 	type Dataset = {
 		dataset: string;

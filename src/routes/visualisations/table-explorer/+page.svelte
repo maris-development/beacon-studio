@@ -3,7 +3,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import { onMount, tick } from 'svelte';
 	import { page } from '$app/state';
-	import { Utils, VirtualPaginationArrowTableData, type Column, type SortDirection } from '@/utils';
+	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
@@ -12,9 +12,10 @@
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
-	import { ArrowWorkerManager } from '@/workers/ArrowWorkerManagager';
+	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
+	import type { Column, SortDirection } from '@/util-types';
 
-	const arrowWorker: ArrowWorkerManager = new ArrowWorkerManager();
+	const arrowWorker: ArrowProcessingWorkerManagager = new ArrowProcessingWorkerManagager();
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);

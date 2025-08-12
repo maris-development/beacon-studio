@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { onDestroy, onMount } from 'svelte';
+	import { mount, onDestroy, onMount } from 'svelte';
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
 	import type { PickingInfo } from '@deck.gl/core';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
-	import * as d3 from 'd3';
+	import { color as d3Color } from 'd3-color';
 	import { interpolatePuOr } from 'd3-scale-chromatic';
 	import { scaleSequential, type ScaleSequential } from 'd3-scale';
-	import maplibregl from 'maplibre-gl';
+	import maplibregl, { Popup } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
@@ -16,27 +16,38 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { page } from '$app/state';
-	import { ApacheArrowUtils, Utils } from '@/utils';
+	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
 	import type { CompiledQuery, GeoParquetOutputFormat, QueryResponse, QueryResponseKind, Select as QuerySelect } from '@/beacon-api/types';
 	import MapInfo from '@/components/map-info.svelte';
+	import MapPopupContent from '@/components/map-popup-content.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { ArrowWorkerManager } from '@/workers/ArrowWorkerManagager';
+	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
 	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend.svelte';
 	
-	const arrowWorker: ArrowWorkerManager = new ArrowWorkerManager();
-	
+	import ArrowProcessingWorker from '$lib/workers/ArrowProcessingWorker?worker';
+	import { ApacheArrowUtils } from '@/arrow-utils';
 
-	let query: CompiledQuery | undefined = $state(undefined);
+	const GROUP_BY_DECIMALS = 3; // Number of decimals to group by for lat/lon (4 = 11m, 3 = 111m, 2 = 1111m, 1 = 11111m, 0 = 111111m)
+
+	const arrowWorker = new ArrowProcessingWorkerManagager();
+		
+
+	
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
+
+	let mapContainer: HTMLDivElement | null = null;
 	let map: maplibregl.Map | null = null;
 	let layer: GeoArrowScatterplotLayer | null = null;
 	let deckOverlay: DeckOverlay | null = null;
-	let onClickInfo: PickingInfo | null = null;
-	let onClickClose: boolean = false;
-	let originalTable: ApacheArrow.Table | null = null; //current data table that is being displayed
-	let table: ApacheArrow.Table | null = null; //current data table that is being displayed
+
+	let originalTable: ApacheArrow.Table | null = null; // original query data table 
+	let table: ApacheArrow.Table | null = null; // current data table that is being displayed (e.g. de-duplicated by lat/lon)
+	let mapPopup: maplibregl.Popup | null = null;
+
+	
+	let query: CompiledQuery | undefined = $state(undefined);
 	let table_kind: QueryResponseKind | null = $state(null);
 	let amountOfRows: number = $state(0);
 	let isLoading = $state(true);
@@ -50,8 +61,9 @@
 
 	let colorScaleMin: number = $state(-1000);
 	let colorScaleMax: number = $state(1000);
+	
 
-	let colorScale: ScaleSequential<number, never> = $state(scaleSequential(interpolatePuOr).domain([-1000, 1000]));
+	let colorScale: ScaleSequential<string, never> = $state(undefined);
 
 	$effect(() =>{
 		if(colorScale && layer) {
@@ -69,6 +81,11 @@
 	onMount(async () => {
 		if (!browser) return;
 
+		const worker = new ArrowProcessingWorker();
+		console.log(await worker.postMessage({ action: 'ping' }));
+
+
+
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
@@ -80,11 +97,12 @@
 			map.remove();
 			map = null;
 		}
+		arrowWorker.terminate();
 	});
 
 	function initMap(){
 		map = new maplibregl.Map({
-			container: 'deck-gl-map',
+			container: mapContainer,
 			style: 'https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json',
 			center: [0.45, 51.47],
 			zoom: 1,
@@ -94,7 +112,14 @@
 
 		map.addControl(new maplibregl.NavigationControl());
 
+		mapPopup = new maplibregl.Popup({
+			closeButton: true,
+			closeOnClick: false,
+			className: 'map-popup'
+		});
+
 		map.once('load', () => {
+			console.log('Map loaded successfully');
 			getUrlSuppliedQuery();
 		});
 	}
@@ -232,7 +257,7 @@
 		}
 
 		try {
-			table = await arrowWorker.deduplicateTable(originalTable, latitudeColumnName, longitudeColumnName, amountOfRows);
+			table = await arrowWorker.deduplicateTable(originalTable, latitudeColumnName, longitudeColumnName, amountOfRows, GROUP_BY_DECIMALS);
 
 		} catch(error) {
 			addToast({
@@ -315,30 +340,43 @@
 			radiusMinPixels: 3,
 			radiusUnits: 'meters',
 			getFillColor: getFillColor,
+			onClick: onPointClick,
+
 			getRadius: 100,
 			radiusMaxPixels: 20,
 			pickable: true,
 			autoHighlight: true,
 			highlightColor: [255, 255, 0, 128], // Yellow highlight color
-			onClick: (info) => {
-				console.log('Clicked on point:', info);
-				if (!info.object) {
-					onClickInfo = null;
-					onClickClose = false;
-					return;
-				}
-				onClickClose = true;
-				onClickInfo = info;
-			},
 			updateTriggers: {
 				getFillColor: [colorScale, selectedDataColumnName]
 			}
 		});
 	}
 
+	function onPointClick(info){
+		const data = info.object.toArray();
 
-	function getFillColor(d){
+		const mapPopupContent = Utils.renderComponent(MapPopupContent, {
+			data: data,
+			table: table,
+			latitudeColumnName,
+			longitudeColumnName,
+			groupByDecimals: GROUP_BY_DECIMALS
+		});
+
+		console.log('Point clicked:', info.coordinate);
+
+		mapPopup.remove();
+		mapPopup.setDOMContent(mapPopupContent);
+		mapPopup.setLngLat(info.coordinate);
+		mapPopup.addTo(map);
+	}
+
+
+	function getFillColor(d): [number, number, number, number]
+	{
 		const row = d.data.data.get(d.index);
+	
 		if (!row) {
 			return [0, 0, 0, 0]; // Default to transparent black if row is undefined
 		}
@@ -350,7 +388,7 @@
 			return [0, 0, 0, 0]; // Default to transparent black if value is not a number
 		}
 
-		const color = d3.color(colorScale(value))?.rgb(); // returns RGB object
+		const color = d3Color((colorScale(value) as any))?.rgb(); // returns RGB object
 
 		if (!color) {
 			return [0, 0, 0, 0]; // Default to black if color is not defined
@@ -410,8 +448,9 @@
 />
 
 <div class="map-wrapper">
-	<div id="deck-gl-map" class="map"></div>
-
+	<div bind:this={mapContainer} class="map">
+		
+	</div>
 	<div class="map-info-wrapper">
 		<MapInfo onEditClick={openEditQueryModal}>
 			<p>Rows: {amountOfRows}</p>
@@ -465,6 +504,7 @@
 			position: absolute;
 			top: 0;
 			left: 0;
+			overflow-x: hidden;
 			overflow-y: auto;
 			z-index: 10; // Ensure it overlays the map
 		}

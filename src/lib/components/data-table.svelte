@@ -2,10 +2,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
-	import type { Column, SortDirection } from '@/utils';
 	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';
+	import type { Column, SortDirection } from '@/util-types';
 
 
 

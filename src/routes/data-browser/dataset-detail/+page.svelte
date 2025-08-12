@@ -6,9 +6,10 @@
     import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
 	import DataTable from '$lib/components/data-table.svelte';
-	import { Utils, VirtualPaginationData, type Column } from '@/utils';
+	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
+	import type { Column } from '@/util-types';
 
     
     const file = page.url.searchParams.get('file') || '';

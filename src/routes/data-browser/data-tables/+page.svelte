@@ -6,7 +6,8 @@
 	import DataTable from '$lib/components/data-table.svelte';
   	import { goto } from '$app/navigation';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import { AffixString, type Column } from '@/utils';
+	import { AffixString } from '@/utils';
+	import type { Column } from '@/util-types';
 
 	
 
