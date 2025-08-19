@@ -24,7 +24,7 @@ export class ApacheArrowUtils {
         latitudeColumnName: string = 'Latitude',
         longitudeColumnName: string = 'Longitude',
         maxRows: number = 100
-    ): Record<string, unknown>[] {
+    ): unknown[] {
 
         const toKey = (lat: number, lon: number): string => {
             return `${lat.toFixed(groupByDecimals)},${lon.toFixed(groupByDecimals)}`;
@@ -32,21 +32,31 @@ export class ApacheArrowUtils {
 
         const latCol = table.getChild(latitudeColumnName);
         const lonCol = table.getChild(longitudeColumnName);
+        const rows = table.numRows;
+
+        // const amountOfFields = table.schema.fields.length;
+        
 
         if (!latCol || !lonCol) {
             throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
         }
 
-        const results: Record<string, unknown>[] = [];
+        const results: unknown[] = [];
         const searchKey = toKey(latLon[0], latLon[1]);
 
-        for (let i = 0; i < table.numRows && results.length < maxRows; i++) {
+        for (let i = 0; i < rows; i++) {
             const rowLat = latCol.get(i);
             const rowLon = lonCol.get(i);
             const rowKey = toKey(rowLat, rowLon);
 
             if (rowKey === searchKey) {
-                results.push(ApacheArrowUtils.arrayToRecord(table.get(i).toArray(), table.schema));
+
+                const rowData = table.get(i).toArray().copyWithin(5, 0);
+                results.push(rowData);
+
+                if(results.length >= maxRows) {
+                    break;
+                }
             }
         }
 
@@ -356,8 +366,6 @@ export class ApacheArrowUtils {
             amountOfRows = table.numRows;
         }
 
-        console.log(`Deduplicating ${amountOfRows} rows based on ${latitudeColumnName} and ${longitudeColumnName}`, table);
-
         const latCol = table.getChild(latitudeColumnName);
         const lonCol = table.getChild(longitudeColumnName);
 
@@ -378,7 +386,7 @@ export class ApacheArrowUtils {
             }
         }
 
-        console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows`,);
+        console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
 
         // 3. Rebuild each column as a JS array of the kept values
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -396,7 +404,6 @@ export class ApacheArrowUtils {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (deduped as any).schema = table.schema; // Preserve original schema
-
 
         return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
     }

@@ -3,77 +3,38 @@
 	import { cn } from "$lib/utils.js";
 
 	interface Props {
-		header?: Snippet;
 		children?: Snippet;
-		footer?: Snippet;
 		class?: string;
 		href?: string;
 		onClick?: () => void;
 	}
 
-	let { header, children, footer, class: cardClass, href, onClick }: Props = $props();
+	let { children, class: cardClass, href, onClick }: Props = $props();
 	let card: HTMLElement = $state(null);
-
 
 </script>
 
 {#if href}
 	<a class={cn("card clickable", cardClass)} href={href} bind:this={card}>
-		{#if header}
-			<div class="card-header">
-				{@render header()}
-			</div>
-		{/if}
-
 		{#if children}
 			<div class="card-content">
 				{@render children()}
-			</div>
-		{/if}
-
-		{#if footer}
-			<div class="card-footer">
-				{@render footer()}
 			</div>
 		{/if}
 	</a>
 {:else if onClick}
 	<button type="button" class={cn("card clickable", cardClass)} onclick={onClick} bind:this={card} >
-		{#if header}
-			<div class="card-header">
-				{@render header()}
-			</div>
-		{/if}
-
 		{#if children}
 			<div class="card-content">
 				{@render children()}
-			</div>
-		{/if}
-
-		{#if footer}
-			<div class="card-footer">
-				{@render footer()}
 			</div>
 		{/if}
 	</button>
 {:else}
 	<div class={cn("card", cardClass)} bind:this={card}>
-		{#if header}
-			<div class="card-header">
-				{@render header()}
-			</div>
-		{/if}
-
 		{#if children}
 			<div class="card-content">
 				{@render children()}
-			</div>
-		{/if}
-
-		{#if footer}
-			<div class="card-footer">
-				{@render footer()}
 			</div>
 		{/if}
 	</div>

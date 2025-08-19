@@ -67,6 +67,10 @@
 					{
 						title: 'Table Explorer',
 						url: '/visualisations/table-explorer'
+					},
+					{
+						title: 'Graph Explorer',
+						url: '/visualisations/chart-explorer'
 					}
 				]
 			},

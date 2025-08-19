@@ -25,22 +25,18 @@
 		</Tabs.List>
 		<Tabs.Content value="easy-builder">
 			<Card>
-				{#snippet header()}
-					<h1 class="title">Easy Query Builder</h1>
-					<p class="description">
-						Use this simple form to build your queries. It&apos;s great for quick tasks.
-					</p>
-				{/snippet}
+				<h1 class="title">Easy Query Builder</h1>
+				<p class="description">
+					Use this simple form to build your queries. It&apos;s great for quick tasks.
+				</p>
 
 				<EasyQueryBuilder />
 			</Card>
 		</Tabs.Content>
 		<Tabs.Content value="advanced-builder">
 			<Card>
-				{#snippet header()}
-					<h1 class="title">Advanced Query Builder</h1>
-					<p class="description">Use this advanced form to build more complex queries.</p>
-				{/snippet}
+				<h1 class="title">Advanced Query Builder</h1>
+				<p class="description">Use this advanced form to build more complex queries.</p>
 
 				<AdvancedQueryBuilder />
 			</Card>

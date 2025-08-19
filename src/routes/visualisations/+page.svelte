@@ -30,6 +30,11 @@
 			<h2>Table explorer</h2>
 			<p>Explore your data in a tabular format. The table explorer allows for detailed examination and filtering of your dataset.</p>
 		</a>
+	
+		<a href="/visualisations/chart-explorer" class="function">
+			<h2>Chart explorer</h2>
+			<p>Explore your data using charts. The chart explorer allows for detailed examination and filtering of your dataset.</p>
+		</a>
 
 
     </div>

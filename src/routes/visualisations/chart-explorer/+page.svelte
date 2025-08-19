@@ -8,31 +8,20 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
-	import DataTable from '@/components/data-table.svelte';
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
-	import type { Column, SortDirection } from '@/util-types';
-
-	const arrowWorker: ArrowProcessingWorkerManagager = new ArrowProcessingWorkerManagager();
+	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let table: ApacheArrow.Table | null = $state(null); // The table data returned from the query
 	let table_kind: QueryResponseKind | null = $state(null);
-    let queryDurationMs: number | null = $state(null);
-
-
-	let virtualPaginationData: VirtualPaginationArrowTableData = new VirtualPaginationArrowTableData();
-	let columns: Column[] = $state([]);
-	let displayRows: Record<string, any>[] = $state([]); //currently displayed rows
+	let queryDurationMs: number | null = $state(null);
 
 	let totalRows: number = $state(0);
-	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let offset = $state(0);
-	let pageSize: number = $state(20);
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
 
@@ -41,25 +30,24 @@
 	let editQueryString = $state('');
 
 	onMount(async () => {
-		
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
 		getUrlSuppliedQuery();
 	});
 
-	async function getUrlSuppliedQuery(){
+	function getUrlSuppliedQuery() {
 		query = Utils.getUrlSuppliedQuery();
 
 		if (query) {
+			query.output.format = 'parquet'; // Ensure the output format is set to parquet
+
 			// Use the decoded query for your logic
 			executeAndDisplayQuery();
-
 		} else {
 			// TODO: Ask user for query json
 			editQueryString = '{ "message": "Enter a JSON query" }';
 			editQueryModalOpen = true;
-
 		}
 	}
 
@@ -75,24 +63,23 @@
 		} catch (error) {
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${error.message}`
+				message: `3 Failed to execute query: ${error.message}`
 			});
 		}
-		
 	}
 
 	async function executeQuery() {
 		const startTime = performance.now();
 		const result = await client.query(query);
-        const endTime = performance.now();
-        
-        queryDurationMs = endTime - startTime;
+		const endTime = performance.now();
+
+		queryDurationMs = endTime - startTime;
 
 		if (result.isErr()) {
 			console.error(result.unwrapErr());
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${result.unwrapErr()}`
+				message: `1 Failed to execute query: ${result.unwrapErr()}`
 			});
 		}
 
@@ -102,7 +89,7 @@
 			console.error(queryResponse.error_message);
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${queryResponse.error_message}`
+				message: `2 Failed to execute query: ${queryResponse.error_message}`
 			});
 			return;
 		}
@@ -120,11 +107,10 @@
 		table_kind = queryResponse.kind;
 
 		console.log('Query result:', table);
-			
 	}
 
-	function prepareTableForDisplay(){
-		if(!table){
+	function prepareTableForDisplay() {
+		if (!table) {
 			addToast({
 				type: 'error',
 				message: 'No table data available to display.'
@@ -133,81 +119,23 @@
 		}
 
 		totalRows = table.numRows;
-		virtualPaginationData.setData(table);
-
-		columns = table.schema.fields.map((field) => ({
-			key: field.name,
-			header: Utils.ucfirst(field.name),
-			sortable: true
-		}));
-
-		getPage();
 	}
 
-	function onPageChange(newPageIndex: number) {
-		pageIndex = newPageIndex;
-		getPage();
-	}
-
-	async function onChangeSort(columnKey: string, direction: SortDirection) {
-		console.log('Sorting by', columnKey, 'in', direction, 'order');
-		
-		displayRows = [];
-		isLoading = true;
-
-		try {
-			const sortedTable = await arrowWorker.orderTableByColumn(table, columnKey, direction);
-
-			virtualPaginationData.setData(sortedTable);
-
-			getPage();
-
-		} catch(error) {
-			console.error('Error sorting table:', error);
-			addToast({
-				type: 'error',
-				message: `Failed to sort table: ${error.message}`
-			});
-		}
-			
-			
-
-
-	}
-
-	function getPage() {
-        offset = (pageIndex - 1) * pageSize;
-
-        const data = virtualPaginationData.getPageData(offset, pageSize);
-        
-        setData(data);
-
-        Utils.setPageUrlParameter(pageIndex);
-    }
-	
-	function setData(fields: Record<string, any>[]) {
-        displayRows = fields;
-
-        isLoading = false;
-    }
-
-	
-	function updateQuery(newQuery){
+	function updateQuery(newQuery) {
 		query = newQuery;
 		firstLoad = true;
 		isLoading = true;
 		executeAndDisplayQuery();
 	}
 
-
-	function openEditQueryModal(){
+	function openEditQueryModal() {
 		editQueryString = JSON.stringify(query, null, 2);
 		editQueryModalOpen = true;
 	}
 
 	function closeEditQueryModal(save = true) {
 		editQueryModalOpen = false;
-		
+
 		if (!save) {
 			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
 			if (confirmation) {
@@ -226,47 +154,60 @@
 			return;
 		}
 	}
-
-
-</script>	
+</script>
 
 <svelte:head>
-	<title>Table explorer - Beacon Studio</title>
+	<title>Chart explorer - Beacon Studio</title>
 </svelte:head>
 
-
 {#if editQueryModalOpen}
-	<EditQueryJsonModal bind:editQueryString={editQueryString} onClose={closeEditQueryModal} />
+	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
 {/if}
 
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },
-		{ label: 'Table explorer', href: '/visualisations/table-explorer' }
+		{ label: 'Chart explorer', href: '/visualisations/chart-explorer' }
 	]}
 />
 
 <div class="page-container">
-	<h1>Table explorer</h1>
+	<div class="header">
+		<h1>Chart explorer</h1>
 
-	<Button onclick={openEditQueryModal}>
-		Edit query JSON
-		<FileJson2Icon size=1rem />
-	</Button>
+		<Button onclick={openEditQueryModal}>
+			Edit query JSON
+			<FileJson2Icon size="1rem" />
+		</Button>
 
-	<p>
-		{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
-	</p>
+		<p>
+			{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(
+				queryDurationMs / 1000
+			)}.
+		</p>
 
-	<DataTable
-		{onPageChange}
-		{onChangeSort}
-		{columns}
-		rows={displayRows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
+		<p>
+			Below you can find a <a href="https://perspective.finos.org/" target="blank" rel="noopener noreferrer">Perspective viewer</a> that allows you to explore the query results interactively.
 
+			By default it opens a table, but you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure' button in the top right.
+		</p>
+	</div>
+
+	<div class="viewer">
+		<GraphViewer class="flex-1" {table} />
+	</div>
 </div>
+
+<style lang="scss">
+	.page-container {
+		flex-grow: 1;
+		display: flex;
+		flex-direction: column;
+
+		.viewer {
+			flex-grow: 1;
+			display: flex;
+			flex-direction: column;
+		}
+	}
+</style>

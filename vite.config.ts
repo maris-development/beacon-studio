@@ -5,11 +5,24 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
 	plugins: [
-		tailwindcss(), 
-		sveltekit(), 
+		tailwindcss(),
+		sveltekit(),
 		devtoolsJson()
 	],
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
+	},
+	optimizeDeps: {
+		esbuildOptions: {
+			target: 'esnext',
+			supported: { 'top-level-await': true }
+		}
+	},
+	esbuild: {
+		target: 'esnext',
+		supported: { 'top-level-await': true }
+	},
+	build: {
+		target: 'esnext' 
 	}
 });

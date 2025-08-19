@@ -19,7 +19,7 @@ type FindSimilarRowByLatLonRequest = {
 type FindSimilarRowByLatLonResponse = {
     id: number;
     action: 'findSimilarRowsByLatLon';
-    result: Record<string, unknown>[];
+    result: unknown[];
 }
 
 //order table by column
@@ -153,6 +153,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
                     payload.maxRows
                 )
             };
+
             self.postMessage(response);
             break;
         }

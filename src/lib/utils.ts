@@ -4,12 +4,13 @@ import { clsx, type ClassValue } from "clsx";
 import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
-import type { DataType, Filter } from "./beacon-api/types";
+import type { CompiledQuery, DataType, Filter } from "./beacon-api/types";
 import type { ParameterFilterType } from "./components/query-builder/advanced-parameter-filter.svelte";
 import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';
-import type { SortDirection } from './util-types';
+import type { Rendered, SortDirection } from './util-types';
+import { page } from '$app/state';
 
 
 // import * as aq from 'arquero';
@@ -19,20 +20,41 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
 
+
 export class Utils {
+    static getUrlSuppliedQuery(): CompiledQuery | null {
+        const urlSuppliedQuery = page.url.searchParams.get('query');
+
+        let query: CompiledQuery | null = null;
+
+        if (urlSuppliedQuery) {
+            try {
+                query = Utils.gzipStringToObject(urlSuppliedQuery);
+            } catch (error) {
+                console.error('Failed to decode query:', error);
+            }
+        }
+
+        return query;
+    }
 
     static renderComponent<T extends Record<string, unknown>>(
         component: Component<T, Record<string, unknown>, string>,
         props: T = {} as T
-    ): HTMLElement {
+    ): Rendered {
         const container = document.createElement('div');
 
-        mount(component, {
+        const handle = mount(component, {
             target: container,
             props: props
         });
+    
 
-        return container.firstElementChild as HTMLElement;
+        return {
+            element: container,
+            handle,
+            container
+        };
     }
 
     static setPageUrlParameter(pageIndex: number, parameterName: string = 'page') {
@@ -162,6 +184,56 @@ export class Utils {
         }
     }
 
+    static formatBytes(bytes: number, decimals = 2): string {
+		if (bytes === 0) return '0 Bytes';
+
+		const k = 1024;
+		const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+		const value = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
+		return `${value} ${sizes[i]}`;
+	}
+
+    static formatSecondsToReadableTime(totalSeconds: number): string {
+		const units = [
+			{ label: 'months', value: 60 * 60 * 24 * 30 },
+			{ label: 'days', value: 60 * 60 * 24 },
+			{ label: 'hours', value: 60 * 60 },
+			{ label: 'minutes', value: 60 },
+			{ label: 'seconds', value: 1 }
+		];
+
+        //get decimals, times 1000:
+        const totalMilliseconds: number = (totalSeconds % 1) * 1000;
+
+        if(totalSeconds < 60){
+            return `${Math.floor(totalSeconds)}.${String(totalMilliseconds.toFixed(0)).padStart(3, '0')}s`;
+        }
+
+        const values: number[] = [];
+
+		for (const unit of units) {
+			const amount = Math.floor(totalSeconds / unit.value);
+			values.push(amount);
+			totalSeconds %= unit.value;
+		}
+
+		// Remove leading zeros, but leave at least minutes and seconds
+		while (values.length > 2 && values[0] === 0) {
+			values.shift();
+		}
+
+		let timeString = values.map((v) => String(v).padStart(2, '0')).join(':');
+
+        if (totalMilliseconds > 0) {
+            const milliseconds = Math.floor(totalMilliseconds);
+            timeString += `.${String(milliseconds).padStart(3, '0')}`;
+        }
+
+		return timeString;
+	}
+
     static ucfirst(str: string): string {
         if (!str) return str;
         return str.charAt(0).toUpperCase() + str.slice(1);
@@ -188,6 +260,71 @@ export class Utils {
         const decompressed = pako.ungzip(compressedData, { to: 'string' });
         return JSON.parse(decompressed) as T;
     }
+
+    static orderTableByColumn<Row = unknown>(data: Row[], column: keyof Row, direction: SortDirection): Row[] {
+
+        let isNumeric = false;
+        let isBoolean = false;
+        let isObject = false;
+        let isString = false;
+
+        if (data.length > 0) {
+            const firstRow = data[0];
+            const value = firstRow[column];
+
+            isNumeric = typeof value === 'number';
+            isBoolean = typeof value === 'boolean';
+            isObject = typeof value === 'object';
+            isString = typeof value === 'string';
+        }
+
+        if(isObject){
+            console.warn('Sorting column with values of type object is not supported.');
+            return data;
+        }
+
+        if (isNumeric) {
+            data.sort((a, b) => {
+                const aValue = a[column] as number;
+                const bValue = b[column] as number;
+
+                if (direction === 'asc') {
+                    return aValue - bValue;
+                } else {
+                    return bValue - aValue;
+                }
+            });
+
+        } else if(isBoolean){
+            data.sort((a, b) => {
+                const aValue = a[column] as boolean;
+                const bValue = b[column] as boolean;
+
+                if (direction === 'asc') {
+                    return aValue === bValue ? 0 : aValue ? 1 : -1;
+                } else {
+                    return aValue === bValue ? 0 : aValue ? -1 : 1;
+                }
+            });
+
+        } else if(isString) {
+            data.sort((a, b) => {
+                const aValue = a[column] as string;
+                const bValue = b[column] as string;
+
+                if (direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
+                }
+            });
+
+        }
+
+
+
+        return data.copyWithin(data.length, 0);
+    }
 }
 
 export class AffixString {
@@ -211,6 +348,9 @@ export class VirtualPaginationData<Row> {
     data: Row[];
     length: number;
 
+    sortColumn: keyof Row | null = null;
+    sortDirection: SortDirection | null = null;
+
     constructor(data: Row[]) {
         this.originalData = data;
         this.data = data;
@@ -227,6 +367,7 @@ export class VirtualPaginationData<Row> {
         this.length = data.length;
     }
 
+
     filter(predicate: (item: Row) => boolean): number {
         this.data = this.originalData.filter(predicate);
         this.length = this.data.length;
@@ -237,6 +378,18 @@ export class VirtualPaginationData<Row> {
         this.data = this.originalData;
         this.length = this.data.length;
         return this.length;
+    }
+
+    orderBy(column: keyof Row, direction: SortDirection) {
+        this.sortColumn = column;
+        this.sortDirection = direction;
+
+
+        this.data = Utils.orderTableByColumn(
+            this.data,
+            column,
+            direction,
+        );
     }
 }
 

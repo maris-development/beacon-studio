@@ -9,7 +9,7 @@
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
-	import type { Column } from '@/util-types';
+	import type { Column, SortDirection } from '@/util-types';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
@@ -20,14 +20,14 @@
     let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
-    let columns: Column[] = [
-        { key: 'name', header: 'Field', sortable: false },
-        { key: 'data_type', header: 'Data Type', sortable: false },
-        { key: 'nullable', header: 'Nullable', sortable: false },
-        { key: 'dict_id', header: 'Dictionary ID', sortable: false },
-        { key: 'dict_is_ordered', header: 'Is Ordered', sortable: false },
+    let columns: Column[] = $state([
+        { key: 'name', header: 'Field', sortable: true },
+        { key: 'data_type', header: 'Data Type', sortable: true },
+        { key: 'nullable', header: 'Nullable', sortable: true },
+        { key: 'dict_id', header: 'Dictionary ID', sortable: true },
+        { key: 'dict_is_ordered', header: 'Is Ordered', sortable: true },
         { key: 'metadata', header: 'Metadata', sortable: false }
-    ];
+    ]);
     let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
 	let rows: SchemaField[] = $state([]);
 
@@ -108,7 +108,12 @@
         getPage();
     }
 
+	function onChangeSort(column: keyof SchemaField, direction: SortDirection) {
 
+		virtualSchemaData.orderBy(column, direction);
+
+		getPage();
+	}
 
 </script>
 
@@ -126,6 +131,7 @@
 
     <DataTable
         {onPageChange}
+        {onChangeSort}
 		{columns}
 		{rows}
 		{totalRows}

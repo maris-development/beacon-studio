@@ -6,6 +6,7 @@
 	import Card from '@/components/card/card.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
+	import { Utils } from '@/utils';
 
 	const UPDATE_INTERVAL = 1000; // 5 seconds
 
@@ -45,42 +46,6 @@
 			console.error('Error fetching Beacon system info:', error);
 		}
 	}
-
-	function formatBytes(bytes: number, decimals = 2): string {
-		if (bytes === 0) return '0 Bytes';
-
-		const k = 1024;
-		const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-		const value = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
-		return `${value} ${sizes[i]}`;
-	}
-
-	function formatSecondsToReadableTime(totalSeconds: number): string {
-		const units = [
-			{ label: 'months', value: 60 * 60 * 24 * 30 },
-			{ label: 'days', value: 60 * 60 * 24 },
-			{ label: 'hours', value: 60 * 60 },
-			{ label: 'minutes', value: 60 },
-			{ label: 'seconds', value: 1 }
-		];
-
-		const values: number[] = [];
-
-		for (const unit of units) {
-			const amount = Math.floor(totalSeconds / unit.value);
-			values.push(amount);
-			totalSeconds %= unit.value;
-		}
-
-		// Remove leading zeros, but leave at least minutes and seconds
-		while (values.length > 2 && values[0] === 0) {
-			values.shift();
-		}
-
-		return values.map((v) => String(v).padStart(2, '0')).join(':');
-	}
 </script>
 
 <svelte:head>
@@ -107,126 +72,101 @@
 	<div class="system-info-flex">
 		<div class="system-info-grid">
 			<Card>
-				{#snippet header()}
-					<span class="description muted">Beacon Version</span>
-					<div class="title">{systemInfo?.beacon_version}</div>
-				{/snippet}
-
-				{#snippet footer()}
-					{#if systemInfo?.system_info != null}
-						<div>System uptime: {formatSecondsToReadableTime(systemInfo.system_info.uptime)}</div>
-					{/if}
-				{/snippet}
+				<span class="description muted">Beacon Version</span>
+				<div class="title">{systemInfo?.beacon_version}</div>
+				{#if systemInfo?.system_info != null}
+					<div>
+						System uptime: {Utils.formatSecondsToReadableTime(systemInfo.system_info.uptime)}
+					</div>
+				{/if}
 			</Card>
 
 			{#if systemInfo?.system_info != null}
 				<Card>
-					{#snippet header()}
-						<span class="description muted">System CPU Usage</span>
-						<div class="title">{(systemInfo.system_info.global_cpu_usage * 100).toFixed(1)}%</div>
-					{/snippet}
+					<span class="description muted">System CPU Usage</span>
+					<div class="title">{(systemInfo.system_info.global_cpu_usage * 100).toFixed(1)}%</div>
 
-					{#snippet footer()}
-						<div class="muted">
-							{systemInfo.system_info.physical_core_count} Physical Cores
-						</div>
-					{/snippet}
+					<div class="muted">
+						{systemInfo.system_info.physical_core_count} Physical Cores
+					</div>
 				</Card>
 
 				<Card>
-					{#snippet header()}
-						<span class="description muted">System Memory Usage</span>
-						<div class="title">{formatBytes(systemInfo.system_info.used_memory)}</div>
-					{/snippet}
+					<span class="description muted">System Memory Usage</span>
+					<div class="title">{Utils.formatBytes(systemInfo.system_info.used_memory)}</div>
 
-					{#snippet footer()}
-						<div>{formatBytes(systemInfo.system_info.total_memory)} Total</div>
-						<div class="muted">
-							{(
-								(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory) *
-								100
-							).toFixed(1)}% Used
-						</div>
-						<div class="muted">
-							{formatBytes(systemInfo.system_info.free_memory)} Free
-						</div>
-					{/snippet}
+					<div>{Utils.formatBytes(systemInfo.system_info.total_memory)} Total</div>
+					<div class="muted">
+						{(
+							(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory) *
+							100
+						).toFixed(1)}% Used
+					</div>
+					<div class="muted">
+						{Utils.formatBytes(systemInfo.system_info.free_memory)} Free
+					</div>
 				</Card>
 
 				<Card>
-					{#snippet header()}
-						<span class="description muted">System Swap Usage</span>
-						<div class="title">{formatBytes(systemInfo.system_info.used_swap)}</div>
-					{/snippet}
+					<span class="description muted">System Swap Usage</span>
+					<div class="title">{Utils.formatBytes(systemInfo.system_info.used_swap)}</div>
 
-					{#snippet footer()}
-						<div>{formatBytes(systemInfo.system_info.total_swap)} Total</div>
-						<div class="muted">
-							{(
-								(systemInfo.system_info.used_swap / systemInfo.system_info.total_swap) *
-								100
-							).toFixed(1)}% Used
-						</div>
-						<div class="muted">
-							{formatBytes(systemInfo.system_info.free_swap)} Free
-						</div>
-					{/snippet}
+					<div>{Utils.formatBytes(systemInfo.system_info.total_swap)} Total</div>
+					<div class="muted">
+						{((systemInfo.system_info.used_swap / systemInfo.system_info.total_swap) * 100).toFixed(
+							1
+						)}% Used
+					</div>
+					<div class="muted">
+						{Utils.formatBytes(systemInfo.system_info.free_swap)} Free
+					</div>
 				</Card>
 
 				<Card>
-					{#snippet header()}
-						<span class="muted">Load Average</span>
+					<span class="muted">Load Average</span>
 
-						<div class="title">
-							1 min:
-							{(
-								(systemInfo.system_info.load_average.one /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-						<div class="title">
-							5 min:
-							{(
-								(systemInfo.system_info.load_average.five /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-						<div class="title">
-							15 min:
-							{(
-								(systemInfo.system_info.load_average.fifteen /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-					{/snippet}
+					<div class="title">
+						1 min:
+						{(
+							(systemInfo.system_info.load_average.one /
+								systemInfo.system_info.physical_core_count) *
+							100
+						).toFixed(1)}%
+					</div>
+					<div class="title">
+						5 min:
+						{(
+							(systemInfo.system_info.load_average.five /
+								systemInfo.system_info.physical_core_count) *
+							100
+						).toFixed(1)}%
+					</div>
+					<div class="title">
+						15 min:
+						{(
+							(systemInfo.system_info.load_average.fifteen /
+								systemInfo.system_info.physical_core_count) *
+							100
+						).toFixed(1)}%
+					</div>
 				</Card>
 
 				<Card>
-					{#snippet header()}
-						<span class="muted">System Information</span>
-						<div class="title">{systemInfo.system_info.name}</div>
-					{/snippet}
-
-					{#snippet footer()}
-						<div>OS: {systemInfo.system_info.long_os_version}</div>
-						<div class="muted">Hostname: {systemInfo.system_info.host_name}</div>
-						<div class="muted">Kernel: {systemInfo.system_info.kernel_version}</div>
-						<div class="muted">Distribution: {systemInfo.system_info.distribution_id}</div>
-						<div class="muted">Version: {systemInfo.system_info.os_version}</div>
-					{/snippet}
+					<span class="muted">System Information</span>
+					<div class="title">{systemInfo.system_info.name}</div>
+					<div>OS: {systemInfo.system_info.long_os_version}</div>
+					<div class="muted">Hostname: {systemInfo.system_info.host_name}</div>
+					<div class="muted">Kernel: {systemInfo.system_info.kernel_version}</div>
+					<div class="muted">Distribution: {systemInfo.system_info.distribution_id}</div>
+					<div class="muted">Version: {systemInfo.system_info.os_version}</div>
 				</Card>
 
 				<Card>
-					{#snippet header()}
-						<span class="muted">CPUs</span>
+					<span class="muted">CPUs</span>
 
-						<div class="title">
-							{systemInfo.system_info.cpus.length}× {systemInfo.system_info.cpus[0].brand}
-						</div>
-					{/snippet}
+					<div class="title">
+						{systemInfo.system_info.cpus.length}× {systemInfo.system_info.cpus[0].brand}
+					</div>
 				</Card>
 			{/if}
 		</div>

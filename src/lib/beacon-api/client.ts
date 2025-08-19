@@ -78,6 +78,9 @@ export class BeaconClient {
             body: JSON.stringify(query),
             cache: 'no-cache',
         }
+
+        // console.log('client.query', endpoint, query, request_info);
+
         const response = await fetch(endpoint, request_info);
 
         if (!response.ok) {

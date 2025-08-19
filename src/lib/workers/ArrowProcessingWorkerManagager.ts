@@ -24,7 +24,7 @@ export class ArrowProcessingWorkerManagager {
 
   private setupWorkerListeners(): void {
     this.worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      console.log('Worker message received:', event);
+      // console.log('Worker message received:', event);
 
       const { id } = event.data;
 
@@ -140,7 +140,7 @@ export class ArrowProcessingWorkerManagager {
     latitudeColumnName: string = 'Latitude',
     longitudeColumnName: string = 'Longitude',
     maxRows: number = 100
-  ): Promise<any> {
+  ): Promise<unknown[]> {
     const request: Partial<WorkerRequest> = {
       action: 'findSimilarRowsByLatLon',
       payload: {

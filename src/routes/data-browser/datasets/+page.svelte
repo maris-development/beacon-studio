@@ -16,9 +16,9 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
-	let columns: Column[] = [
+	let columns: Column[] = $state([
 		{ key: 'dataset', header: 'Dataset', sortable: false }
-	];
+	]);
     let virtualSchemaData: VirtualPaginationData<Dataset> = new VirtualPaginationData<Dataset>([]);
 	let rows: { dataset: string }[] = $state([]);
 

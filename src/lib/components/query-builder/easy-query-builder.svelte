@@ -19,6 +19,7 @@
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
@@ -94,7 +95,7 @@
 		}
 	});
 
-	function compileQuery(): null | CompiledQuery {
+	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
 
 		// get all the selected parameters
@@ -104,6 +105,7 @@
 			.map((p) => p.column);
 
 		let all_parameters = [...selected_data_parameters, ...selected_metadata_parameters];
+
 		all_parameters.forEach((parameter) => {
 			builder.addSelect({ column: parameter.alias, alias: null });
 
@@ -123,62 +125,95 @@
 		builder.setFrom(selected_table_name);
 		builder.setOutput({ format: selected_output_format as OutputFormat });
 
-		let compiled_query = builder.compile();
+		let compiledQuery = builder.compile();
 
-		if (compiled_query.isErr()) {
-			let errorMessage = compiled_query.unwrapErr();
-			console.error('Error compiling query:', errorMessage);
-			addToast({
-				message: `Error compiling query: ${errorMessage}`,
-				type: 'error'
-			});
-			return null;
+		if (compiledQuery.isErr()) {
+			throw new Error('Failed to compile query: ' + compiledQuery.unwrapErr());
 		}
 
-		console.debug('Compiled Query:', compiled_query);
+		console.debug('Compiled Query:', compiledQuery);
 
-		return compiled_query.unwrap();
+		return compiledQuery.unwrap();
+	}
+
+	function compileAndGZipQuery(): string|undefined {
+		try {
+			let compiledQuery = compileQuery();
+			return Utils.objectToGzipString(compiledQuery);
+
+		} catch (error) {
+			console.error('Error compiling and gzipping query:', error);
+			addToast({
+				message: `Error compiling query: ${error.message}`,
+				type: 'error'
+			});
+		}
 	}
 
 	async function handleSubmit() {
-		let compiled_query = compileQuery();
+		let compiledQuery: CompiledQuery;
 
-		await client.queryToDownload(compiled_query, output_format_extensions[selected_output_format]);
+		try {
+			compiledQuery = compileQuery();
+
+		} catch (error) {
+			console.error('Error compiling query:', error);
+			addToast({
+				message: `Error compiling query: ${error.message}`,
+				type: 'error'
+			});
+			return;
+		}
+
+		if(compiledQuery){
+			await client.queryToDownload(compiledQuery, output_format_extensions[selected_output_format]);
+		}
 	}
 
 	async function handleMapVisualise() {
-		let compiled_query = compileQuery();
+		const gzippedQuery = compileAndGZipQuery();
+		if(gzippedQuery){
+			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
 
-		if (!compiled_query) return;
-
-		const gzippedQuery = Utils.objectToGzipString(compiled_query);
-
-		goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+	async function handleChartVisualise() {
+		const gzippedQuery = compileAndGZipQuery();
+		if(gzippedQuery){
+			goto(`/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
 	}
 
 	async function handleTableVisualise() {
-		let compiled_query = compileQuery();
-
-		if (!compiled_query) return;
-
-		const gzippedQuery = Utils.objectToGzipString(compiled_query);
-
-		goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		const gzippedQuery = compileAndGZipQuery();
+		if(gzippedQuery){
+			goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
 	}
 
 	async function handleCopyQuery() {
-		let compiled_query = compileQuery();
+		let compiledQuery: CompiledQuery;
 
-		if (!compiled_query) return;
+		try {
+			compiledQuery = compileQuery();
 
-		let query_json = JSON.stringify(compiled_query, null, 2);
+		} catch (error) {
+			console.error('Error compiling query:', error);
+			addToast({
+				message: `Error compiling query: ${error.message}`,
+				type: 'error'
+			});
+			return;
+		}
+
+		let queryJson = JSON.stringify(compiledQuery, null, 2);
 
 		addToast({
 			message: 'Query JSON copied to clipboard',
 			type: 'success'
 		});
 
-		Utils.copyToClipboard(query_json);
+		Utils.copyToClipboard(queryJson);
 	}
 </script>
 
@@ -256,38 +291,53 @@
 			</div>
 		{/if}
 	</div>
-	<Label for="dataCollection">Selected Output Format</Label>
-	<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
-		<Select.Trigger>
-			{selected_output_format}
-		</Select.Trigger>
-		<Select.Content>
-			<Select.Group>
-				<Select.Label>Tables</Select.Label>
-				{#each Object.entries(output_formats) as [label, value]}
-					<Select.Item {label} {value} />
-				{/each}
-			</Select.Group>
-		</Select.Content>
-	</Select.Root>
 
+	<h4>Select an output format you want the data to be in.</h4>
 	<div class="flex flex-row gap-2">
+		<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
+			<Select.Trigger>
+				{selected_output_format}
+			</Select.Trigger>
+			<Select.Content>
+				<Select.Group>
+					<Select.Label>Tables</Select.Label>
+					{#each Object.entries(output_formats) as [label, value]}
+						<Select.Item {label} {value} />
+					{/each}
+				</Select.Group>
+			</Select.Content>
+		</Select.Root>
+
+		<span class="flex items-center justify-center">and</span>
 		<Button onclick={handleSubmit}>
-			Run query
+			Execute query
 			<DownloadIcon size="1rem" />
 		</Button>
-		<Button onclick={handleTableVisualise}>
-			Explore data
-			<SheetIcon size="1rem" />
-		</Button>
-		<Button onclick={handleMapVisualise}>
-			Visualize on map
-			<MapIcon size="1rem" />
-		</Button>
+		
+		<span class="flex items-center justify-center">or</span>
 		<Button onclick={handleCopyQuery}>
 			Copy query JSON
 			<FileJson2Icon size="1rem" />
 		</Button>
+	</div>
+
+	<h4>Or use the options below to visualise the data</h4>
+
+	<div class="flex flex-row gap-2">
+		
+		<Button onclick={handleTableVisualise}>
+			View as table
+			<SheetIcon size="1rem" />
+		</Button>
+		<Button onclick={handleMapVisualise}>
+			View on map
+			<MapIcon size="1rem" />
+		</Button>
+		<Button onclick={handleChartVisualise}>
+			View on chart
+			<ChartPieIcon size="1rem" />
+		</Button>
+		
 	</div>
 </div>
 

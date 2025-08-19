@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { mount, onDestroy, onMount } from 'svelte';
+	import { mount, onDestroy, onMount, unmount } from 'svelte';
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
 	import type { PickingInfo } from '@deck.gl/core';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
@@ -25,15 +25,13 @@
 	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
 	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend.svelte';
 	
-	import ArrowProcessingWorker from '$lib/workers/ArrowProcessingWorker?worker';
 	import { ApacheArrowUtils } from '@/arrow-utils';
+	import type { Rendered } from '@/util-types';
+	import { nonpassive } from 'svelte/legacy';
 
 	const GROUP_BY_DECIMALS = 3; // Number of decimals to group by for lat/lon (4 = 11m, 3 = 111m, 2 = 1111m, 1 = 11111m, 0 = 111111m)
-
-	const arrowWorker = new ArrowProcessingWorkerManagager();
-		
-
 	
+	let arrowWorker: ArrowProcessingWorkerManagager;
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
@@ -45,11 +43,12 @@
 	let originalTable: ApacheArrow.Table | null = null; // original query data table 
 	let table: ApacheArrow.Table | null = null; // current data table that is being displayed (e.g. de-duplicated by lat/lon)
 	let mapPopup: maplibregl.Popup | null = null;
-
+	let mapPopupContent: Rendered;
 	
 	let query: CompiledQuery | undefined = $state(undefined);
 	let table_kind: QueryResponseKind | null = $state(null);
 	let amountOfRows: number = $state(0);
+    let queryDurationMs: number | null = $state(null);
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
 	let editQueryModalOpen = $state(false);
@@ -81,11 +80,7 @@
 	onMount(async () => {
 		if (!browser) return;
 
-		const worker = new ArrowProcessingWorker();
-		console.log(await worker.postMessage({ action: 'ping' }));
-
-
-
+		arrowWorker = new ArrowProcessingWorkerManagager();
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
@@ -115,7 +110,8 @@
 		mapPopup = new maplibregl.Popup({
 			closeButton: true,
 			closeOnClick: false,
-			className: 'map-popup'
+			className: 'map-popup',
+			maxWidth: 'none'
 		});
 
 		map.once('load', () => {
@@ -125,18 +121,12 @@
 	}
 
 	function getUrlSuppliedQuery() {
-		const urlSuppliedQuery = page.url.searchParams.get('query');
+		query = Utils.getUrlSuppliedQuery();
 
-		if (urlSuppliedQuery) {
-			try {
-				query = Utils.gzipStringToObject(urlSuppliedQuery);
-				query.output.format = 'parquet';
-			} catch (error) {
-				console.error('Failed to decode query:', error);
-			}
-		}
 
 		if (query) {
+            query.output.format = 'parquet'; // Ensure the output format is set to parquet
+
 			// Use the decoded query for your logic
 			executeAndDisplayQuery();
 		} else {
@@ -207,7 +197,11 @@
 
 	async function executeQuery() {
 
+		const startTime = performance.now();
 		const result = await client.query(query);
+        const endTime = performance.now();
+        
+        queryDurationMs = endTime - startTime;
 
 		if (result.isErr()) {
 			console.error(result.unwrapErr());
@@ -354,24 +348,36 @@
 	}
 
 	function onPointClick(info){
-		const data = info.object.toArray();
 
-		const mapPopupContent = Utils.renderComponent(MapPopupContent, {
-			data: data,
-			table: table,
+		console.log('Point clicked:', info.coordinate);
+
+		destroyMapPopupContent();
+		mapPopup.remove();
+		
+		//get current HTML
+		mapPopupContent = Utils.renderComponent(MapPopupContent, {
+			rowData: info.object.toArray(),
+			table: originalTable,
 			latitudeColumnName,
 			longitudeColumnName,
 			groupByDecimals: GROUP_BY_DECIMALS
 		});
 
-		console.log('Point clicked:', info.coordinate);
 
-		mapPopup.remove();
-		mapPopup.setDOMContent(mapPopupContent);
+		mapPopup.setDOMContent(mapPopupContent.element);
 		mapPopup.setLngLat(info.coordinate);
 		mapPopup.addTo(map);
+
+		mapPopup.off('close', destroyMapPopupContent);
+		mapPopup.on('close', destroyMapPopupContent);
 	}
 
+	function destroyMapPopupContent() {
+		if (mapPopupContent) {
+			unmount(mapPopupContent.handle);
+			mapPopupContent = null;
+		}
+	}
 
 	function getFillColor(d): [number, number, number, number]
 	{
@@ -453,7 +459,9 @@
 	</div>
 	<div class="map-info-wrapper">
 		<MapInfo onEditClick={openEditQueryModal}>
-			<p>Rows: {amountOfRows}</p>
+			<p>
+				{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+			</p>
 
 			<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
 				<Select.Trigger>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger>

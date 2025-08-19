@@ -39,8 +39,8 @@
 
 	$effect(() => {
 		pageCount = Math.ceil(totalRows / pageSize);
-	})
-
+		// console.log('Page count updated:', pageCount, totalRows, pageSize, totalRows/pageSize);
+	});
 
 	function _changeSort(column: Column) {
 		const columnRef = column.ref;
@@ -174,7 +174,6 @@
 		overflow: hidden;
 		position: relative;
 
-		margin-bottom: 1rem;
 
 		.table-wrapper {
 			overflow-x: auto;

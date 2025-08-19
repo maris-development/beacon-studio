@@ -11,12 +11,11 @@
 
 	
 
-	let columns: Column[] = [{ key: 'table', header: 'Table', sortable: false, rawHtml: true }];
+	let columns: Column[] = $state([{ key: 'table', header: 'Table', sortable: false, rawHtml: true }]);
 	let rows: { table: AffixString }[] = $state([]);
 
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let offset = 0;
 	let pageSize: number = 1000;
 	let isLoading = $state(true);
 	let firstLoad = true;
@@ -56,7 +55,6 @@
 		firstLoad = false;
 		isLoading = true;
 
-		offset = (page - 1) * pageSize;
 		let results = await client.getTables();
 
 		rows = results.map((table) => ({table: new AffixString(table)}));

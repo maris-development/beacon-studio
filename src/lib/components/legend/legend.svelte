@@ -21,7 +21,6 @@
 
 	let currentDomain: [number, number] = [colorScaleMin, colorScaleMax];
 	let currentScaleColors: { color: RGBColor; value: number }[] = $state(getScaleColors());
-	$inspect(currentScaleColors);
 
 	$effect(() => {
 		if (colorScale) {
