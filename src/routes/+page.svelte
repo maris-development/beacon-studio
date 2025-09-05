@@ -4,6 +4,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import ChooseBeaconModal from '@/components/modals/ChooseBeaconModal.svelte';
 	import { onMount } from 'svelte';
+	import Card from '@/components/card/card.svelte';
 
 	let beaconInstanceArray: BeaconInstance[] = $beaconInstances;
 	let currentBeaconInstanceValue: BeaconInstance | null = $currentBeaconInstance;
@@ -64,6 +65,32 @@
 			maris-development.github.io/beacon/
 		</a> to read the documentation.
 	</p>
+
+	<div class="beacon-functions">
+		<Card href="/data-browser">
+			<h2>Browse data</h2>
+			<p>
+				Browse the contents and definitions of your Beacon instance in a tabular interface.
+			</p>
+		</Card>
+
+		<Card href="/queries">
+			<h2>Create queries</h2>
+			<p>
+				Use the query builder or query editor to create queries for your Beacon instance.
+			</p>
+		</Card>
+		
+		<Card href="/visualisations">
+			<h2>Visualise data</h2>
+			<p>
+				Use the visualisation tools to view tables, charts and graphs of the contents of your Beacon instance.
+			</p>
+		</Card>
+
+
+		
+	</div>
 </div>
 
 {#if showChooseBeaconModal}
@@ -71,4 +98,9 @@
 {/if}
 
 <style lang="scss">
+	.beacon-functions {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
 </style>

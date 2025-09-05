@@ -6,7 +6,8 @@ import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat, QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
+import { Utils } from '@/utils';
 
 const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
@@ -20,12 +21,41 @@ export class BeaconClient {
         this.token = token;
     }
 
+    static output_formats: Record<string, string> = {
+		Parquet: 'parquet',
+		CSV: 'csv',
+		Arrow: 'arrow',
+		NetCDF: 'netcdf'
+	};
+
+
+    static outputFormatToExtension(query: CompiledQuery, prefix: string = ''): string {
+        switch (true) {
+            case Utils.objectHasProperty(query.output.format, "geoparquet"):
+            case query.output.format === "parquet":
+                return prefix + "parquet";
+
+            case query.output.format === "csv":
+                return prefix + "csv";
+
+            case query.output.format === "ipc":
+            case query.output.format === "arrow":
+                return prefix + "arrow";
+
+            case query.output.format === "netcdf":
+                return prefix + "nc";
+
+            default:
+                return prefix + "blob";
+        }
+    }
+
     static new(instance: BeaconInstance): BeaconClient {
         const client = new BeaconClient(instance.url, instance.token);
         return client;
     }
 
-    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string  = '.blob'): Promise<void> {
+    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob'): Promise<void> {
         const endpoint = `${this.host}/api/query`;
 
         const request_info: RequestInit = {
@@ -94,7 +124,7 @@ export class BeaconClient {
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
         if (typeof query.output.format === 'object' && 'geoparquet' in query.output.format) {
-            const geoOutput = query.output as { format: GeoParquetOutputFormat};
+            const geoOutput = query.output as { format: GeoParquetOutputFormat };
             const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
             if (!longitude_column || !latitude_column) {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
@@ -299,7 +329,7 @@ export class BeaconClient {
         return response;
     }
 
-       // Overload #1 - JSON default
+    // Overload #1 - JSON default
     fetch<T>(input: string | URL | Request, init?: RequestInit): Promise<T>;
 
     // Overload #2 - Explicit text
@@ -312,9 +342,9 @@ export class BeaconClient {
     fetch<T>(
         input: string | URL | globalThis.Request,
         init?: RequestInit,
-        responseType?: 'json' | 'text' 
+        responseType?: 'json' | 'text'
     ): Promise<unknown> { // use overloads for typing
-        if(!responseType) responseType = 'json';
+        if (!responseType) responseType = 'json';
         if (!init) init = {};
 
         //merge headers with auth headers:
@@ -380,7 +410,7 @@ export class BeaconClient {
                 batchSize: 128000
             });
             return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
-        } catch (error){
+        } catch (error) {
             console.error(error);
             return Err("Failed to read buffer as Parquet");
         }

@@ -19,7 +19,9 @@
     <Breadcrumb.List>
         <Breadcrumb.Item>
             <Breadcrumb.Link href="/">
-                <HouseIcon size=1rem />
+                <span class="primary-color">
+                    <HouseIcon size=1rem />
+                </span>
             </Breadcrumb.Link>
         </Breadcrumb.Item>
 
@@ -30,3 +32,10 @@
         {/each}
     </Breadcrumb.List>
 </Breadcrumb.Root>
+
+<style lang="scss">
+    .primary-color {
+        color: var(--primary);
+    }
+
+</style>

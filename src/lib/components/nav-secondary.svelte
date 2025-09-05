@@ -11,6 +11,7 @@
 			title: string;
 			url: string;
 			icon: Component;
+			target?: string;
 		}[];
 	} & ComponentProps<typeof Sidebar.Group> = $props();
 </script>
@@ -22,7 +23,7 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton size="sm">
 						{#snippet child({ props })}
-							<a href={item.url} {...props}>
+							<a href={item.url} target={item.target} {...props}>
 								<item.icon />
 								<span>{item.title}</span>
 							</a>

@@ -10,10 +10,16 @@
 	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
 	import DataTable from '@/components/data-table.svelte';
 	import { Button } from '@/components/ui/button';
+
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import MapIcon from '@lucide/svelte/icons/map';
+
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
 	import type { Column, SortDirection } from '@/util-types';
+	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
+	import { goto } from '$app/navigation';
 
 	const arrowWorker: ArrowProcessingWorkerManagager = new ArrowProcessingWorkerManagager();
 
@@ -40,6 +46,9 @@
 	let editQueryModalOpen = $state(false);
 	let editQueryString = $state('');
 
+	let noQueryAvailableModalOpen = $state(false);
+
+
 	onMount(async () => {
 		
 		currentBeaconInstanceValue = $currentBeaconInstance;
@@ -58,7 +67,7 @@
 		} else {
 			// TODO: Ask user for query json
 			editQueryString = '{ "message": "Enter a JSON query" }';
-			editQueryModalOpen = true;
+			noQueryAvailableModalOpen = true;
 
 		}
 	}
@@ -227,6 +236,20 @@
 		}
 	}
 
+	async function handleChartVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if(gzippedQuery){
+			goto(`/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+	async function handleMapVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if(gzippedQuery){
+			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
 
 </script>	
 
@@ -239,6 +262,11 @@
 	<EditQueryJsonModal bind:editQueryString={editQueryString} onClose={closeEditQueryModal} />
 {/if}
 
+{#if noQueryAvailableModalOpen}
+	<NoQueryAvailableModal onCancel={() => noQueryAvailableModalOpen = false} openQueryJsonEditor={() => { noQueryAvailableModalOpen = false; openEditQueryModal(); }} />
+{/if}
+
+
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },
@@ -249,10 +277,24 @@
 <div class="page-container">
 	<h1>Table explorer</h1>
 
-	<Button onclick={openEditQueryModal}>
-		Edit query JSON
-		<FileJson2Icon size=1rem />
-	</Button>
+	<div class="buttons-header">
+		<Button onclick={openEditQueryModal}>
+			Edit query JSON
+			<FileJson2Icon size=1rem />
+		</Button>
+		
+		<span>or</span>
+
+		<Button onclick={handleChartVisualise}>
+			View on chart
+			<ChartPieIcon size="1rem" />
+		</Button>
+
+		<Button onclick={handleMapVisualise}>
+			View on map
+			<MapIcon size="1rem" />
+		</Button>
+	</div>
 
 	<p>
 		{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.

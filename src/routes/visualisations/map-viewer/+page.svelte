@@ -1,12 +1,9 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { mount, onDestroy, onMount, unmount } from 'svelte';
+	import {  onDestroy, onMount, unmount } from 'svelte';
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
-	import type { PickingInfo } from '@deck.gl/core';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
-	import { interpolatePuOr } from 'd3-scale-chromatic';
-	import { scaleSequential, type ScaleSequential } from 'd3-scale';
 	import maplibregl, { Popup } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
@@ -15,7 +12,6 @@
 	import { addToast } from '@/stores/toasts';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
-	import { page } from '$app/state';
 	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
 	import type { CompiledQuery, GeoParquetOutputFormat, QueryResponse, QueryResponseKind, Select as QuerySelect } from '@/beacon-api/types';
@@ -27,7 +23,8 @@
 	
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Rendered } from '@/util-types';
-	import { nonpassive } from 'svelte/legacy';
+	import type { ScaleSequential } from 'd3-scale';
+	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 
 	const GROUP_BY_DECIMALS = 3; // Number of decimals to group by for lat/lon (4 = 11m, 3 = 111m, 2 = 1111m, 1 = 11111m, 0 = 111111m)
 	
@@ -52,6 +49,7 @@
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
 	let editQueryModalOpen = $state(false);
+	let noQueryAvailableModalOpen = $state(false);
 	let editQueryString = $state('');
 	let availableColumnNames: string[] = $state([]);
 	let selectedDataColumnName: string = $state(undefined);
@@ -60,8 +58,6 @@
 
 	let colorScaleMin: number = $state(-1000);
 	let colorScaleMax: number = $state(1000);
-	
-
 	let colorScale: ScaleSequential<string, never> = $state(undefined);
 
 	$effect(() =>{
@@ -133,7 +129,7 @@
 			// TODO: Ask user for query json
 			isLoading = false;
 			editQueryString = '{ "message": "Enter a JSON query" }';
-			editQueryModalOpen = true;
+			noQueryAvailableModalOpen = true;
 		}
 	}
 
@@ -414,7 +410,7 @@
 	}
 
 	function openEditQueryModal() {
-		editQueryString = JSON.stringify(query, null, 2);
+		if(query) editQueryString = JSON.stringify(query, null, 2);
 		editQueryModalOpen = true;
 	}
 
@@ -458,7 +454,7 @@
 		
 	</div>
 	<div class="map-info-wrapper">
-		<MapInfo onEditClick={openEditQueryModal}>
+		<MapInfo onEditClick={openEditQueryModal} compiledQuery={query}>
 			<p>
 				{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
 			</p>
@@ -495,11 +491,18 @@
 			<h3>Loading...</h3>
 		</div>
 	{/if}
-
-	{#if editQueryModalOpen}
-		<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
-	{/if}
 </div>
+
+{#if editQueryModalOpen}
+	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
+{/if}
+
+
+{#if noQueryAvailableModalOpen}
+	<NoQueryAvailableModal onCancel={() => noQueryAvailableModalOpen = false} openQueryJsonEditor={() => { noQueryAvailableModalOpen = false; openEditQueryModal(); }} />
+{/if}
+
+
 
 <style lang="scss">
 	.map-wrapper {

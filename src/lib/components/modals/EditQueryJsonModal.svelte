@@ -1,4 +1,4 @@
-<!-- src/lib/components/BeaconMapQueryModal.svelte -->
+<!-- src/lib/components/modals/EditQueryJsonModal.svelte -->
 <script lang="ts">
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';

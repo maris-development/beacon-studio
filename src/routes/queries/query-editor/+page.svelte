@@ -1,5 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import SheetIcon from '@lucide/svelte/icons/sheet';
+	import MapIcon from '@lucide/svelte/icons/map';
+	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import SearchCodeIcon from '@lucide/svelte/icons/search-code';
+	import TestTubeIcon from '@lucide/svelte/icons/test-tube';
+
+	import { Button } from '$lib/components/ui/button/index.js';
+	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
+	import { Utils } from '@/utils';
+	import { goto } from '$app/navigation';
+	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { BeaconClient } from '@/beacon-api/client';
+	import type { CompiledQuery } from '@/beacon-api/types';
+	import { addToast } from '@/stores/toasts';
 
 	let sourceCode = $state(`{
 		"query_parameters": [
@@ -35,57 +51,135 @@
 			"format": "parquet"
 		}
 	}`);
+
 	
 
+	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+	let client: BeaconClient;
 
-	/**
-	 * TopBar component (using shadcn-svelte)
-	 * Props:
-	 *  - breadcrumbs: Array<{ label: string; href: string }>;
-	 */
-	import CirclePlayIcon from '@lucide/svelte/icons/circle-play';
-	import SearchCodeIcon from '@lucide/svelte/icons/search-code';
-	import TestTubeIcon from '@lucide/svelte/icons/test-tube';
-
-	import { Button } from '$lib/components/ui/button/index.js';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
-
-	const handleAnalyze = () => console.log('Analyze action triggered');
-	const handleExecute = () => console.log('Execute action triggered');
-	const handleInfo = () => console.log('Info action triggered');
-
-	onMount(() => {
+	onMount(async () => {
+		currentBeaconInstanceValue = $currentBeaconInstance;
+		client = BeaconClient.new(currentBeaconInstanceValue);
 	});
 
+	async function handleExecute() {
+		try {
+			const query: CompiledQuery = JSON.parse(sourceCode);
+			const extension = BeaconClient.outputFormatToExtension(query);
+			await client.queryToDownload(query, extension);
 
+		} catch (error) {
+			console.error('Error executing query:', error);
+			addToast({
+				message: `Error executing query: ${error.message}`,
+				type: 'error'
+			});
+		}
+	}
+
+	async function handleInfo() {
+		alert('Info action triggered (not implemented yet)');
+	}
+
+	async function handleAnalyze() {
+		alert('Analyze action triggered (not implemented yet)');
+	}
+
+	async function handleMapVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		if (gzippedQuery) {
+			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+	async function handleChartVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		if (gzippedQuery) {
+			goto(`/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+	async function handleTableVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		if (gzippedQuery) {
+			goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+	onMount(() => {});
 </script>
 
-<div>
+<div class="page-wrapper">
 	<Cookiecrumb
 		crumbs={[
 			{ label: 'Queries', href: '/queries' },
 			{ label: 'Query Editor', href: '/queries/query-editor' }
 		]}
-	>
-		<!-- Right: Shadcn Buttons -->
-		<div class="actions">
-			<Button variant="default" size="sm" onclick={handleInfo}>
-				<TestTubeIcon />
-				Query Plan
-			</Button>
-			<Button variant="default" size="sm" onclick={handleAnalyze}>
-				<SearchCodeIcon />
-				Analyze
-			</Button>
-			<Button variant="default" size="sm" onclick={handleExecute}>
-				<CirclePlayIcon />
-				Run
-			</Button>
-		</div>
-	</Cookiecrumb>
+	></Cookiecrumb>
+	<!-- Right: Shadcn Buttons -->
 
-	<QueryEditor  bind:sourceCode />
+	<div class="page-container">
+		<div class="actions">
+			<div class="execute-query">
+				<Button onclick={handleInfo}>
+					Query Plan
+					<TestTubeIcon />
+				</Button>
+				<Button onclick={handleAnalyze}>
+					Analyze
+					<SearchCodeIcon />
+				</Button>
+				<Button onclick={handleExecute}>
+					Execute query
+					<DownloadIcon />
+				</Button>
+			</div>
+
+			<div class="view-query">
+				<Button onclick={handleTableVisualise}>
+					View as table
+					<SheetIcon size="1rem" />
+				</Button>
+
+				<Button onclick={handleMapVisualise}>
+					View on map
+					<MapIcon size="1rem" />
+				</Button>
+
+				<Button onclick={handleChartVisualise}>
+					View on chart
+					<ChartPieIcon size="1rem" />
+				</Button>
+			</div>
+		</div>
+
+		<div class="editor">
+			<QueryEditor bind:sourceCode height="100%" />
+		</div>
+	</div>
 </div>
 
+<style lang="scss">
+	div.page-wrapper {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		div.page-container {
+			flex-grow: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
 
+			div.actions {
+				display: flex;
+				flex-direction: row;
+				gap: 0.5rem;
+				justify-content: space-between;
+			}
+
+			div.editor {
+				flex-grow: 1;
+			}
+		}
+	}
+</style>

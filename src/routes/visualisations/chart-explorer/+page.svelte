@@ -1,18 +1,20 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import { onMount, tick } from 'svelte';
-	import { page } from '$app/state';
-	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
+	import { onMount } from 'svelte';
+	import { Utils } from '@/utils';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import SheetIcon from '@lucide/svelte/icons/sheet';
+	import MapIcon from '@lucide/svelte/icons/map';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
-	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
 	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
+	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
+	import { goto } from '$app/navigation';
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -28,6 +30,8 @@
 	// Modal for editing query
 	let editQueryModalOpen = $state(false);
 	let editQueryString = $state('');
+
+	let noQueryAvailableModalOpen = $state(false);
 
 	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
@@ -47,7 +51,7 @@
 		} else {
 			// TODO: Ask user for query json
 			editQueryString = '{ "message": "Enter a JSON query" }';
-			editQueryModalOpen = true;
+			noQueryAvailableModalOpen = true;
 		}
 	}
 
@@ -154,6 +158,21 @@
 			return;
 		}
 	}
+
+	async function handleMapVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if(gzippedQuery){
+			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+
+	async function handleTableVisualise() {
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if(gzippedQuery){
+			goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -162,6 +181,10 @@
 
 {#if editQueryModalOpen}
 	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
+{/if}
+
+{#if noQueryAvailableModalOpen}
+	<NoQueryAvailableModal onCancel={() => noQueryAvailableModalOpen = false} openQueryJsonEditor={() => { noQueryAvailableModalOpen = false; openEditQueryModal(); }} />
 {/if}
 
 <Cookiecrumb
@@ -175,10 +198,25 @@
 	<div class="header">
 		<h1>Chart explorer</h1>
 
-		<Button onclick={openEditQueryModal}>
-			Edit query JSON
-			<FileJson2Icon size="1rem" />
-		</Button>
+		<div class="buttons-header">
+			<Button onclick={openEditQueryModal}>
+				Edit query JSON
+				<FileJson2Icon size="1rem" />
+			</Button>
+
+			<span>or</span>
+
+			<Button onclick={handleTableVisualise}>
+				View as table
+				<SheetIcon size="1rem" />
+			</Button>
+
+			<Button onclick={handleMapVisualise}>
+				View on map
+				<MapIcon size="1rem" />
+			</Button>
+
+		</div>
 
 		<p>
 			{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(

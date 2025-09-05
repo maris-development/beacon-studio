@@ -22,6 +22,11 @@ export function cn(...inputs: ClassValue[]) {
 
 
 export class Utils {
+
+    static objectHasProperty<T,K extends PropertyKey>(obj: T, prop: K): obj is T & Record<K, unknown> {
+        return typeof obj === "object" && obj !== null && prop in obj;
+    }
+
     static getUrlSuppliedQuery(): CompiledQuery | null {
         const urlSuppliedQuery = page.url.searchParams.get('query');
 

@@ -24,21 +24,10 @@
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 
-	const output_formats: Record<string, string> = {
-		Parquet: 'parquet',
-		CSV: 'csv',
-		Arrow: 'arrow',
-		NetCDF: 'netcdf'
-	};
 
-	const output_format_extensions = {
-		parquet: 'parquet',
-		csv: 'csv',
-		arrow: 'ipc',
-		netcdf: 'nc'
-	};
 
-	let selected_output_format: string = $state(output_formats['Parquet']);
+	
+	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
 
 	let easy_tables = $state<Array<TableDefinition>>([]);
 	let selected_table_name = $state('');
@@ -166,7 +155,7 @@
 		}
 
 		if(compiledQuery){
-			await client.queryToDownload(compiledQuery, output_format_extensions[selected_output_format]);
+			await client.queryToDownload(compiledQuery, BeaconClient.outputFormatToExtension(compiledQuery));
 		}
 	}
 
@@ -267,7 +256,7 @@
 					</Collapsible.Content>
 				</Collapsible.Root>
 
-				<Collapsible.Root class="space-y-2">
+				<Collapsible.Root class="space-y-2" open>
 					<div class="flex items-center justify-between">
 						<h3 class=" font-semibold">Select metadata columns</h3>
 						<Collapsible.Trigger
@@ -292,53 +281,60 @@
 		{/if}
 	</div>
 
-	<h4>Select an output format you want the data to be in.</h4>
-	<div class="flex flex-row gap-2">
-		<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
-			<Select.Trigger>
-				{selected_output_format}
-			</Select.Trigger>
-			<Select.Content>
-				<Select.Group>
-					<Select.Label>Tables</Select.Label>
-					{#each Object.entries(output_formats) as [label, value]}
-						<Select.Item {label} {value} />
-					{/each}
-				</Select.Group>
-			</Select.Content>
-		</Select.Root>
+	<Label for="outputFormat" class="mt-8">Selected Output Format</Label>
+	<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
+		<Select.Trigger>
+			{selected_output_format}
+		</Select.Trigger>
+		<Select.Content>
+			<Select.Group>
+				<Select.Label>Tables</Select.Label>
+				{#each Object.entries(BeaconClient.output_formats) as [label, value]}
+					<Select.Item {label} {value} />
+				{/each}
+			</Select.Group>
+		</Select.Content>
+	</Select.Root>
 
-		<span class="flex items-center justify-center">and</span>
-		<Button onclick={handleSubmit}>
-			Execute query
-			<DownloadIcon size="1rem" />
-		</Button>
+
+	<hr>
+
+	<div class="flex flex-row gap-2 justify-between">
+		<div class="flex flex-row gap-2">
+			<Button onclick={handleSubmit}>
+				Execute query
+				<DownloadIcon size="1rem" />
+			</Button>
+
+			<Button onclick={handleCopyQuery}>
+				Copy query JSON
+				<FileJson2Icon size="1rem" />
+			</Button>
+		</div>
+
+		<div class="flex flex-row gap-2">
 		
-		<span class="flex items-center justify-center">or</span>
-		<Button onclick={handleCopyQuery}>
-			Copy query JSON
-			<FileJson2Icon size="1rem" />
-		</Button>
+			<Button onclick={handleTableVisualise}>
+				View as table
+				<SheetIcon size="1rem" />
+			</Button>
+
+			<Button onclick={handleMapVisualise}>
+				View on map
+				<MapIcon size="1rem" />
+			</Button>
+
+			<Button onclick={handleChartVisualise}>
+				View on chart
+				<ChartPieIcon size="1rem" />
+			</Button>
+
+		</div>
 	</div>
 
-	<h4>Or use the options below to visualise the data</h4>
+	<!-- <p>Or use the options below to visualise the data</p> -->
 
-	<div class="flex flex-row gap-2">
-		
-		<Button onclick={handleTableVisualise}>
-			View as table
-			<SheetIcon size="1rem" />
-		</Button>
-		<Button onclick={handleMapVisualise}>
-			View on map
-			<MapIcon size="1rem" />
-		</Button>
-		<Button onclick={handleChartVisualise}>
-			View on chart
-			<ChartPieIcon size="1rem" />
-		</Button>
-		
-	</div>
+	
 </div>
 
 <style lang="scss">

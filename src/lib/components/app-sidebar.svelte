@@ -69,7 +69,7 @@
 						url: '/visualisations/table-explorer'
 					},
 					{
-						title: 'Graph Explorer',
+						title: 'Chart Explorer',
 						url: '/visualisations/chart-explorer'
 					}
 				]
@@ -91,17 +91,20 @@
 			{
 				title: 'Documentation',
 				url: 'https://maris-development.github.io/beacon/',
-				icon: BookOpenIcon
+				icon: BookOpenIcon,
+				target: "_blank"
 			},
 			{
 				title: 'Support',
 				url: 'https://github.com/maris-development/beacon',
-				icon: LifeBuoyIcon
+				icon: LifeBuoyIcon,
+				target: "_blank"
 			},
 			{
 				title: 'Feedback',
 				url: 'https://github.com/maris-development/beacon/issues',
-				icon: SendIcon
+				icon: SendIcon,
+				target: "_blank"
 			}
 		]
 	};
@@ -126,7 +129,7 @@
 					{#snippet child({ props })}
 						<a href="/" {...props}>
 							<div
-								class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg"
+								class=" header-icon"
 							>
 								<DatabaseZapIcon class="size-4" />
 							</div>
@@ -158,3 +161,20 @@
 
 	</Sidebar.Footer>
 </Sidebar.Root>
+
+
+<style lang="scss">
+
+.header-icon {
+	background: var(--background);
+	color: var(--foreground);
+  display: flex;
+  aspect-ratio: 1 / 1;
+  width: 2rem;   // w-8
+  height: 2rem;  // h-8
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem; // rounded-lg
+}
+
+</style>
