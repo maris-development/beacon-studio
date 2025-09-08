@@ -11,7 +11,7 @@ import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';
 import type { Rendered, SortDirection } from './util-types';
 import { page } from '$app/state';
-
+import { get, type Readable } from "svelte/store";
 
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
@@ -22,6 +22,48 @@ export function cn(...inputs: ClassValue[]) {
 
 
 export class Utils {
+
+    static async sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    /**
+     * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
+     * 
+     * The cloning process follows these steps:
+     * 1. Attempts to use `structuredClone` for a deep and accurate clone.
+     * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
+     * 3. As a last resort, performs a shallow clone using object spread.
+     * 
+     * @typeParam T - The type of the value to clone.
+     * @param value - The value or Svelte `Readable` store to clone.
+     * @returns A cloned copy of the input value.
+     * @remarks
+     * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
+     * - Non-serializable properties may be lost if the fallback methods are used.
+     */
+    static cloneObject<T>(value: T | Readable<T>): T {
+        // 1) Best: structuredClone (fast, preserves Dates/Maps/Sets, etc.)
+        try {
+            const maybeObject = value as T;
+            return structuredClone(maybeObject);
+        } catch {
+            // ignored
+        }
+
+        // 2) If it’s JSON-like, this blows away proxies reliably
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch {
+            // ignored
+        }
+
+        // 3) Last resort, shallow clone
+        const clone = { ...value } as T;
+
+        console.warn('cloneObject: shallow clone', clone)
+
+        return clone
+    }
 
     static objectHasProperty<T,K extends PropertyKey>(obj: T, prop: K): obj is T & Record<K, unknown> {
         return typeof obj === "object" && obj !== null && prop in obj;

@@ -168,7 +168,7 @@
 		<h3>Query Parameters</h3>
 		<Button variant="outline" onclick={() => (open = true)}>
 			Add Parameter
-			<PlusIcon size="1rem" />
+			<PlusIcon />
 		</Button>
 	</div>
 
@@ -225,12 +225,12 @@
 		<div class="flex flex-row gap-2">
 			<Button onclick={handleSubmit}>
 				Execute query
-				<DownloadIcon size="1rem" />
+				<DownloadIcon />
 			</Button>
 
 			<Button onclick={handleCopyQuery}>
 				Copy query JSON
-				<FileJson2Icon size="1rem" />
+				<FileJson2Icon />
 			</Button>
 		</div>
 		
@@ -238,17 +238,17 @@
 		
 			<Button onclick={handleTableVisualise}>
 				View as table
-				<SheetIcon size="1rem" />
+				<SheetIcon />
 			</Button>
 
 			<Button onclick={handleMapVisualise}>
 				View on map
-				<MapIcon size="1rem" />
+				<MapIcon />
 			</Button>
 
 			<Button onclick={handleChartVisualise}>
 				View on chart
-				<ChartPieIcon size="1rem" />
+				<ChartPieIcon />
 			</Button>
 
 		</div>

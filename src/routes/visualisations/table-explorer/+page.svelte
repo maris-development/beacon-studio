@@ -48,6 +48,8 @@
 
 	let noQueryAvailableModalOpen = $state(false);
 
+	$inspect(query);
+
 
 	onMount(async () => {
 		
@@ -91,6 +93,8 @@
 	}
 
 	async function executeQuery() {
+
+
 		const startTime = performance.now();
 		const result = await client.query(query);
         const endTime = performance.now();
@@ -128,7 +132,7 @@
 		table = queryResponse.arrow_table;
 		table_kind = queryResponse.kind;
 
-		console.log('Query result:', table);
+		// console.log('Query result:', table);
 			
 	}
 
@@ -287,12 +291,12 @@
 
 		<Button onclick={handleChartVisualise}>
 			View on chart
-			<ChartPieIcon size="1rem" />
+			<ChartPieIcon />
 		</Button>
 
 		<Button onclick={handleMapVisualise}>
 			View on map
-			<MapIcon size="1rem" />
+			<MapIcon />
 		</Button>
 	</div>
 

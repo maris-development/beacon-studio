@@ -207,7 +207,8 @@
 </script>
 
 <div id="easy-query-builder">
-	<Label for="dataCollection">Selected Data Collection</Label>
+	<!-- <Label for="dataCollection">Selected Data Collection</Label> -->
+	<h4>Select Data Collection</h4>
 	<Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
 		<Select.Trigger>
 			{selected_table?.table_name ?? 'Select a table'}
@@ -223,20 +224,28 @@
 			</Select.Group>
 		</Select.Content>
 	</Select.Root>
+
 	{#if selected_table}
-		<h3>Collection Description</h3>
-		<p>{selected_table.description ?? 'No description available.'}</p>
+		<h4>Collection Description</h4>
+		{#if selected_table.description }
+			<p>{selected_table.description}</p>
+		{:else}
+			<div class="text-gray-500">
+				<p>No description available.</p>
+			</div>
+		{/if}
 	{/if}
+
 	<div>
 		{#if selected_preset_table_type === null}
-			<div class="mt-4 text-gray-500">
+			<div class=" text-gray-500">
 				<p>Select a table to see available query parameters.</p>
 			</div>
 		{:else}
-			<div class="mt-4 grid gap-4">
+			<div class="grid gap-4">
 				<Collapsible.Root class="space-y-2" open>
 					<div class="flex items-center justify-between">
-						<h3 class=" font-semibold">Select data columns</h3>
+						<h4 class=" font-semibold">Select data columns</h4>
 						<Collapsible.Trigger
 							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
 						>
@@ -252,13 +261,18 @@
 									bind:is_selected={data_parameters[i].selected}
 								/>
 							{/each}
+							{#if data_parameters.length === 0}
+								<div class="text-gray-500">
+									<p>No data columns available.</p>
+								</div>
+							{/if}
 						</div>
 					</Collapsible.Content>
 				</Collapsible.Root>
 
 				<Collapsible.Root class="space-y-2" open>
 					<div class="flex items-center justify-between">
-						<h3 class=" font-semibold">Select metadata columns</h3>
+						<h4 class=" font-semibold">Select metadata columns</h4>
 						<Collapsible.Trigger
 							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
 						>
@@ -274,6 +288,12 @@
 									bind:is_selected={metadata_parameters[i].selected}
 								/>
 							{/each}
+							{#if metadata_parameters.length === 0}
+								<div class="text-gray-500">
+									<p>No metadata columns available.</p>
+								</div>
+							{/if}
+
 						</div>
 					</Collapsible.Content>
 				</Collapsible.Root>
@@ -281,7 +301,9 @@
 		{/if}
 	</div>
 
-	<Label for="outputFormat" class="mt-8">Selected Output Format</Label>
+	<h4>Select output format</h4>
+	<Label for="outputFormat">Output format</Label>
+
 	<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
 		<Select.Trigger>
 			{selected_output_format}
@@ -303,12 +325,12 @@
 		<div class="flex flex-row gap-2">
 			<Button onclick={handleSubmit}>
 				Execute query
-				<DownloadIcon size="1rem" />
+				<DownloadIcon />
 			</Button>
 
 			<Button onclick={handleCopyQuery}>
 				Copy query JSON
-				<FileJson2Icon size="1rem" />
+				<FileJson2Icon />
 			</Button>
 		</div>
 
@@ -316,17 +338,17 @@
 		
 			<Button onclick={handleTableVisualise}>
 				View as table
-				<SheetIcon size="1rem" />
+				<SheetIcon />
 			</Button>
 
 			<Button onclick={handleMapVisualise}>
 				View on map
-				<MapIcon size="1rem" />
+				<MapIcon />
 			</Button>
 
 			<Button onclick={handleChartVisualise}>
 				View on chart
-				<ChartPieIcon size="1rem" />
+				<ChartPieIcon />
 			</Button>
 
 		</div>

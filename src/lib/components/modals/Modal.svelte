@@ -71,7 +71,7 @@
 		inset: 0;
 		background: rgba(0, 0, 0, 0.5);
 		cursor: default;
-		z-index: 100;
+		z-index: 1000;
 
 		.modal {
 			position: fixed;

@@ -13,11 +13,11 @@
 	<div class="buttons">
 		<Button onclick={() => onClose()}>
 			Save and execute
-			<SaveIcon size="1rem" />
+			<SaveIcon />
 		</Button>
 		<Button onclick={() => onClose(false)} variant="destructive">
 			Cancel
-			<CircleXIcon size="1rem" />
+			<CircleXIcon />
 		</Button>
 	</div>
 	<QueryEditor bind:sourceCode={editQueryString} height="80vh" />

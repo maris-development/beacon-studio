@@ -27,7 +27,41 @@ export class BeaconClient {
 		Arrow: 'arrow',
 		NetCDF: 'netcdf'
 	};
+    
+    /**
+     * Ensures that the output format of the provided query is set to 'parquet' or 'geoparquet'.
+     * 
+     * If the output format is already 'parquet' or an object containing the 'geoparquet' key, 
+     * the query is returned unchanged. Otherwise, the output format is set to 'parquet', 
+     * and a warning is logged to the console.
+     *
+     * @param query - The compiled query object to check and potentially modify.
+     * @returns A cloned query object with the output format ensured to be 'parquet' or 'geoparquet'.
+     */
+    static ensureParquetOutput(query: Readonly<CompiledQuery>) {
 
+        const newQuery =  Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
+
+        // console.log('ensureParquetOutput', newQuery);
+
+        switch (true) {
+            case typeof newQuery.output.format === 'object' && 'geoparquet' in (newQuery.output.format ?? {}):
+                // is geoparquet, allowed
+                break;
+
+            case newQuery.output.format === 'parquet': 
+                // is parquet, allowed
+                break;
+
+            default:
+                console.warn(`BeaconClient.ensureParquetOutput: Output format '${newQuery.output.format}' changed to 'parquet'`);
+                //set format to parquet
+                newQuery.output.format = 'parquet';
+                break;
+        }
+
+        return newQuery;
+    }
 
     static outputFormatToExtension(query: CompiledQuery, prefix: string = ''): string {
         switch (true) {
@@ -99,6 +133,8 @@ export class BeaconClient {
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
         await wasmInit(PARQUET_WASM_URL);
 
+        const correctedQuery = BeaconClient.ensureParquetOutput(query);
+
         const endpoint = `${this.host}/api/query`;
 
         // Create a request to the Beacon API using fetch
@@ -123,9 +159,10 @@ export class BeaconClient {
         const byte_buffer = new Uint8Array(buffer);
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
-        if (typeof query.output.format === 'object' && 'geoparquet' in query.output.format) {
-            const geoOutput = query.output as { format: GeoParquetOutputFormat };
+        if (typeof correctedQuery.output.format === 'object' && 'geoparquet' in correctedQuery.output.format) {
+            const geoOutput = correctedQuery.output as { format: GeoParquetOutputFormat };
             const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
+
             if (!longitude_column || !latitude_column) {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
             }
@@ -139,28 +176,15 @@ export class BeaconClient {
             });
         }
 
-        switch (query.output.format) {
-            case 'parquet': {
-                // Return the arrow table with geoparquet format
-                return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
-                    return {
-                        kind: 'parquet',
-                        arrow_table: arrow_table,
-                    }
-                });
+        return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
+            return {
+                kind: 'parquet',
+                arrow_table: arrow_table,
             }
-            case 'arrow':
-            case 'ipc': {
-                throw new Error("Arrow format not implemented yet");
-            }
-            case 'netcdf': {
-                throw new Error("NetCDF format not implemented yet");
-            }
-            case 'csv': {
-                throw new Error("CSV format not implemented yet");
-            }
-        }
+        });
+
     }
+
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
         const url = new URL(`${this.host}/api/query/explain`);
@@ -320,13 +344,13 @@ export class BeaconClient {
         return response;
     }
 
-    async getStatus(): Promise<string> {
+    async getHealth(): Promise<boolean> {
 
-        const url = new URL(`${this.host}/api/status`);
+        const url = new URL(`${this.host}/api/health`);
 
         const response: string = await this.fetch(url, {}, 'text');
 
-        return response;
+        return response == "Ok";
     }
 
     // Overload #1 - JSON default

@@ -12,7 +12,7 @@ export const addToast = (toast: Partial<IToast>) => {
     id,
     type: "info",
     dismissible: true,
-    timeout: (toast.type ?? "info") === "error" ? 0 : 5000, // No timeout for errors, 5 seconds for others
+    timeout: (toast.type ?? "info") === "error" ? 20000 : 5000, // No timeout for errors, 5 seconds for others
     message: "",
   };
   

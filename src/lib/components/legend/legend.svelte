@@ -130,7 +130,7 @@
 						font-size: 0.75rem;
 						pointer-events: none;
 						opacity: 1;
-						z-index: 10;
+						z-index: 3;
 					}
 
 					&:before {
@@ -142,7 +142,7 @@
 						border-width: 5px;
 						border-style: solid;
 						border-color: #333 transparent transparent transparent;
-						z-index: 10;
+						z-index: 3;
 					}
 				}
 			}

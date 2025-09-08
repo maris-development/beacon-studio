@@ -179,7 +179,7 @@
 			}
 		};
 
-		latitudeColumnName= newOutputFormat.geoparquet.latitude_column;
+		latitudeColumnName = newOutputFormat.geoparquet.latitude_column;
 		longitudeColumnName = newOutputFormat.geoparquet.longitude_column;
 
 		console.log('changeQueryOutputToGeoparquet', {
@@ -517,11 +517,11 @@
 			left: 0;
 			overflow-x: hidden;
 			overflow-y: auto;
-			z-index: 10; // Ensure it overlays the map
+			z-index: 4; // Ensure it overlays the map
 		}
 
 		.map {
-			z-index: 9;
+			z-index: 3;
 			height: 100%;
 			width: 100%;
 			border-radius: 0 0 calc(0.625rem + 4px) calc(0.625rem + 4px);
@@ -540,7 +540,7 @@
 			justify-content: center;
 
 			background-color: rgba(255, 255, 255, 0.5);
-			z-index: 10; // Ensure it overlays the map
+			z-index: 5; // Ensure it overlays the map
 		}
 	}
 </style>

@@ -138,17 +138,17 @@
 			<div class="view-query">
 				<Button onclick={handleTableVisualise}>
 					View as table
-					<SheetIcon size="1rem" />
+					<SheetIcon />
 				</Button>
 
 				<Button onclick={handleMapVisualise}>
 					View on map
-					<MapIcon size="1rem" />
+					<MapIcon />
 				</Button>
 
 				<Button onclick={handleChartVisualise}>
 					View on chart
-					<ChartPieIcon size="1rem" />
+					<ChartPieIcon />
 				</Button>
 			</div>
 		</div>

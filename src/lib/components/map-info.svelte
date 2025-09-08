@@ -46,12 +46,12 @@
 
 		<Button onclick={handleTableVisualise}>
 			View as table
-			<SheetIcon size="1rem" />
+			<SheetIcon />
 		</Button>
 
 		<Button onclick={handleChartVisualise}>
 			View on chart
-			<ChartPieIcon size="1rem" />
+			<ChartPieIcon />
 		</Button>
 	</div>
     {@render children?.()}
