@@ -140,7 +140,6 @@
         gap: 1rem;
 		margin-bottom: 1rem;
 
-		.fake-beacon-instance,
         .beacon-instance {
             background-color: #f9f9f9;
             border: 1px solid #ddd;
