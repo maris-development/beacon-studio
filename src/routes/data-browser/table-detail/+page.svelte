@@ -10,6 +10,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
+    import { base } from '$app/paths';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
@@ -122,7 +123,7 @@
 	<title>Table {tableName} - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Data tables', href: '/data-browser/data-tables' }, { label: `Table ${tableName}`, href: '' }]} />
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: `${base}/data-browser` }, { label: 'Data tables', href: `${base}/data-browser/data-tables` }, { label: `Table ${tableName}`, href: '' }]} />
 
 <div class="page-container">
 	<h1>Table '{tableName}' ({totalRows} fields)</h1>

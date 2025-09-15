@@ -20,6 +20,7 @@
 	import type { Column, SortDirection } from '@/util-types';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
+  	import { base } from '$app/paths';
 
 	const arrowWorker: ArrowProcessingWorkerManagager = new ArrowProcessingWorkerManagager();
 
@@ -243,14 +244,14 @@
 	async function handleChartVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 

@@ -9,6 +9,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
+	import { base } from '$app/paths';
 
 	const file = page.url.searchParams.get('file') || '';
 
@@ -117,8 +118,8 @@
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: '/data-browser' },
-		{ label: 'Datasets', href: '/data-browser/datasets' },
+		{ label: 'Data Browser', href: `${base}/data-browser` },
+		{ label: 'Datasets', href: `${base}/data-browser/datasets` },
 		{ label: `Dataset ${file}`, href: '#' }
 	]}
 />

@@ -7,6 +7,7 @@
 	import { Utils } from '@/utils';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { goto } from '$app/navigation';
+  	import { base } from '$app/paths';
 
 	let {
 		onEditClick = () => {},
@@ -21,14 +22,14 @@
 	async function handleChartVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(compiledQuery);
 		if(gzippedQuery){
-			goto(`/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(compiledQuery);
 		if(gzippedQuery){
-			goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 	

@@ -15,6 +15,7 @@
 	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
+  	import { base } from '$app/paths';
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -162,7 +163,7 @@
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
@@ -170,7 +171,7 @@
 	async function handleTableVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>

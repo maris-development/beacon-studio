@@ -8,6 +8,7 @@
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { Column } from '@/util-types';
+  	import { base } from '$app/paths';
 
 	type Dataset = {
 		dataset: string;
@@ -104,7 +105,7 @@
 	function onCellClick(row: Record<string, any>, column: Column) {
 		const filename = row[column.key];
 
-		const url = new URL('/data-browser/dataset-detail', window.location.origin);
+		const url = new URL(`${base}/data-browser/dataset-detail`, window.location.origin);
 		
 		url.searchParams.set('file', filename);
 
@@ -123,7 +124,7 @@
 	<title>Datasets - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Datasets', href: '/data-browser/datasets' }]} />
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: `${base}/data-browser` }, { label: 'Datasets', href: `${base}/data-browser/datasets` }]} />
 
 <div class="page-container">
 	<h1>Datasets</h1>

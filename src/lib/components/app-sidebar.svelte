@@ -8,6 +8,8 @@
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
+  	import { base } from '$app/paths';
+
 
 	const data = {
 		instance: {
@@ -18,21 +20,21 @@
 		nodeContent: [
 			{
 				title: 'Data Browser',
-				url: '/data-browser',
+				url: base + '/data-browser',
 				icon: Table2Icon,
 				isActive: true,
 				items: [
 					{
 						title: 'Datasets',
-						url: '/data-browser/datasets'
+						url: base + '/data-browser/datasets'
 					},
 					{
 						title: 'Data Tables',
-						url: '/data-browser/data-tables'
+						url: base + '/data-browser/data-tables'
 					}
 					// { // not needed for now
 					// 	title: 'Settings',
-					// 	url: '/data-browser/settings'
+					// 	url: base + '/data-browser/settings'
 					// }
 				]
 			}
@@ -40,37 +42,37 @@
 		dataAccess: [
 			{
 				title: 'Queries',
-				url: '/queries',
+				url: base + '/queries',
 				icon: DatabaseIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Builder',
-						url: '/queries/query-builder'
+						url: base + '/queries/query-builder'
 					},
 					{
 						title: 'Editor',
-						url: '/queries/query-editor'
+						url: base + '/queries/query-editor'
 					}
 				]
 			},
 			{
 				title: 'Visualizations',
-				url: '/visualisations',
+				url: base + '/visualisations',
 				icon: EyeIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Map Viewer',
-						url: '/visualisations/map-viewer',
+						url: base + '/visualisations/map-viewer',
 					},
 					{
 						title: 'Table Explorer',
-						url: '/visualisations/table-explorer'
+						url: base + '/visualisations/table-explorer'
 					},
 					{
 						title: 'Chart Explorer',
-						url: '/visualisations/chart-explorer'
+						url: base + '/visualisations/chart-explorer'
 					}
 				]
 			},
@@ -78,12 +80,12 @@
 		nodeManagement: [
 			{
 				title: 'System Info',
-				url: '/system-info',
+				url: base + '/system-info',
 				icon: CpuIcon
 			},
 			{
 				title: 'Settings',
-				url: '/settings',
+				url: base + '/settings',
 				icon: Settings2Icon
 			}
 		],
@@ -127,7 +129,7 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
 					{#snippet child({ props })}
-						<a href="/" {...props}>
+						<a href="{base}/" {...props}>
 							<div
 								class=" header-icon"
 							>

@@ -23,6 +23,16 @@ export function cn(...inputs: ClassValue[]) {
 
 export class Utils {
 
+    // Not actually random! Dont use for security/cryptographic purposes!
+    static randomUUID(){
+        // Generate a random-like UUID (version 4) without using crypto API
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+
     static async sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }

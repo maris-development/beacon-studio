@@ -7,6 +7,10 @@
 	import Card from '@/components/card/card.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
 	import { Button } from '@/components/ui/button';
+	import { BeaconClient } from '@/beacon-api/client';
+	import { addToast } from '@/stores/toasts';
+  	import { base } from '$app/paths';
+	import { Utils } from '@/utils';
 
 	let beaconInstanceArray: BeaconInstance[] = $beaconInstances;
 	let currentBeaconInstanceValue: BeaconInstance | null = $currentBeaconInstance;
@@ -18,9 +22,9 @@
 
 		if(!beaconInstanceArray.find(i => i.url === 'https://beacon-ihm.maris.nl/')) {
 			const ihmInstance: BeaconInstance = {
-				id: crypto.randomUUID(),
+				id: Utils.randomUUID(),
 				name: 'IHM Beacon',
-				url: 'https://beacon-ihm.maris.nl/',
+				url: 'https://beacon-ihm.maris.nl',
 				description: 'De Informatiehuis Marien (IHM) Beacon server',
 				createdAt: new Date(),
 				updatedAt: new Date(),
@@ -35,6 +39,12 @@
 		}
 	}
 
+	async function testConnection(){
+		const client = BeaconClient.new(currentBeaconInstanceValue);
+		
+		await client.testConnection();
+	}
+
 	function updateInstanceValues() {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		beaconInstanceArray = $beaconInstances;
@@ -43,6 +53,7 @@
 	function openModalIfNoInstance() {
 		createIhmInstanceIfNotExists();
 		pickFirstInstance();
+		testConnection();
 
 		if (currentBeaconInstanceValue == null) {
 			showChooseBeaconModal = true;
@@ -98,21 +109,21 @@
 	</p>
 
 	<div class="beacon-functions">
-		<Card href="/data-browser">
+		<Card href="{base}/data-browser">
 			<h2>Browse data</h2>
 			<p>
 				Browse the contents and definitions of your Beacon instance in a tabular interface.
 			</p>
 		</Card>
 
-		<Card href="/queries">
+		<Card href="{base}/queries">
 			<h2>Create queries</h2>
 			<p>
 				Use the query builder or query editor to create queries for your Beacon instance.
 			</p>
 		</Card>
 		
-		<Card href="/visualisations">
+		<Card href="{base}/visualisations">
 			<h2>Visualise data</h2>
 			<p>
 				Use the visualisation tools to view tables, charts and graphs of the contents of your Beacon instance.

@@ -16,13 +16,18 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			precompress: false,
-			strict: false,
+			strict: false
 		}),
+		paths: {
+			base: (process.env.BASE_PATH ?? '').trim(), // Replace with your subdirectory
+		},
 		alias: {
 			// when you write `@/foo` → load from `./src/lib/foo`
 			'@/*': './src/lib/*'
 		}
 	}
 };
+
+// console.error(config);
 
 export default config;

@@ -168,6 +168,8 @@
 </div>
 
 <style lang="scss">
+	@use 'sass:color';
+	
 	.data-table-wrapper {
 		border: 1px solid #ddd;
 		border-radius: 8px;
@@ -204,7 +206,7 @@
 							cursor: pointer;
 
 							&:hover {
-								background-color: darken(#f9f9f9, 5%);
+								background-color: color.mix(black, #f9f9f9, 5%); 
 							}
 						}
 

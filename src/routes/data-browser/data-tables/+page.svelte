@@ -8,6 +8,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import { AffixString } from '@/utils';
 	import type { Column } from '@/util-types';
+  	import { base } from '$app/paths';
 
 	
 
@@ -89,7 +90,7 @@
 	function onCellClick(row: Record<string, AffixString>, column: Column) {
 		const filename = row[column.key];
 
-		const url = new URL('/data-browser/table-detail', window.location.origin);
+		const url = new URL(`${base}/data-browser/table-detail`, window.location.origin);
 
 		url.searchParams.set('table_name', filename.main);
 
@@ -102,7 +103,7 @@
 	<title>Data Tables - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }, { label: 'Data tables', href: '/data-browser/data-tables' }]} />
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: `${base}/data-browser` }, { label: 'Data tables', href: `${base}/data-browser/data-tables` }]} />
 
 <div class="page-container">
 	<h1>Data Tables</h1>

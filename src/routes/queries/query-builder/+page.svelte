@@ -4,6 +4,8 @@
 	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
+import { base } from '$app/paths';
+
 </script>
 
 <svelte:head>
@@ -12,8 +14,8 @@
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Queries', href: '/queries' },
-		{ label: 'Query Builder', href: '/queries/query-builder' }
+		{ label: 'Queries', href: `${base}/queries` },
+		{ label: 'Query Builder', href: `${base}/queries/query-builder` }
 	]}
 />
 

@@ -8,6 +8,7 @@ import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
 import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
+import { addToast } from '@/stores/toasts';
 
 const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
 
@@ -351,6 +352,36 @@ export class BeaconClient {
         const response: string = await this.fetch(url, {}, 'text');
 
         return response == "Ok";
+    }
+
+    /**
+     * Tests the connection to the Beacon instance by checking its health status.
+     *
+     * @returns {Promise<boolean>} A promise that resolves to `true` if the connection is successful and the Beacon instance is healthy,
+     * or `false` if there is an error connecting or the instance is not healthy.
+     *
+     * @throws {Error} Throws an error if the connection is successful but the Beacon instance is not healthy.
+     *
+     * Displays an error toast notification if the connection fails.
+     */
+    async testConnection(): Promise<boolean> {
+        const result = await this.getHealth().then((isHealthy) => {
+			// Connection successful
+			if(!isHealthy){
+				throw new Error('Connected succesfully, but Beacon instance is not healthy.');
+			}
+
+            return true;
+		}).catch(() => {
+			addToast({
+				message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
+				type: 'error',
+                timeout: 0
+			});
+            return false;
+		});
+
+        return result;
     }
 
     // Overload #1 - JSON default

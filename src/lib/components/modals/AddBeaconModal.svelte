@@ -95,7 +95,6 @@
 
 		connectionCheckState = "testing";
 
-
 		const testingInstance: BeaconInstance = {
 			id: 'testing-instance',
 			name: 'Testing Instance',
@@ -108,24 +107,20 @@
 
 		const testingClient = BeaconClient.new(testingInstance);
 
-		let success = false;
-
 		await Utils.sleep(330);
 
-		await testingClient.getHealth().then((isHealthy) => {
-			if (isHealthy) {
-				connectionCheckState = "valid";
-				success = true;
-			} 
-		}).catch(() => {
-			connectionCheckState = "invalid";
-			addToast({
-				message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
-				type: 'error'
-			});
-		});
+		let couldConnect = await testingClient.testConnection()
 
-		return success;
+		if (couldConnect) {
+			connectionCheckState = "valid";
+
+		} else {
+			connectionCheckState = "invalid";
+			
+			return false;
+		}
+			
+		return true;
 	}
 </script>
 
