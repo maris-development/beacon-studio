@@ -9,8 +9,9 @@ import { MemoryCache } from '@/cache';
 import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
+import {base} from '$app/paths';
 
-const PARQUET_WASM_URL = '/parquet_wasm_bg.wasm';
+const PARQUET_WASM_URL = `${base}/parquet_wasm_bg.wasm`;
 
 export class BeaconClient {
     host: string;

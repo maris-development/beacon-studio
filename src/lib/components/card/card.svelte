@@ -41,6 +41,9 @@
 {/if}
 
 <style lang="scss">
+	button.card {
+		text-align: left; // Force left alignment for the button text
+	}
 	.card {
 		display: flex;
 		flex-direction: column;

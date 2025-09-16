@@ -23,7 +23,15 @@ export function cn(...inputs: ClassValue[]) {
 
 export class Utils {
 
-    // Not actually random! Dont use for security/cryptographic purposes!
+    /**
+     * Generates a random UUID (version 4) string.
+     * 
+     * **This implementation does not use the crypto API and is not suitable for cryptographic purposes.**
+     * The generated UUID follows the format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
+     * where 'x' is replaced with a random hexadecimal digit and 'y' is replaced with a random hexadecimal digit from 8, 9, A, or B.
+     *
+     * @returns {string} A randomly generated UUID v4 string.
+     */
     static randomUUID(){
         // Generate a random-like UUID (version 4) without using crypto API
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

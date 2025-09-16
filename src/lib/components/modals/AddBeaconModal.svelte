@@ -10,13 +10,14 @@
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import CheckIcon from '@lucide/svelte/icons/check';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 	import { DatasetController } from 'chart.js';
 
 	/** Parent passes these in to handle save/close; optionally an instance for editing */
-	export let onSave: (instance: BeaconInstance) => void;
+	export let onSave: (instance: BeaconInstance, isDeleted: boolean) => void;
 	export let onClose: () => void;
 	export let instance: BeaconInstance | null = null;
 
@@ -82,7 +83,17 @@
 			updatedAt: now
 		};
 
-		onSave(newInstance);
+		onSave(newInstance, false);
+	}
+
+	async function removeInstance(){
+		if(!instance) return;
+
+		let confirmation = confirm(`Are you sure you want to remove the instance "${instance.name}"? This action cannot be undone.`);
+
+		if(!confirmation) return;
+
+		onSave(instance, true);
 	}
 
 
@@ -149,12 +160,19 @@
 	</form>
 
 	<div slot="footer" class="footer">
-		<Button type="button" variant="destructive" onclick={closeModal} data-connection-state={connectionCheckState}>
-			Cancel
-			<CircleXIcon />
+		<div class="buttons-left">
+			<Button type="button" variant="outline" onclick={closeModal} >
+				Cancel
+				<CircleXIcon />
+			</Button>
 
-			
-		</Button>
+			<Button type="button" variant="destructive" onclick={removeInstance} disabled={!instance}>
+				Delete
+				<Trash2Icon />
+			</Button>
+		</div>
+
+
 
 		<div class="buttons-right">
 			<Button variant="outline" onclick={testConnection}>
