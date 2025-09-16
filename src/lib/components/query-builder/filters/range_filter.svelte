@@ -1,14 +1,25 @@
 <script lang="ts">
+	import type { RangeFilterColumn } from '@/beacon-api/types';
 	import Input from '@/components/ui/input/input.svelte';
 
 	let {
+		range_filter,
 		min_value = $bindable(),
 		max_value = $bindable()
-	}: { min_value: string | number; max_value: string | number } = $props();
+	}: {
+		range_filter: RangeFilterColumn;
+		min_value: string | number;
+		max_value: string | number;
+	} = $props();
 
-	let is_timestamp_filter = isTimestamp(min_value) || isTimestamp(max_value);
-	let is_number_filter = isNumber(min_value) || isNumber(max_value);
-	let is_string_filter = isString(min_value) || isString(max_value);
+	let origin_filter = $state({ ...range_filter });
+
+	let is_timestamp_filter = $state(isTimestamp(min_value) && isTimestamp(max_value));
+	let is_number_filter = $state(isNumber(min_value) && isNumber(max_value));
+	let is_string_filter = $state(isString(min_value) && isString(max_value));
+
+	let timestamp_min_value = $state('');
+	let timestamp_max_value = $state('');
 
 	function isTimestamp(value: unknown): boolean {
 		return typeof value === 'string' && !isNaN(Date.parse(value));
@@ -23,10 +34,10 @@
 	}
 
 	if (typeof min_value === 'string' && isTimestamp(min_value)) {
-		var timestamp_min_value = $state(toDatetimeLocalStringFromUTC(min_value));
+		timestamp_min_value = toDatetimeLocalStringFromUTC(min_value);
 	}
 	if (typeof max_value === 'string' && isTimestamp(max_value)) {
-		var timestamp_max_value = $state(toDatetimeLocalStringFromUTC(max_value));
+		timestamp_max_value = toDatetimeLocalStringFromUTC(max_value);
 	}
 
 	function toDatetimeLocalStringFromUTC(value: string): string {
@@ -42,7 +53,25 @@
 	}
 
 	$effect(() => {
-		console.log('min_value changed:', min_value);
+		if (range_filter !== origin_filter) {
+			min_value = range_filter.min;
+			max_value = range_filter.max;
+
+			is_timestamp_filter = isTimestamp(min_value) && isTimestamp(max_value);
+			is_number_filter = isNumber(min_value) && isNumber(max_value);
+			is_string_filter = isString(min_value) && isString(max_value);
+
+			if (is_timestamp_filter) {
+				if (typeof min_value === 'string') {
+					timestamp_min_value = toDatetimeLocalStringFromUTC(min_value);
+				}
+				if (typeof max_value === 'string') {
+					timestamp_max_value = toDatetimeLocalStringFromUTC(max_value);
+				}
+			}
+
+			origin_filter = range_filter;
+		}
 	});
 </script>
 
@@ -73,10 +102,10 @@
 			/>
 		{:else if is_number_filter}
 			<div>
-				<Input type="number" step="any" bind:value={max_value} class="w-[200px]"/>
+				<Input type="number" step="any" bind:value={max_value} class="w-[200px]" />
 			</div>
 		{:else if is_string_filter}
-			<Input type="text" bind:value={max_value} placeholder="Enter text" class="w-[200px]"/>
+			<Input type="text" bind:value={max_value} placeholder="Enter text" class="w-[200px]" />
 		{/if}
 	</div>
 </div>

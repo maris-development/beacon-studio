@@ -4,8 +4,8 @@
 	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
-import { base } from '$app/paths';
-
+	import { base } from '$app/paths';
+	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
 </script>
 
 <svelte:head>
@@ -32,7 +32,7 @@ import { base } from '$app/paths';
 					Use this simple form to build your queries. It&apos;s great for quick tasks.
 				</p>
 
-				<EasyQueryBuilder />
+				<EasyTableSelector />
 			</Card>
 		</Tabs.Content>
 		<Tabs.Content value="advanced-builder">

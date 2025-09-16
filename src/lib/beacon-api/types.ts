@@ -183,7 +183,7 @@ export interface RangeFilterColumn {
 }
 
 export interface OptionsFilterColumn {
-    values: Array<string | number>;
+    options: Array<string | number>;
 }
 
 export type AnyFilterColumn = Record<string, unknown>;

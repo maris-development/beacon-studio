@@ -23,91 +23,103 @@
 
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
-  	import { base } from '$app/paths';
+	import { base } from '$app/paths';
+	import type { QueryFilterValue } from './filters/filter.svelte';
+	import Filter from './filters/filter.svelte';
 
-
-
-	
-	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
-
-	let easy_tables = $state<Array<TableDefinition>>([]);
-	let selected_table_name = $state('');
-
-	const selected_table = $derived.by(() => {
-		return easy_tables.find((t) => t.table_name === selected_table_name) || null;
-	});
-
-	let selected_preset_table_type: PresetTableType = $derived.by(() => {
-		let easy_table_type = selected_table?.table_type;
-		if (easy_table_type === undefined || easy_table_type === null) {
-			return null;
-		}
-		if ('preset' in easy_table_type) {
-			// ‣ here TS knows table: { preset: PresetTableType }
-			console.log('Selected Preset Table Type:', easy_table_type.preset);
-			return easy_table_type.preset;
-		}
-		// extract preset table type from the easy_table_type
-		return null;
-	});
-
-	let data_parameters: { selected: boolean; column: PresetColumn }[] = $state([]);
-	let metadata_parameters: { selected: boolean; column: PresetColumn }[] = $state([]);
-
-	$effect(() => {
-		if (!selected_preset_table_type) return;
-
-		data_parameters = selected_preset_table_type.data_columns.map((column) => ({
-			selected: false,
-			column
-		}));
-
-		metadata_parameters = selected_preset_table_type.metadata_columns.map((column) => ({
-			selected: false,
-			column
-		}));
-	});
+	let { selected_table_name }: { selected_table_name: string } = $props();
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
+	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
+
+	let selected_table = $derived(await fetchPresetTableType(selected_table_name));
+
+	async function fetchPresetTableType(table_name: string): Promise<TableDefinition | null> {
+		if (!table_name) {
+			return null;
+		}
+
+		let preset_table_types = await client.getPresetTables();
+
+		// Find the selected table type
+		let selected_table_type = preset_table_types.find((t) => t.table_name === table_name) || null;
+		console.log('Selected table type:', selected_table_type);
+		return selected_table_type;
+	}
+
+	let data_parameters: {
+		selected: boolean;
+		column: PresetColumn;
+		filter_value: QueryFilterValue;
+	}[] = $state([]);
+
+	let metadata_parameters: {
+		selected: boolean;
+		column: PresetColumn;
+		filter_value: QueryFilterValue;
+	}[] = $state([]);
+
+	$effect(() => {
+		if (!selected_table) {
+			data_parameters = [];
+			metadata_parameters = [];
+			return;
+		}
+
+		let table_type = selected_table.table_type;
+		if ('preset' in table_type) {
+			// It's a preset table type
+			let data_columns = table_type.preset.data_columns;
+			data_parameters = data_columns.map((column) => ({
+				selected: false,
+				column,
+				filter_value: null
+			}));
+
+			let metadata_columns = table_type.preset.metadata_columns;
+			metadata_parameters = metadata_columns.map((column) => ({
+				selected: false,
+				column,
+				filter_value: null
+			}));
+		}
+	});
 
 	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
-
-		let preset_tables = await client.getPresetTables();
-
-		easy_tables = preset_tables;
-
-		// By default, select the first table if available
-		if (easy_tables.length > 0) {
-			selected_table_name = easy_tables[0].table_name;
-		}
 	});
 
 	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
 
 		// get all the selected parameters
-		let selected_data_parameters = data_parameters.filter((p) => p.selected).map((p) => p.column);
-		let selected_metadata_parameters = metadata_parameters
-			.filter((p) => p.selected)
-			.map((p) => p.column);
+		let selected_data_parameters = data_parameters.filter((p) => p.selected).map((p) => p);
+		let selected_metadata_parameters = metadata_parameters.filter((p) => p.selected).map((p) => p);
 
 		let all_parameters = [...selected_data_parameters, ...selected_metadata_parameters];
 
 		all_parameters.forEach((parameter) => {
-			builder.addSelect({ column: parameter.alias, alias: null });
+			builder.addSelect({ column: parameter.column.alias, alias: null });
 
-			if (parameter.filter) {
-				let filter = parameter.filter;
+			if (parameter.filter_value) {
+				let filter = parameter.filter_value;
 				if ('min' in filter && 'max' in filter) {
 					// ToDo: fix this to use the correct types
 					builder.addFilter({
-						for_query_parameter: parameter.alias,
+						for_query_parameter: parameter.column.alias,
 						min: filter.min as string | number,
 						max: filter.max as string | number
 					});
+				} else if ('options' in filter) {
+					let or_filters = { or: [] };
+
+					for (let option of filter.options) {
+						or_filters.or.push({ eq: option, for_query_parameter: parameter.column.alias });
+					}
+
+					builder.addFilter(or_filters);
 				}
 			}
 		});
@@ -121,16 +133,15 @@
 			throw new Error('Failed to compile query: ' + compiledQuery.unwrapErr());
 		}
 
-		console.debug('Compiled Query:', compiledQuery);
+		console.log('Compiled Query:', compiledQuery);
 
 		return compiledQuery.unwrap();
 	}
 
-	function compileAndGZipQuery(): string|undefined {
+	function compileAndGZipQuery(): string | undefined {
 		try {
 			let compiledQuery = compileQuery();
 			return Utils.objectToGzipString(compiledQuery);
-
 		} catch (error) {
 			console.error('Error compiling and gzipping query:', error);
 			addToast({
@@ -145,7 +156,6 @@
 
 		try {
 			compiledQuery = compileQuery();
-
 		} catch (error) {
 			console.error('Error compiling query:', error);
 			addToast({
@@ -155,28 +165,31 @@
 			return;
 		}
 
-		if(compiledQuery){
-			await client.queryToDownload(compiledQuery, BeaconClient.outputFormatToExtension(compiledQuery));
+		if (compiledQuery) {
+			await client.queryToDownload(
+				compiledQuery,
+				BeaconClient.outputFormatToExtension(compiledQuery)
+			);
 		}
 	}
 
 	async function handleMapVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleChartVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
@@ -186,7 +199,6 @@
 
 		try {
 			compiledQuery = compileQuery();
-
 		} catch (error) {
 			console.error('Error compiling query:', error);
 			addToast({
@@ -208,27 +220,10 @@
 </script>
 
 <div id="easy-query-builder">
-	<!-- <Label for="dataCollection">Selected Data Collection</Label> -->
-	<h4>Select Data Collection</h4>
-	<Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
-		<Select.Trigger>
-			{selected_table?.table_name ?? 'Select a table'}
-		</Select.Trigger>
-		<Select.Content>
-			<Select.Group>
-				<Select.Label>Tables</Select.Label>
-				{#each easy_tables as table (table.table_name)}
-					<Select.Item value={table.table_name} label={table.table_name}>
-						{table.table_name}
-					</Select.Item>
-				{/each}
-			</Select.Group>
-		</Select.Content>
-	</Select.Root>
-
+	<h1>{selected_table_name}</h1>
 	{#if selected_table}
 		<h4>Collection Description</h4>
-		{#if selected_table.description }
+		{#if selected_table.description}
 			<p>{selected_table.description}</p>
 		{:else}
 			<div class="text-gray-500">
@@ -238,7 +233,7 @@
 	{/if}
 
 	<div>
-		{#if selected_preset_table_type === null}
+		{#if selected_table === null}
 			<div class=" text-gray-500">
 				<p>Select a table to see available query parameters.</p>
 			</div>
@@ -260,6 +255,7 @@
 								<Parameter
 									bind:column={data_parameters[i].column}
 									bind:is_selected={data_parameters[i].selected}
+									bind:filter_value={data_parameters[i].filter_value}
 								/>
 							{/each}
 							{#if data_parameters.length === 0}
@@ -287,6 +283,7 @@
 								<Parameter
 									bind:column={metadata_parameters[i].column}
 									bind:is_selected={metadata_parameters[i].selected}
+									bind:filter_value={metadata_parameters[i].filter_value}
 								/>
 							{/each}
 							{#if metadata_parameters.length === 0}
@@ -294,7 +291,6 @@
 									<p>No metadata columns available.</p>
 								</div>
 							{/if}
-
 						</div>
 					</Collapsible.Content>
 				</Collapsible.Root>
@@ -319,10 +315,9 @@
 		</Select.Content>
 	</Select.Root>
 
+	<hr />
 
-	<hr>
-
-	<div class="flex flex-row gap-2 justify-between">
+	<div class="flex flex-row justify-between gap-2">
 		<div class="flex flex-row gap-2">
 			<Button onclick={handleSubmit}>
 				Execute query
@@ -336,7 +331,6 @@
 		</div>
 
 		<div class="flex flex-row gap-2">
-		
 			<Button onclick={handleTableVisualise}>
 				View as table
 				<SheetIcon />
@@ -351,13 +345,10 @@
 				View on chart
 				<ChartPieIcon />
 			</Button>
-
 		</div>
 	</div>
 
 	<!-- <p>Or use the options below to visualise the data</p> -->
-
-	
 </div>
 
 <style lang="scss">
