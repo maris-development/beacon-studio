@@ -53,7 +53,7 @@
 	<RangeFilter range_filter={filter as RangeFilterColumn} bind:max_value bind:min_value />
 {:else if filter !== null && 'options' in filter}
 	<!-- Options Filter -->
-	<OptionsFilter filter={filter as OptionsFilterColumn} bind:selected_options />
+	<OptionsFilter options_filter={filter as OptionsFilterColumn} bind:selected_options />
 {:else if filter !== null}
 	<!-- Any Filter -->
 	<AnyFilter filter={filter as AnyFilterColumn} />

@@ -32,22 +32,7 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
-
-	let selected_table = $derived(await fetchPresetTableType(selected_table_name));
-
-	async function fetchPresetTableType(table_name: string): Promise<TableDefinition | null> {
-		if (!table_name) {
-			return null;
-		}
-
-		let preset_table_types = await client.getPresetTables();
-
-		// Find the selected table type
-		let selected_table_type = preset_table_types.find((t) => t.table_name === table_name) || null;
-		console.log('Selected table type:', selected_table_type);
-		return selected_table_type;
-	}
-
+	let selected_table: TableDefinition | null = $derived(await fetchPresetTableType(selected_table_name));
 	let data_parameters: {
 		selected: boolean;
 		column: PresetColumn;
@@ -59,6 +44,7 @@
 		column: PresetColumn;
 		filter_value: QueryFilterValue;
 	}[] = $state([]);
+
 
 	$effect(() => {
 		if (!selected_table) {
@@ -91,6 +77,23 @@
 		client = BeaconClient.new(currentBeaconInstanceValue);
 	});
 
+
+	async function fetchPresetTableType(table_name: string): Promise<TableDefinition | null> {
+		if (!table_name || !client) {
+			return null;
+		}
+
+		let preset_table_types = await client.getPresetTables();
+
+		// Find the selected table type
+		let selected_table_type = preset_table_types.find((t) => t.table_name === table_name) || null;
+		
+		console.log('Selected table type:', selected_table_type);
+
+		return selected_table_type;
+	}
+
+	
 	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
 
@@ -220,10 +223,10 @@
 </script>
 
 <div id="easy-query-builder">
-	<h1>{selected_table_name}</h1>
 	{#if selected_table}
 		<h4>Collection Description</h4>
 		{#if selected_table.description}
+			<p>Selected table: <b>{selected_table_name}</b></p>
 			<p>{selected_table.description}</p>
 		{:else}
 			<div class="text-gray-500">
