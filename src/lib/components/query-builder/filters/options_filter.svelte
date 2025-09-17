@@ -7,6 +7,15 @@
 		selected_options = $bindable()
 	}: { options_filter: OptionsFilterColumn; selected_options: Array<string | number> } = $props();
 
+	// store previous reference so effect only reacts to options_filter changes
+	let old_options_filter: OptionsFilterColumn | null = null;
+
+	$effect(() => {
+		if (options_filter !== old_options_filter) {
+			selected_options = [];
+			old_options_filter = options_filter;
+		}
+	});
 </script>
 
 <div class="flex justify-between gap-4">

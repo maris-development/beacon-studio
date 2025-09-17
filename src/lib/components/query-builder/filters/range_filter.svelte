@@ -12,7 +12,7 @@
 		max_value: string | number;
 	} = $props();
 
-	let origin_filter = $state({ ...range_filter });
+	let origin_filter: RangeFilterColumn = $state({ ...range_filter });
 
 	let is_timestamp_filter = $state(isTimestamp(min_value) && isTimestamp(max_value));
 	let is_number_filter = $state(isNumber(min_value) && isNumber(max_value));
