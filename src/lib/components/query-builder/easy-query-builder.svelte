@@ -179,6 +179,7 @@
 	}
 
 	async function handleMapVisualise() {
+		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
 			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
@@ -186,6 +187,7 @@
 	}
 
 	async function handleChartVisualise() {
+		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
 			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
@@ -193,6 +195,7 @@
 	}
 
 	async function handleTableVisualise() {
+		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
 			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
@@ -200,11 +203,14 @@
 	}
 
 	async function handleCopyQuery() {
+		isLoading = true;
+
 		let compiledQuery: CompiledQuery;
 
 		try {
 			compiledQuery = compileQuery();
 		} catch (error) {
+			isLoading = false;
 			console.error('Error compiling query:', error);
 			addToast({
 				message: `Error compiling query: ${error.message}`,
