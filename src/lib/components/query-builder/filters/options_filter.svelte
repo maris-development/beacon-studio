@@ -9,8 +9,14 @@
 		filter: OptionsFilterColumn;
 	}>();
 
+	let origin_filter = $state({ ...filter });
+
 	$effect(() => {
 		console.log('OptionsFilter props changed:', { filter, selected_options });
+		if (filter !== origin_filter) {
+			selected_options = [];
+			origin_filter = filter;
+		}
 	});
 
 	function addToSelectedOptions(option: string | number) {
@@ -31,7 +37,7 @@
 <div class="grid grid-cols-2 gap-2">
 	<div class="text-sm">Options Filter:</div>
 	<div class="justify-items-end">
-		{#each filter.options as option (option)}
+		{#each origin_filter.options as option (option)}
 			<div class="mt-2 flex items-center gap-3">
 				<Label for={option as string}>{option}</Label>
 				<Checkbox
