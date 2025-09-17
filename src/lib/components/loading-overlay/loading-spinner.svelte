@@ -1,13 +1,18 @@
 <script lang="ts">
-	export let ringColor: string | null = 'gray';
-	export let ringSegmentColor: string | null = 'black';
-	export let size: string | null = '4rem';
+
+	let {
+		ringColor = "black",
+		size = "32px",
+	}: {
+		ringColor?: string ;
+		size?: string ;
+	} = $props();
 </script>
 
 <div class="loading-spinner-wrapper">
 	<div
 		class="loading-spinner"
-		style="--ring-color: {ringColor}; --ring-segment-color: {ringSegmentColor}; --size: {size}"
+		style="--ring-color: {ringColor};  --size: {size}"
 	></div>
 </div>
 
@@ -17,11 +22,11 @@
 		justify-content: center;
 		align-items: center;
 		.loading-spinner {
-			width: var(--size, 8px);
-			height: var(--size, 8px);
+			width: var(--size, 32px);
+			height: var(--size, 32px);
 			border: 4px solid;
-			border-color: var(--ring-color, #e5e7eb) transparent;
-			border-top-color: var(--ring-segment-color, #000);
+			border-color: var(--ring-color, #000) transparent;
+			border-top-color: var(--ring-color, #000);
 			border-radius: 50%;
 			animation: spin 1s linear infinite;
 		}

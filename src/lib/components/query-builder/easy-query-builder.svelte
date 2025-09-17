@@ -2,8 +2,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import type { PresetColumn, PresetTableType } from '@/beacon-api/types';
-
+	import type { PresetColumn } from '@/beacon-api/types';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -13,22 +12,21 @@
 	import { QueryBuilder } from '@/beacon-api/query';
 	import type { CompiledQuery, OutputFormat, TableDefinition } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import type { QueryFilterValue } from './filters/filter.svelte';
-	import Filter from './filters/filter.svelte';
+	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
 
 	let { selected_table_name }: { selected_table_name: string } = $props();
 
+	let isLoading: boolean = $state(false);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
@@ -169,10 +167,14 @@
 		}
 
 		if (compiledQuery) {
+			isLoading = true;
 			await client.queryToDownload(
 				compiledQuery,
 				BeaconClient.outputFormatToExtension(compiledQuery)
 			);
+			await Utils.sleep(500); 
+			isLoading = false;
+
 		}
 	}
 
@@ -221,6 +223,10 @@
 		Utils.copyToClipboard(queryJson);
 	}
 </script>
+
+{#if isLoading}
+	<PageLoadingOverlay text="Executing query..." />
+{/if}
 
 <div id="easy-query-builder">
 	{#if selected_table}
