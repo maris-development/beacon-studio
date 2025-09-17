@@ -32,7 +32,9 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
-	let selected_table: TableDefinition | null = $derived(await fetchPresetTableType(selected_table_name));
+	let selected_table: TableDefinition | null = $derived(
+		await fetchPresetTableType(selected_table_name)
+	);
 	let data_parameters: {
 		selected: boolean;
 		column: PresetColumn;
@@ -44,7 +46,6 @@
 		column: PresetColumn;
 		filter_value: QueryFilterValue;
 	}[] = $state([]);
-
 
 	$effect(() => {
 		if (!selected_table) {
@@ -77,7 +78,6 @@
 		client = BeaconClient.new(currentBeaconInstanceValue);
 	});
 
-
 	async function fetchPresetTableType(table_name: string): Promise<TableDefinition | null> {
 		if (!table_name || !client) {
 			return null;
@@ -87,13 +87,12 @@
 
 		// Find the selected table type
 		let selected_table_type = preset_table_types.find((t) => t.table_name === table_name) || null;
-		
+
 		console.log('Selected table type:', selected_table_type);
 
 		return selected_table_type;
 	}
 
-	
 	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
 
@@ -121,8 +120,9 @@
 					for (let option of filter.options) {
 						or_filters.or.push({ eq: option, for_query_parameter: parameter.column.alias });
 					}
-
-					builder.addFilter(or_filters);
+					if (or_filters.or.length > 0) {
+						builder.addFilter(or_filters);
+					}
 				}
 			}
 		});
