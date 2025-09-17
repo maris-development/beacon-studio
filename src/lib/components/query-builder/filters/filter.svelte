@@ -49,6 +49,17 @@
 				filter_value = { options: selected_options };
 			}
 		}
+
+		if (filter_value === null && filter !== null) {
+			if ('min' in filter && 'max' in filter) {
+				min_value = filter.min as number | string;
+				max_value = filter.max as number | string;
+				filter_value = { min: filter.min as number | string, max: filter.max as number | string };
+			} else if ('options' in filter) {
+				selected_options = [];
+				filter_value = { options: selected_options };
+			}
+		}
 	});
 </script>
 
