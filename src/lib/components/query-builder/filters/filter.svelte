@@ -8,6 +8,7 @@
 	import RangeFilter from './range_filter.svelte';
 	import OptionsFilter from './options_filter.svelte';
 	import AnyFilter from './any_filter.svelte';
+	import { onMount } from 'svelte';
 
 	let {
 		filter,
@@ -23,16 +24,18 @@
 	let max_value: number | string = $state(0);
 	let selected_options: Array<string | number> = $state([]);
 
-	if (filter !== null) {
-		if ('min' in filter && 'max' in filter) {
-			min_value = filter.min as number | string;
-			max_value = filter.max as number | string;
-			filter_value = { min: filter.min as number | string, max: filter.max as number | string };
-		} else if ('options' in filter) {
-			selected_options = [];
-			filter_value = { options: selected_options };
+	onMount(() => {
+		if (filter !== null) {
+			if ('min' in filter && 'max' in filter) {
+				min_value = filter.min as number | string;
+				max_value = filter.max as number | string;
+				filter_value = { min: filter.min as number | string, max: filter.max as number | string };
+			} else if ('options' in filter) {
+				selected_options = [];
+				filter_value = { options: selected_options };
+			}
 		}
-	}
+	});
 
 	$effect(() => {
 		if (filter_value !== null) {
