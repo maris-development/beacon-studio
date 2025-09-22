@@ -2,7 +2,7 @@
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Column, SortDirection } from '@/util-types';
 	import { VirtualPaginationData } from '@/utils';
-	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
+	import { ArrowProcessingWorkerManager } from '@/workers/ArrowProcessingWorkerManager';
 	import * as ApacheArrow from 'apache-arrow';
 	import { onDestroy, onMount } from 'svelte';
 	import DataTable from './data-table.svelte';
@@ -21,7 +21,7 @@
 		groupByDecimals?: number;
 	} = $props();
 
-	let arrowWorker: ArrowProcessingWorkerManagager;
+	let arrowWorker: ArrowProcessingWorkerManager;
 	let columns: Column[] = $state([]);
 	let virtualSchemaData: VirtualPaginationData<number[]> = new VirtualPaginationData<number[]>([]);
 	let rows: number[][] = $state([]);
@@ -32,7 +32,7 @@
 	let pageSize: number = 10;
 
 	onMount(() => {
-		arrowWorker = new ArrowProcessingWorkerManagager();
+		arrowWorker = new ArrowProcessingWorkerManager();
 
 		const record = ApacheArrowUtils.arrayToRecord(rowData, table.schema);
 
@@ -112,9 +112,12 @@
 		{pageSize}
 		{pageIndex}
 		{isLoading}
+		size="small"
 	/>
 </div>
 
 <style lang="scss">
-
+ .map-popup-content {
+	max-width: 50vw;
+ }
 </style>

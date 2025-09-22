@@ -4,6 +4,46 @@ import type { SortDirection } from './util-types';
 
 export class ApacheArrowUtils {
     /**
+         * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
+         * 
+         * The cloning process follows these steps:
+         * 1. Attempts to use `structuredClone` for a deep and accurate clone.
+         * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
+         * 3. As a last resort, performs a shallow clone using object spread.
+         * 
+         * @typeParam T - The type of the value to clone.
+         * @param value - The value or Svelte `Readable` store to clone.
+         * @returns A cloned copy of the input value.
+         * @remarks
+         * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
+         * - Non-serializable properties may be lost if the fallback methods are used.
+         */
+    static cloneObject<T>(value: T | ApacheArrow.Readable<T>): T {
+        // 1) Best: structuredClone (fast, preserves Dates/Maps/Sets, etc.)
+        try {
+            const maybeObject = value as T;
+            return structuredClone(maybeObject);
+        } catch {
+            // ignored
+        }
+
+        // 2) If it’s JSON-like, this blows away proxies reliably
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch {
+            // ignored
+        }
+
+        // 3) Last resort, shallow clone
+        const clone = { ...value } as T;
+
+        console.warn('cloneObject: shallow clone', clone)
+
+        return clone
+    }
+
+    
+    /**
      * Finds and returns rows from an Apache Arrow table whose latitude and longitude values
      * match the provided coordinates, rounded to a specified number of decimal places.
      *
@@ -34,15 +74,13 @@ export class ApacheArrowUtils {
         const lonCol = table.getChild(longitudeColumnName);
         const rows = table.numRows;
 
-        // const amountOfFields = table.schema.fields.length;
-        
-
         if (!latCol || !lonCol) {
             throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
         }
 
         const results: unknown[] = [];
         const searchKey = toKey(latLon[0], latLon[1]);
+        const amounfOfFields = table.schema.fields.filter(f => f.name !== 'geometry').length;
 
         for (let i = 0; i < rows; i++) {
             const rowLat = latCol.get(i);
@@ -51,10 +89,11 @@ export class ApacheArrowUtils {
 
             if (rowKey === searchKey) {
 
-                const rowData = table.get(i).toArray().copyWithin(5, 0);
+                const rowData = table.get(i).toArray().copyWithin(amounfOfFields, 0);
+
                 results.push(rowData);
 
-                if(results.length >= maxRows) {
+                if (results.length >= maxRows) {
                     break;
                 }
             }
@@ -150,8 +189,10 @@ export class ApacheArrowUtils {
                 return value ? 'true' : 'false';
 
             case ApacheArrow.Type.Timestamp:
-                // case ApacheArrow.Type.TimestampNanosecond:
                 return new Date(value as number).toISOString();
+
+            case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
+                return JSON.stringify(value);
 
             default:
                 console.warn(`Unsupported type for toString: ${type}`, type);
@@ -263,19 +304,31 @@ export class ApacheArrowUtils {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         switch ((sortColumn.type as any).typeId) {
-            // case ApacheArrow.Type.Timestamp: 
-            //     // Timestamp sorting
-            //     sortedIndices = indexedArray.sort((a, b) => {
-            //         const valA = a.value as number;
-            //         const valB = b.value as number;
-            //         if (valA === null && valB === null) return 0;
-            //         if (valA === null) return 1;
-            //         if (valB === null) return -1;
-            //         return direction === 'asc' ? valA - valB : valB - valA;
-            //     }).map(item => item.index);
-            //     break;
-            case ApacheArrow.Type.Timestamp:
             case ApacheArrow.Type.Int:
+            case ApacheArrow.Type.Time:
+            case ApacheArrow.Type.Timestamp:
+
+                // BigInt sorting
+                sortedIndices = indexedArray
+                    .sort((a, b) => {
+                        const valA = a.value as bigint | null;
+                        const valB = b.value as bigint | null;
+
+                        if (valA === null && valB === null) return 0;
+                        if (valA === null) return 1;  // nulls last
+                        if (valB === null) return -1;
+
+                        if (valA === valB) return 0;
+
+                        if (direction === 'asc') {
+                            return valA < valB ? -1 : 1;
+                        } else {
+                            return valA > valB ? -1 : 1;
+                        }
+                    })
+                    .map(item => item.index);
+                break;
+
             case ApacheArrow.Type.Float:
                 // Numeric sorting
                 sortedIndices = indexedArray.sort((a, b) => {
@@ -313,7 +366,7 @@ export class ApacheArrowUtils {
                 break;
 
             default:
-                // console.warn(`Unsupported column type for sorting: ${sortColumn.type.typeId}`);
+                console.warn(`Unsupported column type for sorting: ${sortColumn.type.typeId}`);
                 return table; // Return original table if type is unsupported
         }
 

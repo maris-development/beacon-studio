@@ -64,7 +64,7 @@
 		openModalIfNoInstance();
 	});
 
-	let showIhmStuff = false;
+	let showIhmStuff = true;
 	// IHM Stuff:
 	let showWelcomeModal = $state(showIhmStuff);
 
@@ -80,7 +80,7 @@
 		const ihm_beacon_url = 'https://beacon-ihm.maris.nl';
 
 		// Check if an instance with the IHM Beacon URL already exists
-		if(!beaconInstanceArray.find(i => i.url === ihm_beacon_url)) {
+		if(!beaconInstanceArray.find(i => i.url.includes(ihm_beacon_url))) {
 			const ihmInstance: BeaconInstance = {
 				id: Utils.randomUUID(),
 				name: 'IHM Beacon',

@@ -20,6 +20,7 @@
 		totalRows?: number;
 		isLoading?: boolean;
 		rowClass?: string;
+		size?: 'small' | 'medium' | 'large';
 	};
 
 	let {
@@ -32,7 +33,8 @@
 		pageIndex = 1,
 		totalRows = 0,
 		isLoading = false,
-		rowClass = ''
+		rowClass = '',
+		size = 'medium'
 	}: Props = $props();
 
 	let pageCount: number = $state(0);
@@ -86,7 +88,7 @@
 
 <div class="data-table-wrapper">
 	<div class="table-wrapper">
-		<table class="dataset-table">
+		<table class="dataset-table {size}">
 			<thead>
 				<tr>
 					{#each columns as column}
@@ -97,17 +99,17 @@
 									 {#if (column.isSorted == true)}
 										{#if (column.sortDirection === 'asc')}
 											<span class="sort-indicator asc">
-												<ChrevonUpIcon />
+												<ChrevonUpIcon size="1.25em" />
 											</span>
 										{/if}
 										{#if (column.sortDirection === 'desc')}
 											<span class="sort-indicator desc">
-												<ChrevonDownIcon />
+												<ChrevonDownIcon size="1.25em" />
 											</span>
 										{/if}
 									{:else}
 										<span class="sort-indicator none">
-											<ChrevonUpDownIcon />
+											<ChrevonUpDownIcon size="1.25em" />
 										</span>
 									{/if}
 								{/if}
@@ -180,27 +182,48 @@
 		.table-wrapper {
 			overflow-x: auto;
 			//nice scrollbar
-			&::-webkit-scrollbar {
-    				display: none;
-				}
-				-ms-overflow-style: none;
-				scrollbar-width: none;
+			// &::-webkit-scrollbar {
+			// 	display: none;
+			// }
+			// -ms-overflow-style: none;
+			// scrollbar-width: none;
+
 			table.dataset-table {
 				width: 100%;
 				border-collapse: collapse;
-				
 
+				thead th, 
+				tbody td {
+					padding: 0.5rem 0.75rem;
+					font-size: 0.875rem;
+					border-bottom: 1px solid #ddd;
+				}
+
+				&.small {
+					thead th, 
+					tbody td {
+						padding: 0.25rem 0.5rem;
+						font-size: 0.7rem;
+					}
+				}
+
+				&.large {
+					thead th, 
+					tbody td {
+						padding: 1rem 1.5rem;
+						font-size: 1rem;
+					}
+				}
+				
+				
 				thead {
 					background-color: #f9f9f9;
 
 					th {
-						padding: 0.75rem 1rem;
 						text-align: left;
-						font-size: 0.875rem;
 						font-weight: 600;
 						text-transform: uppercase;
 						color: #666;
-						border-bottom: 1px solid #ddd;
 
 						&.sortable {
 							cursor: pointer;
@@ -211,7 +234,7 @@
 						}
 
 						.sort-indicator {
-							margin-left: 0.5rem;
+							// margin-left: 0.5rem;
 							display: inline-block;
 							vertical-align: middle;
 
@@ -230,10 +253,7 @@
 						}
 
 						td {
-							padding: 0.75rem 1rem;
-							font-size: 0.875rem;
 							color: #555;
-							border-bottom: 1px solid #eee;
 
 							&.no-data {
 								display: table-cell;

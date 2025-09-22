@@ -3,6 +3,7 @@
 import * as ApacheArrow from 'apache-arrow';
 import ArrowProcessingWorker from '$lib/workers/ArrowProcessingWorker?worker';
 import type { WorkerRequest, WorkerResponse } from './ArrowProcessingWorker';
+import { addToast } from '@/stores/toasts';
 
 interface PendingTask {
   resolve: (value: any) => void;
@@ -10,7 +11,7 @@ interface PendingTask {
   request: WorkerRequest;
 }
 
-export class ArrowProcessingWorkerManagager {
+export class ArrowProcessingWorkerManager {
   private worker: Worker;
   private messageId: number = 0;
   private pendingTasks: Map<number, PendingTask> = new Map();
@@ -66,6 +67,7 @@ export class ArrowProcessingWorkerManagager {
         }
         case 'findSimilarRowsByLatLon': {
           const { result } = event.data;
+          console.log("WorkerManager findSimilarRowsByLatLon result", result);
           task.resolve(result);
           break;
         }
@@ -76,6 +78,12 @@ export class ArrowProcessingWorkerManagager {
 
     this.worker.onerror = (error: ErrorEvent) => {
       console.error('Worker error:', error);
+      if(error.message){
+        addToast({
+          message: `${error.message}`,
+          type: 'error',
+        })
+      }
     };
   }
 

@@ -16,13 +16,13 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
-	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
+	import { ArrowProcessingWorkerManager } from '@/workers/ArrowProcessingWorkerManager';
 	import type { Column, SortDirection } from '@/util-types';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
   	import { base } from '$app/paths';
 
-	const arrowWorker: ArrowProcessingWorkerManagager = new ArrowProcessingWorkerManagager();
+	const arrowWorker: ArrowProcessingWorkerManager = new ArrowProcessingWorkerManager();
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -152,7 +152,7 @@
 		columns = table.schema.fields.map((field) => ({
 			key: field.name,
 			header: Utils.ucfirst(field.name),
-			sortable: true
+			sortable: field.typeId != ApacheArrow.Type.Struct // Disable sorting for geometry columns
 		}));
 
 		getPage();

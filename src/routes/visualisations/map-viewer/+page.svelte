@@ -18,7 +18,7 @@
 	import MapInfo from '@/components/map-info.svelte';
 	import MapPopupContent from '@/components/map-popup-content.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { ArrowProcessingWorkerManagager } from '@/workers/ArrowProcessingWorkerManagager';
+	import { ArrowProcessingWorkerManager } from '@/workers/ArrowProcessingWorkerManager';
 	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend.svelte';
 	
 	import { ApacheArrowUtils } from '@/arrow-utils';
@@ -28,7 +28,7 @@
 
 	const GROUP_BY_DECIMALS = 3; // Number of decimals to group by for lat/lon (4 = 11m, 3 = 111m, 2 = 1111m, 1 = 11111m, 0 = 111111m)
 	
-	let arrowWorker: ArrowProcessingWorkerManagager;
+	let arrowWorker: ArrowProcessingWorkerManager;
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
@@ -76,7 +76,7 @@
 	onMount(async () => {
 		if (!browser) return;
 
-		arrowWorker = new ArrowProcessingWorkerManagager();
+		arrowWorker = new ArrowProcessingWorkerManager();
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
