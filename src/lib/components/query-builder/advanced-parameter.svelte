@@ -12,8 +12,9 @@
 
 	let {
 		column = $bindable()
-	}: { column: { name: string; type: DataType; selected_filters: SelectedFilterType[] } } =
-		$props();
+	}: {
+		column: { name: string; type: DataType; selected_filters: SelectedFilterType[] };
+	} = $props();
 </script>
 
 <Label class="grid items-center gap-3 rounded-lg border border-blue-600 bg-blue-50 p-3">
@@ -30,7 +31,12 @@
 			<AddAdvancedFilter data_type={column.type} bind:selected_filters={column.selected_filters} />
 		</div>
 		<div>
-			<Button variant="destructive"><CircleXIcon /> Remove Field</Button>
+			<Button
+				onclick={() => {
+					console.log('Removing column.');
+				}}
+				variant="destructive"><CircleXIcon /> Remove Column</Button
+			>
 		</div>
 	</div>
 	{#if column.selected_filters.length > 0}
@@ -45,6 +51,7 @@
 							variant="ghost"
 							size="icon"
 							onclick={() => {
+								console.log('Removing filter:', filter);
 								column.selected_filters = column.selected_filters.filter((f) => f !== filter);
 							}}
 						>

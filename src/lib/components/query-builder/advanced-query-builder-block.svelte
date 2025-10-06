@@ -3,6 +3,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
@@ -18,7 +19,7 @@
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
-  	import { base } from '$app/paths';
+	import { base } from '$app/paths';
 
 	let {
 		table_name,
@@ -55,6 +56,18 @@
 
 	let open = $state(false);
 
+	function select_deselect_column(field_name: string) {
+		const index = selected_fields.findIndex((f) => f.name === field_name);
+		if (index === -1) {
+			const field = fields.find((f) => f.name === field_name);
+			if (field) {
+				selected_fields.push({ name: field.name, type: field.type, selected_filters: [] });
+			}
+		} else {
+			selected_fields.splice(index, 1);
+		}
+	}
+
 	function compileQuery() {
 		let builder = new QueryBuilder();
 
@@ -82,11 +95,10 @@
 		return compiledQuery.unwrap();
 	}
 
-	function compileAndGZipQuery(): string|undefined {
+	function compileAndGZipQuery(): string | undefined {
 		try {
 			let compiledQuery = compileQuery();
 			return Utils.objectToGzipString(compiledQuery);
-
 		} catch (error) {
 			console.error('Error compiling and gzipping query:', error);
 			addToast({
@@ -101,7 +113,6 @@
 
 		try {
 			compiledQuery = compileQuery();
-
 		} catch (error) {
 			console.error('Error compiling query:', error);
 			addToast({
@@ -111,28 +122,31 @@
 			return;
 		}
 
-		if(compiledQuery){
-			await client.queryToDownload(compiledQuery, BeaconClient.outputFormatToExtension(compiledQuery));
+		if (compiledQuery) {
+			await client.queryToDownload(
+				compiledQuery,
+				BeaconClient.outputFormatToExtension(compiledQuery)
+			);
 		}
 	}
 
 	async function handleMapVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleChartVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
@@ -142,7 +156,6 @@
 
 		try {
 			compiledQuery = compileQuery();
-
 		} catch (error) {
 			console.error('Error compiling query:', error);
 			addToast({
@@ -174,7 +187,7 @@
 	</div>
 
 	<Command.Dialog bind:open>
-		<Command.Input placeholder="Type a command or search..." />
+		<Command.Input placeholder="Type a column or search..." />
 		<Command.List>
 			<Command.Empty>No columns found.</Command.Empty>
 			<Command.Group heading="Available Columns">
@@ -183,13 +196,17 @@
 						value={field.name}
 						onclick={() => {
 							console.log('Selected field:', field.name);
-							selected_fields.push({ name: field.name, type: field.type, selected_filters: [] });
-							open = false;
+							select_deselect_column(field.name);
 							console.log('Selected fields:', selected_fields);
 						}}
 					>
 						<span class="font-semibold">{field.name}</span>
 						<span class="text-muted-foreground text-sm">{field.type}</span>
+						<span class="absolute right-2 flex size-3.5 items-center justify-center">
+							{#if selected_fields.find((f) => f.name === field.name)}
+								<CheckIcon class="size-4" />
+							{/if}
+						</span>
 					</Command.Item>
 				{/each}
 			</Command.Group>
@@ -220,9 +237,9 @@
 		</Select.Content>
 	</Select.Root>
 
-	<hr>
+	<hr />
 
-	<div class="flex flex-row gap-2 justify-between">
+	<div class="flex flex-row justify-between gap-2">
 		<div class="flex flex-row gap-2">
 			<Button onclick={handleSubmit}>
 				Execute query
@@ -234,9 +251,8 @@
 				<FileJson2Icon />
 			</Button>
 		</div>
-		
+
 		<div class="flex flex-row gap-2">
-		
 			<Button onclick={handleTableVisualise}>
 				View as table
 				<SheetIcon />
@@ -251,7 +267,6 @@
 				View on chart
 				<ChartPieIcon />
 			</Button>
-
 		</div>
 	</div>
 </div>
@@ -262,6 +277,5 @@
 		flex-direction: column;
 		gap: 1rem;
 		margin-top: 1rem;
-		
 	}
 </style>

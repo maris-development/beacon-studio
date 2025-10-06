@@ -4,15 +4,17 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
 	import DataTable from '$lib/components/data-table.svelte';
-  	import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import { AffixString } from '@/utils';
 	import type { Column } from '@/util-types';
-  	import { base } from '$app/paths';
+	import { base } from '$app/paths';
+	import Button from '@/components/ui/button/button.svelte';
+	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
 
-	
-
-	let columns: Column[] = $state([{ key: 'table', header: 'Table', sortable: false, rawHtml: true }]);
+	let columns: Column[] = $state([
+		{ key: 'table', header: 'Table', sortable: false, rawHtml: true }
+	]);
 	let rows: { table: AffixString }[] = $state([]);
 
 	let totalRows: number = $state(0);
@@ -20,10 +22,11 @@
 	let pageSize: number = 1000;
 	let isLoading = $state(true);
 	let firstLoad = true;
+	let create_table_modal_open: boolean = $state(false);
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
-	
+
 	onMount(() => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
@@ -38,7 +41,7 @@
 
 		await getDefaultTable();
 	}
-	
+
 	function onChangeSort(column: string, direction: 'asc' | 'desc') {
 		console.log('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
 	}
@@ -49,7 +52,6 @@
 		getTables(page);
 	}
 
-
 	async function getTables(page: number) {
 		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
 
@@ -58,7 +60,7 @@
 
 		let results = await client.getTables();
 
-		rows = results.map((table) => ({table: new AffixString(table)}));
+		rows = results.map((table) => ({ table: new AffixString(table) }));
 
 		totalRows = rows.length;
 		pageIndex = page;
@@ -76,14 +78,13 @@
 
 			let idx = _rows.findIndex((row) => row.table.main === defaultTable);
 
-			if(_rows[idx]) {
+			if (_rows[idx]) {
 				_rows[idx].table.suffix = ` <span class="default-label">Default</span>`;
 			}
 
 			rows = _rows;
 
 			// console.log('Updated rows:', rows);
-			
 		}
 	}
 
@@ -96,27 +97,32 @@
 
 		goto(url.toString());
 	}
-
 </script>
 
 <svelte:head>
 	<title>Data Tables - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: `${base}/data-browser` }, { label: 'Data tables', href: `${base}/data-browser/data-tables` }]} />
+<Cookiecrumb
+	crumbs={[
+		{ label: 'Data Browser', href: `${base}/data-browser` },
+		{ label: 'Data tables', href: `${base}/data-browser/data-tables` }
+	]}
+/>
 
 <div class="page-container">
 	<h1>Data Tables</h1>
+	<div class="mb-4 flex items-center justify-between">
+		<p>Explore and manage the tables that are available in your Beacon instance.</p>
 
-	<p>Explore and manage the tables that are available in your Beacon instance.</p>
+		<Button variant="outline" onclick={() => (create_table_modal_open = true)}>Create Table</Button>
+	</div>
 
 	<DataTable
 		rowClass="arrow-row"
-		
 		{onChangeSort}
 		{onPageChange}
 		{onCellClick}
-		
 		{columns}
 		{rows}
 		{totalRows}
@@ -124,9 +130,14 @@
 		{pageIndex}
 		{isLoading}
 	/>
-	
-</div>
 
+	{#if create_table_modal_open}
+		<CreateTableModal
+			onCancel={() => (create_table_modal_open = false)}
+			instance={currentBeaconInstanceValue}
+		/>
+	{/if}
+</div>
 
 <style lang="scss">
 	div.page-container :global(tr.arrow-row) {
@@ -137,8 +148,10 @@
 		&::after {
 			content: '';
 			position: absolute;
-			top: 50%; right: 1rem;
-			width: 1em; height: 1em;
+			top: 50%;
+			right: 1rem;
+			width: 1em;
+			height: 1em;
 			transform: translateY(-50%);
 
 			mask: url('/icons/arrow-right.svg') no-repeat center/contain;
@@ -146,14 +159,12 @@
 		}
 	}
 
-	div.page-container :global(td span.default-label)  {
-
+	div.page-container :global(td span.default-label) {
 		font-size: 0.8em;
 		padding: 0.2em 0.4em;
 		border-radius: 4px;
 		margin-left: 0.5em;
 		background-color: var(--primary);
 		color: var(--primary-foreground);
-
 	}
 </style>

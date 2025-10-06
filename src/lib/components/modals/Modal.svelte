@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { Utils } from "@/utils";
-	import { onMount } from "svelte";
-	
- 
+	import { Utils } from '@/utils';
+	import { onMount } from 'svelte';
+
 	/** Parent passes these in to handle save/close; optionally an instance for editing */
 	export let onClose: () => void;
 	export let canCloseModal: boolean = true;
@@ -16,20 +15,18 @@
 			onClose();
 		}
 	}
-	
 
 	onMount(() => {
-		if(canCloseModal){
+		if (canCloseModal) {
 			//also add escape key listener to close modal
 			document.addEventListener('keydown', closeModalOnEscape);
 		}
-
 
 		return () => {
 			// Cleanup: remove event listener if it was added
 			document.removeEventListener('keydown', closeModalOnEscape);
 		};
-	})
+	});
 </script>
 
 <div
@@ -37,7 +34,7 @@
 	class="backdrop"
 	role="presentation"
 	aria-hidden="true"
-	on:click={() => canCloseModal ? onClose() : undefined} 
+	on:click={() => (canCloseModal ? onClose() : undefined)}
 >
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<div
@@ -71,7 +68,7 @@
 		inset: 0;
 		background: rgba(0, 0, 0, 0.5);
 		cursor: default;
-		z-index: 1000;
+		z-index: 49;
 
 		.modal {
 			position: fixed;
