@@ -8,8 +8,7 @@
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
-  	import { base } from '$app/paths';
-
+	import { base } from '$app/paths';
 
 	const data = {
 		instance: {
@@ -17,28 +16,6 @@
 			name: 'Beacon Euro Argo',
 			description: 'Beacon Instance running on top of the Euro Argo Fleet collection'
 		},
-		nodeContent: [
-			{
-				title: 'Data Browser',
-				url: base + '/data-browser',
-				icon: Table2Icon,
-				isActive: true,
-				items: [
-					{
-						title: 'Datasets',
-						url: base + '/data-browser/datasets'
-					},
-					{
-						title: 'Data Tables',
-						url: base + '/data-browser/data-tables'
-					}
-					// { // not needed for now
-					// 	title: 'Settings',
-					// 	url: base + '/data-browser/settings'
-					// }
-				]
-			}
-		],
 		dataAccess: [
 			{
 				title: 'Queries',
@@ -64,7 +41,7 @@
 				items: [
 					{
 						title: 'Map Viewer',
-						url: base + '/visualisations/map-viewer',
+						url: base + '/visualisations/map-viewer'
 					},
 					{
 						title: 'Table Explorer',
@@ -75,9 +52,25 @@
 						url: base + '/visualisations/chart-explorer'
 					}
 				]
-			},
+			}
 		],
 		nodeManagement: [
+			{
+				title: 'Content',
+				url: base + '/data-browser',
+				icon: Table2Icon,
+				isActive: true,
+				items: [
+					{
+						title: 'Datasets',
+						url: base + '/data-browser/datasets'
+					},
+					{
+						title: 'Data Tables',
+						url: base + '/data-browser/data-tables'
+					}
+				]
+			},
 			{
 				title: 'System Info',
 				url: base + '/system-info',
@@ -94,19 +87,19 @@
 				title: 'Documentation',
 				url: 'https://maris-development.github.io/beacon/',
 				icon: BookOpenIcon,
-				target: "_blank"
+				target: '_blank'
 			},
 			{
 				title: 'Support',
 				url: 'https://github.com/maris-development/beacon',
 				icon: LifeBuoyIcon,
-				target: "_blank"
+				target: '_blank'
 			},
 			{
 				title: 'Feedback',
 				url: 'https://github.com/maris-development/beacon/issues',
 				icon: SendIcon,
-				target: "_blank"
+				target: '_blank'
 			}
 		]
 	};
@@ -118,21 +111,19 @@
 	import NavInstance from './nav-instance.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
+	import { icon } from 'leaflet';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
 
 <Sidebar.Root bind:ref variant="inset" {...restProps}>
 	<Sidebar.Header>
-
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
 					{#snippet child({ props })}
 						<a href="{base}/" {...props}>
-							<div
-								class=" header-icon"
-							>
+							<div class=" header-icon">
 								<DatabaseZapIcon class="size-4" />
 							</div>
 							<div class="grid flex-1 text-left text-sm leading-tight">
@@ -146,37 +137,28 @@
 		</Sidebar.Menu>
 
 		<NavInstance />
-
 	</Sidebar.Header>
 
-
 	<Sidebar.Content>
-		<NavMain title="Node Content" items={data.nodeContent} />
 		<NavMain title="Data Access" items={data.dataAccess} />
 		<NavMain title="Node Management" items={data.nodeManagement} />
 		<!-- <NavProjects projects={data.projects} /> -->
 		<NavSecondary items={data.navSecondary} class="mt-auto" />
 	</Sidebar.Content>
 
-
-	<Sidebar.Footer>
-
-	</Sidebar.Footer>
+	<Sidebar.Footer></Sidebar.Footer>
 </Sidebar.Root>
 
-
 <style lang="scss">
-
-.header-icon {
-	background: var(--background);
-	color: var(--foreground);
-  display: flex;
-  aspect-ratio: 1 / 1;
-  width: 2rem;   // w-8
-  height: 2rem;  // h-8
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem; // rounded-lg
-}
-
+	.header-icon {
+		background: var(--background);
+		color: var(--foreground);
+		display: flex;
+		aspect-ratio: 1 / 1;
+		width: 2rem; // w-8
+		height: 2rem; // h-8
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.5rem; // rounded-lg
+	}
 </style>
