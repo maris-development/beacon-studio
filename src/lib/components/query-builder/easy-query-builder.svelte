@@ -23,6 +23,7 @@
 	import { base } from '$app/paths';
 	import type { QueryFilterValue } from './filters/filter.svelte';
 	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
+	import { Checkbox } from '../ui/checkbox';
 
 	let { selected_table_name }: { selected_table_name: string } = $props();
 
@@ -44,6 +45,8 @@
 		column: PresetColumn;
 		filter_value: QueryFilterValue;
 	}[] = $state([]);
+
+	let include_all_metadata_optional: boolean = $state(false);
 
 	$effect(() => {
 		if (!selected_table) {
@@ -89,6 +92,13 @@
 		console.log('Selected table type:', selected_table_type);
 
 		return selected_table_type;
+	}
+
+	function setSelectAllMetadataOptional(value: boolean) {
+		metadata_parameters = metadata_parameters.map((param) => ({
+			...param,
+			selected: value
+		}));
 	}
 
 	function compileQuery(): CompiledQuery {
@@ -172,9 +182,8 @@
 				compiledQuery,
 				BeaconClient.outputFormatToExtension(compiledQuery)
 			);
-			await Utils.sleep(500); 
+			await Utils.sleep(500);
 			isLoading = false;
-
 		}
 	}
 
@@ -284,7 +293,17 @@
 
 				<Collapsible.Root class="space-y-2" open>
 					<div class="flex items-center justify-between">
-						<h4 class=" font-semibold">Select metadata columns</h4>
+						<div class="flex items-center gap-2">
+							<h4 class="font-semibold">Select metadata columns</h4>
+							<div class="flex items-center gap-2">
+								<p class=" text-gray-500">Include all metadata optional</p>
+								<Checkbox
+									bind:checked={include_all_metadata_optional}
+									onclick={() => setSelectAllMetadataOptional(!include_all_metadata_optional)}
+								/>
+							</div>
+						</div>
+
 						<Collapsible.Trigger
 							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
 						>
