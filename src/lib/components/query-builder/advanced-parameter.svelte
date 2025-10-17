@@ -11,9 +11,11 @@
 	import AdvancedParameterFilter from './advanced-parameter-filter.svelte';
 
 	let {
-		column = $bindable()
+		column = $bindable(),
+		remove_column = $bindable()
 	}: {
 		column: { name: string; type: DataType; selected_filters: SelectedFilterType[] };
+		remove_column: (selected_field_name: string) => void;
 	} = $props();
 </script>
 
@@ -34,6 +36,7 @@
 			<Button
 				onclick={() => {
 					console.log('Removing column.');
+					remove_column(column.name);
 				}}
 				variant="destructive"><CircleXIcon /> Remove Column</Button
 			>

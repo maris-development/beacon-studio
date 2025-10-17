@@ -12,6 +12,8 @@ import { ApacheArrowUtils } from './arrow-utils';
 import type { Rendered, SortDirection } from './util-types';
 import { page } from '$app/state';
 import { get, type Readable } from "svelte/store";
+import { fromZonedTime } from 'date-fns-tz';
+import type { Result } from './util/result';
 
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
@@ -32,9 +34,9 @@ export class Utils {
      *
      * @returns {string} A randomly generated UUID v4 string.
      */
-    static randomUUID(){
+    static randomUUID() {
         // Generate a random-like UUID (version 4) without using crypto API
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
         });
@@ -83,7 +85,7 @@ export class Utils {
         return clone
     }
 
-    static objectHasProperty<T,K extends PropertyKey>(obj: T, prop: K): obj is T & Record<K, unknown> {
+    static objectHasProperty<T, K extends PropertyKey>(obj: T, prop: K): obj is T & Record<K, unknown> {
         return typeof obj === "object" && obj !== null && prop in obj;
     }
 
@@ -113,7 +115,7 @@ export class Utils {
             target: container,
             props: props
         });
-    
+
 
         return {
             element: container,
@@ -193,26 +195,26 @@ export class Utils {
             case "range_timestamp":
                 return {
                     for_query_parameter: column,
-                    min: filter.min.toString(),
-                    max: filter.max.toString()
+                    min: new Date(filter.min.toString()).toISOString(),
+                    max: new Date(filter.max.toString()).toISOString()
                 };
             case "equals_timestamp":
-                return { for_query_parameter: column, eq: filter.value.toString() };
+                return { for_query_parameter: column, eq: new Date(filter.value.toString()).toISOString() };
 
             case "not_equals_timestamp":
-                return { for_query_parameter: column, neq: filter.value.toString() };
+                return { for_query_parameter: column, neq: new Date(filter.value.toString()).toISOString() };
 
             case "greater_than_timestamp":
-                return { for_query_parameter: column, gt: filter.value.toString() };
+                return { for_query_parameter: column, gt: new Date(filter.value.toString()).toISOString() };
 
             case "greater_than_or_equals_timestamp":
-                return { for_query_parameter: column, gt_eq: filter.value.toString() };
+                return { for_query_parameter: column, gt_eq: new Date(filter.value.toString()).toISOString() };
 
             case "less_than_timestamp":
-                return { for_query_parameter: column, lt: filter.value.toString() };
+                return { for_query_parameter: column, lt: new Date(filter.value.toString()).toISOString() };
 
             case "less_than_or_equals_timestamp":
-                return { for_query_parameter: column, lt_eq: filter.value.toString() };
+                return { for_query_parameter: column, lt_eq: new Date(filter.value.toString()).toISOString() };
 
             case "is_null":
                 return { is_null: { for_query_parameter: column } };
@@ -250,54 +252,54 @@ export class Utils {
     }
 
     static formatBytes(bytes: number, decimals = 2): string {
-		if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) return '0 Bytes';
 
-		const k = 1024;
-		const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-		const value = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
-		return `${value} ${sizes[i]}`;
-	}
+        const value = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
+        return `${value} ${sizes[i]}`;
+    }
 
     static formatSecondsToReadableTime(totalSeconds: number): string {
-		const units = [
-			{ label: 'months', value: 60 * 60 * 24 * 30 },
-			{ label: 'days', value: 60 * 60 * 24 },
-			{ label: 'hours', value: 60 * 60 },
-			{ label: 'minutes', value: 60 },
-			{ label: 'seconds', value: 1 }
-		];
+        const units = [
+            { label: 'months', value: 60 * 60 * 24 * 30 },
+            { label: 'days', value: 60 * 60 * 24 },
+            { label: 'hours', value: 60 * 60 },
+            { label: 'minutes', value: 60 },
+            { label: 'seconds', value: 1 }
+        ];
 
         //get decimals, times 1000:
         const totalMilliseconds: number = (totalSeconds % 1) * 1000;
 
-        if(totalSeconds < 60){
+        if (totalSeconds < 60) {
             return `${Math.floor(totalSeconds)}.${String(totalMilliseconds.toFixed(0)).padStart(3, '0')}s`;
         }
 
         const values: number[] = [];
 
-		for (const unit of units) {
-			const amount = Math.floor(totalSeconds / unit.value);
-			values.push(amount);
-			totalSeconds %= unit.value;
-		}
+        for (const unit of units) {
+            const amount = Math.floor(totalSeconds / unit.value);
+            values.push(amount);
+            totalSeconds %= unit.value;
+        }
 
-		// Remove leading zeros, but leave at least minutes and seconds
-		while (values.length > 2 && values[0] === 0) {
-			values.shift();
-		}
+        // Remove leading zeros, but leave at least minutes and seconds
+        while (values.length > 2 && values[0] === 0) {
+            values.shift();
+        }
 
-		let timeString = values.map((v) => String(v).padStart(2, '0')).join(':');
+        let timeString = values.map((v) => String(v).padStart(2, '0')).join(':');
 
         if (totalMilliseconds > 0) {
             const milliseconds = Math.floor(totalMilliseconds);
             timeString += `.${String(milliseconds).padStart(3, '0')}`;
         }
 
-		return timeString;
-	}
+        return timeString;
+    }
 
     static ucfirst(str: string): string {
         if (!str) return str;
@@ -343,7 +345,7 @@ export class Utils {
             isString = typeof value === 'string';
         }
 
-        if(isObject){
+        if (isObject) {
             console.warn('Sorting column with values of type object is not supported.');
             return data;
         }
@@ -360,7 +362,7 @@ export class Utils {
                 }
             });
 
-        } else if(isBoolean){
+        } else if (isBoolean) {
             data.sort((a, b) => {
                 const aValue = a[column] as boolean;
                 const bValue = b[column] as boolean;
@@ -372,7 +374,7 @@ export class Utils {
                 }
             });
 
-        } else if(isString) {
+        } else if (isString) {
             data.sort((a, b) => {
                 const aValue = a[column] as string;
                 const bValue = b[column] as string;

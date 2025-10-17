@@ -35,6 +35,10 @@
 	let selected_fields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
 		$state([]);
 
+	function remove_selected_field(field_name: string) {
+		selected_fields = selected_fields.filter((f) => f.name !== field_name);
+	}
+
 	$effect(() => {
 		if (table_name && client && table_name !== previous_table_name) {
 			console.log('Fetching schema for table:', table_name);
@@ -217,7 +221,7 @@
 	<div class="flex flex-col gap-2">
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
 			{#each selected_fields as field (field.name)}
-				<AdvancedParameter column={field} />
+				<AdvancedParameter column={field} remove_column={remove_selected_field} />
 			{/each}
 		</div>
 	</div>
