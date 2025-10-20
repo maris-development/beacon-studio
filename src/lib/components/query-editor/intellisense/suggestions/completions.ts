@@ -27,7 +27,7 @@ export function provideCompletions(
         const token = dot[1];
         const owner = aliases[token] ?? token;
         let cols =
-            schema.tables[owner] ?? schema.tableFunctions.find(f => f.name === owner)?.columns ?? [];
+            schema.tables[owner] ?? schema.tableFunctions.find(f => f.function_name === owner)?.columns ?? [];
         return {
             suggestions: cols.map(c => ({
                 label: c.name,

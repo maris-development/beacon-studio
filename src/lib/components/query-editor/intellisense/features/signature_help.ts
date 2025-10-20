@@ -14,18 +14,18 @@ export function registerSignatureHelp(monaco: typeof import("monaco-editor"), st
 
             const fn =
                 schema.scalarFunctions.find(f => f.function_name.toUpperCase() === name.toUpperCase()) ??
-                schema.tableFunctions.find(f => f.name.toUpperCase() === name.toUpperCase());
+                schema.tableFunctions.find(f => f.function_name.toUpperCase() === name.toUpperCase());
             if (!fn) return null;
 
             const lastParen = upto.lastIndexOf("(");
             const argsPart = upto.slice(lastParen + 1);
             let activeParam = 0; for (const ch of argsPart) if (ch === ",") activeParam++;
 
-            const params = (fn.parameters ?? []).map(p => ({ label: `${p.name}: ${p.type}${p.optional ? "?" : ""}` }));
+            const params = (fn.params ?? []).map(p => ({ label: `${p.name}: ${p.data_type}${p.optional ? "?" : ""}` }));
 
             return {
                 value: {
-                    signatures: [{ label: `${fn.function_name}(${(fn.parameters ?? []).map(p => `${p.name}: ${p.type}${p.optional ? "?" : ""}`).join(", ")})`, parameters: params }],
+                    signatures: [{ label: `${fn.function_name}(${(fn.params ?? []).map(p => `${p.name}: ${p.data_type}${p.optional ? "?" : ""}`).join(", ")})`, parameters: params }],
                     activeSignature: 0,
                     activeParameter: Math.min(activeParam, Math.max(0, params.length - 1)),
                 },

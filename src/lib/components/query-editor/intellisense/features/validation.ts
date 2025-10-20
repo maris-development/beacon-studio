@@ -21,7 +21,7 @@ export function attachValidation(
         let m: RegExpExecArray | null;
         while ((m = reTbl.exec(text))) {
             const t = m[2];
-            const exists = schema.tables[t] || schema.tableFunctions.find(f => f.name === t);
+            const exists = schema.tables[t] || schema.tableFunctions.find(f => f.function_name === t);
             if (!exists) {
                 markers.push({
                     message: `Unknown table or table function: "${t}"`,
@@ -42,7 +42,7 @@ export function attachValidation(
             const col = c[2];
             const owner = aliases[ownerToken] ?? ownerToken;
             const cols =
-                schema.tables[owner] ?? schema.tableFunctions.find(f => f.name === owner)?.columns;
+                schema.tables[owner] ?? schema.tableFunctions.find(f => f.function_name === owner)?.columns;
             if (!cols || !cols.find(x => x.name === col)) {
                 markers.push({
                     message: cols ? `Unknown column "${col}" on "${owner}"` : `Unknown table/alias "${ownerToken}"`,

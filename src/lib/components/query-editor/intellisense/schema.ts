@@ -13,7 +13,7 @@ export type ScalarFunction = {
 
 export type TableFunction = {
     kind: "table";
-    name: string;
+    function_name: string;
     params?: FuncParam[];
     columns: Column[]; // explicit TVF output columns
 };

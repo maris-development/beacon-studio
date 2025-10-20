@@ -42,10 +42,10 @@ export function registerHoverProvider(monacoNS: typeof import("monaco-editor"), 
                 }
 
                 // b) Table-valued function (treated as table in FROM/JOIN)
-                const tvf = schema.tableFunctions.find((f) => f.name === tableName);
+                const tvf = schema.tableFunctions.find((f) => f.function_name === tableName);
                 if (tvf) {
                     const md = tvf.columns.map((c) => `- \`${c.name}\`: \`${c.data_type}\``).join("\n");
-                    const sig = `**${tvf.name}**(${(tvf.params ?? []).map((p) => p.name).join(", ")})`;
+                    const sig = `**${tvf.function_name}**(${(tvf.params ?? []).map((p) => p.name).join(", ")})`;
                     return { contents: [{ value: sig }, { value: "_table function_" }, { value: md || "_No columns_" }] };
                 }
             }
@@ -66,7 +66,7 @@ export function registerHoverProvider(monacoNS: typeof import("monaco-editor"), 
                 // search in tables OR TVFs
                 const fromTable =
                     schema.tables[owner]?.find((c) => c.name === colName) ??
-                    schema.tableFunctions.find((f) => f.name === owner)?.columns.find((c) => c.name === colName);
+                    schema.tableFunctions.find((f) => f.function_name === owner)?.columns.find((c) => c.name === colName);
 
                 if (fromTable) {
                     return {
@@ -88,7 +88,7 @@ export function registerHoverProvider(monacoNS: typeof import("monaco-editor"), 
                         const inTable = schema.tables[t]?.find((c) => c.name === word);
                         if (inTable) matches.push({ owner: t, col: inTable });
 
-                        const tvf = schema.tableFunctions.find((f) => f.name === t);
+                        const tvf = schema.tableFunctions.find((f) => f.function_name === t);
                         const inTVF = tvf?.columns.find((c) => c.name === word);
                         if (inTVF) matches.push({ owner: t, col: inTVF });
                     }
@@ -118,9 +118,9 @@ export function registerHoverProvider(monacoNS: typeof import("monaco-editor"), 
                     const sig = `${s.function_name}(${(s.params ?? []).map((p) => `${p.name}: ${p.data_type}${p.optional ? "?" : ""}`).join(", ")})`;
                     return { contents: [{ value: `**${sig}** → \`${s.return_type}\`` }, { value: s.description ?? "" }] };
                 }
-                const tf = schema.tableFunctions.find((f) => f.name.toUpperCase() === word.toUpperCase());
+                const tf = schema.tableFunctions.find((f) => f.function_name.toUpperCase() === word.toUpperCase());
                 if (tf) {
-                    const sig = `${tf.name}(${(tf.params ?? []).map((p) => `${p.name}: ${p.data_type}${p.optional ? "?" : ""}`).join(", ")})`;
+                    const sig = `${tf.function_name}(${(tf.params ?? []).map((p) => `${p.name}: ${p.data_type}${p.optional ? "?" : ""}`).join(", ")})`;
                     const md = tf.columns.map((c) => `- \`${c.name}\`: \`${c.data_type}\``).join("\n");
                     return { contents: [{ value: `**${sig}**` }, { value: "_table function_" }, { value: md || "_No columns_" }] };
                 }

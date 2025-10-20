@@ -25,7 +25,7 @@ export function scopedColumnItems(
                 range,
             });
         }
-        const tvf = schema.tableFunctions.find(f => f.name === t);
+        const tvf = schema.tableFunctions.find(f => f.function_name === t);
         if (tvf) {
             const lbl = (rev[t]?.[0]) || t;
             for (const c of tvf.columns) {
