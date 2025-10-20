@@ -6,11 +6,10 @@
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import SearchCodeIcon from '@lucide/svelte/icons/search-code';
 	import TestTubeIcon from '@lucide/svelte/icons/test-tube';
-	import * as Select from '$lib/components/ui/select/index.js';
 
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import JsonQueryEditor from '@/components/query-editor/json-query-editor.svelte';
+	import SqlQueryEditor from '@/components/query-editor/sql-query-editor.svelte';
 	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
@@ -19,43 +18,15 @@
 	import { addToast } from '@/stores/toasts';
 	import { base } from '$app/paths';
 
-	let editor_types = ['JSON', 'SQL'];
-	let selected_editor_type = $state('JSON');
-
-	let sourceCode = $state(`{
-		"query_parameters": [
-			{
-				"column_name": "TIME"
-			},
-			{
-				"column_name": "DOXY"
-			},
-			{
-				"column_name": "DEPH"
-			},
-			{
-				"column_name": "LONGITUDE"
-			},
-			{
-				"column_name": "LATITUDE"
-			}
-		],
-		"filters": [
-			{
-				"for_query_parameter": "TIME",
-				"min": "2019-11-01T00:00:00",
-				"max": "2020-11-30T00:00:00"
-			},
-			{
-				"for_query_parameter": "DEPH",
-				"min": 0,
-				"max": 5
-			}
-		],
-		"output": {
-			"format": "parquet"
-		}
-	}`);
+	let sourceCode = $state(
+		`SELECT TEMP, DOXY, TIME, DEPH, LONGITUDE, LATITUDE 
+FROM measurements 
+WHERE 
+  TIME BETWEEN '2019-11-01T00:00:00' AND '2020-11-30T00:00:00'
+  AND
+  DEPH BETWEEN 0 AND 5
+        `
+	);
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
@@ -157,7 +128,7 @@
 		</div>
 
 		<div class="editor">
-			<JsonQueryEditor bind:sourceCode height="100%" />
+			<SqlQueryEditor bind:sourceCode height="100%" />
 		</div>
 	</div>
 </div>

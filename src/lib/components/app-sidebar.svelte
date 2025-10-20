@@ -28,8 +28,12 @@
 						url: base + '/queries/query-builder'
 					},
 					{
-						title: 'Editor',
+						title: 'JSON Editor',
 						url: base + '/queries/query-editor'
+					},
+					{
+						title: 'SQL Editor',
+						url: base + '/queries/sql-query-editor'
 					}
 				]
 			},

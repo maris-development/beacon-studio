@@ -2,7 +2,7 @@
 <script lang="ts">
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
-	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
+	import QueryEditor from '@/components/query-editor/json-query-editor.svelte';
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 
