@@ -16,6 +16,7 @@
 	let showChooseBeaconModal = $state(false);
 
 	async function testConnection(){
+		if(currentBeaconInstanceValue == null) return;
 		const client = BeaconClient.new(currentBeaconInstanceValue);
 		await client.testConnection();
 	}
@@ -59,12 +60,54 @@
 
 
 
-	onMount(() => {
-		createIhmInstanceIfNotExists();
+	onMount(async () => {
+		await addBeaconInstanceFromCurrentHostRoot();
+
 		openModalIfNoInstance();
 	});
 
-	let showIhmStuff = true;
+
+	/*
+	 * Adds a Beacon instance based on the current host root URL
+	 * E.g. if the app is hosted at "https://beacon.maris.nl/studio/", it will try to add "https://beacon.maris.nl/" as a Beacon instance
+	 */
+	async function addBeaconInstanceFromCurrentHostRoot(){
+		const currentHostRoot = window.location.origin;
+
+		// Check if an instance with the current host root URL already exists
+		if(!beaconInstanceArray.find(i => i.url.includes(currentHostRoot))) {
+
+			const hostname = window.location.hostname
+			const hostInstance: BeaconInstance = {
+				id: Utils.randomUUID(),
+				name: `Beacon - ${hostname}`,
+				url: currentHostRoot,
+				description: `Beacon instance based on current host root URL. (${currentHostRoot})`,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			};
+
+			//test the instance before adding
+			const client = BeaconClient.new(hostInstance);
+
+			const canConnect = await client.getHealth().then(() => true).catch(() => false);
+
+			if(canConnect){
+				beaconInstances.update(instances => {
+					instances.push(hostInstance);
+					return instances;
+				});
+
+				currentBeaconInstance.set(hostInstance);
+			} else {
+				console.warn(`Could not connect to Beacon instance at ${currentHostRoot}. Not adding instance.`);
+			}
+			
+		}
+	}
+
+
+	let showIhmStuff = false;
 	// IHM Stuff:
 	let showWelcomeModal = $state(showIhmStuff);
 
@@ -72,32 +115,6 @@
 		showWelcomeModal = false;
 	}
 
-	function createIhmInstanceIfNotExists(){
-		if(!showIhmStuff) return;
-
-		updateInstanceValues();
-
-		const ihm_beacon_url = 'https://beacon-ihm.maris.nl';
-
-		// Check if an instance with the IHM Beacon URL already exists
-		if(!beaconInstanceArray.find(i => i.url.includes(ihm_beacon_url))) {
-			const ihmInstance: BeaconInstance = {
-				id: Utils.randomUUID(),
-				name: 'IHM Beacon',
-				url: ihm_beacon_url,
-				description: 'De Informatiehuis Marien (IHM) Beacon server',
-				createdAt: new Date(),
-				updatedAt: new Date(),
-			};
-
-			beaconInstances.update(instances => {
-				instances.push(ihmInstance);
-				return instances;
-			});
-
-			currentBeaconInstance.set(ihmInstance);
-		}
-	}
 </script>
 
 <svelte:head>

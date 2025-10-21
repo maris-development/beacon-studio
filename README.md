@@ -1,4 +1,4 @@
-# sv
+# Beacon Studio
 
 Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
@@ -32,6 +32,12 @@ To create a production version of your app:
 ```bash
 npm run build
 ```
+
+To run it in a subdir somwhere e.g. `beacon-wod.maris.nl/studio`:
+```bash
+BASE_PATH=//studio npm run build --omit=dev
+```
+(use // to prevent path lookup of bash)
 
 You can preview the production build with `npm run preview`.
 

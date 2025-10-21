@@ -1,8 +1,13 @@
-
+/**
+ * @deprecated just use try/catch instead. This isn't rust after all.
+ */
 export function Ok<T>(value: T): Result<T, never> {
     return Result.Ok(value);
 }
 
+/**
+ * @deprecated just use try/catch instead. This isn't rust after all.
+ */
 export function Err<E>(error: E): Result<never, E> {
     return Result.Err(error);
 }
@@ -11,6 +16,9 @@ type ErrorInner<Err> = { ok: false; error: Err };
 type OkInner<Ok> = { ok: true; value: Ok };
 type Inner<Ok, Err> = OkInner<Ok> | ErrorInner<Err>;
 
+/**
+ * @deprecated just use try/catch instead. This isn't rust after all.
+ */
 export class Result<Ok, Err> {
 
     private constructor(private inner: Inner<Ok, Err>) {

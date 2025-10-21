@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import { BeaconClient } from '@/beacon-api/client';
+	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
 	import DataTable from '@/components/data-table.svelte';
@@ -82,59 +82,39 @@
 		isLoading = true;
 
 		try {
+			
 			await executeQuery();
+			
 			prepareTableForDisplay();
+
 		} catch (error) {
+
+			if(error instanceof NoDataInResponseError){
+				addToast({
+					type: 'info',
+					message: `Query executed successfully but returned no data.`
+				});
+				return;
+			}
+
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${error.message}`
 			});
+
 		}
 		
 	}
 
 	async function executeQuery() {
-
-
 		const startTime = performance.now();
-		const result = await client.query(query);
+		const queryResponse = await client.query(query);
         const endTime = performance.now();
         
         queryDurationMs = endTime - startTime;
 
-		if (result.isErr()) {
-			console.error(result.unwrapErr());
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${result.unwrapErr()}`
-			});
-		}
-
-		const queryResponse: QueryResponse = result.unwrap();
-
-		if (queryResponse.kind == 'error') {
-			console.error(queryResponse.error_message);
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${queryResponse.error_message}`
-			});
-			return;
-		}
-
-		if (!('arrow_table' in queryResponse)) {
-			console.error('Unexpected query result format:', queryResponse);
-			addToast({
-				type: 'error',
-				message: `Unexpected query result format`
-			});
-			return;
-		}
-
 		table = queryResponse.arrow_table;
 		table_kind = queryResponse.kind;
-
-		// console.log('Query result:', table);
-			
 	}
 
 	function prepareTableForDisplay(){
@@ -183,10 +163,6 @@
 				message: `Failed to sort table: ${error.message}`
 			});
 		}
-			
-			
-
-
 	}
 
 	function getPage() {

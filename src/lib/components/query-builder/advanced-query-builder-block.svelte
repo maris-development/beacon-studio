@@ -88,15 +88,7 @@
 		builder.setFrom(table_name);
 		builder.setOutput({ format: selected_output_format as OutputFormat });
 
-		let compiledQuery = builder.compile();
-
-		if (compiledQuery.isErr()) {
-			throw new Error('Failed to compile query: ' + compiledQuery.unwrapErr());
-		}
-
-		console.debug('Compiled Query:', compiledQuery);
-
-		return compiledQuery.unwrap();
+		return builder.compile();
 	}
 
 	function compileAndGZipQuery(): string | undefined {

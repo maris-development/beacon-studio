@@ -2,11 +2,10 @@
 import * as ApacheArrow from 'apache-arrow';
 import wasmInit from 'parquet-wasm';
 
-import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
+import type {  BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  GeoParquetQueryResponse,  ParquetQueryResponse,  QueryMetricsResult, QueryResponseKind, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import {base} from '$app/paths';
@@ -132,7 +131,24 @@ export class BeaconClient {
         URL.revokeObjectURL(link.href);
     }
 
-    async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
+    /**
+     * Executes a compiled query against the Beacon API and returns the response as an Arrow table.
+     * 
+     * @param query - The compiled query to execute against the Beacon API
+     * @returns A Promise containing the QueryResponse with the resulting Arrow table
+     * 
+     * @remarks
+     * This method:
+     * - Initializes WASM for Parquet processing
+     * - Ensures the query output format is set to Parquet
+     * - Makes a POST request to the Beacon API's query endpoint
+     * - Handles special geoparquet format validation for longitude/latitude columns
+     * - Converts the response buffer to an Arrow table format
+     * 
+     * @throws Error when geoparquet format is specified without required longitude and latitude columns
+     * @throws NoDataInResponseError when the response buffer is empty
+     */
+    async query(query: CompiledQuery): Promise<ParquetQueryResponse|GeoParquetQueryResponse> {
         await wasmInit(PARQUET_WASM_URL);
 
         const correctedQuery = BeaconClient.ensureParquetOutput(query);
@@ -153,12 +169,13 @@ export class BeaconClient {
 
         if (!response.ok) {
             const error_message = await response.text();
-            return Err(`Error querying Beacon API: ${response.status} ${response.statusText} - ${error_message}`);
+            throw new Error(`Error querying Beacon API: ${response.status} ${response.statusText} - ${error_message}`);
         }
 
         // Await the response body as a buffer
         const buffer = await response.arrayBuffer();
         const byte_buffer = new Uint8Array(buffer);
+        let kind: QueryResponseKind = 'parquet';
 
         // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
         if (typeof correctedQuery.output.format === 'object' && 'geoparquet' in correctedQuery.output.format) {
@@ -169,24 +186,16 @@ export class BeaconClient {
                 throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
             }
 
-            // Return the arrow table with geoparquet format
-            return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
-                return {
-                    kind: 'geoparquet',
-                    arrow_table: arrow_table,
-                }
-            });
+            kind = 'geoparquet';    
         }
 
-        return BeaconClient.readParquetBufferAsArrowTable(byte_buffer).map((arrow_table) => {
-            return {
-                kind: 'parquet',
-                arrow_table: arrow_table,
-            }
-        });
+        const arrow_table = BeaconClient.readParquetBufferAsArrowTable(byte_buffer);
 
+        return {
+            kind: kind,
+            arrow_table: arrow_table
+        };
     }
-
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
         const url = new URL(`${this.host}/api/query/explain`);
@@ -362,7 +371,7 @@ export class BeaconClient {
      * or `false` if there is an error connecting or the instance is not healthy.
      *
      * @throws {Error} Throws an error if the connection is successful but the Beacon instance is not healthy.
-     *
+     * @param {boolean} throwUnhealthy - If set to `true`, the method will throw an error when the Beacon instance is not healthy.
      * Displays an error toast notification if the connection fails.
      */
     async testConnection(): Promise<boolean> {
@@ -460,26 +469,54 @@ export class BeaconClient {
         });
     }
 
-    static readParquetBufferAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
+    /**
+     * Reads a Parquet buffer and converts it to an Apache Arrow Table.
+     * 
+     * @param buffer - The Uint8Array containing the Parquet data to be read
+     * @returns A Result containing either the converted Apache Arrow Table or an error string
+     * @throws {NoDataInResponseError} When the buffer is empty (length is 0)
+     * 
+     * @remarks
+     * This method uses a batch size of 128,000 for reading the Parquet data and converts
+     * the resulting WASM table to an Arrow Table via IPC stream format.
+     */
+    static readParquetBufferAsArrowTable(buffer: Uint8Array): ApacheArrow.Table {
+        if(buffer.length === 0){
+            throw new NoDataInResponseError("Query didn't return any data.");
+        }
+
+        const wasmTable = readParquet(buffer, {
+            batchSize: 128000
+        });
+
+        return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
+    }
+
+    /**
+     * Reads a binary Arrow buffer and converts it to an Apache Arrow Table.
+     * 
+     * @param buffer - The Uint8Array containing the Arrow IPC (Inter-Process Communication) data
+     * @returns A Result containing either the parsed Apache Arrow Table on success, or an error message string on failure
+     * 
+     */
+    static readArrowAsArrowTable(buffer: Uint8Array): ApacheArrow.Table {
         try {
-            const wasmTable = readParquet(buffer, {
-                batchSize: 128000
-            });
-            return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
-        } catch (error) {
-            console.error(error);
-            return Err("Failed to read buffer as Parquet");
+            return ApacheArrow.tableFromIPC(buffer);
+
+        } catch(error) {
+            console.error("Error reading Arrow buffer:", error);
+
+            throw new Error("Failed to parse Arrow data: " + (error instanceof Error ? error.message : String(error)));
         }
     }
 
-    static readArrowAsArrowTable(buffer: Uint8Array): Result<ApacheArrow.Table, string> {
-        try {
-            const jsTable = ApacheArrow.tableFromIPC(buffer);
-            return Ok(jsTable);
-        } catch {
-            return Err("Failed to read buffer as Arrow");
-        }
+
+}
+
+
+export class NoDataInResponseError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "NoDataInResponseError";
     }
-
-
 }

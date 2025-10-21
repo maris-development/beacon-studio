@@ -11,7 +11,7 @@
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import { addToast } from '@/stores/toasts';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import { BeaconClient } from '@/beacon-api/client';
+	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
 	import type { CompiledQuery, GeoParquetOutputFormat, QueryResponse, QueryResponseKind, Select as QuerySelect } from '@/beacon-api/types';
@@ -140,10 +140,22 @@
 		isLoading = true;
 
 		try {
-			changeQueryOutputToGeoparquet();
-			await executeQuery();
+			changeQueryOutputToGeoparquet(); 
+
+			await executeQuery(); 
+
 			await prepareTableForDisplay();
+			
 		} catch (error) {
+
+			if(error instanceof NoDataInResponseError){
+				addToast({
+					type: 'info',
+					message: `Query executed successfully but returned no data.`
+				});
+				return;
+			}
+			
 			console.error(error);
 			isLoading = false;
 			addToast({
@@ -194,46 +206,15 @@
 	async function executeQuery() {
 
 		const startTime = performance.now();
-		const result = await client.query(query);
+		const queryResponse = await client.query(query);
         const endTime = performance.now();
         
         queryDurationMs = endTime - startTime;
-
-		if (result.isErr()) {
-			console.error(result.unwrapErr());
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${result.unwrapErr()}`
-			});
-		}
-
-		const queryResponse: QueryResponse = result.unwrap();
-
-		if (queryResponse.kind == 'error') {
-			console.error(queryResponse.error_message);
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${queryResponse.error_message}`
-			});
-			return;
-		}
-
-		if (!('arrow_table' in queryResponse)) {
-			console.error('Unexpected query result format:', queryResponse);
-			addToast({
-				type: 'error',
-				message: `Unexpected query result format`
-			});
-			return;
-		}
 		
 		originalTable = queryResponse.arrow_table;
-		amountOfRows = originalTable.numRows;
 		table_kind = queryResponse.kind;
 
-		
-
-		// console.log('Query result received successfully.', queryResponse.arrow_table.schema);
+		amountOfRows = originalTable.numRows;
 	}
 
 

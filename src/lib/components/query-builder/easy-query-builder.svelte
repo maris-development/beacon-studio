@@ -138,15 +138,7 @@
 		builder.setFrom(selected_table_name);
 		builder.setOutput({ format: selected_output_format as OutputFormat });
 
-		let compiledQuery = builder.compile();
-
-		if (compiledQuery.isErr()) {
-			throw new Error('Failed to compile query: ' + compiledQuery.unwrapErr());
-		}
-
-		console.log('Compiled Query:', compiledQuery);
-
-		return compiledQuery.unwrap();
+		return builder.compile();;
 	}
 
 	function compileAndGZipQuery(): string | undefined {
@@ -212,21 +204,19 @@
 	}
 
 	async function handleCopyQuery() {
-		isLoading = true;
 
 		let compiledQuery: CompiledQuery;
 
 		try {
 			compiledQuery = compileQuery();
 		} catch (error) {
-			isLoading = false;
 			console.error('Error compiling query:', error);
 			addToast({
 				message: `Error compiling query: ${error.message}`,
 				type: 'error'
 			});
 			return;
-		}
+		} 
 
 		let queryJson = JSON.stringify(compiledQuery, null, 2);
 

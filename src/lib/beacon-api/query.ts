@@ -49,23 +49,28 @@ export class QueryBuilder {
         return this;
     }
 
-    compile(): Result<CompiledQuery, string> {
+    /**
+     * Compiles the query into a format suitable for execution.
+     * @returns CompiledQuery object representing the Beacon Query
+     * @throws Error if required fields are missing
+     */
+    compile(): CompiledQuery {
         if (this.selects.length === 0) {
-            return Err("No query parameters specified");
+            throw new Error("Failed to compile query: No query parameters specified");
         }
 
         if (this.output === null) {
-            return Err("No output format specified");
+            throw new Error("Failed to compile query: No output format specified");
         }
 
-        return Ok({
+        return {
             from: this.from,
             query_parameters: this.selects,
             filters: this.filters,
             output: this.output,
             limit: this.limit,
             offset: this.offset
-        });
+        };
     }
 }
 
