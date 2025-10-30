@@ -50,7 +50,9 @@
 				// fetchTables: () => fetch('/api/tables').then((r) => r.json()),
 				// fetchScalarFunctions: () => fetch('/api/functions/scalar').then((r) => r.json()),
 				// fetchTableFunctions: () => fetch('/api/functions/table').then((r) => r.json())
-				fetchTableFunctions: () => Promise.resolve([]),
+				fetchTableFunctions: () => {
+					return fetch('http://localhost:5001/api/table-functions').then((r) => r.json());
+				},
 				fetchScalarFunctions: () => {
 					return fetch('http://localhost:5001/api/functions').then((r) => r.json());
 				},

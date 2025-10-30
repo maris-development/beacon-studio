@@ -58,27 +58,6 @@ WHERE
 		alert('Analyze action triggered (not implemented yet)');
 	}
 
-	async function handleMapVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
-		if (gzippedQuery) {
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
-	async function handleChartVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
-		if (gzippedQuery) {
-			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
-	async function handleTableVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
-		if (gzippedQuery) {
-			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
 	onMount(() => {});
 </script>
 
@@ -103,27 +82,10 @@ WHERE
 					<SearchCodeIcon />
 				</Button>
 				<Button onclick={handleExecute}>
-					Execute query
+					Execute
 					<DownloadIcon />
 				</Button>
 				<div style=""></div>
-			</div>
-
-			<div class="view-query">
-				<Button onclick={handleTableVisualise}>
-					View as table
-					<SheetIcon />
-				</Button>
-
-				<Button onclick={handleMapVisualise}>
-					View on map
-					<MapIcon />
-				</Button>
-
-				<Button onclick={handleChartVisualise}>
-					View on chart
-					<ChartPieIcon />
-				</Button>
 			</div>
 		</div>
 

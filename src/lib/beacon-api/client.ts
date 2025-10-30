@@ -6,10 +6,10 @@ import { Err, Ok, Result } from '../util/result';
 import { readParquet } from 'parquet-wasm/esm';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  QueryMetricsResult, QueryResponse, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat, QueryMetricsResult, QueryResponse, Schema, SqlQuery, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
-import {base} from '$app/paths';
+import { base } from '$app/paths';
 
 const PARQUET_WASM_URL = `${base}/parquet_wasm_bg.wasm`;
 
@@ -24,12 +24,12 @@ export class BeaconClient {
     }
 
     static output_formats: Record<string, string> = {
-		Parquet: 'parquet',
-		CSV: 'csv',
-		Arrow: 'arrow',
-		NetCDF: 'netcdf'
-	};
-    
+        Parquet: 'parquet',
+        CSV: 'csv',
+        Arrow: 'arrow',
+        NetCDF: 'netcdf'
+    };
+
     /**
      * Ensures that the output format of the provided query is set to 'parquet' or 'geoparquet'.
      * 
@@ -42,7 +42,7 @@ export class BeaconClient {
      */
     static ensureParquetOutput(query: Readonly<CompiledQuery>) {
 
-        const newQuery =  Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
+        const newQuery = Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
 
         // console.log('ensureParquetOutput', newQuery);
 
@@ -51,7 +51,7 @@ export class BeaconClient {
                 // is geoparquet, allowed
                 break;
 
-            case newQuery.output.format === 'parquet': 
+            case newQuery.output.format === 'parquet':
                 // is parquet, allowed
                 break;
 
@@ -130,6 +130,39 @@ export class BeaconClient {
         document.body.removeChild(link);
 
         URL.revokeObjectURL(link.href);
+    }
+
+    async query_sql_to_parquet(sql: string): Promise<Result<ApacheArrow.Table, string>> {
+        await wasmInit(PARQUET_WASM_URL);
+
+        const endpoint = `${this.host}/api/query`;
+
+        let query: SqlQuery = {
+            sql: sql,
+            output: {
+                format: 'parquet'
+            }
+        };
+
+        // Create a request to the Beacon API using fetch
+        const request_info: RequestInit = {
+            method: 'POST',
+            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(query),
+            cache: 'no-cache',
+        }
+        const response = await fetch(endpoint, request_info);
+
+        if (!response.ok) {
+            const error_message = await response.text();
+            return Err(`Error querying Beacon API: ${response.status} ${response.statusText} - ${error_message}`);
+        }
+
+        // Await the response body as a buffer
+        const buffer = await response.arrayBuffer();
+        const byte_buffer = new Uint8Array(buffer);
+
+        return BeaconClient.readParquetBufferAsArrowTable(byte_buffer);
     }
 
     async query(query: CompiledQuery): Promise<Result<QueryResponse, string>> {
@@ -367,20 +400,20 @@ export class BeaconClient {
      */
     async testConnection(): Promise<boolean> {
         const result = await this.getHealth().then((isHealthy) => {
-			// Connection successful
-			if(!isHealthy){
-				throw new Error('Connected succesfully, but Beacon instance is not healthy.');
-			}
+            // Connection successful
+            if (!isHealthy) {
+                throw new Error('Connected succesfully, but Beacon instance is not healthy.');
+            }
 
             return true;
-		}).catch(() => {
-			addToast({
-				message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
-				type: 'error',
+        }).catch(() => {
+            addToast({
+                message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
+                type: 'error',
                 timeout: 0
-			});
+            });
             return false;
-		});
+        });
 
         return result;
     }

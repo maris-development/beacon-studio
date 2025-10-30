@@ -44,7 +44,7 @@ export function registerHoverProvider(monacoNS: typeof import("monaco-editor"), 
                 // b) Table-valued function (treated as table in FROM/JOIN)
                 const tvf = schema.tableFunctions.find((f) => f.function_name === tableName);
                 if (tvf) {
-                    const md = tvf.columns.map((c) => `- \`${c.name}\`: \`${c.data_type}\``).join("\n");
+                    const md = tvf.params.map((c) => `- \`${c.name}\`: \`${c.data_type}\``).join("\n");
                     const sig = `**${tvf.function_name}**(${(tvf.params ?? []).map((p) => p.name).join(", ")})`;
                     return { contents: [{ value: sig }, { value: "_table function_" }, { value: md || "_No columns_" }] };
                 }

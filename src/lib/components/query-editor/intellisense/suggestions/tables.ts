@@ -18,12 +18,12 @@ export function fromLikeItems(
     }
     for (const f of schema.tableFunctions) {
         out.push({
-            label: f.name,
+            label: f.function_name,
             kind: monaco.languages.CompletionItemKind.Function,
-            insertText: f.name + makeFunctionSnippet(f.params),
+            insertText: f.function_name + makeFunctionSnippet(f.params),
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            detail: `(table function) ${signatureLabel(f.name, f.params)}`,
-            sortText: "1tf" + f.name,
+            detail: `(table function) ${signatureLabel(f.function_name, f.params)}`,
+            sortText: "1tf" + f.function_name,
             range,
         });
     }

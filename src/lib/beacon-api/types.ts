@@ -128,6 +128,11 @@ export interface BeaconSystemInfo {
     } | null;
 };
 
+export type SqlQuery = {
+    sql: string;
+    output: Output;
+}
+
 export type CompiledQuery = {
     query_parameters: Select[],
     filters: Filter[],
