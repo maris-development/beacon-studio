@@ -14,7 +14,7 @@
 	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
-	import type { CompiledQuery, GeoParquetOutputFormat, QueryResponse, QueryResponseKind, Select as QuerySelect } from '@/beacon-api/types';
+	import type { CompiledQuery, GeoParquetOutputFormat,  ParquetQueryResponse, Select as QuerySelect } from '@/beacon-api/types';
 	import MapInfo from '@/components/map-info.svelte';
 	import MapPopupContent from '@/components/map-popup-content.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -36,16 +36,18 @@
 	let map: maplibregl.Map | null = null;
 	let layer: GeoArrowScatterplotLayer | null = null;
 	let deckOverlay: DeckOverlay | null = null;
-
-	let originalTable: ApacheArrow.Table | null = null; // original query data table 
-	let table: ApacheArrow.Table | null = null; // current data table that is being displayed (e.g. de-duplicated by lat/lon)
 	let mapPopup: maplibregl.Popup | null = null;
 	let mapPopupContent: Rendered;
 	
 	let query: CompiledQuery | undefined = $state(undefined);
-	let table_kind: QueryResponseKind | null = $state(null);
-	let amountOfRows: number = $state(0);
-    let queryDurationMs: number | null = $state(null);
+
+	let queryResponse: ParquetQueryResponse | null = $state(null);
+	let amountOfRows: number = $derived(queryResponse?.rowCount);
+    let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
+	let originalTable: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); // original query data table 
+	let table: ApacheArrow.Table | null = null; // current data table that is being displayed (e.g. de-duplicated by lat/lon)
+
+
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
 	let editQueryModalOpen = $state(false);
@@ -63,6 +65,8 @@
 	$effect(() =>{
 		if(colorScale && layer) {
 			layer.setNeedsRedraw();
+			addGeoArrowLayer(true);
+
 		}
 	});
 
@@ -142,7 +146,7 @@
 		try {
 			changeQueryOutputToGeoparquet(); 
 
-			await executeQuery(); 
+			queryResponse = await client.query(query);
 
 			await prepareTableForDisplay();
 			
@@ -203,21 +207,6 @@
 	}
 
 
-	async function executeQuery() {
-
-		const startTime = performance.now();
-		const queryResponse = await client.query(query);
-        const endTime = performance.now();
-        
-        queryDurationMs = endTime - startTime;
-		
-		originalTable = queryResponse.arrow_table;
-		table_kind = queryResponse.kind;
-
-		amountOfRows = originalTable.numRows;
-	}
-
-
 	async function prepareTableForDisplay(){
 		if(!originalTable){
 			addToast({
@@ -251,11 +240,11 @@
 
 	let currentDataColumnName: string | undefined = undefined;
 
-	async function addGeoArrowLayer() {
+	async function addGeoArrowLayer(force: boolean = false) {
 
 		if(!selectedDataColumnName) return;
 
-		if(selectedDataColumnName === currentDataColumnName) {
+		if(selectedDataColumnName === currentDataColumnName && !force) {
 			console.log('Selected data column is the same as before, skipping layer update.');
 			return;
 		} else {

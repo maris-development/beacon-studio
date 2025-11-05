@@ -3,16 +3,26 @@ import * as ApacheArrow from 'apache-arrow';
 //  TYPES AND INTERFACES
 
 export type QueryResponse = ErrorQueryResponse | JsonQueryResponse | CsvQueryResponse | NetCDFQueryResponse
-    | GeoParquetQueryResponse | ParquetQueryResponse | ArrowQueryResponse;
+    | ParquetQueryResponse;
 
+export type LimitReachedQueryWarning = "limit_reached";
 
-export type GeoParquetQueryResponse = { kind: 'geoparquet'; arrow_table: ApacheArrow.Table };
-export type ParquetQueryResponse = { kind: 'parquet' | 'arrow'; arrow_table: ApacheArrow.Table };
-export type ArrowQueryResponse = ParquetQueryResponse;
-export type JsonQueryResponse = { kind: 'json'; buffer: Uint8Array };
-export type CsvQueryResponse = { kind: 'csv'; buffer: Uint8Array };
-export type NetCDFQueryResponse = { kind: 'netcdf'; buffer: Uint8Array };
-export type ErrorQueryResponse = { kind: 'error'; error_message: string };
+export type QueryWarning = LimitReachedQueryWarning;
+
+export type GeoParquetQueryResponse = {  kind: 'geoparquet'; arrow_table: ApacheArrow.Table } & DefaultQueryResponse;
+export type ArrowQueryResponse = { kind: 'parquet' | 'arrow'; arrow_table: ApacheArrow.Table } & DefaultQueryResponse;
+export type JsonQueryResponse = { kind: 'json'; buffer: Uint8Array } & DefaultQueryResponse;
+export type CsvQueryResponse = { kind: 'csv'; buffer: Uint8Array } & DefaultQueryResponse;
+export type NetCDFQueryResponse = { kind: 'netcdf'; buffer: Uint8Array } & DefaultQueryResponse;
+export type ErrorQueryResponse = { kind: 'error'; error_message: string } & DefaultQueryResponse;
+
+export type ParquetQueryResponse = GeoParquetQueryResponse | ArrowQueryResponse;
+
+type DefaultQueryResponse = {
+    duration?: number; 
+    warnings?: QueryWarning[];
+    rowCount?: number;
+}
 
 export type QueryResponseKind = 'error' | 'json' | 'csv' | 'netcdf' | 'geoparquet' | 'parquet' | 'arrow';
 
@@ -200,6 +210,8 @@ type BasePresetColumn = {
     column_name: string;
     alias: string;
     description: string;
+    column_metadata_columns: PresetColumn[];
+    metadata_columns: PresetColumn[];
 };
 
 export type PresetColumn = BasePresetColumn & {

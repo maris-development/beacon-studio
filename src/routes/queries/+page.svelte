@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import Card from '@/components/card/card.svelte';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 </script>
 
@@ -9,7 +9,7 @@
 	<title>Queries - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Queries', href: `${base}/queries` }]} />
+<Cookiecrumb crumbs={[{ label: 'Queries', href: resolve('/queries') }]} />
 
 <div class="page-container">
 	<h1>Queries</h1>
@@ -17,7 +17,7 @@
 	<p>Use the following ways to query your Beacon contents.</p>
 
 	<div class="queries-functions">
-		<Card href="{base}/queries/query-builder">
+		<Card href={resolve('/queries/query-builder')}>
 				<h2>Query builder</h2>
 			<p>
 				Build queries using a user-friendly interface. There's two types of builders, the easy
@@ -26,7 +26,7 @@
 			</p>
 		</Card>
 
-		<Card href="{base}/queries/query-editor" class="card">
+		<Card href={resolve('/queries/query-editor')} class="card">
 			<h2>Query editor</h2>
 			
 			<p>Edit queries in a raw text editor, this is for advanced users and developers.</p>

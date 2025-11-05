@@ -8,7 +8,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import { AffixString } from '@/utils';
 	import type { Column } from '@/util-types';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import Button from '@/components/ui/button/button.svelte';
 	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
 
@@ -91,7 +91,7 @@
 	function onCellClick(row: Record<string, AffixString>, column: Column) {
 		const filename = row[column.key];
 
-		const url = new URL(`${base}/data-browser/table-detail`, window.location.origin);
+		const url = new URL(resolve('/data-browser/table-detail'), window.location.origin);
 
 		url.searchParams.set('table_name', filename.main);
 
@@ -105,8 +105,8 @@
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: `${base}/data-browser` },
-		{ label: 'Data tables', href: `${base}/data-browser/data-tables` }
+		{ label: 'Data Browser', href: resolve('/data-browser') },
+		{ label: 'Data tables', href: resolve('/data-browser/data-tables') }
 	]}
 />
 

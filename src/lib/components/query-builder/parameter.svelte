@@ -18,6 +18,10 @@
 	} = $props();
 
 	let preset_filter_object = $derived(column.filter);
+
+	let metadata_columns = $derived.by(() => {
+		return (column.metadata_columns || []).concat(column.column_metadata_columns || []);
+	});
 </script>
 
 <label class="parameter">
@@ -26,12 +30,16 @@
 			<Checkbox bind:checked={is_selected} id={column.column_name} />
 			<h4>{column.alias}</h4>
 		</div>
+
 		<Separator />
+
 		{#each Object.entries(column).filter(([key, _]) => !['filter', 'alias', 'column_name'].includes(key)) as [key, value]}
-			<div class="key-value">
-				<strong>{Utils.ucfirst(key)}:</strong>
-				{value}
-			</div>
+			{#if typeof value === 'string' || value instanceof String}
+				<div class="key-value">
+					<strong>{Utils.ucfirst(key)}:</strong>
+					{value}
+				</div>
+			{/if}
 		{/each}
 	</div>
 

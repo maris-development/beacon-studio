@@ -16,7 +16,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { addToast } from '@/stores/toasts';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	let sourceCode = $state(`{
 		"query_parameters": [
@@ -89,21 +89,21 @@
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(sourceCode);
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleChartVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(sourceCode);
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(sourceCode);
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
@@ -113,10 +113,10 @@
 <div class="page-wrapper">
 	<Cookiecrumb
 		crumbs={[
-			{ label: 'Queries', href: `${base}/queries` },
-			{ label: 'Query Editor', href: `${base}/queries/query-editor` }
+			{ label: 'Queries', href: resolve('/queries') },
+			{ label: 'Query Editor', href: resolve('/queries/query-editor') }
 		]}
-	></Cookiecrumb>
+	/>
 	<!-- Right: Shadcn Buttons -->
 
 	<div class="page-container">

@@ -135,6 +135,7 @@ export class Utils {
 
         url.searchParams.set(parameterName, String(pageIndex));
 
+        // eslint-disable-next-line svelte/no-navigation-without-resolve
         Navigation.replaceState(url, {});
     }
 
@@ -263,6 +264,9 @@ export class Utils {
     }
 
     static formatSecondsToReadableTime(totalSeconds: number): string {
+        if(!totalSeconds){
+            return '0.000s';
+        }
         const units = [
             { label: 'months', value: 60 * 60 * 24 * 30 },
             { label: 'days', value: 60 * 60 * 24 },

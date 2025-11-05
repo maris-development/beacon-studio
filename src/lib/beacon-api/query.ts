@@ -1,4 +1,3 @@
-import { Err, Ok, Result } from "../util/result";
 import type { CompiledQuery, Filter, From, Output, Select } from "./types";
 
 export class QueryBuilder {

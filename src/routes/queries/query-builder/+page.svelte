@@ -1,10 +1,9 @@
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import Card from '@/components/card/card.svelte';
-	import EasyQueryBuilder from '$lib/components/query-builder/easy-query-builder.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
 </script>
 
@@ -14,8 +13,8 @@
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Queries', href: `${base}/queries` },
-		{ label: 'Query Builder', href: `${base}/queries/query-builder` }
+		{ label: 'Queries', href: resolve('/queries') },
+		{ label: 'Query Builder', href: resolve('/queries/query-builder') }
 	]}
 />
 

@@ -22,7 +22,7 @@
 	<p class="text-muted-foreground text-sm m-0">Options Filter:</p>
 	<div class="justify-items-end">
 		<Select.Root type="multiple" name="dataCollection" bind:value={selected_options as string[]} >
-			<Select.Trigger  class="w-[200px]">
+			<Select.Trigger  class="w-[200px] bg-[var(--background)] border border-[#ccc]">
 				{selected_options.length} options selected
 			</Select.Trigger>
 			<Select.Content>

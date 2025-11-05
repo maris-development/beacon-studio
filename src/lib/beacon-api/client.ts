@@ -5,14 +5,19 @@ import wasmInit from 'parquet-wasm';
 import { readParquet } from 'parquet-wasm/esm';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type {  BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  GeoParquetQueryResponse,  ParquetQueryResponse,  QueryMetricsResult, QueryResponseKind, Schema, TableDefinition, TableExtension } from './types';
+import type {  BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  GeoParquetQueryResponse,  ParquetQueryResponse,  QueryMetricsResult, QueryResponseKind, QueryWarning, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
-import {base} from '$app/paths';
+import {asset} from '$app/paths';
 
-const PARQUET_WASM_URL = `${base}/parquet_wasm_bg.wasm`;
+
+
+
 
 export class BeaconClient {
+    static PARQUET_WASM_URL = asset(`/parquet_wasm_bg.wasm`);
+    static QUERY_LIMIT = 50_000_000; //50 million cells
+
     host: string;
     token: string | null = null;
     private memCache = new MemoryCache();
@@ -149,9 +154,17 @@ export class BeaconClient {
      * @throws NoDataInResponseError when the response buffer is empty
      */
     async query(query: CompiledQuery): Promise<ParquetQueryResponse|GeoParquetQueryResponse> {
-        await wasmInit(PARQUET_WASM_URL);
+        await wasmInit(BeaconClient.PARQUET_WASM_URL);
 
-        const correctedQuery = BeaconClient.ensureParquetOutput(query);
+        if(typeof query == 'string'){
+            query = JSON.parse(query) as CompiledQuery;
+        }
+
+        const _query = Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
+
+        _query.limit = Math.round(BeaconClient.QUERY_LIMIT / query.query_parameters.length);
+
+        const correctedQuery = BeaconClient.ensureParquetOutput(_query);
 
         const endpoint = `${this.host}/api/query`;
 
@@ -159,11 +172,13 @@ export class BeaconClient {
         const request_info: RequestInit = {
             method: 'POST',
             headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify(query),
+            body: JSON.stringify(_query),
             cache: 'no-cache',
         }
 
-        // console.log('client.query', endpoint, query, request_info);
+        // console.log('[BeaconClient] query()', endpoint, query, request_info);
+
+		const startTime = performance.now();
 
         const response = await fetch(endpoint, request_info);
 
@@ -191,9 +206,29 @@ export class BeaconClient {
 
         const arrow_table = BeaconClient.readParquetBufferAsArrowTable(byte_buffer);
 
+		const endTime = performance.now();
+
+        const warnings: QueryWarning[] = [];
+
+        const rowCount = arrow_table.numRows;
+
+        if(rowCount >= _query.limit) {
+            warnings.push("limit_reached");
+            addToast({
+				type: 'warning',
+				message: `
+					The query result has reached the limit of ${BeaconClient.QUERY_LIMIT} cells to prevent crashing your browser. 
+					The data may be incomplete. Consider refining your query to reduce the result size.
+				`.trim()
+			});
+        }
+
         return {
             kind: kind,
-            arrow_table: arrow_table
+            arrow_table: arrow_table,
+            warnings: warnings,
+            duration: endTime - startTime,
+            rowCount: rowCount
         };
     }
 

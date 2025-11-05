@@ -20,7 +20,7 @@
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import type { QueryFilterValue } from './filters/filter.svelte';
 	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
 	import { Checkbox } from '../ui/checkbox';
@@ -46,7 +46,8 @@
 		filter_value: QueryFilterValue;
 	}[] = $state([]);
 
-	let include_all_metadata_optional: boolean = $state(false);
+	let include_all_data_columns: boolean = $state(true);
+	let include_all_metadata_columns: boolean = $state(true);
 
 	$effect(() => {
 		if (!selected_table) {
@@ -56,18 +57,19 @@
 		}
 
 		let table_type = selected_table.table_type;
+
 		if ('preset' in table_type) {
 			// It's a preset table type
 			let data_columns = table_type.preset.data_columns;
 			data_parameters = data_columns.map((column) => ({
-				selected: false,
+				selected: include_all_data_columns, // By default, select all data columns
 				column,
 				filter_value: null
 			}));
 
 			let metadata_columns = table_type.preset.metadata_columns;
 			metadata_parameters = metadata_columns.map((column) => ({
-				selected: false,
+				selected: include_all_metadata_columns, // By default, select all metadata columns
 				column,
 				filter_value: null
 			}));
@@ -84,21 +86,11 @@
 			return null;
 		}
 
-		let preset_table_types = await client.getPresetTables();
-
-		// Find the selected table type
-		let selected_table_type = preset_table_types.find((t) => t.table_name === table_name) || null;
+		let selected_table_type: TableDefinition = await client.getTableConfig(table_name);
 
 		console.log('Selected table type:', selected_table_type);
 
 		return selected_table_type;
-	}
-
-	function setSelectAllMetadataOptional(value: boolean) {
-		metadata_parameters = metadata_parameters.map((param) => ({
-			...param,
-			selected: value
-		}));
 	}
 
 	function compileQuery(): CompiledQuery {
@@ -138,7 +130,7 @@
 		builder.setFrom(selected_table_name);
 		builder.setOutput({ format: selected_output_format as OutputFormat });
 
-		return builder.compile();;
+		return builder.compile();
 	}
 
 	function compileAndGZipQuery(): string | undefined {
@@ -183,7 +175,7 @@
 		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
@@ -191,7 +183,9 @@
 		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(
+				resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
 		}
 	}
 
@@ -199,12 +193,13 @@
 		isLoading = true;
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(
+				resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
 		}
 	}
 
 	async function handleCopyQuery() {
-
 		let compiledQuery: CompiledQuery;
 
 		try {
@@ -216,7 +211,7 @@
 				type: 'error'
 			});
 			return;
-		} 
+		}
 
 		let queryJson = JSON.stringify(compiledQuery, null, 2);
 
@@ -246,87 +241,92 @@
 		{/if}
 	{/if}
 
-	<div>
-		{#if selected_table === null}
-			<div class=" text-gray-500">
-				<p>Select a table to see available query parameters.</p>
-			</div>
-		{:else}
-			<div class="grid gap-4">
-				<Collapsible.Root class="space-y-2" open>
-					<div class="flex items-center justify-between">
-						<h4 class=" font-semibold">Select data columns</h4>
-						<Collapsible.Trigger
-							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
-						>
-							<ChevronsUpDownIcon />
-							<span class="sr-only">Toggle</span>
-						</Collapsible.Trigger>
-					</div>
-					<Collapsible.Content class="space-y-2">
-						<div class="parameter-grid">
-							{#each data_parameters as _, i}
-								<Parameter
-									bind:column={data_parameters[i].column}
-									bind:is_selected={data_parameters[i].selected}
-									bind:filter_value={data_parameters[i].filter_value}
-								/>
-							{/each}
-							{#if data_parameters.length === 0}
-								<div class="text-gray-500">
-									<p>No data columns available.</p>
-								</div>
-							{/if}
-						</div>
-					</Collapsible.Content>
-				</Collapsible.Root>
+	{#if selected_table === null}
+		<div class=" text-gray-500">
+			<p>Select a table to see available query parameters.</p>
+		</div>
+	{:else}
+		<div >
+			<Collapsible.Root class="mb-[4rem]" open>
+				<div class="flex items-center justify-between">
+					<h4 class=" font-semibold">Select data columns</h4>
+					<Collapsible.Trigger
+						class={buttonVariants({ variant: 'default', size: 'sm', /*class: 'w-9 p-0'*/ })}
+					>
+						Toggle columns display
+						<ChevronsUpDownIcon />
+					</Collapsible.Trigger>
+				</div>
 
-				<Collapsible.Root class="space-y-2" open>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2">
-							<h4 class="font-semibold">Select metadata columns</h4>
-							<div class="flex items-center gap-2">
-								<p class=" text-gray-500">Include all metadata optional</p>
-								<Checkbox
-									bind:checked={include_all_metadata_optional}
-									onclick={() => setSelectAllMetadataOptional(!include_all_metadata_optional)}
-								/>
+				<div class="mb-[1rem] flex gap-2">
+					<Checkbox id="select-all-data-columns" bind:checked={include_all_data_columns} />
+					<Label for="select-all-data-columns" class=" text-gray-500"
+						>Include all <strong>data columns</strong> with your query.</Label
+					>
+				</div>
+
+				<Collapsible.Content class="space-y-2">
+					<div class="parameter-grid">
+						{#each data_parameters as _, i}
+							<Parameter
+								bind:column={data_parameters[i].column}
+								bind:is_selected={data_parameters[i].selected}
+								bind:filter_value={data_parameters[i].filter_value}
+							/>
+						{/each}
+						{#if data_parameters.length === 0}
+							<div class="text-gray-500">
+								<p>No data columns available.</p>
 							</div>
-						</div>
-
-						<Collapsible.Trigger
-							class={buttonVariants({ variant: 'default', size: 'sm', class: 'w-9 p-0' })}
-						>
-							<ChevronsUpDownIcon />
-							<span class="sr-only">Toggle</span>
-						</Collapsible.Trigger>
+						{/if}
 					</div>
-					<Collapsible.Content class="space-y-2">
-						<div class="parameter-grid">
-							{#each metadata_parameters as _, i}
-								<Parameter
-									bind:column={metadata_parameters[i].column}
-									bind:is_selected={metadata_parameters[i].selected}
-									bind:filter_value={metadata_parameters[i].filter_value}
-								/>
-							{/each}
-							{#if metadata_parameters.length === 0}
-								<div class="text-gray-500">
-									<p>No metadata columns available.</p>
-								</div>
-							{/if}
-						</div>
-					</Collapsible.Content>
-				</Collapsible.Root>
-			</div>
-		{/if}
-	</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+
+			<Collapsible.Root class="mb-[4rem]">
+				<div class="flex items-center justify-between">
+					<h4 class="font-semibold">Select metadata columns</h4>
+
+					<Collapsible.Trigger
+						class={buttonVariants({ variant: 'default', size: 'sm', /*class: 'w-9 p-0'*/ })}
+					>
+						Toggle columns display
+						<ChevronsUpDownIcon />
+					</Collapsible.Trigger>
+				</div>
+
+				<div class="mb-[1rem] flex gap-2">
+					<Checkbox id="select-all-metadata-columns" bind:checked={include_all_metadata_columns} />
+					<Label for="select-all-metadata-columns" class=" text-gray-500"
+						>Include all <strong>metadata columns</strong> with your query.</Label
+					>
+				</div>
+
+				<Collapsible.Content class="space-y-2">
+					<div class="parameter-grid">
+						{#each metadata_parameters as _, i}
+							<Parameter
+								bind:column={metadata_parameters[i].column}
+								bind:is_selected={metadata_parameters[i].selected}
+								bind:filter_value={metadata_parameters[i].filter_value}
+							/>
+						{/each}
+						{#if metadata_parameters.length === 0}
+							<div class="text-gray-500">
+								<p>No metadata columns available.</p>
+							</div>
+						{/if}
+					</div>
+				</Collapsible.Content>
+			</Collapsible.Root>
+		</div>
+	{/if}
 
 	<h4>Select output format</h4>
-	<Label for="outputFormat">Output format</Label>
+	<Label for="select-outputFormat">Output format</Label>
 
 	<Select.Root type="single" name="dataCollection" bind:value={selected_output_format}>
-		<Select.Trigger>
+		<Select.Trigger id="select-outputFormat">
 			{selected_output_format}
 		</Select.Trigger>
 		<Select.Content>
@@ -384,11 +384,7 @@
 		.parameter-grid {
 			display: grid;
 			gap: 1rem;
-			grid-template-columns: 1fr 1fr;
-
-			@media (max-width: 960px) {
-				grid-template-columns: 1fr;
-			}
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

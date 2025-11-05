@@ -2,7 +2,7 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import type { Snippet } from 'svelte';
 	import HouseIcon from '@lucide/svelte/icons/house';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
     export type Crumb = {
         label: string;
@@ -19,7 +19,7 @@
 <Breadcrumb.Root flexChildren={children}>
     <Breadcrumb.List>
         <Breadcrumb.Item>
-            <Breadcrumb.Link href="{base}/">
+            <Breadcrumb.Link href={resolve('/')}>
                 <span class="primary-color">
                     <HouseIcon size=1rem />
                 </span>

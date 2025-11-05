@@ -6,7 +6,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
-	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
+	import type { CompiledQuery, ParquetQueryResponse} from '@/beacon-api/types';
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import SheetIcon from '@lucide/svelte/icons/sheet';
@@ -15,14 +15,15 @@
 	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
-	let table: ApacheArrow.Table | null = $state(null); // The table data returned from the query
-	let table_kind: QueryResponseKind | null = $state(null);
-	let queryDurationMs: number | null = $state(null);
+
+	let queryResponse: ParquetQueryResponse | null = $state(null);
+	let table: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); 
+	let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
 
 	let totalRows: number = $state(0);
 	let isLoading = $state(true);
@@ -63,7 +64,8 @@
 		isLoading = true;
 
 		try {
-			await executeQuery();
+
+			queryResponse = await client.query(query);
 
 			prepareTableForDisplay();
 
@@ -84,16 +86,7 @@
 		}
 	}
 
-	async function executeQuery() {
-		const startTime = performance.now();
-		const queryResponse = await client.query(query);
-		const endTime = performance.now();
-
-		queryDurationMs = endTime - startTime;
-		
-		table = queryResponse.arrow_table;
-		table_kind = queryResponse.kind;
-	}
+	
 
 	function prepareTableForDisplay() {
 		if (!table) {
@@ -144,7 +137,7 @@
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
@@ -152,7 +145,7 @@
 	async function handleTableVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if(gzippedQuery){
-			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>

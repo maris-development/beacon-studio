@@ -16,7 +16,7 @@
 	// Svelte lifecycle and navigation
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	// State variables
 	let currentBeaconInstanceValue: BeaconInstance | null = null; // holds the selected beacon instance
@@ -55,7 +55,7 @@
 	 */
 	function checkAndRedirect(): void {
 		if (currentBeaconInstanceValue == null && instancesList.length === 0) {
-			goto(`${base}/`); // Redirect to home page to set up an instance
+			goto(resolve('/')); // Redirect to home page to set up an instance
 		}
 	}
 

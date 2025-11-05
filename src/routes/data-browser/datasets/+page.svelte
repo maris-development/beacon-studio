@@ -8,9 +8,8 @@
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { Column } from '@/util-types';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import Button from '@/components/ui/button/button.svelte';
-	import UploadFileModal from '@/components/modals/UploadDatasetsModal.svelte';
 	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
 
 	type Dataset = {
@@ -101,7 +100,7 @@
 	function onCellClick(row: Record<string, any>, column: Column) {
 		const filename = row[column.key];
 
-		const url = new URL(`${base}/data-browser/dataset-detail`, window.location.origin);
+		const url = new URL(resolve('/data-browser/dataset-detail'), window.location.origin);
 
 		url.searchParams.set('file', filename);
 
@@ -119,8 +118,8 @@
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: `${base}/data-browser` },
-		{ label: 'Datasets', href: `${base}/data-browser/datasets` }
+		{ label: 'Data Browser', href: resolve('/data-browser') },
+		{ label: 'Datasets', href: resolve('/data-browser/datasets') }
 	]}
 />
 

@@ -4,7 +4,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	let { 
         onCancel = () => {},
@@ -16,7 +16,7 @@
 <Modal title="No query to view" onClose={() => onCancel(false)} width="50vw">
     <p>Please build or enter a query to visualize data.</p>
 	<div class="buttons">
-        <Button href="{base}/queries/query-builder">
+        <Button href={resolve('/queries/query-builder')}>
 			Build a query
     		<HammerIcon size=1rem />
 		</Button>

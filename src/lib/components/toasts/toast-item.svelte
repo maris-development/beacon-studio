@@ -48,6 +48,10 @@
 		min-width: 300px;
 		gap: 0.5rem;
 	}
+
+	.warning {
+		background: #FF8F5C;
+	}
 	
 	.error {
 		background: IndianRed;

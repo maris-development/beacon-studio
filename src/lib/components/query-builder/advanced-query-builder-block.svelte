@@ -19,7 +19,7 @@
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 
 	let {
 		table_name,
@@ -129,21 +129,21 @@
 	async function handleMapVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleChartVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(`${base}/visualisations/table-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 

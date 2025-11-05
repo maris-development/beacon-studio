@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import Card from '@/components/card/card.svelte';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
@@ -59,12 +59,12 @@
 	<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
 
 	<div class="data-browser-functions">
-		<Card href="{base}/data-browser/datasets">
+		<Card href={resolve('/data-browser/datasets')}>
 			<h2>{datasetsTitle}</h2>
 			<p>View and manage individual datasets.</p>
 		</Card>
 
-		<Card href="{base}/data-browser/data-tables">
+		<Card href={resolve('/data-browser/data-tables')}>
 			<h2>{dataTablesTitle}</h2>
 			<p>View and manage data tables.</p>
 		</Card>

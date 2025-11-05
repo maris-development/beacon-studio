@@ -9,19 +9,19 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let selected_table_name = $state('');
-	let easy_tables = $state<Array<TableDefinition>>([]);
+	// let easy_tables = $state<Array<TableDefinition>>([]);
+	let easy_table_names = $state<Array<string>>([]);
 
 	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
-		let preset_tables = await client.getPresetTables();
+		easy_table_names = (await client.getTables()).filter((tableName => tableName.startsWith('easy')));
 
-		easy_tables = preset_tables;
 
 		// By default, select the first table if available
-		if (easy_tables.length > 0) {
-			selected_table_name = easy_tables[0].table_name;
+		if (easy_table_names.length > 0) {
+			selected_table_name = easy_table_names[0];
 		}
 	});
 </script>
@@ -35,9 +35,9 @@
 		<Select.Content>
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
-				{#each easy_tables as table (table.table_name)}
-					<Select.Item value={table.table_name} label={table.table_name}>
-						{table.table_name}
+				{#each easy_table_names as table_name}
+					<Select.Item value={table_name} label={table_name}>
+						{table_name}
 					</Select.Item>
 				{/each}
 			</Select.Group>

@@ -8,7 +8,7 @@
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 
 	const data = {
 		instance: {
@@ -19,37 +19,37 @@
 		dataAccess: [
 			{
 				title: 'Queries',
-				url: base + '/queries',
+				url: resolve('/queries'),
 				icon: DatabaseIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Builder',
-						url: base + '/queries/query-builder'
+						url: resolve('/queries/query-builder')
 					},
 					{
 						title: 'Editor',
-						url: base + '/queries/query-editor'
+						url: resolve('/queries/query-editor')
 					}
 				]
 			},
 			{
 				title: 'Visualizations',
-				url: base + '/visualisations',
+				url: resolve('/visualisations'),
 				icon: EyeIcon,
 				isActive: true,
 				items: [
 					{
 						title: 'Map Viewer',
-						url: base + '/visualisations/map-viewer'
+						url: resolve('/visualisations/map-viewer')
 					},
 					{
 						title: 'Table Explorer',
-						url: base + '/visualisations/table-explorer'
+						url: resolve('/visualisations/table-explorer')
 					},
 					{
 						title: 'Chart Explorer',
-						url: base + '/visualisations/chart-explorer'
+						url: resolve('/visualisations/chart-explorer')
 					}
 				]
 			}
@@ -57,28 +57,28 @@
 		nodeManagement: [
 			{
 				title: 'Content',
-				url: base + '/data-browser',
+				url: resolve('/data-browser'),
 				icon: Table2Icon,
 				isActive: true,
 				items: [
 					{
 						title: 'Datasets',
-						url: base + '/data-browser/datasets'
+						url: resolve('/data-browser/datasets')
 					},
 					{
 						title: 'Data Tables',
-						url: base + '/data-browser/data-tables'
+						url: resolve('/data-browser/data-tables')
 					}
 				]
 			},
 			{
 				title: 'System Info',
-				url: base + '/system-info',
+				url: resolve('/system-info'),
 				icon: CpuIcon
 			},
 			{
 				title: 'Settings',
-				url: base + '/settings',
+				url: resolve('/settings'),
 				icon: Settings2Icon
 			}
 		],
@@ -111,7 +111,6 @@
 	import NavInstance from './nav-instance.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
-	import { icon } from 'leaflet';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
@@ -122,7 +121,7 @@
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
 					{#snippet child({ props })}
-						<a href="{base}/" {...props}>
+						<a href="{resolve('/')}" {...props}>
 							<div class=" header-icon">
 								<DatabaseZapIcon class="size-4" />
 							</div>

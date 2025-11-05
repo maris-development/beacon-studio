@@ -7,7 +7,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
-	import type { CompiledQuery, QueryResponse, QueryResponseKind } from '@/beacon-api/types';
+	import type { CompiledQuery, ParquetQueryResponse } from '@/beacon-api/types';
 	import DataTable from '@/components/data-table.svelte';
 	import { Button } from '@/components/ui/button';
 
@@ -20,16 +20,17 @@
 	import type { Column, SortDirection } from '@/util-types';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 
 	const arrowWorker: ArrowProcessingWorkerManager = new ArrowProcessingWorkerManager();
 
 	let query: CompiledQuery | undefined = $state(undefined);
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
-	let table: ApacheArrow.Table | null = $state(null); // The table data returned from the query
-	let table_kind: QueryResponseKind | null = $state(null);
-    let queryDurationMs: number | null = $state(null);
+	
+	let queryResponse: ParquetQueryResponse | null = $state(null);
+	let table: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); 
+	let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
 
 
 	let virtualPaginationData: VirtualPaginationArrowTableData = new VirtualPaginationArrowTableData();
@@ -49,7 +50,7 @@
 
 	let noQueryAvailableModalOpen = $state(false);
 
-	$inspect(query);
+	// $inspect(query);
 
 
 	onMount(async () => {
@@ -82,9 +83,9 @@
 		isLoading = true;
 
 		try {
-			
-			await executeQuery();
-			
+			console.log(typeof query);
+			queryResponse = await client.query(query);
+
 			prepareTableForDisplay();
 
 		} catch (error) {
@@ -106,16 +107,6 @@
 		
 	}
 
-	async function executeQuery() {
-		const startTime = performance.now();
-		const queryResponse = await client.query(query);
-        const endTime = performance.now();
-        
-        queryDurationMs = endTime - startTime;
-
-		table = queryResponse.arrow_table;
-		table_kind = queryResponse.kind;
-	}
 
 	function prepareTableForDisplay(){
 		if(!table){
@@ -219,15 +210,17 @@
 
 	async function handleChartVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
+
 		if(gzippedQuery){
-			goto(`${base}/visualisations/chart-explorer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
+		
 		if(gzippedQuery){
-			goto(`${base}/visualisations/map-viewer?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 

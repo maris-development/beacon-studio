@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import Card from '@/components/card/card.svelte';
 	import { BeaconClient } from '@/beacon-api/client';
-  	import { base } from '$app/paths';
+  	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
 	import Modal from '@/components/modals/Modal.svelte';
 	import { Button } from '@/components/ui/button';
@@ -77,7 +77,7 @@
 		// Check if an instance with the current host root URL already exists
 		if(!beaconInstanceArray.find(i => i.url.includes(currentHostRoot))) {
 
-			const hostname = window.location.hostname
+			const hostname = window.location.hostname;
 			const hostInstance: BeaconInstance = {
 				id: Utils.randomUUID(),
 				name: `Beacon - ${hostname}`,
@@ -133,21 +133,21 @@
 	</p>
 
 	<div class="beacon-functions">
-		<Card href="{base}/data-browser">
+		<Card href={resolve('/data-browser')}>
 			<h2>Browse data</h2>
 			<p>
 				Browse the contents and definitions of your Beacon instance in a tabular interface.
 			</p>
 		</Card>
 
-		<Card href="{base}/queries">
+		<Card href={resolve('/queries')}>
 			<h2>Create queries</h2>
 			<p>
 				Use the query builder or query editor to create queries for your Beacon instance.
 			</p>
 		</Card>
-		
-		<Card href="{base}/visualisations">
+
+		<Card href={resolve('/visualisations')}>
 			<h2>Visualise data</h2>
 			<p>
 				Use the visualisation tools to view tables, charts and graphs of the contents of your Beacon instance.
