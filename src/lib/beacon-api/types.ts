@@ -149,22 +149,75 @@ export type CompiledQuery = {
 
 export type Select = { column: string, alias: string | null };
 
-export type Filter =
-    | { for_query_parameter: string, min: number | string, max: number | string }
-    | { for_query_parameter: string, eq: number | string }
-    | { for_query_parameter: string, neq: number | string }
-    | { for_query_parameter: string, gt: number | string }
-    | { for_query_parameter: string, gt_eq: number | string }
-    | { for_query_parameter: string, lt: number | string }
-    | { for_query_parameter: string, lt_eq: number | string }
-    | { is_not_null: { for_query_parameter: string } }
-    | { is_null: { for_query_parameter: string } }
-    | { or: Filter[] }
-    | { and: Filter[] };
+export type Filter = 
+    | MinMaxFilter 
+    | EqualFilter 
+    | NotEqualFilter 
+    | GreaterThanFilter 
+    | GreaterThanOrEqualFilter 
+    | LessThanFilter 
+    | LessThanOrEqualFilter 
+    | IsNotNullFilter 
+    | IsNullFilter 
+    | OrFilter 
+    | AndFilter; 
+
+    
+export type MinMaxFilter = {
+    for_query_parameter: string;
+    min: number | string;
+    max: number | string;
+};
+
+export type EqualFilter = {
+    for_query_parameter: string;
+    eq: number | string;
+};
+
+export type NotEqualFilter = {
+    for_query_parameter: string;
+    neq: number | string;
+};
+
+export type GreaterThanFilter = {
+    for_query_parameter: string;
+    gt: number | string;
+};
+
+export type GreaterThanOrEqualFilter = {
+    for_query_parameter: string;
+    gt_eq: number | string;
+};
+
+export type LessThanFilter = {
+    for_query_parameter: string;
+    lt: number | string;
+};
+
+export type LessThanOrEqualFilter = {
+    for_query_parameter: string;
+    lt_eq: number | string;
+};
+
+export type IsNotNullFilter = {
+    is_not_null: { for_query_parameter: string };
+};
+
+export type IsNullFilter = {
+    is_null: { for_query_parameter: string };
+};
+
+export type OrFilter = {
+    or: Filter[];
+};
+
+export type AndFilter = {
+    and: Filter[];
+};
 
 export type Output = { format: OutputFormat };
 
-export type OutputFormat = 'csv' | 'arrow' | 'netcdf' | 'parquet' | 'ipc' | GeoParquetOutputFormat;
+export type OutputFormat = 'zarr' | 'csv' | 'arrow' | 'netcdf' | 'parquet' | 'ipc' | GeoParquetOutputFormat;
 
 export type GeoParquetOutputFormat = { geoparquet: { longitude_column: string, latitude_column: string } };
 

@@ -25,6 +25,14 @@ export function cn(...inputs: ClassValue[]) {
 
 export class Utils {
 
+    static isNumber(value?: string|number): value is number {
+        return ((value != null) &&
+           (value !== '') &&
+           !isNaN(Number(value.toString())));
+    }
+
+    
+
     /**
      * Generates a random UUID (version 4) string.
      * 
@@ -89,6 +97,7 @@ export class Utils {
         return typeof obj === "object" && obj !== null && prop in obj;
     }
 
+
     static getUrlSuppliedQuery(): CompiledQuery | null {
         const urlSuppliedQuery = page.url.searchParams.get('query');
 
@@ -144,7 +153,7 @@ export class Utils {
     }
 
     static isNumericDataType(datatype: DataType): boolean {
-        return ['Int32', 'Int8', 'Float32', 'Float64'].includes(datatype as string);
+        return ['Int64', 'Int32', 'Int8', 'Float32', 'Float64'].includes(datatype as string);
     }
 
     static isStringDataType(datatype: DataType): boolean {

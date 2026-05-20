@@ -20,6 +20,8 @@
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import CopyQueryJsonButton from '$lib/components/query-buttons/CopyQueryJsonButton.svelte';
+	import CopyQueryPythonButton from '../query-buttons/CopyQueryPythonButton.svelte';
 
 	let {
 		table_name,
@@ -146,30 +148,6 @@
 			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
-
-	async function handleCopyQuery() {
-		let compiledQuery: CompiledQuery;
-
-		try {
-			compiledQuery = compileQuery();
-		} catch (error) {
-			console.error('Error compiling query:', error);
-			addToast({
-				message: `Error compiling query: ${error.message}`,
-				type: 'error'
-			});
-			return;
-		}
-
-		let queryJson = JSON.stringify(compiledQuery, null, 2);
-
-		addToast({
-			message: 'Query JSON copied to clipboard',
-			type: 'success'
-		});
-
-		Utils.copyToClipboard(queryJson);
-	}
 </script>
 
 <!-- <svelte:document onkeydown={handleKeydown} /> -->
@@ -242,10 +220,10 @@
 				<DownloadIcon />
 			</Button>
 
-			<Button onclick={handleCopyQuery}>
-				Copy query JSON
-				<FileJson2Icon />
-			</Button>
+			<CopyQueryJsonButton {compileQuery} />
+			
+			<CopyQueryPythonButton {compileQuery} />
+
 		</div>
 
 		<div class="flex flex-row gap-2">

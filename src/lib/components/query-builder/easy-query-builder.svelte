@@ -16,7 +16,6 @@
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
-	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
@@ -24,6 +23,8 @@
 	import type { QueryFilterValue } from './filters/filter.svelte';
 	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
 	import { Checkbox } from '../ui/checkbox';
+	import CopyQueryJsonButton from '$lib/components/query-buttons/CopyQueryJsonButton.svelte';
+	import CopyQueryPythonButton from '../query-buttons/CopyQueryPythonButton.svelte';
 
 	let { selected_table_name }: { selected_table_name: string } = $props();
 
@@ -199,29 +200,7 @@
 		}
 	}
 
-	async function handleCopyQuery() {
-		let compiledQuery: CompiledQuery;
-
-		try {
-			compiledQuery = compileQuery();
-		} catch (error) {
-			console.error('Error compiling query:', error);
-			addToast({
-				message: `Error compiling query: ${error.message}`,
-				type: 'error'
-			});
-			return;
-		}
-
-		let queryJson = JSON.stringify(compiledQuery, null, 2);
-
-		addToast({
-			message: 'Query JSON copied to clipboard',
-			type: 'success'
-		});
-
-		Utils.copyToClipboard(queryJson);
-	}
+	
 </script>
 
 {#if isLoading}
@@ -348,10 +327,9 @@
 				<DownloadIcon />
 			</Button>
 
-			<Button onclick={handleCopyQuery}>
-				Copy query JSON
-				<FileJson2Icon />
-			</Button>
+			<CopyQueryJsonButton {compileQuery} />
+
+			<CopyQueryPythonButton {compileQuery} />
 		</div>
 
 		<div class="flex flex-row gap-2">
