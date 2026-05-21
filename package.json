@@ -11,7 +11,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "eslint . && prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"tauri:dev": "tauri dev",
+		"tauri:build": "tauri build"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -24,6 +26,7 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/vite": "^4.0.0",
 		"@tanstack/table-core": "^8.21.3",
+		"@tauri-apps/cli": "^2.11.2",
 		"bits-ui": "^2.8.10",
 		"clsx": "^2.1.1",
 		"eslint": "^9.18.0",
@@ -55,6 +58,7 @@
 		"@geoarrow/deck.gl-layers": "^0.3.0",
 		"@geoarrow/geoarrow-js": "^0.3.2",
 		"@monaco-editor/react": "^4.7.0",
+		"@tauri-apps/plugin-opener": "^2.5.4",
 		"@types/leaflet": "^1.9.18",
 		"apache-arrow": "^20.0.0",
 		"arquero": "^8.0.3",

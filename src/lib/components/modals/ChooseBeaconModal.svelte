@@ -12,6 +12,7 @@
 	import SquareIcon from '@lucide/svelte/icons/square';
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
 	import { addToast } from '@/stores/toasts';
+	import ExternalLink from '../external-link.svelte';
 	import Card from '../card/card.svelte';
 
 	export let onClose: () => void;
@@ -128,7 +129,7 @@
 
 			<Card onClick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<h3>{instance.name}</h3>
-				<p>URL: <a href={instance.url} target="_blank">{instance.url}</a></p>
+				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}
 					<p>{instance.description}</p>
 				{/if}

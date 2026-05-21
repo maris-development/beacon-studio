@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+	import ExternalLink from "$lib/components/external-link.svelte";
 	import type { Component, ComponentProps } from "svelte";
 
 	let {
@@ -14,6 +15,9 @@
 			target?: string;
 		}[];
 	} & ComponentProps<typeof Sidebar.Group> = $props();
+
+	const shouldOpenExternally = (item: { url: string; target?: string }) =>
+		item.target === '_blank' || /^https?:\/\//.test(item.url);
 </script>
 
 <Sidebar.Group bind:ref {...restProps}>
@@ -23,10 +27,17 @@
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton size="sm">
 						{#snippet child({ props })}
-							<a href={item.url} target={item.target} {...props}>
-								<item.icon />
-								<span>{item.title}</span>
-							</a>
+							{#if shouldOpenExternally(item)}
+								<ExternalLink href={item.url} target={item.target} {...props}>
+									<item.icon />
+									<span>{item.title}</span>
+								</ExternalLink>
+							{:else}
+								<a href={item.url} target={item.target} {...props}>
+									<item.icon />
+									<span>{item.title}</span>
+								</a>
+							{/if}
 						{/snippet}
 					</Sidebar.MenuButton>
 				</Sidebar.MenuItem>

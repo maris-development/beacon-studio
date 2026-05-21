@@ -8,6 +8,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
   	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
+	import ExternalLink from '@/components/external-link.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
 	import { Button } from '@/components/ui/button';
 
@@ -127,9 +128,9 @@
 	<h1 class="">Welcome to Beacon Studio</h1>
 
 	<p>
-		Visit <a href="https://maris-development.github.io/beacon/">
-			maris-development.github.io/beacon/
-		</a> to read the documentation.
+		Visit <ExternalLink href="https://maris-development.github.io/beacon/">
+			https://maris-development.github.io/beacon/
+		</ExternalLink> to read the documentation. 
 	</p>
 
 	<div class="beacon-functions">
@@ -172,10 +173,10 @@
 			Met deze tool kunt u verbinding maken met een Beacon-server, gegevens verkennen, aangepaste query’s uitvoeren en visualisaties genereren. 
 			We moedigen u aan de mogelijkheden te ontdekken en feedback te delen over uw ervaring. 
 			Deze omgeving is vooraf ingesteld om te verbinden met de IHM Beacon: 
-			<a target="_blank" href="https://beacon-ihm.maris.nl/">https://beacon-ihm.maris.nl/</a>. Via deze link is ook de Beacon API beschikbaar.
+			<ExternalLink href="https://beacon-ihm.maris.nl/">https://beacon-ihm.maris.nl/</ExternalLink>. Via deze link is ook de Beacon API beschikbaar.
 		</p>
 
-		<p>Voor technische documentatie over het gebruik van Beacon, <a target="_blank" href="https://maris-development.github.io/beacon/">klik hier</a>.</p>
+		<p>Voor technische documentatie over het gebruik van Beacon, <ExternalLink href="https://maris-development.github.io/beacon/">klik hier</ExternalLink>.</p>
 
 		<p>Voor vragen, foutmeldingen of ondersteuning kunt u contact opnemen met Paul of Robin via &lt;voornaam&gt;@maris.nl.</p>
 

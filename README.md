@@ -1,22 +1,16 @@
 # Beacon Studio
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
-
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
+Beacon Studio is a SvelteKit + Tauri application for Beacon data exploration.
 
 ## Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run the web app in development mode:
 
 ```bash
 npm run dev
@@ -25,20 +19,50 @@ npm run dev
 npm run dev -- --open
 ```
 
+Run the desktop app (Tauri) in development mode:
+
+```bash
+npm run tauri:dev
+```
+
 ## Building
 
-To create a production version of your app:
+Build the web app (static output):
 
 ```bash
 npm run build
 ```
 
-To run it in a subdir somwhere e.g. `beacon-wod.maris.nl/studio`:
+Build the web app for a subdirectory deployment (example: `beacon-wod.maris.nl/studio`):
+
 ```bash
 BASE_PATH=//studio npm run build --omit=dev
 ```
-(use // to prevent path lookup of bash)
 
-You can preview the production build with `npm run preview`.
+Use `//` to prevent path lookup issues in bash.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Build downloadable desktop executables (Tauri):
+
+```bash
+npm run tauri:build
+```
+
+## Running Production Build Locally
+
+Preview the web production build locally:
+
+```bash
+npm run preview
+```
+
+## Quality Checks
+
+```bash
+npm run check
+npm run lint
+```
+
+## Notes
+
+- Static web output is generated in `build/`.
+- `BASE_PATH` is read by `svelte.config.js` and should be set for subdirectory hosting.
