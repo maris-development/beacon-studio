@@ -1,7 +1,6 @@
 <script lang="ts">
 	import PlusIcon from '@lucide/svelte/icons/plus';
-	import { tick } from 'svelte';
-	import * as Command from '$lib/components/ui/command/index.js';
+	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Separator from '../ui/separator/separator.svelte';
@@ -140,36 +139,58 @@
 		{#snippet child({ props })}
 			<Button
 				variant="default"
-				class="w-[200px] justify-between"
+				class="add-filter-trigger"
 				{...props}
 				role="combobox"
 				aria-expanded={open}
 			>
-				<PlusIcon class="size-4 shrink-0" />
+				<PlusIcon class="add-filter-trigger-icon" />
 				Add Filter
 				<!-- <ChevronsUpDownIcon class="ml-2 size-4 shrink-0 opacity-50" /> -->
 			</Button>
 		{/snippet}
 	</Popover.Trigger>
-	<Popover.Content class="w-[200px] p-0">
-		<Command.Root>
-			<Command.Input placeholder="Search Filters..." />
-			<Command.List>
-				<Command.Empty>No filters found.</Command.Empty>
-				<Command.Group>
-					{#each available_filters as filter}
-						<Command.Item
+	<Popover.Content class="add-filter-content">
+		<SearchSelect.Root>
+			<SearchSelect.Input placeholder="Search filter..." />
+			<SearchSelect.List>
+				<SearchSelect.Empty>No filters found.</SearchSelect.Empty>
+				<SearchSelect.Group>
+					{#each available_filters as filter, index (index)}
+						<SearchSelect.Item
+							value={filter.label}
 							onSelect={() => {
 								selected_filters.push(filter);
 								open = false;
 							}}
 						>
 							{filter.label}
-						</Command.Item>
-						<Separator />
+						</SearchSelect.Item>
+						{#if index < available_filters.length - 1}
+							<Separator />
+						{/if}
 					{/each}
-				</Command.Group>
-			</Command.List>
-		</Command.Root>
+				</SearchSelect.Group>
+			</SearchSelect.List>
+		</SearchSelect.Root>
 	</Popover.Content>
 </Popover.Root>
+
+<style lang="scss">
+	:global(.add-filter-trigger) {
+		width: 12.5rem;
+		display: flex;
+		justify-content: space-between;
+	}
+
+	:global(.add-filter-trigger-icon) {
+		width: 1rem;
+		height: 1rem;
+		flex-shrink: 0;
+	}
+
+	:global(.add-filter-content) {
+		width: 12.5rem;
+		padding: 0;
+	}
+</style>

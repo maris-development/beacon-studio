@@ -28,8 +28,8 @@
 			<Select.Content>
 				<Select.Group>
 					<Select.Label>Tables</Select.Label>
-					{#each options_filter.options as option }
-						<Select.Item value={option as string} label={option}>
+					{#each options_filter.options as option, index (index) }
+						<Select.Item value={option as string} label={(option as string)}>
 							{option}
 						</Select.Item>
 					{/each}

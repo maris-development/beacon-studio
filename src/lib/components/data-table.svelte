@@ -1,20 +1,19 @@
-
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
 	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';
 	import type { Column, SortDirection } from '@/util-types';
+	import { Utils } from '@/utils';
 
 
 
 	type Props = {
 		onChangeSort?: (column: string, direction: SortDirection) => void;
 		onPageChange?: (page: number) => void;
-		onCellClick?: (row: Record<string, any>, column: Column) => void;
+		onCellClick?: (row: Record<string, string>, column: Column) => void;
 		columns: Column[];
-		rows: Record<string, any>[];
+		rows: Record<string, string>[];
 		pageSize?: number;
 		pageIndex?: number;
 		totalRows?: number;
@@ -37,11 +36,8 @@
 		size = 'medium'
 	}: Props = $props();
 
-	let pageCount: number = $state(0);
-
-	$effect(() => {
-		pageCount = Math.ceil(totalRows / pageSize);
-		// console.log('Page count updated:', pageCount, totalRows, pageSize, totalRows/pageSize);
+	let pageCount: number = $derived.by(() => {
+		return Math.ceil(totalRows / pageSize);
 	});
 
 	function _changeSort(column: Column) {
@@ -67,23 +63,7 @@
 		onChangeSort(column.key, column.sortDirection);
 	}
 
-	function toString(value): string {
-		//check if value is an object and has no toString method
-		if (typeof value === 'object' && value !== null) {
-			if (typeof value.toString === 'function') {
-				// If it has a toString method, use it
-				const stringValue = value.toString();
-
-				if (stringValue !== '[object Object]') {
-					return stringValue;
-				}
-			}
-			// If it's an object without a toString method, return a JSON string
-			return JSON.stringify(value, null, 2);
-		}
-
-		return String(value) || '';
-	}
+	
 </script>
 
 <div class="data-table-wrapper">
@@ -91,7 +71,7 @@
 		<table class="dataset-table {size}">
 			<thead>
 				<tr>
-					{#each columns as column}
+					{#each columns as column (column.key) }
 						{#if column.sortable}
 							<th class:sortable={column.sortable} data-key={column.key} onclick={() => _changeSort(column)} bind:this={column.ref} data-sort="">
 								{column.header}
@@ -134,14 +114,13 @@
 						</td>
 					</tr>
 				{:else}
-					{#each rows as row}
+					{#each rows as row, rowIndex (rowIndex)}
 						<tr class={rowClass}>
-							{#each columns as column}
+							{#each columns as column (column.key)}
 								{#if column.rawHtml === true}
-									<td onclick={() => onCellClick(row, column)}>{@html toString(row[column.key])}</td
-									>
+									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(row[column.key])}</td>
 								{:else}
-									<td onclick={() => onCellClick(row, column)}>{toString(row[column.key])}</td>
+									<td onclick={() => onCellClick(row, column)}>{Utils.toString(row[column.key])}</td>
 								{/if}
 							{/each}
 						</tr>

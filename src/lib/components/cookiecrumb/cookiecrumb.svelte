@@ -26,7 +26,7 @@
             </Breadcrumb.Link>
         </Breadcrumb.Item>
 
-        {#each crumbs as crumb}
+        {#each crumbs as crumb, index (index)}
             <Breadcrumb.Item>
                 <Breadcrumb.Link href={crumb.href ?? '#'}>{crumb.label}</Breadcrumb.Link>
             </Breadcrumb.Item>

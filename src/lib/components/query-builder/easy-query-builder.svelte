@@ -5,7 +5,6 @@
 	import type { PresetColumn } from '@/beacon-api/types';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
 	import Parameter from './parameter.svelte';
@@ -13,18 +12,13 @@
 	import type { CompiledQuery, OutputFormat, TableDefinition } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import SheetIcon from '@lucide/svelte/icons/sheet';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { QueryFilterValue } from './filters/filter.svelte';
 	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
 	import { Checkbox } from '../ui/checkbox';
-	import CopyQueryJsonButton from '$lib/components/query-buttons/CopyQueryJsonButton.svelte';
-	import CopyQueryPythonButton from '../query-buttons/CopyQueryPythonButton.svelte';
+	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 
 	let { selected_table_name }: { selected_table_name: string } = $props();
 
@@ -32,9 +26,8 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 	let selected_output_format: string = $state(BeaconClient.output_formats['Parquet']);
-	let selected_table: TableDefinition | null = $derived(
-		await fetchPresetTableType(selected_table_name)
-	);
+	let selected_table: TableDefinition | null = $state(null);
+
 	let data_parameters: {
 		selected: boolean;
 		column: PresetColumn;
@@ -51,30 +44,34 @@
 	let include_all_metadata_columns: boolean = $state(true);
 
 	$effect(() => {
-		if (!selected_table) {
-			data_parameters = [];
-			metadata_parameters = [];
-			return;
-		}
+		(async () => {
+			selected_table = await fetchPresetTableType(selected_table_name);
 
-		let table_type = selected_table.table_type;
+			if (!selected_table) {
+				data_parameters = [];
+				metadata_parameters = [];
+				return;
+			}
 
-		if ('preset' in table_type) {
-			// It's a preset table type
-			let data_columns = table_type.preset.data_columns;
-			data_parameters = data_columns.map((column) => ({
-				selected: include_all_data_columns, // By default, select all data columns
-				column,
-				filter_value: null
-			}));
+			let table_type = selected_table.table_type;
 
-			let metadata_columns = table_type.preset.metadata_columns;
-			metadata_parameters = metadata_columns.map((column) => ({
-				selected: include_all_metadata_columns, // By default, select all metadata columns
-				column,
-				filter_value: null
-			}));
-		}
+			if ('preset' in table_type) {
+				// It's a preset table type
+				let data_columns = table_type.preset.data_columns;
+				data_parameters = data_columns.map((column) => ({
+					selected: include_all_data_columns, // By default, select all data columns
+					column,
+					filter_value: null
+				}));
+
+				let metadata_columns = table_type.preset.metadata_columns;
+				metadata_parameters = metadata_columns.map((column) => ({
+					selected: include_all_metadata_columns, // By default, select all metadata columns
+					column,
+					filter_value: null
+				}));
+			}
+		})();
 	});
 
 	onMount(async () => {
@@ -87,11 +84,7 @@
 			return null;
 		}
 
-		let selected_table_type: TableDefinition = await client.getTableConfig(table_name);
-
-		console.log('Selected table type:', selected_table_type);
-
-		return selected_table_type;
+		return await client.getTableConfig(table_name);
 	}
 
 	function compileQuery(): CompiledQuery {
@@ -199,8 +192,6 @@
 			);
 		}
 	}
-
-	
 </script>
 
 {#if isLoading}
@@ -225,12 +216,12 @@
 			<p>Select a table to see available query parameters.</p>
 		</div>
 	{:else}
-		<div >
+		<div>
 			<Collapsible.Root class="mb-[4rem]" open>
 				<div class="flex items-center justify-between">
 					<h4 class=" font-semibold">Select data columns</h4>
 					<Collapsible.Trigger
-						class={buttonVariants({ variant: 'default', size: 'sm', /*class: 'w-9 p-0'*/ })}
+						class={buttonVariants({ variant: 'default', size: 'sm' /*class: 'w-9 p-0'*/ })}
 					>
 						Toggle columns display
 						<ChevronsUpDownIcon />
@@ -246,11 +237,11 @@
 
 				<Collapsible.Content class="space-y-2">
 					<div class="parameter-grid">
-						{#each data_parameters as _, i}
+						{#each data_parameters as parameter (parameter.column.column_name)}
 							<Parameter
-								bind:column={data_parameters[i].column}
-								bind:is_selected={data_parameters[i].selected}
-								bind:filter_value={data_parameters[i].filter_value}
+								bind:column={parameter.column}
+								bind:is_selected={parameter.selected}
+								bind:filter_value={parameter.filter_value}
 							/>
 						{/each}
 						{#if data_parameters.length === 0}
@@ -267,7 +258,7 @@
 					<h4 class="font-semibold">Select metadata columns</h4>
 
 					<Collapsible.Trigger
-						class={buttonVariants({ variant: 'default', size: 'sm', /*class: 'w-9 p-0'*/ })}
+						class={buttonVariants({ variant: 'default', size: 'sm' /*class: 'w-9 p-0'*/ })}
 					>
 						Toggle columns display
 						<ChevronsUpDownIcon />
@@ -283,11 +274,11 @@
 
 				<Collapsible.Content class="space-y-2">
 					<div class="parameter-grid">
-						{#each metadata_parameters as _, i}
+						{#each metadata_parameters as parameter (parameter.column.column_name)}
 							<Parameter
-								bind:column={metadata_parameters[i].column}
-								bind:is_selected={metadata_parameters[i].selected}
-								bind:filter_value={metadata_parameters[i].filter_value}
+								bind:column={parameter.column}
+								bind:is_selected={parameter.selected}
+								bind:filter_value={parameter.filter_value}
 							/>
 						{/each}
 						{#if metadata_parameters.length === 0}
@@ -311,7 +302,7 @@
 		<Select.Content>
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
-				{#each Object.entries(BeaconClient.output_formats) as [label, value]}
+				{#each Object.entries(BeaconClient.output_formats) as [label, value], i (i)}
 					<Select.Item {label} {value} />
 				{/each}
 			</Select.Group>
@@ -320,35 +311,13 @@
 
 	<hr />
 
-	<div class="flex flex-row justify-between gap-2">
-		<div class="flex flex-row gap-2">
-			<Button onclick={handleSubmit}>
-				Execute query
-				<DownloadIcon />
-			</Button>
-
-			<CopyQueryJsonButton {compileQuery} />
-
-			<CopyQueryPythonButton {compileQuery} />
-		</div>
-
-		<div class="flex flex-row gap-2">
-			<Button onclick={handleTableVisualise}>
-				View as table
-				<SheetIcon />
-			</Button>
-
-			<Button onclick={handleMapVisualise}>
-				View on map
-				<MapIcon />
-			</Button>
-
-			<Button onclick={handleChartVisualise}>
-				View on chart
-				<ChartPieIcon />
-			</Button>
-		</div>
-	</div>
+	<QueryActionBar
+		onExecute={handleSubmit}
+		onViewTable={handleTableVisualise}
+		onViewMap={handleMapVisualise}
+		onViewChart={handleChartVisualise}
+		{compileQuery}
+	/>
 
 	<!-- <p>Or use the options below to visualise the data</p> -->
 </div>

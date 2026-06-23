@@ -1,7 +1,5 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import PlusIcon from '@lucide/svelte/icons/plus';
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 
 	import Separator from '../ui/separator/separator.svelte';
@@ -38,14 +36,15 @@
 					console.log('Removing column.');
 					remove_column(column.name);
 				}}
-				variant="destructive"><CircleXIcon /> Remove Column</Button
+				title="Remove column"
+				variant="destructive"><CircleXIcon /></Button
 			>
 		</div>
 	</div>
 	{#if column.selected_filters.length > 0}
 		<Separator />
 		<div class="flex flex-col gap-2 p-4">
-			{#each column.selected_filters as filter}
+			{#each column.selected_filters as filter, index (index)}
 				<div class="flex items-center justify-between">
 					<span>{filter.label}</span>
 					<div class="flex items-center gap-2">

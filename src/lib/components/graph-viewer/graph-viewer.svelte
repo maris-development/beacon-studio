@@ -17,6 +17,7 @@
     // WASM binaries as URLs (Vite `?url`)
     import SERVER_WASM from "@finos/perspective/dist/wasm/perspective-server.wasm?url";
     import CLIENT_WASM from "@finos/perspective-viewer/dist/wasm/perspective-viewer.wasm?url";
+	import type { PerspectiveViewerElement } from '@finos/perspective-viewer/dist/wasm/perspective-viewer.js';
 
 	let { 
         table,
@@ -24,10 +25,9 @@
      }: { table: ApacheArrow.Table | null, class?: string } = $props();
 
     
-    let viewerEl: HTMLElement;            // <perspective-viewer> ref
+    let viewerEl: PerspectiveViewerElement;            // <perspective-viewer> ref
     let client: Client;                // Perspective Client (worker)
-    let perspectiveTable: any;
-    let viewConfig: any = { 
+    let viewConfig: { title: string; plugin: string; settings: boolean } = { 
         title: "Query result",
         plugin: "Datagrid", 
         settings: false,
@@ -50,12 +50,16 @@
     onDestroy(async () => {
         // Clean up WASM/worker resources to avoid leaks
         try {
-            // @ts-ignore
             await viewerEl?.delete?.();  // free viewer-side resources (WASM). :contentReference[oaicite:3]{index=3}
-        } catch {}
+        } catch (err) {
+            console.warn('Failed to delete perspective viewer resources:', err);
+        }
+        
         try {
             await client?.terminate?.(); // terminate Worker Client cleanly. :contentReference[oaicite:4]{index=4}
-        } catch {}
+        } catch (err) {
+            console.warn('Failed to terminate perspective client worker:', err);
+        }
     });
 
 
@@ -78,14 +82,11 @@
 
             const buffer: ArrayBuffer = ApacheArrow.tableToIPC(table).buffer as ArrayBuffer;
 
-            perspectiveTable = await client.table(buffer);
 
             await tick();
 
-            // @ts-ignore
-            await viewerEl.load?.(perspectiveTable);
+            await viewerEl.load?.(client.table(buffer));
             
-            // @ts-ignore (custom element methods are async)
             await viewerEl.restore?.(viewConfig);
 
 		} catch (err) {

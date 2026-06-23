@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
@@ -35,7 +35,7 @@
 
 	let virtualPaginationData: VirtualPaginationArrowTableData = new VirtualPaginationArrowTableData();
 	let columns: Column[] = $state([]);
-	let displayRows: Record<string, any>[] = $state([]); //currently displayed rows
+	let displayRows: Record<string, string>[] = $state([]); //currently displayed rows
 
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
@@ -166,7 +166,7 @@
         Utils.setPageUrlParameter(pageIndex);
     }
 	
-	function setData(fields: Record<string, any>[]) {
+	function setData(fields: Record<string, string>[]) {
         displayRows = fields;
 
         isLoading = false;

@@ -4,13 +4,13 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { addToast } from "@/stores/toasts";
 	import { Utils } from "@/utils";
-	import { PythonQueryBuilder, QueryBuilder } from "@/beacon-api/query";
+	import { PythonQueryBuilder } from "@/beacon-api/query";
 
 
 	let {
 		compileQuery
 	}: {
-	compileQuery: () => CompiledQuery;
+		compileQuery: () => CompiledQuery;
 	} = $props();
 
 

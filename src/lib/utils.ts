@@ -10,10 +10,9 @@ import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';
 import type { Rendered, SortDirection } from './util-types';
+export type { WithElementRef, WithoutChild, WithoutChildren, WithoutChildrenOrChild } from './util-types';
 import { page } from '$app/state';
 import { get, type Readable } from "svelte/store";
-import { fromZonedTime } from 'date-fns-tz';
-import type { Result } from './util/result';
 
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
@@ -24,6 +23,32 @@ export function cn(...inputs: ClassValue[]) {
 
 
 export class Utils {
+
+    static range(start: number, end: number, step: number = 1): number[] {
+        const result: number[] = [];
+        for (let i = start; i < end; i += step) {
+            result.push(i);
+        }
+        return result;
+    }
+    
+    static toString(value: unknown): string {
+		//check if value is an object and has no toString method
+		if (typeof value === 'object' && value !== null) {
+			if (typeof value.toString === 'function') {
+				// If it has a toString method, use it
+				const stringValue = value.toString();
+
+				if (stringValue !== '[object Object]') {
+					return stringValue;
+				}
+			}
+			// If it's an object without a toString method, return a JSON string
+			return JSON.stringify(value, null, 2);
+		}
+
+		return String(value) || '';
+	}
 
     static isNumber(value?: string|number): value is number {
         return ((value != null) &&
@@ -144,7 +169,6 @@ export class Utils {
 
         url.searchParams.set(parameterName, String(pageIndex));
 
-        // eslint-disable-next-line svelte/no-navigation-without-resolve
         Navigation.replaceState(url, {});
     }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import * as Command from '$lib/components/ui/command/index.js';
+	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -11,17 +12,10 @@
 	import AdvancedParameter from './advanced-parameter.svelte';
 	import type { SelectedFilterType } from './add-advanced-filter.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
-
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import SheetIcon from '@lucide/svelte/icons/sheet';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import CopyQueryJsonButton from '$lib/components/query-buttons/CopyQueryJsonButton.svelte';
-	import CopyQueryPythonButton from '../query-buttons/CopyQueryPythonButton.svelte';
+	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 
 	let {
 		table_name,
@@ -31,53 +25,95 @@
 		client: BeaconClient;
 	} = $props();
 
+	let searchInput;
+	let searchQuery = $state('');
 	let previous_table_name = '';
 	let selected_output_format = $state(BeaconClient.output_formats['Parquet']);
-	let fields: { name: string; type: DataType }[] = $state([]);
-	let selected_fields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
+	let fields: {
+		name: string;
+		type: DataType;
+		ref?: ReturnType<typeof SearchSelect.Item>; //ReturnType<typeof SearchSelect.Item>;
+	}[] = $state([]);
+
+	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
 		$state([]);
 
-	function remove_selected_field(field_name: string) {
-		selected_fields = selected_fields.filter((f) => f.name !== field_name);
-	}
+	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
+
+	const firstVisibleMatchingItem = $derived.by(() => {
+		const normalized = searchQuery.trim().toLowerCase();
+
+		if (!normalized) {
+			return firstVisibleItem;
+		}
+
+		return fields.find(
+			(item) => item.name.toLowerCase().includes(normalized)
+		);
+	});
+
 
 	$effect(() => {
 		if (table_name && client && table_name !== previous_table_name) {
 			console.log('Fetching schema for table:', table_name);
+
 			client.getTableSchema(table_name).then((schema) => {
 				previous_table_name = table_name;
 				fields = schema.fields.map((field) => {
 					return {
 						name: field.name,
-						type: field.data_type
+						type: field.data_type,
 					};
 				});
-				selected_fields = [];
+				selectedFields = [];
 			});
 		} else {
 			fields = []; // Reset fields if no table or client is available
-			selected_fields = []; // Reset selected fields
+			selectedFields = []; // Reset selected fields
 		}
 	});
 
 	let open = $state(false);
 
-	function select_deselect_column(field_name: string) {
-		const index = selected_fields.findIndex((f) => f.name === field_name);
-		if (index === -1) {
-			const field = fields.find((f) => f.name === field_name);
-			if (field) {
-				selected_fields.push({ name: field.name, type: field.type, selected_filters: [] });
+	async function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' && searchInput) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			if (firstVisibleMatchingItem) {
+				toggleColumnSelection(firstVisibleMatchingItem.name);
+			}
+		}
+	}
+
+	function toggleColumnSelection(field_name: string) {
+		const index = fields.findIndex((f) => f.name === field_name);
+
+		if (index !== -1) {
+			const selectedIndex = selectedFields.findIndex((f) => f.name === field_name);
+			
+			if (selectedIndex === -1) {
+				selectedFields.push({
+					name: fields[index].name,
+					type: fields[index].type,
+					selected_filters: []
+				});
+			} else {
+				selectedFields.splice(selectedIndex, 1);
 			}
 		} else {
-			selected_fields.splice(index, 1);
+			console.warn('Field not found:', field_name);
 		}
+	}
+
+	function removeColumnSelection(field_name: string) {
+		selectedFields = selectedFields.filter((f) => f.name !== field_name);
 	}
 
 	function compileQuery() {
 		let builder = new QueryBuilder();
 
-		for (const field of selected_fields) {
+		for (const field of selectedFields) {
 			builder.addSelect({ column: field.name, alias: null });
 			for (const filter of field.selected_filters) {
 				let bfilter = Utils.parameterFilterTypeToFilter(filter.filter_value, field.name);
@@ -138,19 +174,22 @@
 	async function handleChartVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(
+				resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
 		}
 	}
 
 	async function handleTableVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
 		if (gzippedQuery) {
-			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(
+				resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
 		}
 	}
 </script>
 
-<!-- <svelte:document onkeydown={handleKeydown} /> -->
 <div id="advanced-query-builder">
 	<div class="flex flex-row items-center justify-between">
 		<h3>Query Parameters</h3>
@@ -160,38 +199,51 @@
 		</Button>
 	</div>
 
-	<Command.Dialog bind:open>
-		<Command.Input placeholder="Type a column or search..." />
-		<Command.List>
-			<Command.Empty>No columns found.</Command.Empty>
-			<Command.Group heading="Available Columns">
-				{#each fields as field (field.name)}
-					<Command.Item
-						value={field.name}
-						onclick={() => {
-							console.log('Selected field:', field.name);
-							select_deselect_column(field.name);
-							console.log('Selected fields:', selected_fields);
-						}}
-					>
-						<span class="font-semibold">{field.name}</span>
-						<span class="text-muted-foreground text-sm">{field.type}</span>
-						<span class="absolute right-2 flex size-3.5 items-center justify-center">
-							{#if selected_fields.find((f) => f.name === field.name)}
-								<CheckIcon class="size-4" />
-							{/if}
-						</span>
-					</Command.Item>
-				{/each}
-			</Command.Group>
-			<Command.Separator />
-		</Command.List>
-	</Command.Dialog>
+	<Dialog.Root bind:open>
+		<Dialog.Content class="search-columns-dialog" showCloseButton={false}>
+			<Dialog.Header class="sr-only">
+				<Dialog.Title>Add Query Parameter</Dialog.Title>
+				<Dialog.Description>Search and select a column to add it to the query.</Dialog.Description>
+			</Dialog.Header>
+
+			<SearchSelect.Root bind:query={searchQuery}>
+				<SearchSelect.Input
+					placeholder="Type a column or search..."
+					bind:this={searchInput}
+					onKeydown={handleKeydown}
+				/>
+				<SearchSelect.List>
+					<SearchSelect.Empty>
+						No columns found for table <span class="search-columns-empty-table">{table_name}</span>.
+					</SearchSelect.Empty>
+
+					<SearchSelect.Group heading={`Available Columns (${fields.length})`}>
+						{#each fields as field (field.name)}
+							<SearchSelect.Item
+								value={field.name}
+								class="search-columns-item"
+								onSelect={() => {
+									toggleColumnSelection(field.name);
+								}}
+								bind:this={field.ref}
+							>
+								<span class="search-columns-item-name">{field.name}</span>
+								<span class="search-columns-item-details">{Utils.toString(field.type)}</span>
+								{#if selectedFields.find((f) => f.name === field.name)}
+									<CheckIcon class="search-columns-item-icon" />
+								{/if}
+							</SearchSelect.Item>
+						{/each}
+					</SearchSelect.Group>
+				</SearchSelect.List>
+			</SearchSelect.Root>
+		</Dialog.Content>
+	</Dialog.Root>
 
 	<div class="flex flex-col gap-2">
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
-			{#each selected_fields as field (field.name)}
-				<AdvancedParameter column={field} remove_column={remove_selected_field} />
+			{#each Utils.range(0, selectedFields.length) as index (index)}
+				<AdvancedParameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
 			{/each}
 		</div>
 	</div>
@@ -204,7 +256,7 @@
 		<Select.Content>
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
-				{#each Object.entries(BeaconClient.output_formats) as [label, value]}
+				{#each Object.entries(BeaconClient.output_formats) as [label, value], index (index)}
 					<Select.Item {label} {value} />
 				{/each}
 			</Select.Group>
@@ -213,36 +265,13 @@
 
 	<hr />
 
-	<div class="flex flex-row justify-between gap-2">
-		<div class="flex flex-row gap-2">
-			<Button onclick={handleSubmit}>
-				Execute query
-				<DownloadIcon />
-			</Button>
-
-			<CopyQueryJsonButton {compileQuery} />
-			
-			<CopyQueryPythonButton {compileQuery} />
-
-		</div>
-
-		<div class="flex flex-row gap-2">
-			<Button onclick={handleTableVisualise}>
-				View as table
-				<SheetIcon />
-			</Button>
-
-			<Button onclick={handleMapVisualise}>
-				View on map
-				<MapIcon />
-			</Button>
-
-			<Button onclick={handleChartVisualise}>
-				View on chart
-				<ChartPieIcon />
-			</Button>
-		</div>
-	</div>
+	<QueryActionBar
+		onExecute={handleSubmit}
+		onViewTable={handleTableVisualise}
+		onViewMap={handleMapVisualise}
+		onViewChart={handleChartVisualise}
+		{compileQuery}
+	/>
 </div>
 
 <style lang="scss">
@@ -251,5 +280,28 @@
 		flex-direction: column;
 		gap: 1rem;
 		margin-top: 1rem;
+	}
+
+	:global(.search-columns-dialog) {
+		padding: 0;
+		max-width: 42rem;
+	}
+
+	.search-columns-empty-table {
+		font-weight: 600;
+	}
+
+	:global(.search-columns-item) {
+		display: flex;
+	}
+
+	.search-columns-item-name {
+		font-weight: 600;
+		flex-grow: 1;
+	}
+
+	:global(.search-columns-item-icon) {
+		width: 1rem;
+		height: 1rem;
 	}
 </style>

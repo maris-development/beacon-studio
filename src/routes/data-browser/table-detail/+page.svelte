@@ -95,7 +95,7 @@
 
         totalRows = virtualSchemaData.filter(function(field: SchemaField) {
 
-            for(const [_, value] of Object.entries(field)) {
+            for (const value of Object.values(field)) {                
                 if (typeof value === 'string') {
                     return value.toLowerCase()
                         .includes(searchTerm.toLowerCase());

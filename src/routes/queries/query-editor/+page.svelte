@@ -1,22 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import SheetIcon from '@lucide/svelte/icons/sheet';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-	import SearchCodeIcon from '@lucide/svelte/icons/search-code';
-	import TestTubeIcon from '@lucide/svelte/icons/test-tube';
-
-	import { Button } from '$lib/components/ui/button/index.js';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
+	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { addToast } from '@/stores/toasts';
-  	import { resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 
 	let sourceCode = $state(`{
 		"query_parameters": [
@@ -120,39 +113,14 @@
 	<!-- Right: Shadcn Buttons -->
 
 	<div class="page-container">
-		<div class="actions">
-			<div class="execute-query">
-				<Button onclick={handleInfo}>
-					Query Plan
-					<TestTubeIcon />
-				</Button>
-				<Button onclick={handleAnalyze}>
-					Analyze
-					<SearchCodeIcon />
-				</Button>
-				<Button onclick={handleExecute}>
-					Execute query
-					<DownloadIcon />
-				</Button>
-			</div>
-
-			<div class="view-query">
-				<Button onclick={handleTableVisualise}>
-					View as table
-					<SheetIcon />
-				</Button>
-
-				<Button onclick={handleMapVisualise}>
-					View on map
-					<MapIcon />
-				</Button>
-
-				<Button onclick={handleChartVisualise}>
-					View on chart
-					<ChartPieIcon />
-				</Button>
-			</div>
-		</div>
+		<QueryActionBar
+			onQueryPlan={handleInfo}
+			onAnalyze={handleAnalyze}
+			onExecute={handleExecute}
+			onViewTable={handleTableVisualise}
+			onViewMap={handleMapVisualise}
+			onViewChart={handleChartVisualise}
+		/>
 
 		<div class="editor">
 			<QueryEditor bind:sourceCode height="100%" />
@@ -170,13 +138,6 @@
 			display: flex;
 			flex-direction: column;
 			gap: 0.5rem;
-
-			div.actions {
-				display: flex;
-				flex-direction: row;
-				gap: 0.5rem;
-				justify-content: space-between;
-			}
 
 			div.editor {
 				flex-grow: 1;

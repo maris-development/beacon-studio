@@ -83,7 +83,7 @@
 				class="w-[200px]"
 				type="datetime-local"
 				bind:value={timestamp_min_value}
-				onchange={(e) => (min_value = toUTCString(e.target.value))}
+				onchange={(e) => (min_value = toUTCString((e.target as HTMLInputElement).value))}
 			/>
 		{:else if is_number_filter}
 			<Input type="number" lang="en" step="any" bind:value={min_value} class="w-[200px]" />
@@ -98,7 +98,7 @@
 				class="w-[200px]"	
 				type="datetime-local"
 				bind:value={timestamp_max_value}
-				onchange={(e) => (max_value = toUTCString(e.target.value))}
+				onchange={(e) => (max_value = toUTCString((e.target as HTMLInputElement).value))}
 			/>
 		{:else if is_number_filter}
 				<Input type="number" step="any" bind:value={max_value} class="w-[200px]" />

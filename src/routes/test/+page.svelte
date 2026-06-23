@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { beaconInstances, currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { beaconInstances, currentBeaconInstance } from '$lib/stores/config';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { PythonQueryBuilder } from '@/beacon-api/query';
 
-	let beaconInstanceArray: BeaconInstance[] = $beaconInstances;
-	let currentBeaconInstanceValue: BeaconInstance | null = $currentBeaconInstance;
 	const query: CompiledQuery = {
 		from: 'easy_ihm_aquadesk_api',
 		query_parameters: [
@@ -116,8 +114,6 @@
     let pythonCode: string = $state('');
 
 	onMount(() => {
-		beaconInstanceArray = $beaconInstances;
-		currentBeaconInstanceValue = $currentBeaconInstance;
 
         pythonCode = PythonQueryBuilder.toPythonCode(query);
 

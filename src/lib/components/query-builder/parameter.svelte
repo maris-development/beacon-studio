@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { PresetColumn } from '@/beacon-api/types';
-	import { Label } from '$lib/components/ui/label/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 
 	import Separator from '../ui/separator/separator.svelte';
@@ -19,9 +18,9 @@
 
 	let preset_filter_object = $derived(column.filter);
 
-	let metadata_columns = $derived.by(() => {
-		return (column.metadata_columns || []).concat(column.column_metadata_columns || []);
-	});
+	// let metadata_columns = $derived.by(() => {
+	// 	return (column.metadata_columns || []).concat(column.column_metadata_columns || []);
+	// });
 </script>
 
 <label class="parameter">
@@ -33,8 +32,7 @@
 
 		<Separator />
 
-		{#each Object.entries(column).filter(([key, _]) => !['filter', 'alias', 'column_name'].includes(key)) as [key, value]}
-			{#if typeof value === 'string' || value instanceof String}
+			{#each Object.entries(column).filter(([key]) => !['filter', 'alias', 'column_name'].includes(key)) as [key, value] (key)}			{#if typeof value === 'string' }
 				<div class="key-value">
 					<strong>{Utils.ucfirst(key)}:</strong>
 					{value}

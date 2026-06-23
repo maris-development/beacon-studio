@@ -2,7 +2,6 @@ import type { CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Selec
 import { currentBeaconInstance} from "$lib/stores/config";
 import { get } from "svelte/store";
 import { Utils } from "@/utils";
-import { addToast } from "@/stores/toasts";
 
 export class QueryBuilder {
     selects: Select[] = []

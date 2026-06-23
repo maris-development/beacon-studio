@@ -3,11 +3,15 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
-	compilerOptions: {
-		experimental: {
-			async: true
-		}
-	},
+	// NOTE: `experimental.async` makes Svelte flush effects inside async-derived
+	// reaction contexts. Newer bits-ui/runed perform floating-ui $state writes
+	// during those flushes, which triggers `state_unsafe_mutation`. Disable until
+	// the bits-ui + Svelte async interaction is resolved upstream.
+	// compilerOptions: {
+	// 	experimental: {
+	// 		async: true
+	// 	}
+	// },
 	// Consult https://svelte.dev/docs/kit/integrations
 	// for more information about preprocessors
 	preprocess: vitePreprocess(),

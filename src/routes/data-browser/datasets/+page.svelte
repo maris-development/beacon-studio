@@ -85,7 +85,7 @@
 		}
 
 		totalRows = virtualSchemaData.filter(function (field: Dataset) {
-			for (const [_, value] of Object.entries(field)) {
+			for (const value of Object.values(field)) {
 				if (typeof value === 'string') {
 					return value.toLowerCase().includes(searchTerm.toLowerCase());
 				}
@@ -97,7 +97,7 @@
 		getPage();
 	}
 
-	function onCellClick(row: Record<string, any>, column: Column) {
+	function onCellClick(row: Record<string, string>, column: Column) {
 		const filename = row[column.key];
 
 		const url = new URL(resolve('/data-browser/dataset-detail'), window.location.origin);

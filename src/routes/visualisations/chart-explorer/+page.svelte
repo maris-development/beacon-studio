@@ -25,7 +25,6 @@
 	let table: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); 
 	let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
 
-	let totalRows: number = $state(0);
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
 

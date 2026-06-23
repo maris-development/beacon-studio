@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
-	import type { TableDefinition } from '@/beacon-api/types';
 	import { onMount } from 'svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import EasyQueryBuilder from './easy-query-builder.svelte';
@@ -35,7 +34,7 @@
 		<Select.Content>
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
-				{#each easy_table_names as table_name}
+				{#each easy_table_names as table_name, index (index)}
 					<Select.Item value={table_name} label={table_name}>
 						{table_name}
 					</Select.Item>

@@ -4,7 +4,7 @@
 	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
-	import maplibregl, { Popup } from 'maplibre-gl';
+	import maplibregl from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
@@ -360,7 +360,8 @@
 			return [0, 0, 0, 0]; // Default to transparent black if value is not a number
 		}
 
-		const color = d3Color((colorScale(value) as any))?.rgb(); // returns RGB object
+		const scale = colorScale(value);
+		const color = d3Color(scale)?.rgb(); // returns RGB object
 
 		if (!color) {
 			return [0, 0, 0, 0]; // Default to black if color is not defined
@@ -434,7 +435,7 @@
 				<Select.Content>
 					<Select.Group>
 						<Select.Label>Available columns</Select.Label>
-						{#each availableColumnNames as column}
+						{#each availableColumnNames as column, index (index) }
 							<Select.Item value={column} label={column}>
 								{column}
 							</Select.Item>

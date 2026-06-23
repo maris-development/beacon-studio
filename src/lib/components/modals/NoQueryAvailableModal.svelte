@@ -8,12 +8,16 @@
 
 	let { 
         onCancel = () => {},
-        openQueryJsonEditor = () => {},    
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        openQueryJsonEditor = (_?: MouseEvent): void => {},    
         
+    }: {
+        onCancel?: () => void;
+        openQueryJsonEditor?: (e?: MouseEvent) => void;
     } = $props();
 </script>
 
-<Modal title="No query to view" onClose={() => onCancel(false)} width="50vw">
+<Modal title="No query to view" onClose={() => onCancel()} width="50vw">
     <p>Please build or enter a query to visualize data.</p>
 	<div class="buttons">
         <Button href={resolve('/queries/query-builder')}>

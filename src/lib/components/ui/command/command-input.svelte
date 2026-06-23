@@ -4,23 +4,52 @@
 	import { cn } from "$lib/utils.js";
 
 	let {
+		placeholder = "",
 		ref = $bindable(null),
-		class: className,
+		class: className = "",
 		value = $bindable(""),
 		...restProps
 	}: CommandPrimitive.InputProps = $props();
 </script>
 
-<div class="flex h-9 items-center gap-2 border-b px-3" data-slot="command-input-wrapper">
-	<SearchIcon class="size-4 shrink-0 opacity-50" />
+<div class="command-input-wrapper" data-slot="command-input-wrapper">
+	<SearchIcon class="command-input-icon" color="var(--muted-foreground)" size="1rem"/>
 	<CommandPrimitive.Input
+		type="text"
 		data-slot="command-input"
-		class={cn(
-			"placeholder:text-muted-foreground outline-hidden flex h-10 w-full rounded-md bg-transparent py-3 text-sm disabled:cursor-not-allowed disabled:opacity-50",
-			className
-		)}
+		class={cn("command-input", className)}
+		{placeholder}
 		bind:ref
-		{...restProps}
 		bind:value
+		{...restProps}
 	/>
 </div>
+
+<style lang="scss">
+
+	.command-input-wrapper {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		border-bottom: 1px solid var(--border);
+		padding-inline: 0.75rem;
+	}
+
+	.command-input-wrapper :global(.command-input) {
+		border: 0;
+		flex-grow: 1;
+		background: transparent;
+		font-size: 0.875rem;
+		padding-block: 0.75rem;
+		outline: none;
+ 	}
+
+	.command-input-wrapper :global(.command-input::placeholder) {
+		color: var(--muted-foreground);
+	}
+
+	.command-input-wrapper :global(.command-input:disabled) {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+</style>
