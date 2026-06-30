@@ -10,6 +10,24 @@ This file is a quick operational guide for coding agents working in this reposit
 - Runtime model: mostly client-side (`ssr = false` on layout and key routes)
 - Domain: Beacon data exploration (query building/editing + map/table/chart visualizations)
 
+## Platform Strategy (Important)
+- **Develop web-first.** The browser is the primary target; build, test, and validate
+  changes against `npm run dev` / `npm run build` (static web) first.
+- Tauri/desktop (`npm run tauri:dev`, `npm run tauri:build`) is supported and must
+  keep working, but it is secondary. Don't introduce desktop-only assumptions
+  (native APIs, Tauri plugins) into shared code paths unless web has an equivalent
+  or graceful fallback.
+
+## API Client Strategy (Important)
+- **Migrate to `@beacon/client`** (installed via `package.json` as
+  `"@beacon/client": "file:../beacon/clients/beacon-ts"`). It is the isomorphic
+  TypeScript SDK for querying Beacon (browser + Node), with a fluent query builder,
+  Arrow/CSV result decoding, and admin endpoints. See its README for the full API.
+- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@beacon/client` for
+  new code, and migrate existing usage toward it instead of extending the local
+  client. Reuse the SDK's query builder and result handling rather than
+  reimplementing them locally.
+
 ## Core Commands
 - Install deps: `npm install`
 - Dev server: `npm run dev`
@@ -33,7 +51,8 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/routes/visualisations/*`
   - `src/routes/data-browser/*`
 - API client and query model:
-  - `src/lib/beacon-api/client.ts`
+  - `@beacon/client` — preferred SDK (query builder, execution, result decoding)
+  - `src/lib/beacon-api/client.ts` — legacy local client (being phased out)
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
 - Shared state:
@@ -74,7 +93,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - builders (`query-builder/*`)
   - editor (`query-editor/*`)
   - visualizers (`visualisations/*`)
-  - API client (`beacon-api/client.ts`)
+  - API client (`@beacon/client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 
