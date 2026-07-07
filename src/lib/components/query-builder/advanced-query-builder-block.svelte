@@ -7,7 +7,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { BeaconClient } from '@/beacon-api/client';
-	import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
+	import type { CompiledQuery, DataType, Filter, OutputFormat } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import AdvancedParameter from './advanced-parameter.svelte';
 	import type { SelectedFilterType } from './add-advanced-filter.svelte';
@@ -19,10 +19,12 @@
 
 	let {
 		table_name,
-		client
+		client,
+		initialQuery = null
 	}: {
 		table_name: string;
 		client: BeaconClient;
+		initialQuery?: CompiledQuery | null;
 	} = $props();
 
 	let searchInput;
@@ -37,6 +39,7 @@
 
 	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
 		$state([]);
+	let hasHydratedInitialQuery = $state(false);
 
 	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
 
@@ -66,6 +69,7 @@
 					};
 				});
 				selectedFields = [];
+				hydrateFromInitialQuery();
 			});
 		} else {
 			fields = []; // Reset fields if no table or client is available
@@ -186,6 +190,197 @@
 			goto(
 				resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
 			);
+		}
+	}
+
+
+	function hydrateFromInitialQuery() {
+		if (!initialQuery || hasHydratedInitialQuery || fields.length === 0) {
+			return;
+		}
+
+		hasHydratedInitialQuery = true;
+
+		let droppedParts = 0;
+		const normalizedSelectedFields: {
+			name: string;
+			type: DataType;
+			selected_filters: SelectedFilterType[];
+		}[] = [];
+
+		const findSelectedField = (fieldName: string) => {
+			return normalizedSelectedFields.find((field) => field.name === fieldName);
+		};
+
+		const addSelectedFieldIfMissing = (fieldName: string) => {
+			const existingField = findSelectedField(fieldName);
+			if (existingField) {
+				return existingField;
+			}
+
+			const schemaField = fields.find((field) => field.name === fieldName);
+			if (!schemaField) {
+				return null;
+			}
+
+			const selectedField = {
+				name: schemaField.name,
+				type: schemaField.type,
+				selected_filters: []
+			};
+
+			normalizedSelectedFields.push(selectedField);
+			return selectedField;
+		};
+
+		if (typeof initialQuery.from !== 'string') {
+			droppedParts += 1;
+		}
+
+		const normalizedQueryParameters = (initialQuery.query_parameters ?? []) as Array<{
+			column?: string;
+			column_name?: string;
+			alias?: string | null;
+		}>;
+
+		for (const queryParameter of normalizedQueryParameters) {
+			const columnName = queryParameter.column ?? queryParameter.column_name;
+
+			if (!columnName) {
+				droppedParts += 1;
+				continue;
+			}
+
+			const selectedField = addSelectedFieldIfMissing(columnName);
+
+			if (!selectedField) {
+				droppedParts += 1;
+				continue;
+			}
+		}
+
+		const flattenFilters = (filters: Filter[]): Filter[] => {
+			const result: Filter[] = [];
+
+			for (const filter of filters ?? []) {
+				if ('or' in filter) {
+					droppedParts += 1;
+					result.push(...flattenFilters(filter.or));
+					continue;
+				}
+
+				if ('and' in filter) {
+					droppedParts += 1;
+					result.push(...flattenFilters(filter.and));
+					continue;
+				}
+
+				result.push(filter);
+			}
+
+			return result;
+		};
+
+		const getFilterColumnName = (filter: Filter): string | null => {
+			if ('for_query_parameter' in filter) {
+				return filter.for_query_parameter;
+			}
+
+			if ('is_null' in filter) {
+				return filter.is_null.for_query_parameter;
+			}
+
+			if ('is_not_null' in filter) {
+				return filter.is_not_null.for_query_parameter;
+			}
+
+			return null;
+		};
+
+		const getFilterLabel = (filter: SelectedFilterType['filter_value']): string => {
+			switch (filter.type) {
+				case 'range_numeric':
+				case 'range_string':
+				case 'range_timestamp':
+					return 'Between';
+				case 'greater_than_numeric':
+				case 'greater_than_string':
+				case 'greater_than_timestamp':
+					return 'Greater Than';
+				case 'greater_than_or_equals_numeric':
+				case 'greater_than_or_equals_string':
+				case 'greater_than_or_equals_timestamp':
+					return 'Greater Than or Equals';
+				case 'less_than_numeric':
+				case 'less_than_string':
+				case 'less_than_timestamp':
+					return 'Less Than';
+				case 'less_than_or_equals_numeric':
+				case 'less_than_or_equals_string':
+				case 'less_than_or_equals_timestamp':
+					return 'Less Than or Equals';
+				case 'equals_numeric':
+				case 'equals_string':
+				case 'equals_timestamp':
+					return 'Equals';
+				case 'not_equals_numeric':
+				case 'not_equals_string':
+				case 'not_equals_timestamp':
+					return 'Not Equals';
+				case 'is_null':
+					return 'Is Null';
+				case 'is_not_null':
+					return 'Is Not Null';
+			}
+		};
+
+		for (const filter of flattenFilters(initialQuery.filters ?? [])) {
+			const filterColumnName = getFilterColumnName(filter);
+
+			if (!filterColumnName) {
+				droppedParts += 1;
+				continue;
+			}
+
+			let selectedField = findSelectedField(filterColumnName);
+
+			if (!selectedField) {
+				selectedField = addSelectedFieldIfMissing(filterColumnName);
+
+				if (!selectedField) {
+					droppedParts += 1;
+					continue;
+				}
+			}
+
+			const mappedFilter = Utils.filterToParameterFilterType(filter, selectedField.type);
+
+			if (!mappedFilter) {
+				droppedParts += 1;
+				continue;
+			}
+
+			selectedField.selected_filters.push({
+				label: getFilterLabel(mappedFilter),
+				filter_value: mappedFilter
+			});
+		}
+
+		const outputFormat = initialQuery.output?.format;
+
+		if (typeof outputFormat === 'string') {
+			selected_output_format = outputFormat;
+		} else if (outputFormat) {
+			droppedParts += 1;
+		}
+
+		selectedFields = normalizedSelectedFields;
+
+		if (droppedParts > 0) {
+			addToast({
+				type: 'warning',
+				message: `Loaded query with best effort. ${droppedParts} part(s) could not be represented in Advanced Builder.`
+			});
 		}
 	}
 </script>

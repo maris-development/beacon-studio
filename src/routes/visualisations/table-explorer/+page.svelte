@@ -4,36 +4,31 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
-	import type { CompiledQuery, ParquetQueryResponse } from '@/beacon-api/types';
+	import type { CompiledQuery } from '@/beacon-api/types';
+	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
 	import DataTable from '@/components/data-table.svelte';
 	import { Button } from '@/components/ui/button';
 
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import MapIcon from '@lucide/svelte/icons/map';
 
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
-	import { ArrowProcessingWorkerManager } from '@/workers/ArrowProcessingWorkerManager';
 	import type { Column, SortDirection } from '@/util-types';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
-  	import { resolve } from '$app/paths';
-
-	const arrowWorker: ArrowProcessingWorkerManager = new ArrowProcessingWorkerManager();
+	import { resolve } from '$app/paths';
 
 	let query: CompiledQuery | undefined = $state(undefined);
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
-	let client: BeaconClient;
-	
-	let queryResponse: ParquetQueryResponse | null = $state(null);
-	let table: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); 
-	let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
 
+	let entry = $state.raw<DatasetEntry | null>(null);
+	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
+	let queryDurationMs: number | null = $derived(entry?.duration ?? 0);
 
-	let virtualPaginationData: VirtualPaginationArrowTableData = new VirtualPaginationArrowTableData();
+	let virtualPaginationData: VirtualPaginationArrowTableData =
+		new VirtualPaginationArrowTableData();
 	let columns: Column[] = $state([]);
 	let displayRows: Record<string, string>[] = $state([]); //currently displayed rows
 
@@ -52,27 +47,20 @@
 
 	// $inspect(query);
 
-
-	onMount(async () => {
-		
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
-
+	onMount(() => {
 		getUrlSuppliedQuery();
 	});
 
-	async function getUrlSuppliedQuery(){
+	async function getUrlSuppliedQuery() {
 		query = Utils.getUrlSuppliedQuery();
 
 		if (query) {
 			// Use the decoded query for your logic
 			executeAndDisplayQuery();
-
 		} else {
 			// TODO: Ask user for query json
 			editQueryString = '{ "message": "Enter a JSON query" }';
 			noQueryAvailableModalOpen = true;
-
 		}
 	}
 
@@ -83,14 +71,10 @@
 		isLoading = true;
 
 		try {
-			console.log(typeof query);
-			queryResponse = await client.query(query);
+			entry = await queryStore.ensure(query);
 
-			prepareTableForDisplay();
-
-		} catch (error) {
-
-			if(error instanceof NoDataInResponseError){
+			if (entry.rowCount === 0) {
+				isLoading = false;
 				addToast({
 					type: 'info',
 					message: `Query executed successfully but returned no data.`
@@ -98,18 +82,18 @@
 				return;
 			}
 
+			prepareTableForDisplay();
+		} catch (error) {
+			isLoading = false;
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${error.message}`
 			});
-
 		}
-		
 	}
 
-
-	function prepareTableForDisplay(){
-		if(!table){
+	function prepareTableForDisplay() {
+		if (!table) {
 			addToast({
 				type: 'error',
 				message: 'No table data available to display.'
@@ -135,19 +119,20 @@
 	}
 
 	async function onChangeSort(columnKey: string, direction: SortDirection) {
+		if (!entry) return;
+
 		console.log('Sorting by', columnKey, 'in', direction, 'order');
-		
+
 		displayRows = [];
 		isLoading = true;
 
 		try {
-			const sortedTable = await arrowWorker.orderTableByColumn(table, columnKey, direction);
+			const sortedTable = await queryStore.sort(entry, columnKey, direction);
 
 			virtualPaginationData.setData(sortedTable);
 
 			getPage();
-
-		} catch(error) {
+		} catch (error) {
 			console.error('Error sorting table:', error);
 			addToast({
 				type: 'error',
@@ -157,38 +142,36 @@
 	}
 
 	function getPage() {
-        offset = (pageIndex - 1) * pageSize;
+		offset = (pageIndex - 1) * pageSize;
 
-        const data = virtualPaginationData.getPageData(offset, pageSize);
-        
-        setData(data);
+		const data = virtualPaginationData.getPageData(offset, pageSize);
 
-        Utils.setPageUrlParameter(pageIndex);
-    }
-	
+		setData(data);
+
+		Utils.setPageUrlParameter(pageIndex);
+	}
+
 	function setData(fields: Record<string, string>[]) {
-        displayRows = fields;
+		displayRows = fields;
 
-        isLoading = false;
-    }
+		isLoading = false;
+	}
 
-	
-	function updateQuery(newQuery){
+	function updateQuery(newQuery) {
 		query = newQuery;
 		firstLoad = true;
 		isLoading = true;
 		executeAndDisplayQuery();
 	}
 
-
-	function openEditQueryModal(){
+	function openEditQueryModal() {
 		editQueryString = JSON.stringify(query, null, 2);
 		editQueryModalOpen = true;
 	}
 
 	function closeEditQueryModal(save = true) {
 		editQueryModalOpen = false;
-		
+
 		if (!save) {
 			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
 			if (confirmation) {
@@ -211,35 +194,55 @@
 	async function handleChartVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
 
-		if(gzippedQuery){
-			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+		if (gzippedQuery) {
+			goto(
+				resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
 		}
 	}
 
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
-		
-		if(gzippedQuery){
+
+		if (gzippedQuery) {
 			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
+	async function handleEditQuery() {
+		if (!query) {
+			addToast({
+				type: 'error',
+				message: 'No query available to edit.'
+			});
+			return;
+		}
 
-</script>	
+		const gzippedQuery = Utils.objectToGzipString(query);
+
+		if (gzippedQuery) {
+			goto(resolve('/queries/query-builder') + `?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+</script>
 
 <svelte:head>
 	<title>Table explorer - Beacon Studio</title>
 </svelte:head>
 
-
 {#if editQueryModalOpen}
-	<EditQueryJsonModal bind:editQueryString={editQueryString} onClose={closeEditQueryModal} />
+	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
 {/if}
 
 {#if noQueryAvailableModalOpen}
-	<NoQueryAvailableModal onCancel={() => noQueryAvailableModalOpen = false} openQueryJsonEditor={() => { noQueryAvailableModalOpen = false; openEditQueryModal(); }} />
+	<NoQueryAvailableModal
+		onCancel={() => (noQueryAvailableModalOpen = false)}
+		openQueryJsonEditor={() => {
+			noQueryAvailableModalOpen = false;
+			openEditQueryModal();
+		}}
+	/>
 {/if}
-
 
 <Cookiecrumb
 	crumbs={[
@@ -252,11 +255,16 @@
 	<h1>Table explorer</h1>
 
 	<div class="buttons-header">
+		<Button onclick={handleEditQuery}>
+			Edit query
+			<PencilIcon size="1rem" />
+		</Button>
+
 		<Button onclick={openEditQueryModal}>
 			Edit query JSON
-			<FileJson2Icon size=1rem />
+			<FileJson2Icon size="1rem" />
 		</Button>
-		
+
 		<span>or</span>
 
 		<Button onclick={handleChartVisualise}>
@@ -271,7 +279,9 @@
 	</div>
 
 	<p>
-		{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+		{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(
+			queryDurationMs / 1000
+		)}.
 	</p>
 
 	<DataTable
@@ -284,5 +294,4 @@
 		{pageIndex}
 		{isLoading}
 	/>
-
 </div>

@@ -11,6 +11,12 @@
 	import { addToast } from '@/stores/toasts';
 	import { resolve } from '$app/paths';
 
+	type RawQueryParameter = {
+		column?: string;
+		column_name?: string;
+		alias?: string | null;
+	};
+
 	let sourceCode = $state(`{
 		"query_parameters": [
 			{
@@ -58,7 +64,11 @@
 
 	async function handleExecute() {
 		try {
-			const query: CompiledQuery = JSON.parse(sourceCode);
+			const query = parseSourceCodeToCompiledQuery();
+			if (!query) {
+				return;
+			}
+
 			const extension = BeaconClient.outputFormatToExtension(query);
 			await client.queryToDownload(query, extension);
 
@@ -80,23 +90,69 @@
 	}
 
 	async function handleMapVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		const query = parseSourceCodeToCompiledQuery();
+		if (!query) {
+			return;
+		}
+
+		const gzippedQuery = Utils.objectToGzipString(query);
 		if (gzippedQuery) {
 			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleChartVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		const query = parseSourceCodeToCompiledQuery();
+		if (!query) {
+			return;
+		}
+
+		const gzippedQuery = Utils.objectToGzipString(query);
 		if (gzippedQuery) {
 			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
 	async function handleTableVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(sourceCode);
+		const query = parseSourceCodeToCompiledQuery();
+		if (!query) {
+			return;
+		}
+
+		const gzippedQuery = Utils.objectToGzipString(query);
 		if (gzippedQuery) {
 			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
+	function parseSourceCodeToCompiledQuery(): CompiledQuery | undefined {
+		try {
+			const parsed = JSON.parse(sourceCode) as Record<string, unknown> & {
+				query_parameters?: RawQueryParameter[];
+			};
+
+			const normalizedQueryParameters = (parsed.query_parameters ?? []).map((parameter) => {
+				const column = parameter.column ?? parameter.column_name;
+
+				if (!column) {
+					throw new Error('Every query parameter must include column or column_name.');
+				}
+
+				return {
+					column,
+					alias: parameter.alias ?? null
+				};
+			});
+
+			return {
+				...parsed,
+				query_parameters: normalizedQueryParameters
+			} as CompiledQuery;
+		} catch (error) {
+			addToast({
+				message: `Failed to parse query JSON: ${error.message}`,
+				type: 'error'
+			});
 		}
 	}
 
