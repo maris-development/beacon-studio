@@ -50,7 +50,8 @@
 
 			{#if onExecute}
 				<Button onclick={onExecute}>
-					Execute query
+					<!-- Execute query -->
+					Download Data
 					<DownloadIcon />
 				</Button>
 			{/if}
