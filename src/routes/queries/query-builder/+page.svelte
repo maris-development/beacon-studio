@@ -5,6 +5,7 @@
 	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
 	import { resolve } from '$app/paths';
 	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
+	import NewQueryBuilderTableSelector from '@/components/query-builder/new-query-builder-table-selector.svelte';
 </script>
 
 <svelte:head>
@@ -23,6 +24,7 @@
 		<Tabs.List class="self-center">
 			<Tabs.Trigger value="easy-builder">Easy Builder</Tabs.Trigger>
 			<Tabs.Trigger value="advanced-builder">Advanced Builder</Tabs.Trigger>
+			<Tabs.Trigger value="query-builder">Query Builder</Tabs.Trigger>
 		</Tabs.List>
 		<Tabs.Content value="easy-builder">
 			<Card>
@@ -40,6 +42,14 @@
 				<p class="description">Use this advanced form to build more complex queries.</p>
 
 				<AdvancedQueryBuilder />
+			</Card>
+		</Tabs.Content>
+		<Tabs.Content value="query-builder">
+			<Card>
+				<h1 class="title">Query Builder</h1>
+				<p class="description">Use this new form to build more queries.</p>
+
+				<NewQueryBuilderTableSelector />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>
