@@ -461,5 +461,78 @@ export class ApacheArrowUtils {
         return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
     }
 
+    /**
+     * Returns a copy of the table with an added GeoArrow "point" geometry column
+     * derived from its latitude/longitude columns.
+     *
+     * The geometry is an interleaved GeoArrow point — a `FixedSizeList<Float64>[2]`
+     * of `[longitude, latitude]` (x, y) — tagged with the
+     * `ARROW:extension:name = geoarrow.point` field metadata that
+     * `@geoarrow/deck.gl-layers` uses to locate the geometry column. This replaces
+     * the server-side GeoParquet geometry: all views can now share one arrow-native
+     * result and the map builds its geometry client-side.
+     *
+     * @throws If the latitude or longitude column is not present.
+     */
+    static addPointGeometryColumn<T extends ApacheArrow.TypeMap>(
+        table: ApacheArrow.Table<T>,
+        latitudeColumnName: string = 'Latitude',
+        longitudeColumnName: string = 'Longitude',
+        geometryColumnName: string = 'geometry'
+    ): ApacheArrow.Table {
+        const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
+        const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
+
+        if (latIndex === -1 || lonIndex === -1) {
+            throw new Error(
+                `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`
+            );
+        }
+
+        // GeoArrow interleaved point type + the extension metadata deck.gl detects.
+        const coordField = new ApacheArrow.Field('xy', new ApacheArrow.Float64(), false);
+        const pointType = new ApacheArrow.FixedSizeList(2, coordField);
+        const geometryField = new ApacheArrow.Field(
+            geometryColumnName,
+            pointType,
+            true,
+            new Map([['ARROW:extension:name', 'geoarrow.point']])
+        );
+
+        const newFields: ApacheArrow.Field[] = [...table.schema.fields, geometryField];
+        const newSchema = new ApacheArrow.Schema(newFields, table.schema.metadata);
+        const structType = new ApacheArrow.Struct(newFields);
+
+        if (table.batches.length === 0) {
+            return new ApacheArrow.Table(newSchema);
+        }
+
+        const newBatches = table.batches.map((batch) => {
+            const rows = batch.numRows;
+            const latCol = batch.getChildAt(latIndex)!;
+            const lonCol = batch.getChildAt(lonIndex)!;
+
+            // Interleaved [x=lon, y=lat] coordinate buffer.
+            const coords = new Float64Array(rows * 2);
+            for (let i = 0; i < rows; i++) {
+                coords[i * 2] = Number(lonCol.get(i));
+                coords[i * 2 + 1] = Number(latCol.get(i));
+            }
+
+            const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
+            const geometryData = ApacheArrow.makeData({ type: pointType, length: rows, child: childData });
+            const structData = ApacheArrow.makeData({
+                type: structType,
+                length: rows,
+                nullCount: 0,
+                children: [...batch.data.children, geometryData]
+            });
+
+            return new ApacheArrow.RecordBatch(newSchema, structData);
+        });
+
+        return new ApacheArrow.Table(newBatches);
+    }
+
 }
 

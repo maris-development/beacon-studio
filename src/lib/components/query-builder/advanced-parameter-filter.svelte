@@ -5,25 +5,25 @@
 	export type ParameterFilterType =
 		| { min?: number; max?: number; type: 'range_numeric' }
 		| { min?: string; max?: string; type: 'range_string' }
-		| { min?: Date; max?: Date; type: 'range_timestamp' }
+		| { min?: string | Date; max?: string | Date; type: 'range_timestamp' }
 		| { value?: string; type: 'greater_than_string' }
 		| { value?: number; type: 'greater_than_numeric' }
-		| { value?: Date; type: 'greater_than_timestamp' }
+		| { value?: string | Date; type: 'greater_than_timestamp' }
 		| { value?: string; type: 'less_than_string' }
 		| { value?: number; type: 'less_than_numeric' }
-		| { value?: Date; type: 'less_than_timestamp' }
+		| { value?: string | Date; type: 'less_than_timestamp' }
 		| { value?: string; type: 'greater_than_or_equals_string' }
 		| { value?: number; type: 'greater_than_or_equals_numeric' }
-		| { value?: Date; type: 'greater_than_or_equals_timestamp' }
+		| { value?: string | Date; type: 'greater_than_or_equals_timestamp' }
 		| { value?: string; type: 'less_than_or_equals_string' }
 		| { value?: number; type: 'less_than_or_equals_numeric' }
-		| { value?: Date; type: 'less_than_or_equals_timestamp' }
+		| { value?: string | Date; type: 'less_than_or_equals_timestamp' }
 		| { value?: string; type: 'equals_string' }
 		| { value?: number; type: 'equals_numeric' }
-		| { value?: Date; type: 'equals_timestamp' }
+		| { value?: string | Date; type: 'equals_timestamp' }
 		| { value?: string; type: 'not_equals_string' }
 		| { value?: number; type: 'not_equals_numeric' }
-		| { value?: Date; type: 'not_equals_timestamp' }
+		| { value?: string | Date; type: 'not_equals_timestamp' }
 		| { type: 'is_null' }
 		| { type: 'is_not_null' };
 

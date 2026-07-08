@@ -3,27 +3,25 @@
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import { onMount } from 'svelte';
 	import { Utils } from '@/utils';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import { BeaconClient, NoDataInResponseError } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
-	import type { CompiledQuery, ParquetQueryResponse} from '@/beacon-api/types';
+	import type { CompiledQuery } from '@/beacon-api/types';
+	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
-  	import { resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 
 	let query: CompiledQuery | undefined = $state(undefined);
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
-	let client: BeaconClient;
 
-	let queryResponse: ParquetQueryResponse | null = $state(null);
-	let table: ApacheArrow.Table | null = $derived(queryResponse?.arrow_table); 
-	let queryDurationMs: number | null = $derived(queryResponse?.duration ?? 0);
+	let entry = $state.raw<DatasetEntry | null>(null);
+	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
+	let queryDurationMs: number | null = $derived(entry?.duration ?? 0);
 
 	let isLoading = $state(true);
 	let firstLoad = $state(true);
@@ -34,10 +32,7 @@
 
 	let noQueryAvailableModalOpen = $state(false);
 
-	onMount(async () => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
-
+	onMount(() => {
 		getUrlSuppliedQuery();
 	});
 
@@ -45,8 +40,6 @@
 		query = Utils.getUrlSuppliedQuery();
 
 		if (query) {
-			query.output.format = 'parquet'; // Ensure the output format is set to parquet
-
 			// Use the decoded query for your logic
 			executeAndDisplayQuery();
 		} else {
@@ -63,14 +56,10 @@
 		isLoading = true;
 
 		try {
+			entry = await queryStore.ensure(query);
 
-			queryResponse = await client.query(query);
-
-			prepareTableForDisplay();
-
-		} catch (error) {
-
-			if(error instanceof NoDataInResponseError){
+			if (entry.rowCount === 0) {
+				isLoading = false;
 				addToast({
 					type: 'info',
 					message: `Query executed successfully but returned no data.`
@@ -78,14 +67,15 @@
 				return;
 			}
 
+			prepareTableForDisplay();
+		} catch (error) {
+			isLoading = false;
 			addToast({
 				type: 'error',
-				message: `3 Failed to execute query: ${error.message}`
+				message: `Failed to execute query: ${error.message}`
 			});
 		}
 	}
-
-	
 
 	function prepareTableForDisplay() {
 		if (!table) {
@@ -96,7 +86,7 @@
 			return;
 		}
 
-		totalRows = table.numRows;
+		isLoading = false;
 	}
 
 	function updateQuery(newQuery) {
@@ -135,16 +125,32 @@
 
 	async function handleMapVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
-		if(gzippedQuery){
+		if (gzippedQuery) {
 			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
-
 	async function handleTableVisualise() {
 		const gzippedQuery = Utils.objectToGzipString(query);
-		if(gzippedQuery){
-			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+		if (gzippedQuery) {
+			goto(
+				resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
+			);
+		}
+	}
+
+	async function handleEditQuery() {
+		if (!query) {
+			addToast({
+				type: 'error',
+				message: 'No query available to edit.'
+			});
+			return;
+		}
+
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if (gzippedQuery) {
+			goto(resolve('/queries/query-builder') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>
@@ -158,7 +164,13 @@
 {/if}
 
 {#if noQueryAvailableModalOpen}
-	<NoQueryAvailableModal onCancel={() => noQueryAvailableModalOpen = false} openQueryJsonEditor={() => { noQueryAvailableModalOpen = false; openEditQueryModal(); }} />
+	<NoQueryAvailableModal
+		onCancel={() => (noQueryAvailableModalOpen = false)}
+		openQueryJsonEditor={() => {
+			noQueryAvailableModalOpen = false;
+			openEditQueryModal();
+		}}
+	/>
 {/if}
 
 <Cookiecrumb
@@ -173,6 +185,11 @@
 		<h1>Chart explorer</h1>
 
 		<div class="buttons-header">
+			<Button onclick={handleEditQuery}>
+				Edit query
+				<PencilIcon />
+			</Button>
+
 			<Button onclick={openEditQueryModal}>
 				Edit query JSON
 				<FileJson2Icon />
@@ -189,7 +206,6 @@
 				View on map
 				<MapIcon />
 			</Button>
-
 		</div>
 
 		<p>
@@ -199,9 +215,13 @@
 		</p>
 
 		<p>
-			Below you can find a <a href="https://perspective.finos.org/" target="blank" rel="noopener noreferrer">Perspective viewer</a> that allows you to explore the query results interactively.
-
-			By default it opens a table, but you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure' button in the top right.
+			Below you can find a <a
+				href="https://perspective.finos.org/"
+				target="blank"
+				rel="noopener noreferrer">Perspective viewer</a
+			> that allows you to explore the query results interactively. By default it opens a table, but
+			you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
+			button in the top right.
 		</p>
 	</div>
 

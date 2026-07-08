@@ -51,29 +51,31 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/routes/visualisations/*`
   - `src/routes/data-browser/*`
 - API client and query model:
-  - `@beacon/client` — preferred SDK (query builder, execution, result decoding)
-  - `src/lib/beacon-api/client.ts` — legacy local client (being phased out)
+  - `@beacon/client` — preferred SDK; built via `src/lib/beacon-api/sdk-client.ts` (`makeBeaconClient`)
+  - `src/lib/beacon-api/client.ts` — legacy client, now metadata/download only
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
 - Shared state:
+  - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
   - `src/lib/stores/config.ts` (persisted Beacon instance selection)
   - `src/lib/stores/toasts.ts` (global toasts)
-- Heavy data operations (off-main-thread):
+- Heavy data operations (off-main-thread, one shared worker via `getArrowWorker()`):
   - `src/lib/workers/ArrowProcessingWorker.ts`
   - `src/lib/workers/ArrowProcessingWorkerManager.ts`
 
 ## Data Flow (Important)
 1. User configures a query via easy/advanced builder or raw editor.
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
-3. Query may be passed between pages via gzipped URL payload (`Utils.objectToGzipString` / URL param).
-4. Visualizer pages decode query and execute through `BeaconClient.query()`.
-5. Response is read as Parquet/GeoParquet -> Arrow table.
-6. Table is rendered in map/table/chart views, often with worker-assisted transforms.
+3. Query is passed between pages via a gzipped URL payload (`Utils.objectToGzipString` / `?query=`), which also serves as the persistent cache key.
+4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@beacon/client` (`queryArrow()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
+5. Results arrive as a native (zstd) Arrow IPC stream decoded straight to an Arrow table (no Parquet round-trip).
+6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
 
 ## Query and Output Rules
-- `BeaconClient.query()` enforces/normalizes output to parquet-like paths and returns Arrow tables.
-- Map viewer rewrites output to GeoParquet and requires latitude/longitude query columns.
-- `BeaconClient.QUERY_LIMIT` protects browser stability; warnings are surfaced with toasts.
+- `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
+- Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`).
+- `QUERY_CELL_LIMIT` (in the query store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
+- The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info); its Parquet query path and `parquet-wasm` have been removed.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
@@ -82,8 +84,8 @@ This file is a quick operational guide for coding agents working in this reposit
 - Reuse toast patterns for user-facing errors; avoid silent failures.
 
 ## Performance and Safety Patterns
-- Use `ArrowProcessingWorkerManager` for sorting/dedup/min-max and other heavy Arrow operations.
-- Avoid blocking the main thread with large Arrow/parquet transforms.
+- Use the shared worker via `getArrowWorker()` (or the `queryStore` transform methods) for sorting/dedup/min-max/geometry; it keeps tables loaded by key (load-once) across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.
+- Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
 
 ## Editing Guidance for Agents
