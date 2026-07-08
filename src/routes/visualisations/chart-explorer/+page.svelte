@@ -192,10 +192,13 @@
 
 		</div>
 
+		<!-- turn the loading into a func? -->
 		<p>
-			{table?.numRows ?? 0} rows selected in {Utils.formatSecondsToReadableTime(
-				queryDurationMs / 1000
-			)}.
+			{#if table?.numRows == null}
+				Loading rows…
+			{:else}
+				{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+			{/if}
 		</p>
 
 		<p>
