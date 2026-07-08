@@ -1,23 +1,18 @@
 
-import * as ApacheArrow from 'apache-arrow';
-import wasmInit from 'parquet-wasm';
-
-import { readParquet } from 'parquet-wasm/esm';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type {  BeaconSystemInfo, CompiledQuery, FunctionNameObject, GeoParquetOutputFormat,  GeoParquetQueryResponse,  ParquetQueryResponse,  QueryMetricsResult, QueryResponseKind, QueryWarning, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
-import {asset} from '$app/paths';
 
 
-
-
-
+/**
+ * Legacy Beacon HTTP client. Query execution has moved to `@beacon/client`
+ * (see `sdk-client.ts` and `stores/query-store.svelte.ts`); this client is kept
+ * for metadata endpoints (datasets, tables, schemas, system info) and for
+ * server-materialized downloads via {@link queryToDownload}.
+ */
 export class BeaconClient {
-    static PARQUET_WASM_URL = asset(`/parquet_wasm_bg.wasm`);
-    static QUERY_LIMIT = 50_000_000; //50 million cells
-
     host: string;
     token: string | null = null;
     private memCache = new MemoryCache();
@@ -28,46 +23,11 @@ export class BeaconClient {
     }
 
     static output_formats: Record<string, string> = {
-		Parquet: 'parquet',
-		CSV: 'csv',
-		Arrow: 'arrow',
-		NetCDF: 'netcdf'
-	};
-    
-    /**
-     * Ensures that the output format of the provided query is set to 'parquet' or 'geoparquet'.
-     * 
-     * If the output format is already 'parquet' or an object containing the 'geoparquet' key, 
-     * the query is returned unchanged. Otherwise, the output format is set to 'parquet', 
-     * and a warning is logged to the console.
-     *
-     * @param query - The compiled query object to check and potentially modify.
-     * @returns A cloned query object with the output format ensured to be 'parquet' or 'geoparquet'.
-     */
-    static ensureParquetOutput(query: Readonly<CompiledQuery>) {
-
-        const newQuery =  Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
-
-        // console.log('ensureParquetOutput', newQuery);
-
-        switch (true) {
-            case typeof newQuery.output.format === 'object' && 'geoparquet' in (newQuery.output.format ?? {}):
-                // is geoparquet, allowed
-                break;
-
-            case newQuery.output.format === 'parquet': 
-                // is parquet, allowed
-                break;
-
-            default:
-                console.warn(`BeaconClient.ensureParquetOutput: Output format '${newQuery.output.format}' changed to 'parquet'`);
-                //set format to parquet
-                newQuery.output.format = 'parquet';
-                break;
-        }
-
-        return newQuery;
-    }
+        Parquet: 'parquet',
+        CSV: 'csv',
+        Arrow: 'arrow',
+        NetCDF: 'netcdf'
+    };
 
     static outputFormatToExtension(query: CompiledQuery, prefix: string = ''): string {
         switch (true) {
@@ -134,102 +94,6 @@ export class BeaconClient {
         document.body.removeChild(link);
 
         URL.revokeObjectURL(link.href);
-    }
-
-    /**
-     * Executes a compiled query against the Beacon API and returns the response as an Arrow table.
-     * 
-     * @param query - The compiled query to execute against the Beacon API
-     * @returns A Promise containing the QueryResponse with the resulting Arrow table
-     * 
-     * @remarks
-     * This method:
-     * - Initializes WASM for Parquet processing
-     * - Ensures the query output format is set to Parquet
-     * - Makes a POST request to the Beacon API's query endpoint
-     * - Handles special geoparquet format validation for longitude/latitude columns
-     * - Converts the response buffer to an Arrow table format
-     * 
-     * @throws Error when geoparquet format is specified without required longitude and latitude columns
-     * @throws NoDataInResponseError when the response buffer is empty
-     */
-    async query(query: CompiledQuery): Promise<ParquetQueryResponse|GeoParquetQueryResponse> {
-        await wasmInit(BeaconClient.PARQUET_WASM_URL);
-
-        if(typeof query == 'string'){
-            query = JSON.parse(query) as CompiledQuery;
-        }
-
-        const _query = Utils.cloneObject(query); //get a clone, remove reactive wrapper from svelte
-
-        _query.limit = Math.round(BeaconClient.QUERY_LIMIT / query.query_parameters.length);
-
-        const correctedQuery = BeaconClient.ensureParquetOutput(_query);
-
-        const endpoint = `${this.host}/api/query`;
-
-        // Create a request to the Beacon API using fetch
-        const request_info: RequestInit = {
-            method: 'POST',
-            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify(_query),
-            cache: 'no-cache',
-        }
-
-        // console.log('[BeaconClient] query()', endpoint, query, request_info);
-
-		const startTime = performance.now();
-
-        const response = await fetch(endpoint, request_info);
-
-        if (!response.ok) {
-            const error_message = await response.text();
-            throw new Error(`Error querying Beacon API: ${response.status} ${response.statusText} - ${error_message}`);
-        }
-
-        // Await the response body as a buffer
-        const buffer = await response.arrayBuffer();
-        const byte_buffer = new Uint8Array(buffer);
-        let kind: QueryResponseKind = 'parquet';
-
-        // Check if the out is a geoparquet format. This is a special case where we need to handle the longitude and latitude columns.
-        if (typeof correctedQuery.output.format === 'object' && 'geoparquet' in correctedQuery.output.format) {
-            const geoOutput = correctedQuery.output as { format: GeoParquetOutputFormat };
-            const { longitude_column, latitude_column } = geoOutput.format.geoparquet;
-
-            if (!longitude_column || !latitude_column) {
-                throw new Error("Geoparquet output format requires longitude and latitude columns to be specified.");
-            }
-
-            kind = 'geoparquet';    
-        }
-
-        const arrow_table = BeaconClient.readParquetBufferAsArrowTable(byte_buffer);
-
-		const endTime = performance.now();
-
-        const warnings: QueryWarning[] = [];
-
-        const rowCount = arrow_table.numRows;
-
-        if(rowCount >= _query.limit) {
-            warnings.push("limit_reached");
-            addToast({
-				type: 'warning',
-				message: `
-					The query result has reached the limit of ${BeaconClient.QUERY_LIMIT} cells to prevent crashing your browser. 
-					The data may be incomplete. Consider refining your query to reduce the result size.
-				`.trim()
-			});
-        }
-
-        return {
-            kind: kind,
-            arrow_table: arrow_table,
-            warnings: warnings,
-            duration: endTime - startTime,
-            rowCount: rowCount
-        };
     }
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
@@ -411,20 +275,20 @@ export class BeaconClient {
      */
     async testConnection(): Promise<boolean> {
         const result = await this.getHealth().then((isHealthy) => {
-			// Connection successful
-			if(!isHealthy){
-				throw new Error('Connected succesfully, but Beacon instance is not healthy.');
-			}
+            // Connection successful
+            if (!isHealthy) {
+                throw new Error('Connected succesfully, but Beacon instance is not healthy.');
+            }
 
             return true;
-		}).catch(() => {
-			addToast({
-				message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
-				type: 'error',
+        }).catch(() => {
+            addToast({
+                message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
+                type: 'error',
                 timeout: 0
-			});
+            });
             return false;
-		});
+        });
 
         return result;
     }
@@ -504,54 +368,4 @@ export class BeaconClient {
         });
     }
 
-    /**
-     * Reads a Parquet buffer and converts it to an Apache Arrow Table.
-     * 
-     * @param buffer - The Uint8Array containing the Parquet data to be read
-     * @returns A Result containing either the converted Apache Arrow Table or an error string
-     * @throws {NoDataInResponseError} When the buffer is empty (length is 0)
-     * 
-     * @remarks
-     * This method uses a batch size of 128,000 for reading the Parquet data and converts
-     * the resulting WASM table to an Arrow Table via IPC stream format.
-     */
-    static readParquetBufferAsArrowTable(buffer: Uint8Array): ApacheArrow.Table {
-        if(buffer.length === 0){
-            throw new NoDataInResponseError("Query didn't return any data.");
-        }
-
-        const wasmTable = readParquet(buffer, {
-            batchSize: 128000
-        });
-
-        return BeaconClient.readArrowAsArrowTable(wasmTable.intoIPCStream());
-    }
-
-    /**
-     * Reads a binary Arrow buffer and converts it to an Apache Arrow Table.
-     * 
-     * @param buffer - The Uint8Array containing the Arrow IPC (Inter-Process Communication) data
-     * @returns A Result containing either the parsed Apache Arrow Table on success, or an error message string on failure
-     * 
-     */
-    static readArrowAsArrowTable(buffer: Uint8Array): ApacheArrow.Table {
-        try {
-            return ApacheArrow.tableFromIPC(buffer);
-
-        } catch(error) {
-            console.error("Error reading Arrow buffer:", error);
-
-            throw new Error("Failed to parse Arrow data: " + (error instanceof Error ? error.message : String(error)));
-        }
-    }
-
-
-}
-
-
-export class NoDataInResponseError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = "NoDataInResponseError";
-    }
 }

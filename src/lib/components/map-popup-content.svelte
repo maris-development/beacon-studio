@@ -2,26 +2,27 @@
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Column, SortDirection } from '@/util-types';
 	import { VirtualPaginationData } from '@/utils';
-	import { ArrowProcessingWorkerManager } from '@/workers/ArrowProcessingWorkerManager';
+	import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 	import * as ApacheArrow from 'apache-arrow';
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import DataTable from './data-table.svelte';
 
 	let {
 		rowData,
 		table,
+		datasetKey,
 		latitudeColumnName,
 		longitudeColumnName,
 		groupByDecimals = 3 // Default to 3 decimals for grouping
 	}: {
 		rowData: unknown[];
 		table: ApacheArrow.Table;
+		datasetKey: string;
 		latitudeColumnName: string;
 		longitudeColumnName: string;
 		groupByDecimals?: number;
 	} = $props();
 
-	let arrowWorker: ArrowProcessingWorkerManager;
 	let columns: Column[] = $state([]);
 	let virtualSchemaData: VirtualPaginationData<number[]> = new VirtualPaginationData<number[]>([]);
 	let rows: number[][] = $state([]);
@@ -32,8 +33,6 @@
 	let pageSize: number = 10;
 
 	onMount(() => {
-		arrowWorker = new ArrowProcessingWorkerManager();
-
 		const record = ApacheArrowUtils.arrayToRecord(rowData, table.schema);
 
 		columns = table.schema.fields
@@ -49,7 +48,8 @@
 			Number(record[longitudeColumnName])
 		];
 
-		const otherData = arrowWorker.findSimilarRowsByLatLon(
+		const otherData = getArrowWorker().findSimilarRowsByLatLon(
+			datasetKey,
 			table,
 			currentLatLon,
 			groupByDecimals,
@@ -66,11 +66,6 @@
 		});
 	});
 
-	onDestroy(() => {
-		console.log('onDestroy called for MapPopupContent');
-		arrowWorker.terminate();
-	});
-
 	function getPage() {
 		offset = (pageIndex - 1) * pageSize;
 
@@ -81,6 +76,7 @@
 		setData(data);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	function setData(fields: any[]) {
 		rows = fields;
 
@@ -117,7 +113,7 @@
 </div>
 
 <style lang="scss">
- .map-popup-content {
-	max-width: 50vw;
- }
+	.map-popup-content {
+		max-width: 50vw;
+	}
 </style>

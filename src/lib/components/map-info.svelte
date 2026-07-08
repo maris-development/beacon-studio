@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import type { Snippet } from "svelte";
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
@@ -11,10 +12,12 @@
 
 	let {
 		onEditClick = () => {},
+		onEditBuilderClick = () => {},
 		compiledQuery,
         children
 	}: {
 		onEditClick: () => void;
+		onEditBuilderClick?: () => void;
 		compiledQuery: CompiledQuery
         children?: Snippet
 	} = $props();
@@ -38,6 +41,11 @@
 
 <div class="my-ctrl-group">
 	<div class="buttons-header">
+		<Button onclick={() => onEditBuilderClick()}>
+			Edit query
+			<PencilIcon size=1rem />
+		</Button>
+
 		<Button onclick={() => onEditClick()}>
 			Edit query JSON
 			<FileJson2Icon size=1rem />

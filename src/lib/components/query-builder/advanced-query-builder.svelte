@@ -5,7 +5,14 @@
 
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
+	import type { CompiledQuery } from '@/beacon-api/types';
 	import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
+
+	let {
+		initialQuery = null
+	}: {
+		initialQuery?: CompiledQuery | null;
+	} = $props();
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient = $state(null);
@@ -16,10 +23,17 @@
 
 		let tables = await client.getTables();
 		let default_table = await client.getDefaultTable();
+		const requestedTable = typeof initialQuery?.from === 'string' ? initialQuery.from : null;
+
+		table_names = tables;
+
+		if (requestedTable && tables.includes(requestedTable)) {
+			selected_table_name = requestedTable;
+			return;
+		}
 
 		// By default, select the first table if available
 		selected_table_name = default_table;
-		table_names = tables;
 	});
 
 	let selected_table_name = $state('');
@@ -45,4 +59,4 @@
 	</Select.Root>
 </div>
 
-<AdvancedQueryBuilderBlock table_name={selected_table_name} {client} />
+<AdvancedQueryBuilderBlock table_name={selected_table_name} {client} initialQuery={initialQuery} />

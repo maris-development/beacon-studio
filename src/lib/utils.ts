@@ -131,6 +131,10 @@ export class Utils {
         if (urlSuppliedQuery) {
             try {
                 query = Utils.gzipStringToObject(urlSuppliedQuery);
+                
+                if(typeof query == 'string') {
+                    query = JSON.parse(query) as CompiledQuery;
+                }
             } catch (error) {
                 console.error('Failed to decode query:', error);
             }
@@ -255,6 +259,134 @@ export class Utils {
             case "is_not_null":
                 return { is_not_null: { for_query_parameter: column } };
         }
+    }
+
+    static filterToParameterFilterType(filter: Filter, dataType: DataType): ParameterFilterType | null {
+        const isNumeric = Utils.isNumericDataType(dataType);
+        const isString = Utils.isStringDataType(dataType);
+        const isTimestamp = Utils.isTimestampDataType(dataType);
+
+        if ('min' in filter && 'max' in filter) {
+            if (isNumeric) {
+                return { type: 'range_numeric', min: filter.min as number, max: filter.max as number };
+            }
+
+            if (isString) {
+                return { type: 'range_string', min: String(filter.min), max: String(filter.max) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'range_timestamp', min: String(filter.min), max: String(filter.max) };
+            }
+
+            return null;
+        }
+
+        if ('eq' in filter) {
+            if (isNumeric) {
+                return { type: 'equals_numeric', value: Number(filter.eq) };
+            }
+
+            if (isString) {
+                return { type: 'equals_string', value: String(filter.eq) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'equals_timestamp', value: String(filter.eq) };
+            }
+
+            return null;
+        }
+
+        if ('neq' in filter) {
+            if (isNumeric) {
+                return { type: 'not_equals_numeric', value: Number(filter.neq) };
+            }
+
+            if (isString) {
+                return { type: 'not_equals_string', value: String(filter.neq) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'not_equals_timestamp', value: String(filter.neq) };
+            }
+
+            return null;
+        }
+
+        if ('gt' in filter) {
+            if (isNumeric) {
+                return { type: 'greater_than_numeric', value: Number(filter.gt) };
+            }
+
+            if (isString) {
+                return { type: 'greater_than_string', value: String(filter.gt) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'greater_than_timestamp', value: String(filter.gt) };
+            }
+
+            return null;
+        }
+
+        if ('gt_eq' in filter) {
+            if (isNumeric) {
+                return { type: 'greater_than_or_equals_numeric', value: Number(filter.gt_eq) };
+            }
+
+            if (isString) {
+                return { type: 'greater_than_or_equals_string', value: String(filter.gt_eq) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'greater_than_or_equals_timestamp', value: String(filter.gt_eq) };
+            }
+
+            return null;
+        }
+
+        if ('lt' in filter) {
+            if (isNumeric) {
+                return { type: 'less_than_numeric', value: Number(filter.lt) };
+            }
+
+            if (isString) {
+                return { type: 'less_than_string', value: String(filter.lt) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'less_than_timestamp', value: String(filter.lt) };
+            }
+
+            return null;
+        }
+
+        if ('lt_eq' in filter) {
+            if (isNumeric) {
+                return { type: 'less_than_or_equals_numeric', value: Number(filter.lt_eq) };
+            }
+
+            if (isString) {
+                return { type: 'less_than_or_equals_string', value: String(filter.lt_eq) };
+            }
+
+            if (isTimestamp) {
+                return { type: 'less_than_or_equals_timestamp', value: String(filter.lt_eq) };
+            }
+
+            return null;
+        }
+
+        if ('is_null' in filter) {
+            return { type: 'is_null' };
+        }
+
+        if ('is_not_null' in filter) {
+            return { type: 'is_not_null' };
+        }
+
+        return null;
     }
 
     static copyToClipboard(text: string): boolean {
