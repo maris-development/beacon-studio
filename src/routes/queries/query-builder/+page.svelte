@@ -24,6 +24,9 @@
 	]}
 />
 
+<!-- Here add a bar with presistent query builder values -->
+
+
 <div class="flex w-full flex-col gap-6 p-4">
 	<Tabs.Root value={initialTab} class="w-full">
 		<Tabs.List class="self-center">
