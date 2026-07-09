@@ -8,9 +8,30 @@
 	import { resolve } from '$app/paths';
 	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
 	import NewQueryBuilderTableSelector from '@/components/query-builder/new-query-builder-table-selector.svelte';
+	import QuerySelectionStatusBar from '@/components/query-buttons/QuerySelectionStatusBar.svelte';
+	import {
+		makeEmptyQuerySelectionStatus,
+		type QuerySelectionStatus
+	} from '@/components/query-builder/query-selection-status';
 
 	const initialQuery: CompiledQuery | null = Utils.getUrlSuppliedQuery();
 	const initialTab = initialQuery ? 'advanced-builder' : 'easy-builder';
+
+	let activeTab = $state(initialTab);
+	let querySelectionStatus = $state<QuerySelectionStatus>(makeEmptyQuerySelectionStatus());
+	let resetQueryBuilder = $state<(() => void) | undefined>(undefined);
+
+	function handleSaveQuery() {
+		console.log('Save query clicked');
+	}
+
+	function handleSavedQueries() {
+		console.log('Saved queries clicked');
+	}
+
+	function handleReset() {
+		resetQueryBuilder?.();
+	}
 </script>
 
 <svelte:head>
@@ -24,16 +45,28 @@
 	]}
 />
 
-<!-- Here add a bar with presistent query builder values -->
-
 
 <div class="flex w-full flex-col gap-6 p-4">
-	<Tabs.Root value={initialTab} class="w-full">
+	<Tabs.Root bind:value={activeTab} class="w-full">
 		<Tabs.List class="self-center">
 			<Tabs.Trigger value="easy-builder">Easy Builder</Tabs.Trigger>
 			<Tabs.Trigger value="advanced-builder">Advanced Builder</Tabs.Trigger>
 			<Tabs.Trigger value="query-builder">Query Builder</Tabs.Trigger>
 		</Tabs.List>
+
+		{#if activeTab === 'query-builder'}
+			<QuerySelectionStatusBar
+				dataTable={querySelectionStatus.dataTable}
+				columns={querySelectionStatus.columns}
+				filters={querySelectionStatus.filters}
+				selection={querySelectionStatus.selection}
+				outputFormat={querySelectionStatus.outputFormat}
+				saveQuery={handleSaveQuery}
+				savedQueries={handleSavedQueries}
+				reset={handleReset}
+			/>
+		{/if}
+
 		<Tabs.Content value="easy-builder">
 			<Card>
 				<h1 class="title">Easy Query Builder</h1>
@@ -57,7 +90,7 @@
 				<h1 class="title">Query Builder</h1>
 				<p class="description">Use this new form to build more queries.</p>
 
-				<NewQueryBuilderTableSelector />
+				<NewQueryBuilderTableSelector bind:status={querySelectionStatus} bind:onReset={resetQueryBuilder} />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>

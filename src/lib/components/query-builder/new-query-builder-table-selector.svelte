@@ -7,14 +7,29 @@
 
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
-	import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
+	// import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
+    import NewQueryBuilderBlock from './new-query-builder-block.svelte';
+    import type { QuerySelectionStatus } from './query-selection-status';
 	import Button from '../ui/button/button.svelte';
-	import { builderThroughAsyncIterable, tableFromJSON } from 'apache-arrow';
     import ListIcon from '@lucide/svelte/icons/list';
     import GridIcon from '@lucide/svelte/icons/grid';
 
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
-	let client: BeaconClient = $state(null);
+    let {
+        status = $bindable<QuerySelectionStatus>({
+            dataTable: '',
+            columns: 0,
+            filters: 0,
+            selection: 0,
+            outputFormat: ''
+        }),
+        onReset = $bindable<(() => void) | undefined>(undefined)
+    }: {
+        status?: QuerySelectionStatus;
+        onReset?: () => void;
+    } = $props();
+
+    let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+    let client: BeaconClient = $state(null);
 
     type ViewMode = 'cards' | 'list';
     let viewMode = $state<ViewMode>('cards');
@@ -31,25 +46,30 @@
 		let default_table = await client.getDefaultTable();
 
 		// By default, select the first table if available
-        tables_length = tables.length;
+		tables_length = tables.length;
 		selected_table_name = default_table;
 		table_names = tables;
 
-        viewMode = tables.length < 10 ? 'cards' : 'list';
+		viewMode = tables.length < 10 ? 'cards' : 'list';
 	});
+
+	$effect(() => {
+		status.dataTable = selected_table_name;
+	});
+
 </script>
 
 <div class="flex items-center justify-between">
 	<Label for="dataCollection">Select Data Table</Label>
 
 	<div class="flex gap-2">
-        <p>{tables_length === -1 ? 'Loading' : tables_length} tables</p>
+		<p>{tables_length === -1 ? 'Loading' : tables_length} tables</p>
 		<Button
 			variant={viewMode === 'cards' ? 'default' : 'outline'}
 			onclick={() => (viewMode = 'cards')}
 		>
 			Cards
-            <GridIcon />
+			<GridIcon />
 		</Button>
 
 		<Button
@@ -98,4 +118,4 @@
  Why should we split pre selected params and additional params?
  Why not keep them in the same block and reset the block when pressing the reset button? -->
 
-<AdvancedQueryBuilderBlock table_name={selected_table_name} {client} />
+<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:onReset />
