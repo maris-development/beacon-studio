@@ -97,7 +97,7 @@
 		// map.addControl(new GlobeControl(), 'top-right'); //doesnt work with deck.gl overlay...
 		
 		mapOverlay = new MapboxOverlay({
-			interleaved: false,
+			interleaved: true,
 			layers: []
 		});
 
