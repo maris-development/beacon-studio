@@ -41,9 +41,7 @@
 	});
 
 	function _changeSort(column: Column) {
-		const columnRef = column.ref;
-
-		console.log('_changeSort', columnRef);
+		// console.log('_changeSort', column.ref);
 
 		//invert direction:
 		if (column.isSorted == true) {

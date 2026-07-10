@@ -30,7 +30,11 @@
 					{
 						title: 'Editor',
 						url: resolve('/queries/query-editor')
-					}
+					},
+					{
+						title: 'History',
+						url: resolve('/queries/query-history')
+					},
 				]
 			},
 			{
@@ -82,6 +86,7 @@
 				icon: Settings2Icon
 			}
 		],
+		
 		navSecondary: [
 			{
 				title: 'Documentation',

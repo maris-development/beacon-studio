@@ -58,7 +58,7 @@
 
 	$effect(() => {
 		if (table_name && client && table_name !== previous_table_name) {
-			console.log('Fetching schema for table:', table_name);
+			// console.log('Fetching schema for table:', table_name);
 
 			client.getTableSchema(table_name).then((schema) => {
 				previous_table_name = table_name;

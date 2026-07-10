@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onDestroy, onMount, unmount } from 'svelte';
-	import { MapboxOverlay as DeckOverlay } from '@deck.gl/mapbox';
+	import { MapboxOverlay as MapboxOverlay } from '@deck.gl/mapbox';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
-	import maplibregl from 'maplibre-gl';
+	import maplibregl, { GlobeControl, NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
@@ -31,7 +31,7 @@
 	let mapContainer: HTMLDivElement | null = null;
 	let map: maplibregl.Map | null = null;
 	let layer: GeoArrowScatterplotLayer | null = null;
-	let deckOverlay: DeckOverlay | null = null;
+	let mapOverlay: MapboxOverlay | null = null;
 	let mapPopup: maplibregl.Popup | null = null;
 	let mapPopupContent: Rendered;
 
@@ -93,7 +93,15 @@
 			pitch: 0
 		});
 
-		map.addControl(new maplibregl.NavigationControl());
+		map.addControl(new NavigationControl());
+		// map.addControl(new GlobeControl(), 'top-right'); //doesnt work with deck.gl overlay...
+		
+		mapOverlay = new MapboxOverlay({
+			interleaved: false,
+			layers: []
+		});
+
+		map.addControl(mapOverlay);
 
 		mapPopup = new maplibregl.Popup({
 			closeButton: true,
@@ -103,7 +111,7 @@
 		});
 
 		map.once('load', () => {
-			console.log('Map loaded successfully');
+			// console.log('Map loaded successfully');
 			getUrlSuppliedQuery();
 		});
 	}
@@ -154,7 +162,7 @@
 	}
 
 	function deriveColumnNames() {
-		console.log('Deriving column names from query parameters...', query);
+		// console.log('Deriving column names from query parameters...', query);
 
 
 		availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
@@ -219,29 +227,18 @@
 		if (!selectedDataColumnName) return;
 
 		if (selectedDataColumnName === currentDataColumnName && !force) {
-			console.log('Selected data column is the same as before, skipping layer update.');
+			// console.log('Selected data column is the same as before, skipping layer update.');
 			return;
 		} else {
 			currentDataColumnName = selectedDataColumnName;
 		}
 
-		console.log('Adding GeoArrow layer to map...', selectedDataColumnName);
+		// console.log('Adding GeoArrow layer to map...', selectedDataColumnName);
 
 		isLoading = true;
 
-		if (deckOverlay) {
-			map.removeControl(deckOverlay);
-			deckOverlay = null;
-		}
-
 		layer = await createGeoArrowLayer();
-
-		deckOverlay = new DeckOverlay({
-			interleaved: true,
-			layers: [layer]
-		});
-
-		map.addControl(deckOverlay);
+		mapOverlay.setProps({ layers: [layer] }); // <-- instead of remove/re-add
 
 		const tableBounds = ApacheArrowUtils.getTableGeometryBounds(
 			table,
@@ -255,7 +252,7 @@
 
 		isLoading = false;
 
-		console.log('GeoArrow layer added successfully');
+		// console.log('GeoArrow layer added successfully');
 	}
 
 	async function createGeoArrowLayer(): Promise<GeoArrowScatterplotLayer> {
@@ -298,7 +295,7 @@
 	function onPointClick(info) {
 		if (!entry || !originalTable) return;
 
-		console.log('Point clicked:', info.coordinate);
+		// console.log('Point clicked:', info.coordinate);
 
 		destroyMapPopupContent();
 		mapPopup.remove();

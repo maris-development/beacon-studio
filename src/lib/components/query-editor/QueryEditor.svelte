@@ -58,6 +58,12 @@
 
 		return () => editorInstance?.dispose();
 	});
+
+	$effect(() => {
+		if (editorInstance && sourceCode !== editorInstance.getValue()) {
+			editorInstance.setValue(sourceCode);
+		}
+	});
 </script>
 
 <div id="editor" bind:this={editorContainer}

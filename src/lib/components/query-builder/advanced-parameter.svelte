@@ -33,7 +33,7 @@
 		<div>
 			<Button
 				onclick={() => {
-					console.log('Removing column.');
+					// console.log('Removing column.');
 					remove_column(column.name);
 				}}
 				title="Remove column"
@@ -53,7 +53,7 @@
 							variant="ghost"
 							size="icon"
 							onclick={() => {
-								console.log('Removing filter:', filter);
+								// console.log('Removing filter:', filter);
 								column.selected_filters = column.selected_filters.filter((f) => f !== filter);
 							}}
 						>

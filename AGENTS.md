@@ -57,6 +57,8 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/beacon-api/types.ts`
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
+  - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
+  - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/query-history`)
   - `src/lib/stores/config.ts` (persisted Beacon instance selection)
   - `src/lib/stores/toasts.ts` (global toasts)
 - Heavy data operations (off-main-thread, one shared worker via `getArrowWorker()`):
@@ -67,9 +69,10 @@ This file is a quick operational guide for coding agents working in this reposit
 1. User configures a query via easy/advanced builder or raw editor.
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
 3. Query is passed between pages via a gzipped URL payload (`Utils.objectToGzipString` / `?query=`), which also serves as the persistent cache key.
-4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@beacon/client` (`queryArrow()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
-5. Results arrive as a native (zstd) Arrow IPC stream decoded straight to an Arrow table (no Parquet round-trip).
+4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@beacon/client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
+5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`beacon-api/arrow-zstd.ts`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon instance URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
+7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the instance URL) and snapshotting the instance name, row count, duration, and timestamp. The `queries/query-history` page lists them and re-runs each by navigating to a visualiser (or the editor) with the gzipped `?query=` payload; `query-editor` preloads a query supplied via `?query=`.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).

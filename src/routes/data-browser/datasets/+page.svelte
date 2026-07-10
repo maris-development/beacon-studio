@@ -108,7 +108,7 @@
 	}
 
 	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.log('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
+		console.warn('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
 	}
 </script>
 

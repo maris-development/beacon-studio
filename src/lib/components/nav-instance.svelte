@@ -38,7 +38,7 @@
 	 * Show the modal to choose a beacon instance
 	 */
 	function openBeaconInstancePicker(): void {
-		console.log('Opening Beacon Instance Picker');
+		// console.log('Opening Beacon Instance Picker');
 		showChooseBeaconModal = true;
 	}
 
@@ -46,7 +46,7 @@
 	 * Placeholder for visiting source collection feature
 	 */
 	function visitSourceCollection(): void {
-		console.log('Visiting Source Collection');
+		// console.log('Visiting Source Collection');
 		alert('Not implemented yet');
 	}
 

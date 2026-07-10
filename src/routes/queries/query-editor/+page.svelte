@@ -60,11 +60,22 @@
 	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
+
+		// Deep-link support: preload a query passed via `?query=` (e.g. "Edit" from
+		// the query history page), so the editor opens on that query.
+		const suppliedQuery = Utils.getUrlSuppliedQuery();
+
+		// console.log('Supplied query from URL:', suppliedQuery);
+
+		if (suppliedQuery) {
+			sourceCode = JSON.stringify(suppliedQuery, null, 2);
+		}
 	});
 
 	async function handleExecute() {
 		try {
 			const query = parseSourceCodeToCompiledQuery();
+
 			if (!query) {
 				return;
 			}
