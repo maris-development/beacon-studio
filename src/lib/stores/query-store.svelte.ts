@@ -9,21 +9,27 @@
  * session. The gzipped query on the URL (`?query=`) remains the durable identity
  * for deep-links/refresh; here it maps to a cache key.
  *
- * Phase 1 scope: arrow-native fetch (via `@beacon/client`) + a keyed LRU cache.
- * Heavy transforms (sort / dedup / min-max / geometry) will be delegated to a
- * shared worker in a later phase. See [[persistent-query-migration]].
+ * Two tiers: this in-memory LRU of decoded tables (RAM-bound, small), backed by an
+ * OPFS cache of the raw compressed Arrow IPC bytes (`stores/opfs-arrow-cache.ts`)
+ * that survives reloads and app restarts — a memory miss rehydrates locally
+ * instead of re-executing the query. Heavy transforms (sort / dedup / min-max /
+ * geometry) are delegated to a shared worker. See [[persistent-query-migration]].
  */
 
 import * as ApacheArrow from 'apache-arrow';
 import { get } from 'svelte/store';
 import type { QueryInput } from '@beacon/client';
+import { getArrowDecoder } from '@/beacon-api/arrow-zstd';
 import { makeBeaconClient } from '@/beacon-api/sdk-client';
 import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { currentBeaconInstance } from '@/stores/config';
+import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
+import { recordExecution } from '@/stores/query-history';
 import { addToast } from '@/stores/toasts';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
 import { Utils } from '@/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser
@@ -37,6 +43,32 @@ const MAX_ENTRIES = 4;
 /** Max total cells across all cached datasets before oldest entries are evicted. */
 const MAX_TOTAL_CELLS = QUERY_CELL_LIMIT * 2;
 
+/** Per-entry snapshot of the in-memory cache, for the cache-info UI. */
+export interface MemoryCacheEntryInfo {
+	key: string;
+	/** Selected column names (alias preferred), for a compact summary. */
+	columns: string[];
+	rowCount: number;
+	colCount: number;
+	/** Estimated in-memory size of the decoded Arrow table, in bytes. */
+	bytes: number;
+	/** Whether this is the currently-displayed dataset. */
+	isCurrent: boolean;
+}
+
+/** Aggregate + per-entry stats for the in-memory tier of the query cache. */
+export interface MemoryCacheStats {
+	entryCount: number;
+	maxEntries: number;
+	totalCells: number;
+	maxTotalCells: number;
+	totalBytes: number;
+	/** Number of memoized derived tables (e.g. map display tables). */
+	derivedTableCount: number;
+	/** Most-recently-used first. */
+	entries: MemoryCacheEntryInfo[];
+}
+
 /** A cached query result: the Arrow table plus its identifying query and metadata. */
 export interface DatasetEntry {
 	/** Stable cache key derived from the query (canonical JSON). */
@@ -49,7 +81,7 @@ export interface DatasetEntry {
 	rowCount: number;
 	/** Wall-clock fetch + decode duration in milliseconds. */
 	duration: number;
-	/** Server-assigned query id, if captured. Not surfaced by the arrow path yet. */
+	/** Server-assigned query id (from the `x-beacon-query-id` response header). */
 	queryId: string | null;
 	/** Non-fatal warnings raised during execution (e.g. `limit_reached`). */
 	warnings: QueryWarning[];
@@ -71,9 +103,15 @@ class QueryStore {
 	/** Memoized map display tables (dedup + geometry), keyed by dataset + lat/lon + decimals. */
 	private mapTableCache = new Map<string, Promise<ApacheArrow.Table>>();
 
-	/** Computes a stable cache key for a query (object key order doesn't matter). */
+	/**
+	 * Computes a stable cache key for a query (object key order doesn't matter).
+	 * The current Beacon instance's URL is part of the key: results persist across
+	 * sessions (OPFS tier), so the same query against a different instance must
+	 * never share an entry.
+	 */
 	keyFor(query: CompiledQuery): string {
-		return stableStringify(query);
+		const instance = get(currentBeaconInstance);
+		return stableStringify({ instance: instance?.url ?? null, query });
 	}
 
 	/** Returns a cached entry without fetching, or `undefined` if absent. */
@@ -82,9 +120,10 @@ class QueryStore {
 	}
 
 	/**
-	 * Returns the cached result for `query`, fetching it once (arrow-native, via
-	 * `@beacon/client`) if not already cached. Concurrent calls for the same query
-	 * share a single request. On success the entry becomes {@link current}.
+	 * Returns the cached result for `query`: from memory, else rehydrated from the
+	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`). Concurrent
+	 * calls for the same query share a single request. On success the entry becomes
+	 * {@link current}.
 	 *
 	 * Does not throw on empty results — callers should check `entry.rowCount === 0`.
 	 */
@@ -95,17 +134,22 @@ class QueryStore {
 		if (cached) {
 			this.touch(key, cached);
 			this.current = cached;
+			this.recordHistory(cached);
 			return cached;
 		}
 
 		const existing = this.inFlight.get(key);
+
 		if (existing) return existing;
 
 		this.isLoading = true;
-		const promise = this.fetch(query, key)
+
+		const promise = this.load(query, key)
 			.then((entry) => {
+				// console.log('QueryStore.ensure: loaded', entry.key, entry.rowCount, 'rows in', entry.duration.toFixed(1), 'ms');
 				this.insert(entry);
 				this.current = entry;
+				this.recordHistory(entry);
 				return entry;
 			})
 			.finally(() => {
@@ -114,6 +158,7 @@ class QueryStore {
 			});
 
 		this.inFlight.set(key, promise);
+
 		return promise;
 	}
 
@@ -123,12 +168,65 @@ class QueryStore {
 			this.cache.clear();
 			this.mapTableCache.clear();
 			this.current = null;
+			void opfsArrowCache.clear();
 			return;
 		}
 		const key = this.keyFor(query);
 		this.cache.delete(key);
 		this.purgeDerived(key);
 		if (this.current?.key === key) this.current = null;
+		void opfsArrowCache.remove(key);
+	}
+
+	/**
+	 * Records a resolved dataset in the persisted query history. Best-effort: a
+	 * history failure must never break query execution. Snapshots the current Beacon
+	 * instance so the entry stays meaningful if that instance is later changed.
+	 */
+	private recordHistory(entry: DatasetEntry): void {
+		const instance = get(currentBeaconInstance);
+		if (!instance) return;
+		try {
+			recordExecution({
+				key: entry.key,
+				query: entry.query,
+				instanceId: instance.id,
+				instanceName: instance.name,
+				instanceUrl: instance.url,
+				rowCount: entry.rowCount,
+				duration: entry.duration
+			});
+		} catch (error) {
+			console.warn('Failed to record query history entry.', error);
+		}
+	}
+
+	/** Snapshot of the in-memory cache for the cache-info UI (most-recent first). */
+	stats(): MemoryCacheStats {
+		const entries: MemoryCacheEntryInfo[] = [];
+		let totalBytes = 0;
+		for (const entry of this.cache.values()) {
+			const bytes = tableByteLength(entry.table);
+			totalBytes += bytes;
+			entries.push({
+				key: entry.key,
+				columns: (entry.query.query_parameters ?? []).map((p) => p.alias ?? p.column),
+				rowCount: entry.rowCount,
+				colCount: entry.table.numCols,
+				bytes,
+				isCurrent: this.current?.key === entry.key
+			});
+		}
+		entries.reverse(); // cache is insertion-ordered (oldest first); show newest first.
+		return {
+			entryCount: this.cache.size,
+			maxEntries: MAX_ENTRIES,
+			totalCells: this.totalCells(),
+			maxTotalCells: MAX_TOTAL_CELLS,
+			totalBytes,
+			derivedTableCount: this.mapTableCache.size,
+			entries
+		};
 	}
 
 	// -- transforms (delegated off-main-thread to the shared worker) -------------
@@ -207,8 +305,43 @@ class QueryStore {
 		return promise;
 	}
 
+	/** Loads a dataset: rehydrate from the OPFS tier if present, else fetch. */
+	private async load(query: CompiledQuery, key: string): Promise<DatasetEntry> {
+		const restored = await this.restore(query, key);
+		if (restored) return restored;
+		return this.fetch(query, key);
+	}
+
+	/**
+	 * Rehydrates a dataset from the OPFS tier: decodes the persisted (uncompressed)
+	 * Arrow IPC bytes and rebuilds the entry from the sidecar metadata. Returns
+	 * `undefined` on any miss or decode failure (which falls through to a fetch).
+	 */
+	private async restore(query: CompiledQuery, key: string): Promise<DatasetEntry | undefined> {
+		const hit = await opfsArrowCache.get(key);
+		if (!hit) return undefined;
+		try {
+			const decoder = await getArrowDecoder();
+			const table = decoder.tableFromIPC(hit.bytes) as ApacheArrow.Table;
+			return {
+				key,
+				query: Utils.cloneObject(query),
+				table,
+				rowCount: table.numRows,
+				duration: hit.meta.duration,
+				queryId: hit.meta.queryId,
+				warnings: hit.meta.warnings
+			};
+		} catch (error) {
+			console.warn('Failed to decode OPFS-cached result; refetching.', error);
+			void opfsArrowCache.remove(key);
+			return undefined;
+		}
+	}
+
 	/** Executes the query arrow-native and builds a {@link DatasetEntry}. */
 	private async fetch(query: CompiledQuery, key: string): Promise<DatasetEntry> {
+
 		const client = makeBeaconClient(get(currentBeaconInstance));
 
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
@@ -224,12 +357,24 @@ class QueryStore {
 		delete payload.output;
 
 		const start = performance.now();
-		// Runtime value is a real apache-arrow Table (arrow is deduped to one copy);
-		// the SDK just types it as its minimal structural `ArrowTable`.
-		const table = (await client.queryArrow(
-			payload as unknown as QueryInput
-		)) as unknown as ApacheArrow.Table;
-		const duration = performance.now() - start;
+		// Decode via the SDK's `queryBatches`: it reads the zstd Arrow IPC stream with
+		// the SDK's own (correct) streaming decoder, so we don't re-implement zstd/IPC
+		// decoding here. It also surfaces the query id. Runtime batches are real
+
+		// apache-arrow RecordBatches (arrow is deduped to one copy).
+		const response = await client.queryRaw(payload as unknown as QueryInput);
+
+		// console.log('headers', [...response.headers.entries()]);
+
+		const queryId = response.headers.get('x-beacon-query-id') ?? uuidv4(); // generate a UUID if the server didn't provide one, or is blocked by CORS
+
+		const bytes = new Uint8Array(await response.arrayBuffer());
+
+		const decoder = await getArrowDecoder();
+
+		const table = decoder.tableFromIPC(bytes) as ApacheArrow.Table;
+
+		
 
 		const rowCount = table.numRows;
 		const warnings: QueryWarning[] = [];
@@ -242,13 +387,21 @@ class QueryStore {
 			});
 		}
 
+		const duration = performance.now() - start;
+
+		// Persist to OPFS in the background; never blocks returning the entry. We store
+		// the table re-serialized as an uncompressed Arrow IPC stream, so the rehydrate
+		// path is a plain `tableFromIPC` with no zstd dependency.
+		// const ipcBytes = ApacheArrow.tableToIPC(table, 'stream');
+		void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+
 		return {
 			key,
 			query: Utils.cloneObject(query),
 			table,
 			rowCount,
 			duration,
-			queryId: null,
+			queryId,
 			warnings
 		};
 	}
@@ -300,6 +453,13 @@ class QueryStore {
 	}
 }
 
+/** Estimated in-memory footprint of an Arrow table (sum of its batch buffers). */
+function tableByteLength(table: ApacheArrow.Table): number {
+	let bytes = 0;
+	for (const batch of table.batches) bytes += batch.data.byteLength;
+	return bytes;
+}
+
 /** Deterministic JSON: object keys sorted recursively, so equal queries share a key. */
 function stableStringify(value: unknown): string {
 	return JSON.stringify(sortKeys(value));
@@ -320,3 +480,5 @@ function sortKeys(value: unknown): unknown {
 
 /** The app-wide persistent query-result cache. */
 export const queryStore = new QueryStore();
+
+

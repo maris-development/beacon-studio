@@ -18,7 +18,7 @@ export const addToast = (toast: Partial<IToast>) => {
   
   const toastData: IToast = { ...defaults, ...toast };
 
-  console.log("Adding toast:", toastData);
+  // console.log("Adding toast:", toastData);
 
   // Push the toast to the top of the list of toasts
   toasts.update((all) => [toastData, ...all]);

@@ -78,7 +78,7 @@
         }
 
 		try {
-			console.log('viewerEl', viewerEl);
+			// console.log('viewerEl', viewerEl);
 
             const buffer: ArrayBuffer = ApacheArrow.tableToIPC(table).buffer as ArrayBuffer;
 

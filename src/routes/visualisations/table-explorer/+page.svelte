@@ -84,6 +84,7 @@
 
 			prepareTableForDisplay();
 		} catch (error) {
+			console.error('Failed to execute query:', error);
 			isLoading = false;
 			addToast({
 				type: 'error',
@@ -121,7 +122,7 @@
 	async function onChangeSort(columnKey: string, direction: SortDirection) {
 		if (!entry) return;
 
-		console.log('Sorting by', columnKey, 'in', direction, 'order');
+		// console.log('Sorting by', columnKey, 'in', direction, 'order');
 
 		displayRows = [];
 		isLoading = true;

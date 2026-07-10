@@ -26,10 +26,16 @@
 			</p>
 		</Card>
 
-		<Card href={resolve('/queries/query-editor')} class="card">
+		<Card href={resolve('/queries/query-editor')} >
 			<h2>Query editor</h2>
 			
 			<p>Edit queries in a raw text editor, this is for advanced users and developers.</p>
+		</Card>
+		
+		<Card href={resolve('/queries/query-history')} >
+			<h2>Query history</h2>
+			
+			<p>View the history of executed queries.</p>
 		</Card>
 	</div>
 </div>

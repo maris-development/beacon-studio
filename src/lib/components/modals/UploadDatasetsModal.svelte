@@ -26,7 +26,7 @@
 
 		const formData = new FormData();
 		for (const file of files) {
-			console.log('Appending file:', file.name);
+			// console.log('Appending file:', file.name);
 			formData.append('files', file);
 		}
 
@@ -44,16 +44,16 @@
 
 			if (!res.ok) {
 				const err = await res.text();
-				console.log('Upload failed:', err);
+				// console.log('Upload failed:', err);
 				throw new Error(err || 'Upload failed');
 			}
 
-			console.log('Response:', res);
+			// console.log('Response:', res);
 
 			const data = await res.json();
 			message = `✅ Uploaded ${data.uploaded.length} file(s)`;
 		} catch (err: any) {
-			console.log('Upload error:', err);
+			// console.log('Upload error:', err);
 			message = `❌ ${err.message}`;
 		} finally {
 			uploading = false;
