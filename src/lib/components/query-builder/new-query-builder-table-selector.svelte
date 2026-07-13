@@ -10,6 +10,7 @@
 	// import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
     import NewQueryBuilderBlock from './new-query-builder-block.svelte';
     import type { QuerySelectionStatus } from './query-selection-status';
+    import type { QuerySelectionActions } from './query-selection-actions';
 	import Button from '../ui/button/button.svelte';
     import ListIcon from '@lucide/svelte/icons/list';
     import GridIcon from '@lucide/svelte/icons/grid';
@@ -22,9 +23,11 @@
             selection: 0,
             outputFormat: ''
         }),
+        actions = $bindable<QuerySelectionActions | undefined>(undefined),
         onReset = $bindable<(() => void) | undefined>(undefined)
     }: {
         status?: QuerySelectionStatus;
+        actions?: QuerySelectionActions | undefined;
         onReset?: () => void;
     } = $props();
 
@@ -118,4 +121,4 @@
  Why should we split pre selected params and additional params?
  Why not keep them in the same block and reset the block when pressing the reset button? -->
 
-<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:onReset />
+<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:actions bind:onReset />

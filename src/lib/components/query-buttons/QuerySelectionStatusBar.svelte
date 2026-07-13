@@ -14,8 +14,9 @@
     import SaveIcon from '@lucide/svelte/icons/save';
     import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
     import ListIcon from '@lucide/svelte/icons/list';
+    import { type ActionCallback } from '@/components/query-builder/query-selection-actions';
+    import * as Select from '$lib/components/ui/select/index.js';
 
-	type ActionCallback = (() => void | Promise<void>) | undefined;
 
 	let {
 		dataTable,
@@ -23,6 +24,16 @@
 		filters,
 		selection,
 		outputFormat,
+        compileQuery,
+        runQuery,
+        downloadData,
+        copyJson,
+        copyPython,
+        copySql,
+        copyUrl,
+        visualiseTable,
+        visualiseChart,
+        visualiseMap,
 		saveQuery,
 		savedQueries,
         reset
@@ -32,6 +43,16 @@
 		filters?: number,
 		selection?: number,
 		outputFormat?: string,
+        compileQuery?: ActionCallback,
+        runQuery?: ActionCallback,
+        downloadData?: ActionCallback,
+        copyJson?: ActionCallback,
+        copyPython?: ActionCallback,
+        copySql?: ActionCallback,
+        copyUrl?: ActionCallback,
+        visualiseTable?: ActionCallback,
+        visualiseChart?: ActionCallback,
+        visualiseMap?: ActionCallback,
 		saveQuery?: ActionCallback,
 		savedQueries?: ActionCallback,
         reset?: ActionCallback
@@ -67,11 +88,73 @@
 	</div>
 
 	<div class="selection-status-group">
+
+        <Button onclick={compileQuery}>
+
+            Compile Query
+        </Button>
+
+        <Button onclick={runQuery}>
+            Run Query
+
+        </Button>
+
+        <Button onclick={downloadData}>
+            <DownloadIcon />
+            Download Data
+        </Button>
+
+        <!-- dropdown for visualisations -->
+        <Select.Root type="single" name="visualisation">
+            <Select.Trigger class="w-[180px]">
+                Visualise query
+            </Select.Trigger>
+            <Select.Content>
+                <Select.Group>
+                    <Select.Label>Tables</Select.Label>
+                        <Select.Item value=0 label="Table" onclick={visualiseTable}>
+                            Table
+                        </Select.Item>
+                        <Select.Item value=0 label="Chart" onclick={visualiseChart}>
+                            Chart
+                        </Select.Item>
+                        <Select.Item value=0 label="Table" onclick={visualiseMap}>
+                            Map
+                        </Select.Item>
+                </Select.Group>
+            </Select.Content>
+        </Select.Root>
+
+        <!-- dropdown for copy options -->
+        <Select.Root type="single" name="copy">
+            <Select.Trigger class="w-[180px]">
+                Copy query
+            </Select.Trigger>
+            <Select.Content>
+                <Select.Group>
+                    <Select.Label>Tables</Select.Label>
+                        <Select.Item value=0 label="JSON" onclick={copyJson}>
+                            JSON
+                        </Select.Item>
+                        <Select.Item value=0 label="Python" onclick={copyPython}>
+                            Python
+                        </Select.Item>
+                        <Select.Item value=0 label="SQL" onclick={copySql}>
+                            SQL
+                        </Select.Item>
+                        <Select.Item value=0 label="URL" onclick={copyUrl}>
+                            URL
+                        </Select.Item>
+                </Select.Group>
+            </Select.Content>
+        </Select.Root>
+
 		<Button onclick={saveQuery}>
 			<SaveIcon />
 			Save query
 		</Button>
 
+        <!-- dropdown for saved queries? -->
 		<Button onclick={savedQueries}>
 			<ListIcon />
 			Saved (0)

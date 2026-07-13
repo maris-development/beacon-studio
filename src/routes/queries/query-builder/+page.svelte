@@ -9,16 +9,15 @@
 	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
 	import NewQueryBuilderTableSelector from '@/components/query-builder/new-query-builder-table-selector.svelte';
 	import QuerySelectionStatusBar from '@/components/query-buttons/QuerySelectionStatusBar.svelte';
-	import {
-		makeEmptyQuerySelectionStatus,
-		type QuerySelectionStatus
-	} from '@/components/query-builder/query-selection-status';
+	import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/components/query-builder/query-selection-status';
+	import {type QuerySelectionActions} from '@/components/query-builder/query-selection-actions';
 
 	const initialQuery: CompiledQuery | null = Utils.getUrlSuppliedQuery();
 	const initialTab = initialQuery ? 'advanced-builder' : 'easy-builder';
 
 	let activeTab = $state(initialTab);
 	let querySelectionStatus = $state<QuerySelectionStatus>(makeEmptyQuerySelectionStatus());
+	let querySelectionActions = $state<QuerySelectionActions | undefined>(undefined);
 	let resetQueryBuilder = $state<(() => void) | undefined>(undefined);
 
 	function handleSaveQuery() {
@@ -54,6 +53,7 @@
 			<Tabs.Trigger value="query-builder">Query Builder</Tabs.Trigger>
 		</Tabs.List>
 
+		<!-- This check can be removed later because this will become the only query builder -->
 		{#if activeTab === 'query-builder'}
 			<QuerySelectionStatusBar
 				dataTable={querySelectionStatus.dataTable}
@@ -90,7 +90,8 @@
 				<h1 class="title">Query Builder</h1>
 				<p class="description">Use this new form to build more queries.</p>
 
-				<NewQueryBuilderTableSelector bind:status={querySelectionStatus} bind:onReset={resetQueryBuilder} />
+				<!-- Remove onReset from all subsequent scripts -->
+				<NewQueryBuilderTableSelector bind:status={querySelectionStatus} bind:actions={querySelectionActions} bind:onReset={resetQueryBuilder} />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>

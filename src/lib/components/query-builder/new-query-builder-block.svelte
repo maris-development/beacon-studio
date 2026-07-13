@@ -17,6 +17,7 @@
 	import { resolve } from '$app/paths';
 	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 	import type { QuerySelectionStatus } from './query-selection-status';
+    import type { QuerySelectionActions, ActionCallback } from './query-selection-actions';
 
 	let {
 		table_name,
@@ -29,12 +30,28 @@
 			selection: 0,
 			outputFormat: BeaconClient.output_formats['Parquet']
 		}),
-		onReset = $bindable<(() => void) | undefined>(undefined)
+        actions = $bindable<QuerySelectionActions>({
+            compileQuery: handleSubmit,
+            runQuery: undefined,
+            downloadData: handleSubmit,
+            copyJson: undefined,
+            copyPython: undefined,
+            copySql: undefined,
+            copyUrl: undefined,
+            visualiseTable: handleTableVisualise,
+            visualiseChart: handleChartVisualise,
+            visualiseMap: handleMapVisualise,
+            saveQuery: undefined,
+            savedQueries: undefined,
+            reset: undefined
+        }),
+		onReset = $bindable<() => void | undefined>(undefined)
 	}: {
 		table_name: string;
 		client: BeaconClient;
 		initialQuery?: CompiledQuery | null;
 		status?: QuerySelectionStatus;
+        actions?: QuerySelectionActions; // todo
 		onReset?: () => void;
 	} = $props();
 
@@ -144,7 +161,7 @@
 
 	onReset = resetBuilder;
 
-	function compileQuery() {
+	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
 
 		for (const field of selectedFields) {
@@ -153,7 +170,7 @@
 				let bfilter = Utils.parameterFilterTypeToFilter(filter.filter_value, field.name);
 				if (bfilter) {
 					builder.addFilter(bfilter);
-				}
+				}  
 			}
 		}
 
