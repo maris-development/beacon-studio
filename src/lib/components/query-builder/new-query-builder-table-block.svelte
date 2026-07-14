@@ -8,7 +8,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	// import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
-    import NewQueryBuilderBlock from './new-query-builder-block.svelte';
+    import NewQueryBuilderBlock from './new-query-builder-parameter-block.svelte';
     import type { QuerySelectionStatus } from './query-selection-status';
     import type { QuerySelectionActions } from './query-selection-actions';
 	import Button from '../ui/button/button.svelte';
@@ -24,11 +24,11 @@
             outputFormat: ''
         }),
         actions = $bindable<QuerySelectionActions | undefined>(undefined),
-        onReset = $bindable<(() => void) | undefined>(undefined)
+        // onReset = $bindable<(() => void) | undefined>(undefined)
     }: {
         status?: QuerySelectionStatus;
         actions?: QuerySelectionActions | undefined;
-        onReset?: () => void;
+        // onReset?: () => void;
     } = $props();
 
     let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -121,4 +121,4 @@
  Why should we split pre selected params and additional params?
  Why not keep them in the same block and reset the block when pressing the reset button? -->
 
-<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:actions bind:onReset />
+<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:actions />

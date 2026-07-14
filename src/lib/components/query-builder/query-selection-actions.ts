@@ -3,7 +3,7 @@ import type { CompiledQuery } from '@/beacon-api/types';
 export type ActionCallback = (() => void | Promise<void>) | undefined;
 
 export type QuerySelectionActions = {
-    compileQuery: ActionCallback;   // returns function compile query
+    // compileQuery: ActionCallback;   // returns function compile query
     runQuery: ActionCallback;       // returns function run query
     downloadData: ActionCallback;   // returns function download data
     copyJson: ActionCallback;       // copy JSON to clipboard
@@ -17,3 +17,21 @@ export type QuerySelectionActions = {
     savedQueries: ActionCallback;   // select saved queries
     reset: ActionCallback;          // reset query selection
 };
+
+export function makeEmptyQuerySelectionActions(): QuerySelectionActions {
+    return {
+        // compileQuery: undefined,
+        runQuery: undefined,
+        downloadData: undefined,
+        copyJson: undefined,
+        copyPython: undefined,
+        copySql: undefined,
+        copyUrl: undefined,
+        visualiseTable: undefined,
+        visualiseChart: undefined,
+        visualiseMap: undefined,
+        saveQuery: undefined,
+        savedQueries: undefined,
+        reset: undefined
+    };
+}

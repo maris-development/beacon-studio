@@ -31,7 +31,6 @@
 			outputFormat: BeaconClient.output_formats['Parquet']
 		}),
         actions = $bindable<QuerySelectionActions>({
-            compileQuery: handleSubmit,
             runQuery: undefined,
             downloadData: handleSubmit,
             copyJson: undefined,
@@ -45,14 +44,14 @@
             savedQueries: undefined,
             reset: undefined
         }),
-		onReset = $bindable<() => void | undefined>(undefined)
+		// onReset = $bindable<() => void | undefined>(undefined)
 	}: {
 		table_name: string;
 		client: BeaconClient;
 		initialQuery?: CompiledQuery | null;
 		status?: QuerySelectionStatus;
         actions?: QuerySelectionActions; // todo
-		onReset?: () => void;
+		// onReset?: () => void;
 	} = $props();
 
 	let searchInput;
@@ -159,7 +158,8 @@
 		selected_output_format = BeaconClient.output_formats['Parquet'];
 	}
 
-	onReset = resetBuilder;
+	// onReset = resetBuilder;
+    actions.reset = resetBuilder;
 
 	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
@@ -214,6 +214,8 @@
 			);
 		}
 	}
+    actions.compileQuery = handleSubmit;
+    actions.downloadData = handleSubmit;
 
 	async function handleMapVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
@@ -221,6 +223,7 @@
 			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
+    actions.visualiseMap = handleMapVisualise;
 
 	async function handleChartVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
@@ -230,6 +233,7 @@
 			);
 		}
 	}
+    actions.visualiseChart = handleChartVisualise;
 
 	async function handleTableVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
@@ -239,6 +243,7 @@
 			);
 		}
 	}
+    actions.visualiseTable = handleTableVisualise;
 
 
 	function hydrateFromInitialQuery() {

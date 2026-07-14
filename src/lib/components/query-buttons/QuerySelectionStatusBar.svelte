@@ -1,22 +1,28 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
-    import {Badge} from '$lib/components/ui/badge/index.js';
-	import DownloadIcon from '@lucide/svelte/icons/download';
-	import SheetIcon from '@lucide/svelte/icons/sheet';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-	import SearchCodeIcon from '@lucide/svelte/icons/search-code';
-	import TestTubeIcon from '@lucide/svelte/icons/test-tube';
-	import type { CompiledQuery } from '@/beacon-api/types';
-	import CopyQueryJsonButton from './CopyQueryJsonButton.svelte';
-	import CopyQueryPythonButton from './CopyQueryPythonButton.svelte';
-    import TableIcon from '@lucide/svelte/icons/table';
-    import SaveIcon from '@lucide/svelte/icons/save';
-    import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
-    import ListIcon from '@lucide/svelte/icons/list';
-    import { type ActionCallback } from '@/components/query-builder/query-selection-actions';
-    import * as Select from '$lib/components/ui/select/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { type ActionCallback } from '@/components/query-builder/query-selection-actions';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 
+    // icons
+	import FolderIcon from '@lucide/svelte/icons/folder';
+	import ShareIcon from '@lucide/svelte/icons/share';
+	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+	import TableIcon from '@lucide/svelte/icons/table';
+	import SaveIcon from '@lucide/svelte/icons/save';
+	import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
+	import ListIcon from '@lucide/svelte/icons/list';
+    import CopyIcon from '@lucide/svelte/icons/copy';
+    import JsonIcon from '@lucide/svelte/icons/file-json';
+    import PythonIcon from '@lucide/svelte/icons/file-code-corner';
+    import SQLIcon from '@lucide/svelte/icons/database';
+    import UrlIcon from '@lucide/svelte/icons/link-2';
+	import ChartPie from '@lucide/svelte/icons/chart-pie';
+    import MapIcon from '@lucide/svelte/icons/map';
+    import VisualiseIcon from '@lucide/svelte/icons/eye';
+    import RunIcon from '@lucide/svelte/icons/play';
 
 	let {
 		dataTable,
@@ -24,38 +30,38 @@
 		filters,
 		selection,
 		outputFormat,
-        compileQuery,
-        runQuery,
-        downloadData,
-        copyJson,
-        copyPython,
-        copySql,
-        copyUrl,
-        visualiseTable,
-        visualiseChart,
-        visualiseMap,
+		// compileQuery,
+		runQuery,
+		downloadData,
+		copyJson,
+		copyPython,
+		copySql,
+		copyUrl,
+		visualiseTable,
+		visualiseChart,
+		visualiseMap,
 		saveQuery,
 		savedQueries,
-        reset
+		reset
 	}: {
-        dataTable?: string,
-		columns?: number,
-		filters?: number,
-		selection?: number,
-		outputFormat?: string,
-        compileQuery?: ActionCallback,
-        runQuery?: ActionCallback,
-        downloadData?: ActionCallback,
-        copyJson?: ActionCallback,
-        copyPython?: ActionCallback,
-        copySql?: ActionCallback,
-        copyUrl?: ActionCallback,
-        visualiseTable?: ActionCallback,
-        visualiseChart?: ActionCallback,
-        visualiseMap?: ActionCallback,
-		saveQuery?: ActionCallback,
-		savedQueries?: ActionCallback,
-        reset?: ActionCallback
+		dataTable?: string;
+		columns?: number;
+		filters?: number;
+		selection?: number;
+		outputFormat?: string;
+		// compileQuery?: ActionCallback;
+		runQuery?: ActionCallback;
+		downloadData?: ActionCallback;
+		copyJson?: ActionCallback;
+		copyPython?: ActionCallback;
+		copySql?: ActionCallback;
+		copyUrl?: ActionCallback;
+		visualiseTable?: ActionCallback;
+		visualiseChart?: ActionCallback;
+		visualiseMap?: ActionCallback;
+		saveQuery?: ActionCallback;
+		savedQueries?: ActionCallback;
+		reset?: ActionCallback;
 	} = $props();
 </script>
 
@@ -89,72 +95,79 @@
 
 	<div class="selection-status-group">
 
-        <Button onclick={compileQuery}>
-
-            Compile Query
-        </Button>
-
-        <Button onclick={runQuery}>
+        <!-- compile and run query are the same -->
+        <!-- make a action for this that adds a  -->
+		<!-- <Button onclick={compileQuery}>Compile Query</Button> -->
+		<Button onclick={runQuery}>
+            <RunIcon />
             Run Query
-
         </Button>
 
-        <Button onclick={downloadData}>
-            <DownloadIcon />
-            Download Data
-        </Button>
+		<Button onclick={downloadData}>
+			<DownloadIcon />
+			Download Data
+		</Button>
 
-        <!-- dropdown for visualisations -->
-        <Select.Root type="single" name="visualisation">
-            <Select.Trigger class="w-[180px]">
-                Visualise query
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Group>
-                    <Select.Label>Tables</Select.Label>
-                        <Select.Item value=0 label="Table" onclick={visualiseTable}>
-                            Table
-                        </Select.Item>
-                        <Select.Item value=0 label="Chart" onclick={visualiseChart}>
-                            Chart
-                        </Select.Item>
-                        <Select.Item value=0 label="Table" onclick={visualiseMap}>
-                            Map
-                        </Select.Item>
-                </Select.Group>
-            </Select.Content>
-        </Select.Root>
+		<!-- dropdown for visualisations -->
+        <DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+                <Button onclick={downloadData}>
+			        <VisualiseIcon />
+			        Visualise Query
+		        </Button>
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content class="w-48">
+				<DropdownMenu.Item onclick={visualiseTable}>
+					<TableIcon class="text-muted-foreground" />
+					<span>Table</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={visualiseChart}>
+					<ChartPie class="text-muted-foreground" />
+					<span>Chart</span>
+				</DropdownMenu.Item>
+				<!-- <DropdownMenu.Separator /> -->
+				<DropdownMenu.Item onclick={visualiseMap}>
+					<MapIcon class="text-muted-foreground" />
+					<span>Map</span>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
 
-        <!-- dropdown for copy options -->
-        <Select.Root type="single" name="copy">
-            <Select.Trigger class="w-[180px]">
-                Copy query
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Group>
-                    <Select.Label>Tables</Select.Label>
-                        <Select.Item value=0 label="JSON" onclick={copyJson}>
-                            JSON
-                        </Select.Item>
-                        <Select.Item value=0 label="Python" onclick={copyPython}>
-                            Python
-                        </Select.Item>
-                        <Select.Item value=0 label="SQL" onclick={copySql}>
-                            SQL
-                        </Select.Item>
-                        <Select.Item value=0 label="URL" onclick={copyUrl}>
-                            URL
-                        </Select.Item>
-                </Select.Group>
-            </Select.Content>
-        </Select.Root>
+		<!-- dropdown for copy options -->
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+                <Button onclick={downloadData}>
+			        <CopyIcon />
+			        Copy Query
+		        </Button>
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content class="w-48">
+				<DropdownMenu.Item onclick={copyJson}>
+					<JsonIcon class="text-muted-foreground" />
+					<span>JSON</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={copyPython}>
+					<PythonIcon class="text-muted-foreground" />
+					<span>Python</span>
+				</DropdownMenu.Item>
+				<!-- <DropdownMenu.Separator /> -->
+				<DropdownMenu.Item onclick={copySql}>
+					<SQLIcon class="text-muted-foreground" />
+					<span>SQL</span>
+				</DropdownMenu.Item>
+                <DropdownMenu.Item onclick={copyUrl}>
+					<UrlIcon class="text-muted-foreground" />
+					<span>URL</span>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
 
 		<Button onclick={saveQuery}>
 			<SaveIcon />
 			Save query
 		</Button>
 
-        <!-- dropdown for saved queries? -->
+		<!-- dropdown for saved queries? -->
 		<Button onclick={savedQueries}>
 			<ListIcon />
 			Saved (0)

@@ -7,18 +7,18 @@
 	import { Utils } from '@/utils';
 	import { resolve } from '$app/paths';
 	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
-	import NewQueryBuilderTableSelector from '@/components/query-builder/new-query-builder-table-selector.svelte';
+	import NewQueryBuilderTableSelector from '@/components/query-builder/new-query-builder-table-block.svelte';
 	import QuerySelectionStatusBar from '@/components/query-buttons/QuerySelectionStatusBar.svelte';
 	import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/components/query-builder/query-selection-status';
-	import {type QuerySelectionActions} from '@/components/query-builder/query-selection-actions';
+	import { makeEmptyQuerySelectionActions, type QuerySelectionActions} from '@/components/query-builder/query-selection-actions';
 
 	const initialQuery: CompiledQuery | null = Utils.getUrlSuppliedQuery();
 	const initialTab = initialQuery ? 'advanced-builder' : 'easy-builder';
 
 	let activeTab = $state(initialTab);
 	let querySelectionStatus = $state<QuerySelectionStatus>(makeEmptyQuerySelectionStatus());
-	let querySelectionActions = $state<QuerySelectionActions | undefined>(undefined);
-	let resetQueryBuilder = $state<(() => void) | undefined>(undefined);
+	let querySelectionActions = $state<QuerySelectionActions>(makeEmptyQuerySelectionActions());
+	// let resetQueryBuilder = $state<(() => void) | undefined>(undefined);
 
 	function handleSaveQuery() {
 		console.log('Save query clicked');
@@ -28,9 +28,9 @@
 		console.log('Saved queries clicked');
 	}
 
-	function handleReset() {
-		resetQueryBuilder?.();
-	}
+	// function handleReset() {
+	// 	resetQueryBuilder?.();
+	// }
 </script>
 
 <svelte:head>
@@ -61,9 +61,18 @@
 				filters={querySelectionStatus.filters}
 				selection={querySelectionStatus.selection}
 				outputFormat={querySelectionStatus.outputFormat}
+				runQuery={querySelectionActions?.runQuery}
+				downloadData={querySelectionActions?.downloadData}
+				copyJson={querySelectionActions?.copyJson}
+				copyPython={querySelectionActions?.copyPython}
+				copySql={querySelectionActions?.copySql}
+				copyUrl={querySelectionActions?.copyUrl}
+				visualiseTable={querySelectionActions?.visualiseTable}
+				visualiseChart={querySelectionActions?.visualiseChart}
+				visualiseMap={querySelectionActions?.visualiseMap}
 				saveQuery={handleSaveQuery}
 				savedQueries={handleSavedQueries}
-				reset={handleReset}
+				reset={querySelectionActions?.reset}
 			/>
 		{/if}
 
@@ -91,7 +100,7 @@
 				<p class="description">Use this new form to build more queries.</p>
 
 				<!-- Remove onReset from all subsequent scripts -->
-				<NewQueryBuilderTableSelector bind:status={querySelectionStatus} bind:actions={querySelectionActions} bind:onReset={resetQueryBuilder} />
+				<NewQueryBuilderTableSelector bind:status={querySelectionStatus} bind:actions={querySelectionActions} />
 			</Card>
 		</Tabs.Content>
 	</Tabs.Root>
