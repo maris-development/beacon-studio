@@ -1,8 +1,8 @@
-<!-- Top-level query "blocks" manager.
-   page -> new-query-builder-selector-block -> new-query-builder-table-block -> new-query-builder-parameter-block
+<!-- Query "blocks" selector row.
 
- Each block is an independent query draft. Selecting a block makes it the active
- query whose parameters are edited in the table/parameter blocks below. -->
+1 block per query, displaying table, columns, filters, rows and run state.
+add new query blocks, duplicate blocks, close clocks, select active blocks
+ -->
 
 <script lang="ts">
     import { Button } from '$lib/components/ui/button/index.js';
@@ -12,137 +12,35 @@
     import XIcon from '@lucide/svelte/icons/x';
     import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
     import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
-    import NewQueryBuilderTableBlock from './new-query-builder-table-block.svelte';
-    import {
-        makeEmptyQuerySelectionStatus,
-        type QuerySelectionStatus
-    } from './query-selection-status';
-    import {
-        makeEmptyQuerySelectionActions,
-        type QuerySelectionActions
-    } from './query-selection-actions';
+    import type { QueryWorkspace } from './query-workspace.svelte';
 
-    type QueryBlock = {
-        id: string;
-        name: string;
-        status: QuerySelectionStatus;
-        actions: QuerySelectionActions;
-        // TODO: wire these once table/parameter blocks report back per-block query state.
-        selectedColumns: string[];
-        rows: number | null;
-        hasRun: boolean;
-    };
+    // All state lives in the workspace; this component only reads/acts on it.
+    let { workspace }: { workspace: QueryWorkspace } = $props();
 
     const COLUMN_PREVIEW_LIMIT = 3;
-
-    let blockCounter = 0;
-
-    function nextBlockName(): string {
-        blockCounter += 1;
-        return `Query ${blockCounter}`;
-    }
-
-    function createId(): string {
-        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-            return crypto.randomUUID();
-        }
-        return `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    }
-
-    function createBlock(): QueryBlock {
-        return {
-            id: createId(),
-            name: nextBlockName(),
-            status: makeEmptyQuerySelectionStatus(),
-            actions: makeEmptyQuerySelectionActions(),
-            selectedColumns: [],
-            rows: null,
-            hasRun: false
-        };
-    }
-
-    let blocks = $state<QueryBlock[]>([createBlock()]);
-    let activeBlockId = $state<string>(blocks[0].id);
-
-    // Index of the active block; used so the table-block below can bind directly
-    // into blocks[activeIndex].status / .actions.
-    const activeIndex = $derived.by(() => {
-        const index = blocks.findIndex((block) => block.id === activeBlockId);
-        return index === -1 ? 0 : index;
-    });
-
-    function selectBlock(id: string) {
-        activeBlockId = id;
-    }
-
-    function addBlock() {
-        const block = createBlock();
-        blocks.push(block);
-        activeBlockId = block.id;
-    }
-
-    function duplicateBlock(id: string, event: MouseEvent) {
-        event.stopPropagation();
-
-        const index = blocks.findIndex((block) => block.id === id);
-        if (index === -1) {
-            return;
-        }
-
-        const source = blocks[index];
-        const copy: QueryBlock = {
-            id: createId(),
-            name: `${source.name} (copy)`,
-            status: { ...source.status },
-            actions: makeEmptyQuerySelectionActions(),
-            selectedColumns: [...source.selectedColumns],
-            rows: source.rows,
-            hasRun: source.hasRun
-        };
-
-        blocks.splice(index + 1, 0, copy);
-        activeBlockId = copy.id;
-    }
-
-    function closeBlock(id: string, event: MouseEvent) {
-        event.stopPropagation();
-
-        // Always keep at least one block.
-        if (blocks.length === 1) {
-            return;
-        }
-
-        const index = blocks.findIndex((block) => block.id === id);
-        if (index === -1) {
-            return;
-        }
-
-        blocks.splice(index, 1);
-
-        if (activeBlockId === id) {
-            const fallback = blocks[index] ?? blocks[index - 1] ?? blocks[0];
-            activeBlockId = fallback.id;
-        }
-    }
 
     function handleBlockKeydown(id: string, event: KeyboardEvent) {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            selectBlock(id);
+            workspace.selectBlock(id);
         }
     }
 </script>
 
 <div class="query-blocks">
     <div class="query-blocks-row">
-        {#each blocks as block (block.id)}
+        {#each workspace.blocks as block (block.id)}
+            <!-- Derive display data for this block from the workspace. -->
+            {@const status = workspace.statusFor(block)}
+            {@const columns = workspace.selectedColumnsFor(block)}
+            {@const run = workspace.runStateFor(block)}
             <div
                 class="query-block"
-                class:query-block--active={block.id === activeBlockId}
+                class:query-block--active={block.id === workspace.activeBlockId}
                 role="button"
                 tabindex="0"
-                aria-pressed={block.id === activeBlockId}
-                onclick={() => selectBlock(block.id)}
+                aria-pressed={block.id === workspace.activeBlockId}
+                onclick={() => workspace.selectBlock(block.id)}
                 onkeydown={(event) => handleBlockKeydown(block.id, event)}
             >
                 <div class="query-block-header">
@@ -155,7 +53,10 @@
                             class="query-block-icon-button"
                             title="Duplicate query"
                             aria-label="Duplicate query"
-                            onclick={(event) => duplicateBlock(block.id, event)}
+                            onclick={(event) => {
+                                event.stopPropagation();
+                                workspace.duplicateBlock(block.id);
+                            }}
                         >
                             <CopyIcon />
                         </Button>
@@ -166,8 +67,11 @@
                             class="query-block-icon-button"
                             title="Close query"
                             aria-label="Close query"
-                            disabled={blocks.length === 1}
-                            onclick={(event) => closeBlock(block.id, event)}
+                            disabled={workspace.blocks.length === 1}
+                            onclick={(event) => {
+                                event.stopPropagation();
+                                workspace.closeBlock(block.id);
+                            }}
                         >
                             <XIcon />
                         </Button>
@@ -177,24 +81,24 @@
                 <div class="query-block-body">
                     <div class="query-block-line">
                         <span class="query-block-label">Table</span>
-                        <span class="query-block-value" title={block.status.dataTable}>
-                            {block.status.dataTable || 'No table'}
+                        <span class="query-block-value" title={status.dataTable}>
+                            {status.dataTable || 'No table'}
                         </span>
                     </div>
 
                     <div class="query-block-line">
                         <span class="query-block-label">Columns</span>
-                        <span class="query-block-value">{block.status.columns} selected</span>
+                        <span class="query-block-value">{status.columns} selected</span>
                     </div>
 
                     <div class="query-block-columns">
-                        {#if block.selectedColumns.length > 0}
-                            {#each block.selectedColumns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
+                        {#if columns.length > 0}
+                            {#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
                                 <Badge variant="secondary">{column}</Badge>
                             {/each}
-                            {#if block.selectedColumns.length > COLUMN_PREVIEW_LIMIT}
+                            {#if columns.length > COLUMN_PREVIEW_LIMIT}
                                 <Badge variant="outline">
-                                    +{block.selectedColumns.length - COLUMN_PREVIEW_LIMIT}
+                                    +{columns.length - COLUMN_PREVIEW_LIMIT}
                                 </Badge>
                             {/if}
                         {:else}
@@ -204,11 +108,14 @@
 
                     <div class="query-block-line">
                         <span class="query-block-label">Rows</span>
-                        <span class="query-block-value">{block.rows ?? '—'}</span>
+                        <span class="query-block-value">{run.rows ?? '—'}</span>
                     </div>
 
                     <div class="query-block-status">
-                        {#if block.hasRun}
+                        {#if run.isRunning}
+                            <CircleDashedIcon class="query-block-status-icon" />
+                            <span>Running…</span>
+                        {:else if run.hasRun}
                             <CircleCheckIcon class="query-block-status-icon query-block-status-icon--ok" />
                             <span>Query ran</span>
                         {:else}
@@ -225,22 +132,11 @@
             class="query-block-add"
             title="New query"
             aria-label="New query"
-            onclick={addBlock}
+            onclick={() => workspace.addBlock()}
         >
             <PlusIcon />
         </button>
     </div>
-
-    <!-- Active query's builder. Keyed on the active id so switching blocks
-         re-initialises the table/parameter blocks for that query.
-         TODO: persist per-block query params by passing/reading an initialQuery
-         through the table/parameter blocks. -->
-    {#key activeBlockId}
-        <NewQueryBuilderTableBlock
-            bind:status={blocks[activeIndex].status}
-            bind:actions={blocks[activeIndex].actions}
-        />
-    {/key}
 </div>
 
 <style lang="scss">

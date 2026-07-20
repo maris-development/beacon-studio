@@ -10,25 +10,34 @@
 	// import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
     import NewQueryBuilderBlock from './new-query-builder-parameter-block.svelte';
     import type { QuerySelectionStatus } from './query-selection-status';
-    import type { QuerySelectionActions } from './query-selection-actions';
+    import { type QuerySelectionActions, makeEmptyQuerySelectionActions } from './query-selection-actions';
+    import type { CompiledQuery } from '@/beacon-api/types';
+    import type { QueryDraft } from './query-draft';
 	import Button from '../ui/button/button.svelte';
     import ListIcon from '@lucide/svelte/icons/list';
     import GridIcon from '@lucide/svelte/icons/grid';
 
+    import { getCachedTables, getCachedDefaultTable } from '@/beacon-api/metadata-cache';
+
     let {
+        initialDraft = null,
+        pendingSeed = null,
+        onDraftChange,
+        onTableChange,
         status = $bindable<QuerySelectionStatus>({
             dataTable: '',
             columns: 0,
             filters: 0,
             selection: 0,
-            outputFormat: ''
         }),
-        actions = $bindable<QuerySelectionActions | undefined>(undefined),
-        // onReset = $bindable<(() => void) | undefined>(undefined)
+        actions = $bindable<QuerySelectionActions>(makeEmptyQuerySelectionActions()),
     }: {
+        initialDraft?: QueryDraft | null;
+        pendingSeed?: CompiledQuery | null;
+        onDraftChange?: (draft: QueryDraft) => void;
+        onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
-        actions?: QuerySelectionActions | undefined;
-        // onReset?: () => void;
+        actions?: QuerySelectionActions;
     } = $props();
 
     let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -38,19 +47,24 @@
     let viewMode = $state<ViewMode>('cards');
 
     let tables_length = $state<number>(-1); // use -1 as uninitialized value
-    let selected_table_name = $state('');
+    let selected_table_name = $state(initialDraft?.tableName ?? '');
 	let table_names = $state<string[]>([]);
 
 	onMount(async () => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
-		let tables = await client.getTables();
-		let default_table = await client.getDefaultTable();
+		// let tables = await client.getTables();
+		// let default_table = await client.getDefaultTable();
 
-		// By default, select the first table if available
+        let tables = await getCachedTables(client);
+        let default_table = await getCachedDefaultTable(client);
+
+		// By default, select the first table, or restore the table from the draft/seed.
 		tables_length = tables.length;
-		selected_table_name = default_table;
+		const seedTable = typeof pendingSeed?.from === 'string' ? pendingSeed.from : null;
+		const draftTable = initialDraft?.tableName || null;
+        selected_table_name = draftTable ?? seedTable ?? default_table;
 		table_names = tables;
 
 		viewMode = tables.length < 10 ? 'cards' : 'list';
@@ -58,6 +72,7 @@
 
 	$effect(() => {
 		status.dataTable = selected_table_name;
+        onTableChange?.(selected_table_name);
 	});
 
 </script>
@@ -121,4 +136,4 @@
  Why should we split pre selected params and additional params?
  Why not keep them in the same block and reset the block when pressing the reset button? -->
 
-<NewQueryBuilderBlock table_name={selected_table_name} {client} bind:status bind:actions />
+<NewQueryBuilderBlock table_name={selected_table_name} {client} {initialDraft} {pendingSeed} {onDraftChange} bind:status bind:actions />

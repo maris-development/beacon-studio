@@ -3,7 +3,7 @@ export type QuerySelectionStatus = {
 	columns: number;
 	filters: number;
 	selection: number;
-	outputFormat: string;
+	// outputFormat: string;
 };
 
 export function makeEmptyQuerySelectionStatus(): QuerySelectionStatus {
@@ -12,6 +12,6 @@ export function makeEmptyQuerySelectionStatus(): QuerySelectionStatus {
 		columns: 0,
 		filters: 0,
 		selection: 0,
-		outputFormat: ''
+		// outputFormat: ''
 	};
 }

@@ -15,6 +15,9 @@
 	import ExternalLink from '../external-link.svelte';
 	import Card from '../card/card.svelte';
 
+	import { BeaconClient } from '@/beacon-api/client';
+	import { getCachedTables, getCachedSchema } from '@/beacon-api/metadata-cache';
+
 	export let onClose: () => void;
 
 	let beaconInstanceArray = $beaconInstances;
@@ -33,6 +36,19 @@
 			//destructor
 		};
 	});
+
+	// immediatly cache all schemas for all tables on beacon instance selection
+	// how to do this on application start when beacon instance is already selected?
+	async function handleClose(){
+		const client = BeaconClient.new(currentBeaconInstanceValue);
+		const tables = await getCachedTables(client);
+		
+		for (const table of tables){
+			await getCachedSchema(client, table);
+		}
+
+		onClose();
+	}
 
 	function pickInstance(instance: BeaconInstance, e: Event | null = null) {
 		if (e) e.stopPropagation(); // Prevent event bubbling if necessary
@@ -115,7 +131,7 @@
 	}
 </script>
 
-<Modal title="Choose Beacon instance" {onClose}>
+<Modal title="Choose Beacon instance" onClose={handleClose}>
 	<p>Here are the currently configured Beacon instances:</p>
 
 	<div class="beacon-instances-wrapper">
@@ -160,7 +176,7 @@
 			<PlusIcon />
 		</Button>
 
-		<Button variant="outline" onclick={onClose}>
+		<Button variant="outline" onclick={handleClose}>
 			Done
 			<CheckIcon />
 		</Button>

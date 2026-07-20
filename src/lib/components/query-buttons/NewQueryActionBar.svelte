@@ -4,39 +4,35 @@
 	import { type ActionCallback } from '@/components/query-builder/query-selection-actions';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import * as QueryFunctions from '@/components/query-builder/query-functions';
+	import type { CompiledQuery } from "@/beacon-api/types";
 
     // icons
-	import FolderIcon from '@lucide/svelte/icons/folder';
 	import ShareIcon from '@lucide/svelte/icons/share';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import ShareIcon2 from '@lucide/svelte/icons/share-2';
     import DownloadIcon from '@lucide/svelte/icons/download';
 	import TableIcon from '@lucide/svelte/icons/table';
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
-	import ListIcon from '@lucide/svelte/icons/list';
     import CopyIcon from '@lucide/svelte/icons/copy';
-    import JsonIcon from '@lucide/svelte/icons/file-json';
+    import JsonIcon from '@lucide/svelte/icons/file-json-2';
     import PythonIcon from '@lucide/svelte/icons/file-code-corner';
     import SQLIcon from '@lucide/svelte/icons/database';
     import UrlIcon from '@lucide/svelte/icons/link-2';
 	import ChartPie from '@lucide/svelte/icons/chart-pie';
     import MapIcon from '@lucide/svelte/icons/map';
     import VisualiseIcon from '@lucide/svelte/icons/eye';
-    import RunIcon from '@lucide/svelte/icons/play';
+	
+
 
 	let {
-		dataTable,
-		columns,
-		filters,
-		selection,
-		outputFormat,
-		// compileQuery,
-		runQuery,
+		// dataTable,
+		// columns,
+		// filters,
+		// selection,
+		// outputFormat,
+		compileQuery,
 		downloadData,
-		copyJson,
-		copyPython,
-		copySql,
-		copyUrl,
 		visualiseTable,
 		visualiseChart,
 		visualiseMap,
@@ -44,18 +40,13 @@
 		savedQueries,
 		reset
 	}: {
-		dataTable?: string;
-		columns?: number;
-		filters?: number;
-		selection?: number;
-		outputFormat?: string;
-		// compileQuery?: ActionCallback;
-		runQuery?: ActionCallback;
+		// dataTable?: string;
+		// columns?: number;
+		// filters?: number;
+		// selection?: number;
+		// outputFormat?: string;
+		compileQuery?: (() => CompiledQuery) | undefined;
 		downloadData?: ActionCallback;
-		copyJson?: ActionCallback;
-		copyPython?: ActionCallback;
-		copySql?: ActionCallback;
-		copyUrl?: ActionCallback;
 		visualiseTable?: ActionCallback;
 		visualiseChart?: ActionCallback;
 		visualiseMap?: ActionCallback;
@@ -65,8 +56,8 @@
 	} = $props();
 </script>
 
-<div class="query-selection-status-bar">
-	<div class="selection-status-group">
+<div class="query-action-bar">
+	<!-- <div class="selection-status-group">
 		{#if dataTable}
 			<Badge>
 				<TableIcon />
@@ -91,17 +82,9 @@
 				Output: {outputFormat}
 			</Badge>
 		{/if}
-	</div>
+	</div> -->
 
-	<div class="selection-status-group">
-
-        <!-- compile and run query are the same -->
-        <!-- make a action for this that adds a  -->
-		<!-- <Button onclick={compileQuery}>Compile Query</Button> -->
-		<Button onclick={runQuery}>
-            <RunIcon />
-            Run Query
-        </Button>
+	<div class="query-action-group">
 
 		<Button onclick={downloadData}>
 			<DownloadIcon />
@@ -134,33 +117,52 @@
 		</DropdownMenu.Root>
 
 		<!-- dropdown for copy options -->
+		{#if compileQuery}
+		<!-- Add name of active query on top of dropdown -->
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>
                 <Button onclick={downloadData}>
-			        <CopyIcon />
+			        <ShareIcon2 />
 			        Copy Query
 		        </Button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content class="w-48">
-				<DropdownMenu.Item onclick={copyJson}>
-					<JsonIcon class="text-muted-foreground" />
-					<span>JSON</span>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item onclick={copyPython}>
-					<PythonIcon class="text-muted-foreground" />
-					<span>Python</span>
-				</DropdownMenu.Item>
-				<!-- <DropdownMenu.Separator /> -->
-				<DropdownMenu.Item onclick={copySql}>
-					<SQLIcon class="text-muted-foreground" />
-					<span>SQL</span>
-				</DropdownMenu.Item>
-                <DropdownMenu.Item onclick={copyUrl}>
+				<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(compileQuery)}>
 					<UrlIcon class="text-muted-foreground" />
 					<span>URL</span>
 				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => QueryFunctions.copyJSON(compileQuery)}>
+					<CopyIcon class="text-muted-foreground" />
+					<span>JSON</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(compileQuery)}>
+					<CopyIcon class="text-muted-foreground" />
+					<span>Python</span>
+				</DropdownMenu.Item>
+				<!-- <DropdownMenu.Separator /> -->
+				<DropdownMenu.Item onclick={() => QueryFunctions.copySQL(compileQuery)}>
+					<CopyIcon class="text-muted-foreground" />
+					<span>SQL</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item onclick={() => QueryFunctions.downloadJSON(compileQuery)}>
+					<JsonIcon class="text-muted-foreground" />
+					<span>Download JSON</span>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(compileQuery)}>
+					<PythonIcon class="text-muted-foreground" />
+					<span>Download Python</span>
+				</DropdownMenu.Item>
+				<!-- <DropdownMenu.Separator /> -->
+				<DropdownMenu.Item onclick={() => QueryFunctions.downloadSQL(compileQuery)}>
+					<SQLIcon class="text-muted-foreground" />
+					<span>Download SQL</span>
+				</DropdownMenu.Item>
+
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
+		{/if}
+		
 
 		<Button onclick={saveQuery}>
 			<SaveIcon />
@@ -168,10 +170,21 @@
 		</Button>
 
 		<!-- dropdown for saved queries? -->
-		<Button onclick={savedQueries}>
-			<ListIcon />
-			Saved (0)
-		</Button>
+		<!-- <DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+                <Button onclick={savedQueries}>
+					<ListIcon />
+					Saved (count of saved queries here)
+				</Button>
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content class="w-48">
+				foreach loop here
+				<DropdownMenu.Item onclick={loadsavedqueryfunction}}>
+					<SavedIcon class="text-muted-foreground" />
+					<span>saved query num or name</span>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</DropdownMenu.Root> -->
 
 		<Button onclick={reset}>
 			<ResetIcon />
@@ -181,18 +194,21 @@
 </div>
 
 <style lang="scss">
-	.query-selection-status-bar {
+	.query-action-bar {
 		display: flex;
-		justify-content: space-between;
+		justify-content: flex-end;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 
-	.selection-status-group {
+	.query-action-group {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 </style>
+
+
+

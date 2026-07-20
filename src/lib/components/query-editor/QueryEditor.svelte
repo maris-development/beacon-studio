@@ -37,7 +37,8 @@
     let {
         sourceCode = $bindable(),
         width = '100%',
-        height = '90vh'
+        height = '90vh',
+        readOnly = false
     } = $props();
 
 	onMount(() => {
@@ -48,7 +49,8 @@
 			overviewRulerLanes: 0,
 			overviewRulerBorder: false,
 			theme: 'vs-light',
-			scrollBeyondLastLine: true
+			scrollBeyondLastLine: true,
+			readOnly
 		});
 
 		editorInstance.onDidChangeModelContent(() => {
@@ -57,6 +59,15 @@
 		});
 
 		return () => editorInstance?.dispose();
+	});
+
+	// Reflect external sourceCode changes (e.g. builder -> JSON) into the editor.
+	// Guarded by the value comparison so our own edits don't trigger a reset/loop.
+	$effect(() => {
+		const incoming = sourceCode ?? '';
+		if (editorInstance && editorInstance.getValue() !== incoming) {
+			editorInstance.setValue(incoming);
+		}
 	});
 </script>
 

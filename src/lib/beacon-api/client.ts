@@ -163,6 +163,7 @@ export class BeaconClient {
 
     async getTables(): Promise<Array<string>> {
         const url = new URL(`${this.host}/api/tables`);
+        console.log('Fetching tables from URL:', url.toString());
         const response: Array<string> = await this.fetch(url);
         return response;
     }

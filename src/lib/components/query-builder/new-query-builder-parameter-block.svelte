@@ -15,28 +15,28 @@
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
+	// import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 	import type { QuerySelectionStatus } from './query-selection-status';
     import type { QuerySelectionActions, ActionCallback } from './query-selection-actions';
+	import { getCachedSchema } from '@/beacon-api/metadata-cache';
+	import { type QueryDraft } from './query-draft';
+
 
 	let {
 		table_name,
 		client,
-		initialQuery = null,
+		initialDraft = null,
+		pendingSeed = null,
+		onDraftChange,
 		status = $bindable<QuerySelectionStatus>({
 			dataTable: '',
 			columns: 0,
 			filters: 0,
 			selection: 0,
-			outputFormat: BeaconClient.output_formats['Parquet']
 		}),
         actions = $bindable<QuerySelectionActions>({
-            runQuery: undefined,
+			compileQuery: compileQuery,
             downloadData: handleSubmit,
-            copyJson: undefined,
-            copyPython: undefined,
-            copySql: undefined,
-            copyUrl: undefined,
             visualiseTable: handleTableVisualise,
             visualiseChart: handleChartVisualise,
             visualiseMap: handleMapVisualise,
@@ -44,20 +44,22 @@
             savedQueries: undefined,
             reset: undefined
         }),
-		// onReset = $bindable<() => void | undefined>(undefined)
 	}: {
 		table_name: string;
 		client: BeaconClient;
-		initialQuery?: CompiledQuery | null;
+		initialDraft?: QueryDraft | null;
+		pendingSeed?: CompiledQuery | null;
+		/** Emitted on every builder edit with the current draft. */
+		onDraftChange?: (draft: QueryDraft) => void;
 		status?: QuerySelectionStatus;
         actions?: QuerySelectionActions; // todo
-		// onReset?: () => void;
 	} = $props();
 
 	let searchInput;
 	let searchQuery = $state('');
-	let previous_table_name = '';
-	let selected_output_format = $state(BeaconClient.output_formats['Parquet']);
+	let selected_output_format = $state(
+		initialDraft?.outputFormat ?? BeaconClient.output_formats['Parquet']
+	);
 	let fields: {
 		name: string;
 		type: DataType;
@@ -65,8 +67,13 @@
 	}[] = $state([]);
 
 	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
-		$state([]);
-	let hasHydratedInitialQuery = $state(false);
+		$state(initialDraft ? Utils.cloneObject(initialDraft.selectedFields) : []);
+	/** Table the current selection belongs to; used to reset on a real table change. */
+	let selectionTable = initialDraft?.tableName ?? null;
+	let hasInitialisedTable = $state(false);
+
+	let hasHydratedSeed = $state(!pendingSeed);
+	let lastEmittedDraftKey = $state('');
 
 	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
 
@@ -82,38 +89,86 @@
 		);
 	});
 
+	// $effect(() => {
+	// 	status.outputFormat = selected_output_format;
+	// });
+
+
+	// Load the schema for the selected table (cached per instance). Needed for the
+	// "Add Parameter" list and to parse a deep-link seed. Does NOT clear the current
+	// selection — that only happens on a real table change (below).
 	$effect(() => {
-		status.outputFormat = selected_output_format;
+		if (!table_name || !client) {
+			fields = [];
+			return;
+		}
+
+		getCachedSchema(client, table_name).then((schema) => {
+			fields = schema.fields.map((field) => ({
+				name: field.name,
+				type: field.data_type
+			}));
+
+			// Hydrate a one-time deep-link seed once the schema is available.
+			if (pendingSeed && !hasHydratedSeed) {
+				hydrateFromSeed();
+				hasHydratedSeed = true;
+			}
+		});
 	});
 
-
+	// Reset the selected columns when the user actually switches to a different
+	// table (columns from the old table don't apply). Skips the initial value so a
+	// restored draft keeps its selection.
 	$effect(() => {
-		if (table_name && client && table_name !== previous_table_name) {
-			console.log('Fetching schema for table:', table_name);
+		const table = table_name;
 
-			client.getTableSchema(table_name).then((schema) => {
-				previous_table_name = table_name;
-				fields = schema.fields.map((field) => {
-					return {
-						name: field.name,
-						type: field.data_type,
-					};
-				});
-				selectedFields = [];
-				hydrateFromInitialQuery();
-			});
-		} else {
-			fields = []; // Reset fields if no table or client is available
-			selectedFields = []; // Reset selected fields
+		if (!table) {
+			return;
 		}
+
+		if (!hasInitialisedTable) {
+			selectionTable = table;
+			hasInitialisedTable = true;
+			return;
+		}
+
+		if (table !== selectionTable) {
+			selectedFields = [];
+		}
+
+		selectionTable = table;
 	});
 
 	$effect(() => {
 		status.columns = selectedFields.length;
-		status.selection = selectedFields.length;
 		status.filters = selectedFields.reduce((total, field) => {
 			return total + field.selected_filters.length;
 		}, 0);
+	});
+
+	// Emit the current draft upward on every edit so the active block, JSON view
+	// and status badges stay in sync. Waits for a pending deep-link seed to be
+	// parsed first, so it doesn't overwrite the block with an empty draft.
+	$effect(() => {
+		if (!table_name) {
+			return;
+		}
+
+		if (pendingSeed && !hasHydratedSeed) {
+			return;
+		}
+		const draft = {
+			tableName: table_name,
+			selectedFields: Utils.cloneObject(selectedFields),
+			outputFormat: selected_output_format
+		};
+		const draftKey = JSON.stringify(draft);
+		if (draftKey === lastEmittedDraftKey) {
+			return;
+		}
+		lastEmittedDraftKey = draftKey;
+		onDraftChange?.(draft);
 	});
 
 	let open = $state(false);
@@ -179,6 +234,7 @@
 
 		return builder.compile();
 	}
+	actions.compileQuery = compileQuery;
 
 	function compileAndGZipQuery(): string | undefined {
 		try {
@@ -214,8 +270,7 @@
 			);
 		}
 	}
-    actions.compileQuery = handleSubmit;
-    actions.downloadData = handleSubmit;
+	actions.downloadData = handleSubmit;
 
 	async function handleMapVisualise() {
 		const gzippedQuery = compileAndGZipQuery();
@@ -246,12 +301,11 @@
     actions.visualiseTable = handleTableVisualise;
 
 
-	function hydrateFromInitialQuery() {
-		if (!initialQuery || hasHydratedInitialQuery || fields.length === 0) {
+	function hydrateFromSeed() {
+		const initialQuery = pendingSeed;
+		if (!initialQuery || fields.length === 0) {
 			return;
 		}
-
-		hasHydratedInitialQuery = true;
 
 		let droppedParts = 0;
 		const normalizedSelectedFields: {
@@ -512,15 +566,15 @@
 		</Select.Content>
 	</Select.Root>
 
-	<hr />
+	<!-- <hr /> -->
 
-	<QueryActionBar
+	<!-- <QueryActionBar
 		onExecute={handleSubmit}
 		onViewTable={handleTableVisualise}
 		onViewMap={handleMapVisualise}
 		onViewChart={handleChartVisualise}
 		{compileQuery}
-	/>
+	/> -->
 </div>
 
 <style lang="scss">

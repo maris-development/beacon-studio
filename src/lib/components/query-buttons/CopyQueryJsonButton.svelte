@@ -37,7 +37,6 @@
 			message: 'Query JSON copied to clipboard',
 			type: 'success'
 		});
-
     }
 
 </script>
