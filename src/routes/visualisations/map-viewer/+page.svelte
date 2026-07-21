@@ -4,7 +4,7 @@
 	import { MapboxOverlay as MapboxOverlay } from '@deck.gl/mapbox';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
-	import maplibregl, { GlobeControl, NavigationControl } from 'maplibre-gl';
+	import maplibregl, { NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';

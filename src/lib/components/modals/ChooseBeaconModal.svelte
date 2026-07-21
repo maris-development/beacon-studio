@@ -141,7 +141,7 @@
 				<p>No Beacon instances configured. Please add one.</p>
             </Card>
 		{/if}
-		{#each beaconInstanceArray as instance}
+		{#each beaconInstanceArray as instance (instance.id)}
 
 			<Card onClick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<h3>{instance.name}</h3>
