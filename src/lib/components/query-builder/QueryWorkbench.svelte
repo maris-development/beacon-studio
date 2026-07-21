@@ -11,11 +11,11 @@
     import { onMount } from 'svelte';
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import NewQueryActionBar from '@/components/query-buttons/NewQueryActionBar.svelte';
-    import QueryBlock from './new-query-builder-selector-block.svelte';
-    import QueryBuilderPane from './query-builder-pane.svelte';
-    import QueryVisualisationView from './query-visualisation-view.svelte';
+    import QueryBlock from './QueryBuilderSelectorBlock.svelte';
+    import QueryBuilderPane from './QueryBuilderPane.svelte';
+    import QueryVisualisationView from './QueryVisualisationView.svelte';
     import type { CompiledQuery } from '@/beacon-api/types';
-    import { QueryWorkspace } from './query-workspace.svelte';
+    import { QueryWorkspace } from './QueryWorkspace.svelte';
     import { currentBeaconInstance } from '@/stores/config';
     import { BeaconClient } from '@/beacon-api/client';
     import { queryStore } from '@/stores/query-store.svelte';
@@ -32,7 +32,7 @@
         if (instance) client = BeaconClient.new(instance);
     });
 
-    const status = $derived(workspace.statusFor(workspace.activeBlock));
+    // const status = $derived(workspace.statusFor(workspace.activeBlock));
 
     function compileQuery() {
         return workspace.queryFor(workspace.activeBlock);
@@ -42,7 +42,7 @@
         const block = workspace.activeBlock;
         const query = workspace.queryFor(block);
         if (!block || !query) {
-            addToast({ message: 'Build a query first — select a table and at least one column.', type: 'warning' });
+            addToast({ message: 'Build a query first, then select a table and at least one column.', type: 'warning' });
             return;
         }
         if (workspace.runStateFor(block).isRunning) return;
@@ -59,7 +59,7 @@
     async function handleDownload(): Promise<void> {
         const query = workspace.queryFor(workspace.activeBlock);
         if (!query || !client) {
-            addToast({ message: 'Build a query first — select a table and at least one column.', type: 'warning' });
+            addToast({ message: 'Build a query first, then select a table and at least one column.', type: 'warning' });
             return;
         }
         try {

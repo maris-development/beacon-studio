@@ -1,5 +1,5 @@
 <script lang="ts">
-	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';

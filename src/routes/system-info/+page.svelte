@@ -2,8 +2,8 @@
 	import { BeaconClient } from '@/beacon-api/client';
 
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import Card from '@/components/card/card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
 	import { Utils } from '@/utils';

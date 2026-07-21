@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { onMount } from 'svelte';
 	import { Utils } from '@/utils';
 	import { addToast } from '@/stores/toasts';
@@ -12,7 +12,7 @@
 	import SheetIcon from '@lucide/svelte/icons/sheet';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
-	import GraphViewer from '@/components/graph-viewer/graph-viewer.svelte';
+	import GraphViewer from '@/components/graph-viewer/GraphViewer.svelte';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';

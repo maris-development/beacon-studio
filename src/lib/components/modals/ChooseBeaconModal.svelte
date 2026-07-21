@@ -13,7 +13,7 @@
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
 	import { addToast } from '@/stores/toasts';
 	import ExternalLink from '../external-link.svelte';
-	import Card from '../card/card.svelte';
+	import Card from '../card/Card.svelte';
 
 	import { BeaconClient } from '@/beacon-api/client';
 	import { getCachedTables, getCachedSchema } from '@/beacon-api/metadata-cache';

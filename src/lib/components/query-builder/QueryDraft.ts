@@ -9,7 +9,7 @@
  * without a lossy round-trip through CompiledQuery.
  */
 import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
-import type { SelectedFilterType } from './add-advanced-filter.svelte';
+import type { SelectedFilterType } from './AddAdvancedFilter.svelte';
 import { QueryBuilder } from '@/beacon-api/query';
 import { Utils } from '@/utils';
 

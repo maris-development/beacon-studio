@@ -117,7 +117,7 @@
 								{#each memory.entries as entry (entry.key)}
 									<tr>
 										<td class="cols" title={entry.columns.join(', ')}>
-											{entry.columns.join(', ') || '—'}
+											{entry.columns.join(', ') || 'N/A'}
 											{#if entry.isCurrent}<span class="badge">current</span>{/if}
 										</td>
 										<td class="num">{entry.rowCount.toLocaleString()}</td>
@@ -138,7 +138,7 @@
 				<div class="section-head">
 					<h2>Disk cache (OPFS)</h2>
 					<span class="subtle">
-						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : '—'} after storing
+						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : 'N/A'} after storing
 					</span>
 				</div>
 

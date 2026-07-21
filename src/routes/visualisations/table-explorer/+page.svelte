@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';

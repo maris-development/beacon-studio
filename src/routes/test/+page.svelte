@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { beaconInstances, currentBeaconInstance } from '$lib/stores/config';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { PythonQueryBuilder } from '@/beacon-api/query';
 

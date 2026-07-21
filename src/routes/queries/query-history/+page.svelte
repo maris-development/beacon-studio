@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { formatDistanceToNow } from 'date-fns';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import Card from '@/components/card/card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { queryHistory, removeHistoryEntry, clearHistory } from '@/stores/query-history';
 	import type { QueryHistoryEntry } from '@/stores/query-history';

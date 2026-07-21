@@ -17,11 +17,11 @@
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
 	import PanelRightCloseIcon from '@lucide/svelte/icons/panel-right-close';
 	import PanelRightOpenIcon from '@lucide/svelte/icons/panel-right-open';
-	import NewQueryBuilderTableBlock from './new-query-builder-table-block.svelte';
-	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
-	import type { QueryWorkspace } from './query-workspace.svelte';
-	import type { QueryDraft } from './query-draft';
+	import QBTableSelector from './QueryBuilderTableSelector.svelte';
+	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
+	import type { QueryDraft } from './QueryDraft';
 	import {onMount} from 'svelte';
+	import type { QueryWorkspace } from './QueryWorkspace.svelte';
 
 	let { workspace }: { workspace: QueryWorkspace } = $props();
 
@@ -34,7 +34,7 @@
 		const query = workspace.queryFor(workspace.activeBlock);
 		return query
 			? JSON.stringify(query, null, 2)
-			: '// No query yet — pick a table and columns on the left.';
+			: '// No query yet. Pick a table and columns on the left.';
 	});
 
 	// onMount(() => {
@@ -67,7 +67,7 @@
 			<div class="pane-body">
 				<!-- Re-mount per active block so the builder re-hydrates from its query. -->
 				{#key workspace.activeBlockId}
-					<NewQueryBuilderTableBlock
+					<QBTableSelector
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={workspace.activeBlock?.pendingSeed ?? null}
 						onDraftChange={handleDraftChange}
@@ -93,7 +93,7 @@
 
 		{#if rightOpen}
 			<div class="pane-body">
-				<QueryEditor sourceCode={activeQueryJson} height="70vh" readOnly />
+				<QueryTextEditor sourceCode={activeQueryJson} height="70vh" readOnly />
 			</div>
 		{/if}
 	</section>

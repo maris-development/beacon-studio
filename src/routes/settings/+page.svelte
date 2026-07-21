@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 </script>
 
 <Cookiecrumb crumbs={[{ label: 'Settings', href: '/settings' }]} />

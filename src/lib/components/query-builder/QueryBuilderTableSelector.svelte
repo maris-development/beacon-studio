@@ -7,12 +7,11 @@
 
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
-	// import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
-    import NewQueryBuilderBlock from './new-query-builder-parameter-block.svelte';
-    import type { QuerySelectionStatus } from './query-selection-status';
-    import { type QuerySelectionActions, makeEmptyQuerySelectionActions } from './query-selection-actions';
+    import NewQueryBuilderBlock from './QueryBuilderParameterBlock.svelte';
+    import type { QuerySelectionStatus } from './QuerySelectionStatus';
+    import { type QuerySelectionActions, makeEmptyQuerySelectionActions } from './QuerySelectionActions';
     import type { CompiledQuery } from '@/beacon-api/types';
-    import type { QueryDraft } from './query-draft';
+    import type { QueryDraft } from './QueryDraft';
 	import Button from '../ui/button/button.svelte';
     import ListIcon from '@lucide/svelte/icons/list';
     import GridIcon from '@lucide/svelte/icons/grid';
@@ -103,7 +102,7 @@
 <div class="mt-4">
     {#if viewMode === 'cards'}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {#each table_names as table_name}
+            {#each table_names as table_name (table_name)}
                 <Button
                     class={selected_table_name === table_name ? 'bg-primary text-primary-foreground' : ''}
                     variant={table_name === selected_table_name ? 'default' : 'outline'}
@@ -120,7 +119,7 @@
             <Select.Content>
                 <Select.Group>
                     <Select.Label>Tables</Select.Label>
-                    {#each table_names as table_name}
+                    {#each table_names as table_name (table_name)}
                         <Select.Item value={table_name} label={table_name}>
                             {table_name}
                         </Select.Item>

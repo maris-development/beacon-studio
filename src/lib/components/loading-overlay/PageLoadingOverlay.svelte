@@ -1,5 +1,5 @@
 <script lang="ts">
-	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 
     let {
         text = 'Loading...',

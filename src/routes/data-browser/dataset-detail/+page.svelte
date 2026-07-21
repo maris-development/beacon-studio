@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import DataTable from '$lib/components/data-table.svelte';
 	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
 	import { resolve } from '$app/paths';

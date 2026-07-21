@@ -383,7 +383,7 @@ class QueryStore {
 			warnings.push('limit_reached');
 			addToast({
 				type: 'warning',
-				message: `The query result reached the ${QUERY_CELL_LIMIT.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete — refine your query to reduce the result size.`
+				message: `The query result reached the ${QUERY_CELL_LIMIT.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete. Refine your query to reduce the result size.`
 			});
 		}
 

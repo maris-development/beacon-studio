@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import { buttonVariants } from '$lib/components/ui/button/index.js';
-	import Parameter from './parameter.svelte';
+	import Parameter from './Parameter.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import type { CompiledQuery, OutputFormat, TableDefinition } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
@@ -16,7 +16,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { QueryFilterValue } from './filters/filter.svelte';
-	import PageLoadingOverlay from '../loading-overlay/page-loading-overlay.svelte';
+	import PageLoadingOverlay from '../loading-overlay/PageLoadingOverlay.svelte';
 	import { Checkbox } from '../ui/checkbox';
 	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 

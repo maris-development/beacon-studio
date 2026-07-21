@@ -7,12 +7,13 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 <script lang="ts">
     import { Button } from '$lib/components/ui/button/index.js';
     import { Badge } from '$lib/components/ui/badge/index.js';
+    import Card from '@/components/card/Card.svelte';
     import PlusIcon from '@lucide/svelte/icons/plus';
     import CopyIcon from '@lucide/svelte/icons/copy';
     import XIcon from '@lucide/svelte/icons/x';
     import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
     import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
-    import type { QueryWorkspace } from './query-workspace.svelte';
+    import type { QueryWorkspace } from './QueryWorkspace.svelte';
 
     // All state lives in the workspace; this component only reads/acts on it.
     let { workspace }: { workspace: QueryWorkspace } = $props();
@@ -35,95 +36,97 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             {@const columns = workspace.selectedColumnsFor(block)}
             {@const run = workspace.runStateFor(block)}
             <div
-                class="query-block"
-                class:query-block--active={block.id === workspace.activeBlockId}
+                class="query-block-wrapper"
+                class:query-block-wrapper--active={block.id === workspace.activeBlockId}
                 role="button"
                 tabindex="0"
                 aria-pressed={block.id === workspace.activeBlockId}
                 onclick={() => workspace.selectBlock(block.id)}
                 onkeydown={(event) => handleBlockKeydown(block.id, event)}
             >
-                <div class="query-block-header">
-                    <span class="query-block-name" title={block.name}>{block.name}</span>
+                <Card class="query-block">
+                    <div class="query-block-header">
+                        <span class="query-block-name" title={block.name}>{block.name}</span>
 
-                    <div class="query-block-actions">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            class="query-block-icon-button"
-                            title="Duplicate query"
-                            aria-label="Duplicate query"
-                            onclick={(event) => {
-                                event.stopPropagation();
-                                workspace.duplicateBlock(block.id);
-                            }}
-                        >
-                            <CopyIcon />
-                        </Button>
+                        <div class="query-block-actions">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="query-block-icon-button"
+                                title="Duplicate query"
+                                aria-label="Duplicate query"
+                                onclick={(event) => {
+                                    event.stopPropagation();
+                                    workspace.duplicateBlock(block.id);
+                                }}
+                            >
+                                <CopyIcon />
+                            </Button>
 
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            class="query-block-icon-button"
-                            title="Close query"
-                            aria-label="Close query"
-                            disabled={workspace.blocks.length === 1}
-                            onclick={(event) => {
-                                event.stopPropagation();
-                                workspace.closeBlock(block.id);
-                            }}
-                        >
-                            <XIcon />
-                        </Button>
-                    </div>
-                </div>
-
-                <div class="query-block-body">
-                    <div class="query-block-line">
-                        <span class="query-block-label">Table</span>
-                        <span class="query-block-value" title={status.dataTable}>
-                            {status.dataTable || 'No table'}
-                        </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="query-block-icon-button"
+                                title="Close query"
+                                aria-label="Close query"
+                                disabled={workspace.blocks.length === 1}
+                                onclick={(event) => {
+                                    event.stopPropagation();
+                                    workspace.closeBlock(block.id);
+                                }}
+                            >
+                                <XIcon />
+                            </Button>
+                        </div>
                     </div>
 
-                    <div class="query-block-line">
-                        <span class="query-block-label">Columns</span>
-                        <span class="query-block-value">{status.columns} selected</span>
-                    </div>
+                    <div class="query-block-body">
+                        <div class="query-block-line">
+                            <span class="query-block-label">Table</span>
+                            <span class="query-block-value" title={status.dataTable}>
+                                {status.dataTable || 'No table'}
+                            </span>
+                        </div>
 
-                    <div class="query-block-columns">
-                        {#if columns.length > 0}
-                            {#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
-                                <Badge variant="secondary">{column}</Badge>
-                            {/each}
-                            {#if columns.length > COLUMN_PREVIEW_LIMIT}
-                                <Badge variant="outline">
-                                    +{columns.length - COLUMN_PREVIEW_LIMIT}
-                                </Badge>
+                        <div class="query-block-line">
+                            <span class="query-block-label">Columns</span>
+                            <span class="query-block-value">{status.columns} selected</span>
+                        </div>
+
+                        <div class="query-block-columns">
+                            {#if columns.length > 0}
+                                {#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
+                                    <Badge variant="secondary">{column}</Badge>
+                                {/each}
+                                {#if columns.length > COLUMN_PREVIEW_LIMIT}
+                                    <Badge variant="outline">
+                                        +{columns.length - COLUMN_PREVIEW_LIMIT}
+                                    </Badge>
+                                {/if}
+                            {:else}
+                                <span class="query-block-muted">No columns selected</span>
                             {/if}
-                        {:else}
-                            <span class="query-block-muted">No columns selected</span>
-                        {/if}
-                    </div>
+                        </div>
 
-                    <div class="query-block-line">
-                        <span class="query-block-label">Rows</span>
-                        <span class="query-block-value">{run.rows ?? '—'}</span>
-                    </div>
+                        <div class="query-block-line">
+                            <span class="query-block-label">Rows</span>
+                            <span class="query-block-value">{run.rows ?? 'N/A'}</span>
+                        </div>
 
-                    <div class="query-block-status">
-                        {#if run.isRunning}
-                            <CircleDashedIcon class="query-block-status-icon" />
-                            <span>Running…</span>
-                        {:else if run.hasRun}
-                            <CircleCheckIcon class="query-block-status-icon query-block-status-icon--ok" />
-                            <span>Query ran</span>
-                        {:else}
-                            <CircleDashedIcon class="query-block-status-icon" />
-                            <span>Not run yet</span>
-                        {/if}
+                        <div class="query-block-status">
+                            {#if run.isRunning}
+                                <CircleDashedIcon class="query-block-status-icon" />
+                                <span>Running…</span>
+                            {:else if run.hasRun}
+                                <CircleCheckIcon class="query-block-status-icon query-block-status-icon--ok" />
+                                <span>Query ran</span>
+                            {:else}
+                                <CircleDashedIcon class="query-block-status-icon" />
+                                <span>Not run yet</span>
+                            {/if}
+                        </div>
                     </div>
-                </div>
+                </Card>
             </div>
         {/each}
 
@@ -154,29 +157,28 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
         padding-bottom: 0.25rem;
     }
 
-    .query-block {
+    .query-block-wrapper {
         display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
         min-width: 15rem;
         max-width: 18rem;
-        padding: 0.75rem;
-        border: 1px solid var(--border);
-        border-radius: var(--radius, 0.5rem);
-        background: var(--card, transparent);
         cursor: pointer;
+    }
+
+    :global(.query-block-wrapper .query-block.card) {
+        width: 100%;
+        gap: 0.5rem;
+        padding: 0.75rem;
         transition:
             border-color 0.15s ease,
             box-shadow 0.15s ease;
     }
 
-    .query-block:hover {
+    .query-block-wrapper:hover :global(.query-block.card) {
         border-color: var(--primary);
     }
 
-    .query-block--active {
+    .query-block-wrapper--active :global(.query-block.card) {
         border-color: var(--primary);
-        box-shadow: 0 0 0 1px var(--primary);
     }
 
     .query-block-header {

@@ -5,8 +5,8 @@
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
 	import Button from '../ui/button/button.svelte';
-	import AddAdvancedFilter, { type SelectedFilterType } from './add-advanced-filter.svelte';
-	import AdvancedParameterFilter from './advanced-parameter-filter.svelte';
+	import AddAdvancedFilter, { type SelectedFilterType } from './AddAdvancedFilter.svelte';
+	import AdvancedParameterFilter from './AdvancedParameterFilter.svelte';
 
 	let {
 		column = $bindable(),

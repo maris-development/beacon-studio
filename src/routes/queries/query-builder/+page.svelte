@@ -1,13 +1,13 @@
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import Card from '@/components/card/card.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import AdvancedQueryBuilder from '@/components/query-builder/advanced-query-builder.svelte';
+	import Card from '@/components/card/Card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import AdvancedQueryBuilder from '@/components/query-builder/AdvancedQueryBuilder.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import { resolve } from '$app/paths';
-	import EasyTableSelector from '@/components/query-builder/easy-table-selector.svelte';
-	import QueryWorkbench from '@/components/query-builder/query-workbench.svelte';
+	import EasyTableSelector from '@/components/query-builder/EasyTableSelector.svelte';
+	import QueryWorkbench from '@/components/query-builder/QueryWorkbench.svelte';
 
 	const initialQuery: CompiledQuery | null = Utils.getUrlSuppliedQuery();
 	const initialTab = initialQuery ? 'advanced-builder' : 'easy-builder';

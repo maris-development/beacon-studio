@@ -6,7 +6,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import AdvancedQueryBuilderBlock from './advanced-query-builder-block.svelte';
+	import AdvancedQueryBuilderBlock from './AdvancedQueryBuilderBlock.svelte';
 
 	let {
 		initialQuery = null
@@ -49,7 +49,7 @@
 		<Select.Content>
 			<Select.Group>
 				<Select.Label>Tables</Select.Label>
-				{#each table_names as table_name}
+				{#each table_names as table_name (table_name)}
 					<Select.Item value={table_name} label={table_name}>
 						{table_name}
 					</Select.Item>

@@ -5,7 +5,7 @@ import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
 import type { CompiledQuery, DataType, Filter } from "./beacon-api/types";
-import type { ParameterFilterType } from "./components/query-builder/advanced-parameter-filter.svelte";
+import type { ParameterFilterType } from "./components/query-builder/AdvancedParameterFilter.svelte";
 import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';

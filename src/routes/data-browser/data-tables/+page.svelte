@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 	import DataTable from '$lib/components/data-table.svelte';
 	import { goto } from '$app/navigation';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { AffixString } from '@/utils';
 	import type { Column } from '@/util-types';
 	import { resolve } from '$app/paths';

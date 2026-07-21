@@ -6,7 +6,7 @@
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-	import type { ParameterFilterType } from './advanced-parameter-filter.svelte';
+	import type { ParameterFilterType } from './AdvancedParameterFilter.svelte';
 
 	export type SelectedFilterType = { label: string; filter_value: ParameterFilterType };
 

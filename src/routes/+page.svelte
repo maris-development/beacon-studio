@@ -1,10 +1,10 @@
 <script lang="ts">
 
 	import { beaconInstances, currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import ChooseBeaconModal from '@/components/modals/ChooseBeaconModal.svelte';
 	import { onMount } from 'svelte';
-	import Card from '@/components/card/card.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import { BeaconClient } from '@/beacon-api/client';
   	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';

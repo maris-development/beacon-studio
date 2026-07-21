@@ -6,8 +6,8 @@
 	import { color as d3Color } from 'd3-color';
 	import maplibregl, { NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import LoadingSpinner from '@/components/loading-overlay/loading-spinner.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import { addToast } from '@/stores/toasts';
 	import { Utils } from '@/utils';
@@ -17,7 +17,7 @@
 	import MapInfo from '@/components/map-info.svelte';
 	import MapPopupContent from '@/components/map-popup-content.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend.svelte';
+	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/Legend.svelte';
 
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Rendered } from '@/util-types';

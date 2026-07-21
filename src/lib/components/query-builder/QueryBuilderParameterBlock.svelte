@@ -1,4 +1,11 @@
 <script lang="ts">
+	/**
+	 * QueryBuilderParametrBlock.svelte
+	 * Author: Jasper van der Barg
+	 * Description: Query Builder Parameter Block Component
+	*/
+
+
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -9,17 +16,17 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery, DataType, Filter, OutputFormat } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-	import AdvancedParameter from './advanced-parameter.svelte';
-	import type { SelectedFilterType } from './add-advanced-filter.svelte';
+	import AdvancedParameter from './AdvancedParameter.svelte';
+	import type { SelectedFilterType } from './AddAdvancedFilter.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	// import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
-	import type { QuerySelectionStatus } from './query-selection-status';
-    import type { QuerySelectionActions, ActionCallback } from './query-selection-actions';
+	import type { QuerySelectionStatus } from './QuerySelectionStatus';
+    import type { QuerySelectionActions, ActionCallback } from './QuerySelectionActions';
 	import { getCachedSchema } from '@/beacon-api/metadata-cache';
-	import { type QueryDraft } from './query-draft';
+	import { type QueryDraft } from './QueryDraft';
 
 
 	let {

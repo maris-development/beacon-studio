@@ -18,8 +18,8 @@
 	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
 	import { queryStore } from '@/stores/query-store.svelte';
-	import QueryVisualisationTable from './query-visualisation-table.svelte';
-	import type { QueryWorkspace } from './query-workspace.svelte';
+	import QueryVisualisationTable from './QueryVisualisationTable.svelte';
+	import type { QueryWorkspace } from './QueryWorkspace.svelte';
 
 	let { workspace, onRunQuery }: { workspace: QueryWorkspace; onRunQuery?: () => Promise<void> } =
 		$props();

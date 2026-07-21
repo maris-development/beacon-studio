@@ -21,8 +21,8 @@ import { get } from 'svelte/store';
 import {
 	makeEmptyQuerySelectionStatus,
 	type QuerySelectionStatus
-} from './query-selection-status';
-import { compileDraft, makeEmptyDraft, type QueryDraft } from './query-draft';
+} from './QuerySelectionStatus';
+import { compileDraft, makeEmptyDraft, type QueryDraft } from './QueryDraft';
 
 export type QueryBlock = {
 	id: string;

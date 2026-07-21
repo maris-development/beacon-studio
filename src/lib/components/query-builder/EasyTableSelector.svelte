@@ -3,7 +3,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import EasyQueryBuilder from './easy-query-builder.svelte';
+	import EasyQueryBuilder from './EasyQueryBuilder.svelte';
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;

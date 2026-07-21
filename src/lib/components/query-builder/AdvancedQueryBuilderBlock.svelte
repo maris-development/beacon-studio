@@ -9,8 +9,8 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery, DataType, Filter, OutputFormat } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-	import AdvancedParameter from './advanced-parameter.svelte';
-	import type { SelectedFilterType } from './add-advanced-filter.svelte';
+	import AdvancedParameter from './AdvancedParameter.svelte';
+	import type { SelectedFilterType } from './AddAdvancedFilter.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';

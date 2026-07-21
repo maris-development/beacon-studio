@@ -6,7 +6,7 @@
 	import DataTable from '$lib/components/data-table.svelte';
 	import { goto } from '$app/navigation';
 	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { Column } from '@/util-types';
 	import { resolve } from '$app/paths';
 	import Button from '@/components/ui/button/button.svelte';

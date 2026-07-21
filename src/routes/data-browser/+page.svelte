@@ -2,8 +2,8 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { onMount } from 'svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import Card from '@/components/card/card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
   	import { resolve } from '$app/paths';
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);

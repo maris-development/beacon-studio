@@ -82,7 +82,9 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
+- Prefer PascalCase naming for components, types, and other applicable identifiers.
 - Keep route pages orchestration-focused; move reusable logic/components under `src/lib/components/*`.
+- Prefer SCSS styling over Tailwind utility classes, even though Tailwind is enabled.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
 

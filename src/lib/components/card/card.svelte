@@ -51,7 +51,7 @@
 		padding: 1.5rem;
 		box-shadow: var(--shadow-sm);
 		border-style: var(--tw-border-style);
-		border-width: 1px;
+		border-width: 1.5px;
 		color: var(--foreground);
 		gap: 0.75rem;
 

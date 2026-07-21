@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { type ActionCallback } from '@/components/query-builder/query-selection-actions';
+	import { type ActionCallback } from '@/components/query-builder/QuerySelectionActions';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as QueryFunctions from '@/components/query-builder/query-functions';
+	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
 	import type { CompiledQuery } from "@/beacon-api/types";
 
     // icons

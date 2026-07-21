@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Card from "@/components/card/card.svelte";
-	import Cookiecrumb from "@/components/cookiecrumb/cookiecrumb.svelte";
+	import Card from "@/components/card/Card.svelte";
+	import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
   	import { resolve } from '$app/paths';
 </script>
 
