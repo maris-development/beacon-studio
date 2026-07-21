@@ -56,7 +56,7 @@
 		// Encode Basic Auth header
 		const token = btoa(`${username}:${password}`);
 		let json = JSON.stringify(table_config, null, 2);
-		console.log('Creating table with config:', json);
+		// console.log('Creating table with config:', json);
 		try {
 			const res = await fetch(`${instance.url}/api/admin/create-table`, {
 				method: 'POST',
@@ -69,17 +69,17 @@
 
 			if (!res.ok) {
 				const err = await res.text();
-				console.log('Upload failed:', err);
+				// console.log('Upload failed:', err);
 				throw new Error(err || 'Upload failed');
 			}
 
-			console.log('Response:', res);
+			// console.log('Response:', res);
 
 			const data = await res.json();
 			message = `✅ Created table ${table_name}`;
 			onCancel(true);
 		} catch (err: any) {
-			console.log('Create error:', err);
+			// console.log('Create error:', err);
 			message = `❌ ${err.message}`;
 		}
 	}

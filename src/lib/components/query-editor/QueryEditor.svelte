@@ -61,12 +61,9 @@
 		return () => editorInstance?.dispose();
 	});
 
-	// Reflect external sourceCode changes (e.g. builder -> JSON) into the editor.
-	// Guarded by the value comparison so our own edits don't trigger a reset/loop.
 	$effect(() => {
-		const incoming = sourceCode ?? '';
-		if (editorInstance && editorInstance.getValue() !== incoming) {
-			editorInstance.setValue(incoming);
+		if (editorInstance && sourceCode !== editorInstance.getValue()) {
+			editorInstance.setValue(sourceCode);
 		}
 	});
 </script>

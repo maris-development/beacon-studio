@@ -68,7 +68,7 @@
 	function deleteInstance(instance: BeaconInstance) {
 		if (!instance) return;
 
-		console.log('Deleting Beacon instance:', instance);
+		// console.log('Deleting Beacon instance:', instance);
 		showFormModal = false;
 
 		//update list of instances
@@ -100,7 +100,7 @@
 			return;
 		}
 
-		console.log('Saving Beacon instance:', instance);
+		// console.log('Saving Beacon instance:', instance);
 		showFormModal = false;
 
 		//update list of instances

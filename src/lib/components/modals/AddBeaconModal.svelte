@@ -67,7 +67,7 @@
 	async function submitForm() {
 		const validConnection = await testConnection();
 
-		console.log('Connection test result:', validConnection);
+		// console.log('Connection test result:', validConnection);
 
 		if(!validConnection) return;
 

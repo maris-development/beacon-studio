@@ -43,7 +43,7 @@
 	}
 
 	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.log('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
+		console.warn('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
 	}
 
 	function onPageChange(page: number) {
@@ -71,7 +71,7 @@
 	async function getDefaultTable() {
 		const defaultTable = await client.getDefaultTable();
 
-		console.log('Default table:', defaultTable);
+		// console.log('Default table:', defaultTable);
 
 		if (defaultTable) {
 			const _rows = [...rows];

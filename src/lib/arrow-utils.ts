@@ -119,7 +119,7 @@ export class ApacheArrowUtils {
         latitudeColumnName: string = 'Latitude',
         longitudeColumnName: string = 'Longitude'
     ): [[number, number], [number, number]] {
-        console.log('getTableGeometryBounds', table);
+        // console.log('getTableGeometryBounds', table);
 
 
         if (!table) {
@@ -298,7 +298,7 @@ export class ApacheArrowUtils {
             indexedArray.push({ index: i, value: sortedColumnArray[i] });
         }
 
-        console.log('Sorting table', column, direction, table)
+        // console.log('Sorting table', column, direction, table)
 
         let sortedIndices: number[];
 
@@ -439,7 +439,7 @@ export class ApacheArrowUtils {
             }
         }
 
-        console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
+        // console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
 
         // 3. Rebuild each column as a JS array of the kept values
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
