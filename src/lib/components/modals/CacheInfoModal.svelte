@@ -73,7 +73,7 @@
 			<!-- Memory tier -->
 			<section>
 				<div class="section-head">
-					<h2>Memory cache</h2>
+					<h3>Memory cache</h3>
 					<span class="subtle">decoded Arrow tables, this session</span>
 				</div>
 
@@ -136,7 +136,7 @@
 			<!-- Disk tier -->
 			<section>
 				<div class="section-head">
-					<h2>Disk cache (OPFS)</h2>
+					<h3>Disk cache (OPFS)</h3>
 					<span class="subtle">
 						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : 'N/A'} after storing
 					</span>
@@ -230,10 +230,6 @@
 		border-bottom: 1px solid #e5e5e5;
 		padding-bottom: 0.35rem;
 
-		h2 {
-			margin: 0;
-			font-size: 1.05rem;
-		}
 	}
 
 	.subtle {

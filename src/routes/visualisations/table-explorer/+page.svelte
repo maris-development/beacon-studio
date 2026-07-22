@@ -253,7 +253,7 @@
 />
 
 <div class="page-container">
-	<h1>Table explorer</h1>
+	<h2>Table explorer</h2>
 
 	<div class="buttons-header">
 		<Button onclick={handleEditQuery}>

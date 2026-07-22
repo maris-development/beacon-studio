@@ -84,7 +84,11 @@ This file is a quick operational guide for coding agents working in this reposit
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
 - Prefer PascalCase naming for components, types, and other applicable identifiers.
 - Keep route pages orchestration-focused; move reusable logic/components under `src/lib/components/*`.
-- Prefer SCSS styling over Tailwind utility classes, even though Tailwind is enabled.
+- Use SCSS for all styling; do not introduce plain CSS stylesheets or plain CSS blocks.
+- Structure styles with SCSS hierarchy (nested rules) where it improves readability and maintainability.
+- Do not override heading text styles (`h1`-`h6`) defined in `app.scss` (font family, font size, font weight). Only adjust layout/spacing properties (e.g., margins, padding, positioning) in component- or screen-specific styles.
+- Prefer native CSS custom properties (`--var` syntax) for design tokens and runtime theming.
+- Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
 

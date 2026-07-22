@@ -54,18 +54,18 @@
 <Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }]} />
 
 <div class="page-container">
-	<h1>Data Browser</h1>
+	<h2>Data Browser</h2>
 
 	<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
 
 	<div class="data-browser-functions">
 		<Card href={resolve('/data-browser/datasets')}>
-			<h2>{datasetsTitle}</h2>
+			<h3>{datasetsTitle}</h3>
 			<p>View and manage individual datasets.</p>
 		</Card>
 
 		<Card href={resolve('/data-browser/data-tables')}>
-			<h2>{dataTablesTitle}</h2>
+			<h3>{dataTablesTitle}</h3>
 			<p>View and manage data tables.</p>
 		</Card>
 	</div>

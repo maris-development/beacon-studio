@@ -498,8 +498,6 @@
 	}
 </script>
 
-<!-- Naming up for change -->
-
 <div id="new-query-builder">
 	<div class="flex flex-row items-center justify-between">
 		<h3>Query Parameters</h3>

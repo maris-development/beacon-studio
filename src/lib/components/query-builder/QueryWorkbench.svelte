@@ -12,7 +12,7 @@
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import NewQueryActionBar from '@/components/query-buttons/NewQueryActionBar.svelte';
     import QueryBlock from './QueryBuilderSelectorBlock.svelte';
-    import QueryBuilderPane from './QueryBuilderPane.svelte';
+    import QueryBuilderPanes from './QueryWorkbenchPanes.svelte';
     import QueryVisualisationView from './QueryVisualisationView.svelte';
     import type { CompiledQuery } from '@/beacon-api/types';
     import { QueryWorkspace } from './QueryWorkspace.svelte';
@@ -115,7 +115,7 @@
 
 		<Tabs.Content value="build">
 			<!-- Table + parameter selection on the left, live JSON on the right. -->
-			<QueryBuilderPane {workspace} />
+			<QueryBuilderPanes {workspace} />
 		</Tabs.Content>
 
 		<Tabs.Content value="visualise">

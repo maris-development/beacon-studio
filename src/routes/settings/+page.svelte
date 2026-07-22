@@ -5,7 +5,7 @@
 <Cookiecrumb crumbs={[{ label: 'Settings', href: '/settings' }]} />
 
 <div class="page-container">
-	<h1>Settings</h1>
+	<h2>Settings</h2>
 
 	<p>
 		Manage your Beacon Studio settings here. Adjust preferences, manage accounts, and configure system options.

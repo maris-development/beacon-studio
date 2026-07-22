@@ -11,37 +11,30 @@
 	import { resolve } from '$app/paths';
 
 	const data = {
-		instance: {
-			host: 'https://beacon-argo.maris.nl',
-			name: 'Beacon Euro Argo',
-			description: 'Beacon Instance running on top of the Euro Argo Fleet collection'
-		},
 		dataAccess: [
 			{
 				title: 'Queries',
 				url: resolve('/queries'),
 				icon: DatabaseIcon,
-				isActive: true,
 				items: [
 					{
 						title: 'Builder',
 						url: resolve('/queries/query-builder')
 					},
-					{
-						title: 'Editor',
-						url: resolve('/queries/query-editor')
-					},
+					// {
+					// 	title: 'Editor',
+					// 	url: resolve('/queries/query-editor')
+					// },
 					{
 						title: 'History',
 						url: resolve('/queries/query-history')
-					},
+					}
 				]
 			},
 			{
 				title: 'Visualizations',
 				url: resolve('/visualisations'),
 				icon: EyeIcon,
-				isActive: true,
 				items: [
 					{
 						title: 'Map Viewer',
@@ -63,7 +56,6 @@
 				title: 'Content',
 				url: resolve('/data-browser'),
 				icon: Table2Icon,
-				isActive: true,
 				items: [
 					{
 						title: 'Datasets',
@@ -86,7 +78,7 @@
 				icon: Settings2Icon
 			}
 		],
-		
+
 		navSecondary: [
 			{
 				title: 'Documentation',
@@ -116,6 +108,7 @@
 	import NavInstance from './nav-instance.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import type { ComponentProps } from 'svelte';
+	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 </script>
@@ -125,15 +118,17 @@
 		<Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton size="lg">
+					<!-- eslint-disable-next-line @typescript-eslint/no-unused-vars -->
 					{#snippet child({ props })}
-						<a href="{resolve('/')}" {...props}>
+						<a class="header-link" href={resolve('/')}>
 							<div class=" header-icon">
 								<DatabaseZapIcon class="size-4" />
 							</div>
-							<div class="grid flex-1 text-left text-sm leading-tight">
-								<span class="truncate font-medium">Beacon Studio</span>
-								<span class="truncate text-xs">Community</span>
-							</div>
+							<h1 class="truncate">Beacon Studio</h1>
+							<span class="collapse-sidebar">
+								<!-- place collapse icon here.  -->
+								<PanelLeftCloseIcon class="size-4" />
+							</span>
 						</a>
 					{/snippet}
 				</Sidebar.MenuButton>
@@ -154,15 +149,30 @@
 </Sidebar.Root>
 
 <style lang="scss">
-	.header-icon {
-		background: var(--background);
-		color: var(--foreground);
+	.header-link {
 		display: flex;
-		aspect-ratio: 1 / 1;
-		width: 2rem; // w-8
-		height: 2rem; // h-8
+		// justify-content: space-between;
 		align-items: center;
-		justify-content: center;
-		border-radius: 0.5rem; // rounded-lg
+		gap: 0.5rem;
+
+		.header-icon {
+			background: var(--background);
+			color: var(--foreground);
+			display: flex;
+			aspect-ratio: 1 / 1;
+			width: 2rem; // w-8
+			height: 2rem; // h-8
+			align-items: center;
+			justify-content: center;
+			border-radius: 0.5rem; // rounded-lg
+		}
+
+		h1 {
+			flex-grow: 1;
+			font-size: 1rem; // text-base
+			font-weight: 600; // font-medium
+			line-height: 1.5rem; // leading-6
+			margin: 0;
+		}
 	}
 </style>

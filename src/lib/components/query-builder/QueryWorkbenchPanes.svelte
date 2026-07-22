@@ -1,5 +1,5 @@
 <!--
- QueryBuilderPane — the Build-mode content of the workbench.
+ QueryBuilderPanes — the Build-mode content of the workbench.
 
  Two collapsible panes side by side:
    left  = table selection + parameter selection (the existing builder)
@@ -17,10 +17,9 @@
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
 	import PanelRightCloseIcon from '@lucide/svelte/icons/panel-right-close';
 	import PanelRightOpenIcon from '@lucide/svelte/icons/panel-right-open';
-	import QBTableSelector from './QueryBuilderTableSelector.svelte';
+	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from './QueryDraft';
-	import {onMount} from 'svelte';
 	import type { QueryWorkspace } from './QueryWorkspace.svelte';
 
 	let { workspace }: { workspace: QueryWorkspace } = $props();
@@ -67,7 +66,7 @@
 			<div class="pane-body">
 				<!-- Re-mount per active block so the builder re-hydrates from its query. -->
 				{#key workspace.activeBlockId}
-					<QBTableSelector
+					<QueryBuilder
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={workspace.activeBlock?.pendingSeed ?? null}
 						onDraftChange={handleDraftChange}
@@ -114,26 +113,27 @@
 		gap: 0.5rem;
 		border: 1px solid var(--border);
 		border-radius: 0.5rem;
-		padding: 0.75rem;
-	}
+	
+		// A collapsed pane shrinks to just its header so the other pane expands.
+		&.pane--collapsed {
+			flex: 0 0 auto;
+		}
 
-	// A collapsed pane shrinks to just its header so the other pane expands.
-	.pane--collapsed {
-		flex: 0 0 auto;
-	}
+		.pane-header {
+			border-bottom: 1px solid var(--border);
+			padding: 0.75rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.5rem;
 
-	.pane-header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-	}
-
-	.pane-title {
-		font-weight: 600;
-	}
-
-	.pane-body {
-		min-width: 0;
+			.pane-title {
+				font-weight: 600;
+			}
+		}
+		.pane-body {
+			min-width: 0;
+			padding: 0.75rem;
+		}
 	}
 </style>

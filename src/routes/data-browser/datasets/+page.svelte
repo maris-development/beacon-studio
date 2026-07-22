@@ -124,7 +124,7 @@
 />
 
 <div class="page-container">
-	<h1>Datasets</h1>
+	<h2>Datasets</h2>
 
 	<p>Explore and manage the datasets that are available in your Beacon instance.</p>
 

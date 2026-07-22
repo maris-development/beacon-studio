@@ -125,7 +125,7 @@
 <Cookiecrumb />
 
 <div class="page-container">
-	<h1 class="">Welcome to Beacon Studio</h1>
+	<h2 class="">Welcome to Beacon Studio</h2>
 
 	<p>
 		Visit <ExternalLink href="https://maris-development.github.io/beacon/">
@@ -135,21 +135,21 @@
 
 	<div class="beacon-functions">
 		<Card href={resolve('/data-browser')}>
-			<h2>Browse data</h2>
+			<h3>Browse data</h3>
 			<p>
 				Browse the contents and definitions of your Beacon instance in a tabular interface.
 			</p>
 		</Card>
 
 		<Card href={resolve('/queries')}>
-			<h2>Create queries</h2>
+			<h3>Create queries</h3>
 			<p>
 				Use the query builder or query editor to create queries for your Beacon instance.
 			</p>
 		</Card>
 
 		<Card href={resolve('/visualisations')}>
-			<h2>Visualise data</h2>
+			<h3>Visualise data</h3>
 			<p>
 				Use the visualisation tools to view tables, charts and graphs of the contents of your Beacon instance.
 			</p>

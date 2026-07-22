@@ -2,6 +2,7 @@
 	import * as Collapsible from "$lib/components/ui/collapsible/index.js";
 	import * as Sidebar from "$lib/components/ui/sidebar/index.js";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+	import { page } from "$app/state";
 
 	let {
 		title,
@@ -21,16 +22,25 @@
 			}[];
 		}[];
 	} = $props();
+
+	function isItemActive(item: { url: string; items?: { url: string }[] }): boolean {
+		const pathname = page.url.pathname;
+		if (item.items?.length) {
+			return item.items.some((sub) => pathname.startsWith(sub.url)) || pathname.startsWith(item.url + '/') || pathname === item.url;
+		}
+		return pathname === item.url || pathname.startsWith(item.url + '/');
+	}
 </script>
 
 <Sidebar.Group>
 	<Sidebar.GroupLabel>{title}</Sidebar.GroupLabel>
 	<Sidebar.Menu>
 		{#each items as mainItem (mainItem.title)}
-			<Collapsible.Root open={mainItem.isActive}>
+			{@const active = isItemActive(mainItem)}
+			<Collapsible.Root open={active}>
 				{#snippet child({ props })}
 					<Sidebar.MenuItem {...props}>
-						<Sidebar.MenuButton tooltipContent={mainItem.title}>
+						<Sidebar.MenuButton tooltipContent={mainItem.title} isActive={active}>
 							{#snippet child({ props })}
 								<a href={mainItem.url} {...props}>
 									<mainItem.icon />
@@ -54,7 +64,7 @@
 								<Sidebar.MenuSub>
 									{#each mainItem.items as subItem (subItem.title)}
 										<Sidebar.MenuSubItem>
-											<Sidebar.MenuSubButton href={subItem.url}>
+											<Sidebar.MenuSubButton href={subItem.url} isActive={page.url.pathname === subItem.url || page.url.pathname.startsWith(subItem.url + '/')}>
 												<span>{subItem.title}</span>
 											</Sidebar.MenuSubButton>
 										</Sidebar.MenuSubItem>

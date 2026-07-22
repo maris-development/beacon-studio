@@ -125,7 +125,7 @@
 />
 
 <div class="page-container">
-	<h1>Dataset {file} ({totalRows} fields)</h1>
+	<h2>Dataset {file} ({totalRows} fields)</h2>
 
 	<input
 		type="search"

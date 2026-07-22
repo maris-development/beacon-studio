@@ -111,7 +111,7 @@
 />
 
 <div class="page-container">
-	<h1>Data Tables</h1>
+	<h2>Data Tables</h2>
 	<div class="mb-4 flex items-center justify-between">
 		<p>Explore and manage the tables that are available in your Beacon instance.</p>
 

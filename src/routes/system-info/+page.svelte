@@ -55,7 +55,7 @@
 <Cookiecrumb crumbs={[{ label: 'System Info', href: '/system-info' }]} />
 
 <div class="page-container">
-	<h1>System Information</h1>
+	<h2>System Information</h2>
 
 	<p>
 		View detailed information about the Beacon Studio system, including version, CPU usage, memory,

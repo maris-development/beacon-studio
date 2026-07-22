@@ -12,7 +12,6 @@
 	import TableIcon from '@lucide/svelte/icons/table';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
@@ -76,7 +75,7 @@
 <div class="page-container">
 	<div class="header">
 		<div>
-			<h1>Query History</h1>
+			<h2>Query History</h2>
 			<p>Queries you've executed. Re-run, view, or edit any of them.</p>
 		</div>
 		<div class="buttons">
@@ -149,14 +148,14 @@
 								Chart
 								<ChartPieIcon />
 							</Button>
-							<Button
+							<!-- <Button
 								size="sm"
 								variant="outline"
 								onclick={() => openWith(resolve('/queries/query-editor'), entry)}
 							>
 								Edit
 								<PencilIcon />
-							</Button>
+							</Button> -->
 							<Button
 								size="sm"
 								variant="ghost"

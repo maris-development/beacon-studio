@@ -182,7 +182,7 @@
 
 <div class="page-container">
 	<div class="header">
-		<h1>Chart explorer</h1>
+		<h2>Chart explorer</h2>
 
 		<div class="buttons-header">
 			<Button onclick={handleEditQuery}>

@@ -48,7 +48,7 @@
 		on:click|stopPropagation
 	>
 		<header id="modal-title-{shortRandomString}">
-			{title}
+			<h2>{title}</h2>
 			{#if canCloseModal}
 				<button class="close-button" on:click={onClose} aria-label="Close modal"> &times; </button>
 			{/if}
