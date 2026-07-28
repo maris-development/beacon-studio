@@ -19,7 +19,7 @@ html {
 }
 
 body {
-    background: var(--background-gradient);
+    background: var(--app-background);
     background-attachment: fixed;
     color: var(--foreground);
     display: flex;
@@ -27,8 +27,15 @@ body {
     height: 100vh;
 }
 
-.page-container {
+.page-wrapper {
     padding: 1rem;
+}
+
+.page-container {
+    background: white;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(231, 231, 236);
 }
 
 
@@ -73,7 +80,7 @@ h3 {
 }
 
 h4 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     font-weight: 450;
 }
 

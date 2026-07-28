@@ -17,6 +17,11 @@ import { get, type Readable } from "svelte/store";
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
 
+/**
+ * Combines class names and merges Tailwind classes, ensuring that conflicting classes are resolved correctly.
+ * @param inputs 
+ * @returns 
+ */
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
 }
@@ -43,12 +48,23 @@ export class Utils {
 					return stringValue;
 				}
 			}
+
 			// If it's an object without a toString method, return a JSON string
 			return JSON.stringify(value, null, 2);
 		}
 
 		return String(value) || '';
 	}
+
+    static dataTypeToString(datatype: DataType): string {
+        if(typeof datatype ==='string'){
+            return datatype;
+        }
+
+        const type = datatype.Timestamp.filter(x => !!x).join(', ');
+
+        return `Timestamp(${type})`;
+    }
 
     static isNumber(value?: string|number): value is number {
         return ((value != null) &&

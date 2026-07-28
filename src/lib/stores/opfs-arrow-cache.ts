@@ -36,7 +36,6 @@ const META_SUFFIX = '.meta.json';
 /** Sidecar metadata persisted next to each `.arrows` payload. */
 export interface OpfsDatasetMeta {
 	version: number;
-	/** The full QueryStore cache key this entry belongs to (hash preimage). */
 	key: string;
 	rowCount: number;
 	/** Original fetch + decode duration (ms) — shown as-is on rehydrated entries. */

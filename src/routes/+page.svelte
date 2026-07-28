@@ -1,12 +1,11 @@
 <script lang="ts">
-
 	import { beaconInstances, currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import ChooseBeaconModal from '@/components/modals/ChooseBeaconModal.svelte';
 	import { onMount } from 'svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { BeaconClient } from '@/beacon-api/client';
-  	import { resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
 	import ExternalLink from '@/components/external-link.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
@@ -16,8 +15,8 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $currentBeaconInstance;
 	let showChooseBeaconModal = $state(false);
 
-	async function testConnection(){
-		if(currentBeaconInstanceValue == null) return;
+	async function testConnection() {
+		if (currentBeaconInstanceValue == null) return;
 		const client = BeaconClient.new(currentBeaconInstanceValue);
 		await client.testConnection();
 	}
@@ -52,14 +51,10 @@
 
 		if (currentBeaconInstanceValue != null) {
 			showChooseBeaconModal = false;
-			
 		} else {
 			alert('No Beacon instance selected. Please select one before proceeding.');
-
 		}
 	}
-
-
 
 	onMount(async () => {
 		await addBeaconInstanceFromCurrentHostRoot();
@@ -67,17 +62,15 @@
 		openModalIfNoInstance();
 	});
 
-
 	/*
 	 * Adds a Beacon instance based on the current host root URL
 	 * E.g. if the app is hosted at "https://beacon.maris.nl/studio/", it will try to add "https://beacon.maris.nl/" as a Beacon instance
 	 */
-	async function addBeaconInstanceFromCurrentHostRoot(){
+	async function addBeaconInstanceFromCurrentHostRoot() {
 		const currentHostRoot = window.location.origin;
 
 		// Check if an instance with the current host root URL already exists
-		if(!beaconInstanceArray.find(i => i.url.includes(currentHostRoot))) {
-
+		if (!beaconInstanceArray.find((i) => i.url.includes(currentHostRoot))) {
 			const hostname = window.location.hostname;
 			const hostInstance: BeaconInstance = {
 				id: Utils.randomUUID(),
@@ -85,28 +78,31 @@
 				url: currentHostRoot,
 				description: `Beacon instance based on current host root URL. (${currentHostRoot})`,
 				createdAt: new Date(),
-				updatedAt: new Date(),
+				updatedAt: new Date()
 			};
 
 			//test the instance before adding
 			const client = BeaconClient.new(hostInstance);
 
-			const canConnect = await client.getHealth().then(() => true).catch(() => false);
+			const canConnect = await client
+				.getHealth()
+				.then(() => true)
+				.catch(() => false);
 
-			if(canConnect){
-				beaconInstances.update(instances => {
+			if (canConnect) {
+				beaconInstances.update((instances) => {
 					instances.push(hostInstance);
 					return instances;
 				});
 
 				currentBeaconInstance.set(hostInstance);
 			} else {
-				console.warn(`Could not connect to Beacon instance at ${currentHostRoot}. Not adding instance.`);
+				console.warn(
+					`Could not connect to Beacon instance at ${currentHostRoot}. Not adding instance.`
+				);
 			}
-			
 		}
 	}
-
 
 	let showIhmStuff = false;
 	// IHM Stuff:
@@ -115,7 +111,6 @@
 	function hideWelcomeModal() {
 		showWelcomeModal = false;
 	}
-
 </script>
 
 <svelte:head>
@@ -124,39 +119,35 @@
 
 <Cookiecrumb />
 
-<div class="page-container">
-	<h2 class="">Welcome to Beacon Studio</h2>
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2 class="">Welcome to Beacon Studio</h2>
 
-	<p>
-		Visit <ExternalLink href="https://maris-development.github.io/beacon/">
-			https://maris-development.github.io/beacon/
-		</ExternalLink> to read the documentation. 
-	</p>
+		<p>
+			Visit <ExternalLink href="https://maris-development.github.io/beacon/">
+				https://maris-development.github.io/beacon/
+			</ExternalLink> to read the documentation.
+		</p>
 
-	<div class="beacon-functions">
-		<Card href={resolve('/data-browser')}>
-			<h3>Browse data</h3>
-			<p>
-				Browse the contents and definitions of your Beacon instance in a tabular interface.
-			</p>
-		</Card>
+		<div class="beacon-functions">
+			<Card href={resolve('/data-browser')}>
+				<h3>Browse data</h3>
+				<p>Browse the contents and definitions of your Beacon instance in a tabular interface.</p>
+			</Card>
 
-		<Card href={resolve('/queries')}>
-			<h3>Create queries</h3>
-			<p>
-				Use the query builder or query editor to create queries for your Beacon instance.
-			</p>
-		</Card>
+			<Card href={resolve('/queries')}>
+				<h3>Create queries</h3>
+				<p>Use the query builder or query editor to create queries for your Beacon instance.</p>
+			</Card>
 
-		<Card href={resolve('/visualisations')}>
-			<h3>Visualise data</h3>
-			<p>
-				Use the visualisation tools to view tables, charts and graphs of the contents of your Beacon instance.
-			</p>
-		</Card>
-
-
-		
+			<Card href={resolve('/visualisations')}>
+				<h3>Visualise data</h3>
+				<p>
+					Use the visualisation tools to view tables, charts and graphs of the contents of your
+					Beacon instance.
+				</p>
+			</Card>
+		</div>
 	</div>
 </div>
 
@@ -165,29 +156,38 @@
 {/if}
 
 {#if showWelcomeModal}
-	 <Modal title="IHM Beacon Studio testomgeving" onClose={() => hideWelcomeModal()} width="50vw">
-
-		<p>Welkom bij de Informatiehuis Marien Beacon Studio testomgeving! Dit is de eerste versie van de "Beacon Studio", ontwikkeld als proof of concept voor dataopslag, -toegang en visualisatie van IHM-data.</p>
-
+	<Modal title="IHM Beacon Studio testomgeving" onClose={() => hideWelcomeModal()} width="50vw">
 		<p>
-			Met deze tool kunt u verbinding maken met een Beacon-server, gegevens verkennen, aangepaste query’s uitvoeren en visualisaties genereren. 
-			We moedigen u aan de mogelijkheden te ontdekken en feedback te delen over uw ervaring. 
-			Deze omgeving is vooraf ingesteld om te verbinden met de IHM Beacon: 
-			<ExternalLink href="https://beacon-ihm.maris.nl/">https://beacon-ihm.maris.nl/</ExternalLink>. Via deze link is ook de Beacon API beschikbaar.
+			Welkom bij de Informatiehuis Marien Beacon Studio testomgeving! Dit is de eerste versie van de
+			"Beacon Studio", ontwikkeld als proof of concept voor dataopslag, -toegang en visualisatie van
+			IHM-data.
 		</p>
 
-		<p>Voor technische documentatie over het gebruik van Beacon, <ExternalLink href="https://maris-development.github.io/beacon/">klik hier</ExternalLink>.</p>
+		<p>
+			Met deze tool kunt u verbinding maken met een Beacon-server, gegevens verkennen, aangepaste
+			query’s uitvoeren en visualisaties genereren. We moedigen u aan de mogelijkheden te ontdekken
+			en feedback te delen over uw ervaring. Deze omgeving is vooraf ingesteld om te verbinden met
+			de IHM Beacon:
+			<ExternalLink href="https://beacon-ihm.maris.nl/">https://beacon-ihm.maris.nl/</ExternalLink>.
+			Via deze link is ook de Beacon API beschikbaar.
+		</p>
 
-		<p>Voor vragen, foutmeldingen of ondersteuning kunt u contact opnemen met Paul of Robin via &lt;voornaam&gt;@maris.nl.</p>
+		<p>
+			Voor technische documentatie over het gebruik van Beacon, <ExternalLink
+				href="https://maris-development.github.io/beacon/">klik hier</ExternalLink
+			>.
+		</p>
+
+		<p>
+			Voor vragen, foutmeldingen of ondersteuning kunt u contact opnemen met Paul of Robin via
+			&lt;voornaam&gt;@maris.nl.
+		</p>
 
 		<div slot="footer" class="footer-content">
-			<Button onclick={hideWelcomeModal}>
-				Doorgaan
-			</Button>
+			<Button onclick={hideWelcomeModal}>Doorgaan</Button>
 		</div>
 	</Modal>
 {/if}
-
 
 <style lang="scss">
 	.beacon-functions {

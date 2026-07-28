@@ -9,8 +9,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { BeaconClient } from '@/beacon-api/client';
@@ -22,10 +21,8 @@
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	// import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
 	import type { QuerySelectionStatus } from './QuerySelectionStatus';
-    import type { QuerySelectionActions, ActionCallback } from './QuerySelectionActions';
-	import { getCachedSchema } from '@/beacon-api/metadata-cache';
+    import type { QuerySelectionActions } from './QuerySelectionActions';
 	import { type QueryDraft } from './QueryDraft';
 
 
@@ -47,8 +44,6 @@
             visualiseTable: handleTableVisualise,
             visualiseChart: handleChartVisualise,
             visualiseMap: handleMapVisualise,
-            saveQuery: undefined,
-            savedQueries: undefined,
             reset: undefined
         }),
 	}: {
@@ -110,7 +105,7 @@
 			return;
 		}
 
-		getCachedSchema(client, table_name).then((schema) => {
+		client.getCachedSchema(table_name).then((schema) => {
 			fields = schema.fields.map((field) => ({
 				name: field.name,
 				type: field.data_type
@@ -536,7 +531,7 @@
 								bind:this={field.ref}
 							>
 								<span class="search-columns-item-name">{field.name}</span>
-								<span class="search-columns-item-details">{Utils.toString(field.type)}</span>
+								<span class="search-columns-item-details">{Utils.dataTypeToString(field.type)}</span>
 								{#if selectedFields.find((f) => f.name === field.name)}
 									<CheckIcon class="search-columns-item-icon" />
 								{/if}
@@ -550,13 +545,18 @@
 
 	<div class="flex flex-col gap-2">
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
+		{#if selectedFields.length > 0}
 			{#each Utils.range(0, selectedFields.length) as index (index)}
 				<AdvancedParameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
 			{/each}
+		{:else}
+			<h4 class="no-selection">No parameters selected, use the 'Add Parameter' button above.</h4>
+		{/if}
+			
 		</div>
 	</div>
 
-	<Label for="outputFormat">Selected Output Format</Label>
+	<h3>Output Format</h3>
 	<Select.Root type="single" name="outputFormat" bind:value={selected_output_format}>
 		<Select.Trigger class="w-[180px]">
 			{selected_output_format}
@@ -570,16 +570,6 @@
 			</Select.Group>
 		</Select.Content>
 	</Select.Root>
-
-	<!-- <hr /> -->
-
-	<!-- <QueryActionBar
-		onExecute={handleSubmit}
-		onViewTable={handleTableVisualise}
-		onViewMap={handleMapVisualise}
-		onViewChart={handleChartVisualise}
-		{compileQuery}
-	/> -->
 </div>
 
 <style lang="scss">
@@ -611,5 +601,8 @@
 	:global(.search-columns-item-icon) {
 		width: 1rem;
 		height: 1rem;
+	}
+	.no-selection {
+		color: hsl(0, 0%, 50%);
 	}
 </style>

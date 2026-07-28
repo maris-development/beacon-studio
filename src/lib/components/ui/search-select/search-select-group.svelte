@@ -21,7 +21,7 @@
 
 	const context = getSearchSelectContext();
 	const groupCountsStore = context.visibleGroupCounts;
-	const queryStore = context.searchQuery;
+	const queryString = context.searchQuery;
 
 	const groupId = value ?? heading ?? `search-select-group-${Math.random().toString(36).slice(2)}`;
 	setSearchSelectGroupContext(groupId);
@@ -29,7 +29,7 @@
 	let isHidden = $state(false);
 
 	$effect(() => {
-		const query = $queryStore.trim();
+		const query = $queryString.trim();
 		const count = $groupCountsStore.get(groupId) ?? 0;
 		isHidden = query.length > 0 && count === 0;
 	});

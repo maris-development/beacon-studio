@@ -47,6 +47,7 @@
 		width: 40vw;
 		min-width: 300px;
 		gap: 0.5rem;
+		pointer-events: auto;
 	}
 
 	.warning {
@@ -76,5 +77,6 @@
 		padding: 0;
 		line-height: 1;
 		font-size: 1.1rem;
+		cursor: pointer;
 	}
 </style>

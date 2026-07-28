@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { CompiledQuery } from "@/beacon-api/types";
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import { addToast } from "@/stores/toasts";
 	import { Utils } from "@/utils";
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { CompiledQuery } from "@/beacon-api/types";
 	import FileCodeCornerIcon from '@lucide/svelte/icons/file-code-corner';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import { addToast } from "@/stores/toasts";
 	import { Utils } from "@/utils";
 	import { PythonQueryBuilder } from "@/beacon-api/query";

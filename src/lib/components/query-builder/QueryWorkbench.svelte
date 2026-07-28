@@ -9,22 +9,20 @@
  
 <script lang="ts">
     import { onMount } from 'svelte';
-    import * as Tabs from '$lib/components/ui/tabs/index.js';
-    import NewQueryActionBar from '@/components/query-buttons/NewQueryActionBar.svelte';
-    import QueryBlock from './QueryBuilderSelectorBlock.svelte';
-    import QueryBuilderPanes from './QueryWorkbenchPanes.svelte';
-    import QueryVisualisationView from './QueryVisualisationView.svelte';
+    import QueryActionBar from '@/components/query-builder/QueryActionBar.svelte';
+    import QueryBuilderSelectorBlock from './QueryBuilderSelectorBlock.svelte';
+    import QueryWorkbenchPanes from './QueryWorkbenchPanes.svelte';
     import type { CompiledQuery } from '@/beacon-api/types';
     import { QueryWorkspace } from './QueryWorkspace.svelte';
     import { currentBeaconInstance } from '@/stores/config';
     import { BeaconClient } from '@/beacon-api/client';
-    import { queryStore } from '@/stores/query-store.svelte';
     import { addToast } from '@/stores/toasts';
+    import { addSavedQuery } from '@/stores/saved-queries';
+    import { get } from 'svelte/store';
 
     let { initialQuery = null }: { initialQuery?: CompiledQuery | null } = $props();
 
     const workspace = new QueryWorkspace(initialQuery);
-    let mode = $state<'build' | 'visualise'>('build');
     let client: BeaconClient | null = $state(null);
 
     onMount(() => {
@@ -35,20 +33,23 @@
     // const status = $derived(workspace.statusFor(workspace.activeBlock));
 
     function compileQuery() {
-        return workspace.queryFor(workspace.activeBlock);
+        return QueryWorkspace.getQuery(workspace.activeBlock);
     }
 
     async function runActive(): Promise<void> {
         const block = workspace.activeBlock;
-        const query = workspace.queryFor(block);
+        const query = QueryWorkspace.getQuery(block);
         if (!block || !query) {
-            addToast({ message: 'Build a query first, then select a table and at least one column.', type: 'warning' });
+            addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
             return;
         }
-        if (workspace.runStateFor(block).isRunning) return;
+
+        if (workspace.getRunState(block).isRunning) return;
+
         workspace.markBlockRunning(block.id, true);
+        
         try {
-            const entry = await queryStore.ensure(query);
+            const entry = await BeaconClient.ensureQuery(query);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
             workspace.markBlockRunning(block.id, false);
@@ -56,12 +57,14 @@
         }
     }
 
-    async function handleDownload(): Promise<void> {
-        const query = workspace.queryFor(workspace.activeBlock);
+    async function downloadData(): Promise<void> {
+        const query = QueryWorkspace.getQuery(workspace.activeBlock);
+
         if (!query || !client) {
-            addToast({ message: 'Build a query first, then select a table and at least one column.', type: 'warning' });
+            addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
             return;
         }
+
         try {
             await client.queryToDownload(query, BeaconClient.outputFormatToExtension(query));
         } catch (e) {
@@ -70,59 +73,57 @@
     }
 
     async function handleVisualise(): Promise<void> {
-        mode = 'visualise';
         await runActive();
     }
 
-    function handleReset() {
+    function resetQuery() {
         workspace.resetActive();
     }
 
-    function handleSaveQuery() {
-        console.log('TODO: save active query', workspace.queryFor(workspace.activeBlock));
+    function saveQuery(): void {
+        const block = workspace.activeBlock;
+        const query = QueryWorkspace.getQuery(block);
+        if (!block || !query) {
+            addToast({ message: 'Can not save: please select a table and at least one column.', type: 'warning' });
+            return;
+        }
+
+        const instance = get(currentBeaconInstance);
+        try {
+            addSavedQuery({
+                name: block.name,
+                query,
+                instanceId: instance?.id ?? '',
+                instanceName: instance?.name ?? '',
+                instanceUrl: instance?.url ?? ''
+            });
+            addToast({ message: `Query "${block.name}" saved.`, type: 'success' });
+        } catch (e) {
+            addToast({ message: `Failed to save query: ${e?.message ?? e}`, type: 'error' });
+        }
     }
 
-    function handleSavedQueries() {
-        console.log('TODO: open saved queries');
-    }
+
 </script>
 
 <div class="workbench">
 	
+    <div class="page-container">
+        <QueryActionBar
+            {compileQuery}
+            {downloadData}
+            visualiseTable={handleVisualise}
+            visualiseChart={handleVisualise}
+            visualiseMap={handleVisualise}
+            {resetQuery}
+            {saveQuery}
+        />
 
-	<!-- [A] Action bar — always visible -->
-	<!-- TODO: Action bar floats on top of screen when scrolling -->
-	<NewQueryActionBar
-		{compileQuery}
-		downloadData={handleDownload}
-		visualiseTable={handleVisualise}
-		visualiseChart={handleVisualise}
-		visualiseMap={handleVisualise}
-		saveQuery={handleSaveQuery}
-		savedQueries={handleSavedQueries}
-		reset={handleReset}
-	/>
+        <QueryBuilderSelectorBlock {workspace} />
+    </div>
 
-	<!-- [B] Query blocks — always visible -->
-	<QueryBlock {workspace} />
+    <QueryWorkbenchPanes {workspace} />
 
-	<!-- Mode switch: A + B stay above this, content swaps below -->
-	<Tabs.Root bind:value={mode} class="w-full">
-		<Tabs.List class="self-center">
-			<Tabs.Trigger value="build">Build</Tabs.Trigger>
-			<Tabs.Trigger value="visualise">Visualise</Tabs.Trigger>
-		</Tabs.List>
-
-		<Tabs.Content value="build">
-			<!-- Table + parameter selection on the left, live JSON on the right. -->
-			<QueryBuilderPanes {workspace} />
-		</Tabs.Content>
-
-		<Tabs.Content value="visualise">
-			<!-- Runs the active block and shows Table / Chart / Map. -->
-			<QueryVisualisationView {workspace} onRunQuery={runActive} />
-		</Tabs.Content>
-	</Tabs.Root>
 </div>
 
 <style lang="scss">

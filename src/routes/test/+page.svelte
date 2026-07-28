@@ -4,6 +4,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { PythonQueryBuilder } from '@/beacon-api/query';
+	import Button from '@/components/buttons/Button.svelte';
 
 	const query: CompiledQuery = {
 		from: 'easy_ihm_aquadesk_api',
@@ -129,18 +130,36 @@
 
 <Cookiecrumb />
 
-<div class="page-container">
-	<h2 class="">Test page</h2>
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2 class="">Test page</h2>
 
-	<p>
-		Visit <a href="https://maris-development.github.io/beacon/">
-			maris-development.github.io/beacon/
-		</a> to read the documentation.
-	</p>
+		<p>
+			Visit <a href="https://maris-development.github.io/beacon/">
+				maris-development.github.io/beacon/
+			</a> to read the documentation.
+		</p>
 
-	<div>
-        <pre>{pythonCode}</pre>
+		<h3>Button variants</h3>
+
+		<div>
+			<Button variant="default">Default</Button>
+			<Button variant="destructive">Destructive</Button>
+			<Button variant="outline">Outline</Button>
+			<Button variant="secondary">Secondary</Button>
+			<Button variant="ghost">Ghost</Button>
+			<Button variant="link">Link</Button>
+			<Button variant="confirm">Confirm</Button>
+			<Button variant="deny">Deny</Button>
 
 
-    </div>
+		</div>
+
+
+		<div>
+			
+			<pre>{pythonCode}</pre>
+
+		</div>
+	</div>
 </div>

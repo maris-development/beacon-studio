@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import QueryEditor from '@/components/query-editor/QueryTextEditor.svelte';
-	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
+	import QueryActionBar from '$lib/components/query-builder/QueryActionBar.svelte';
 	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';

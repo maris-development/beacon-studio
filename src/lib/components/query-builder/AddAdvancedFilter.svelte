@@ -2,7 +2,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
@@ -31,6 +31,7 @@
 	function getTypedFilters(
 		data_type: DataType
 	): { label: string; filter_value: ParameterFilterType }[] {
+
 		if (Utils.isNumericDataType(data_type)) {
 			return [
 				{
@@ -93,6 +94,7 @@
 					filter_value: { type: 'not_equals_string', value: null }
 				}
 			];
+			
 		} else if (Utils.isTimestampDataType(data_type)) {
 			return [
 				{
@@ -138,7 +140,7 @@
 	<Popover.Trigger>
 		{#snippet child({ props })}
 			<Button
-				variant="default"
+				variant="confirm"
 				class="add-filter-trigger"
 				{...props}
 				role="combobox"

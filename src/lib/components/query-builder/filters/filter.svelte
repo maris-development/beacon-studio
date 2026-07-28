@@ -5,9 +5,9 @@
 		OptionsFilterColumn,
 		RangeFilterColumn
 	} from '@/beacon-api/types';
-	import RangeFilter from './range_filter.svelte';
-	import OptionsFilter from './options_filter.svelte';
-	import AnyFilter from './any_filter.svelte';
+	import RangeFilter from './RangeFilter.svelte';
+	import OptionsFilter from './OptionsFilter.svelte';
+	import AnyFilter from './AnyFilter.svelte';
 	import { onMount } from 'svelte';
 
 	let {

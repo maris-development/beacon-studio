@@ -2,7 +2,7 @@
  * Query history — a persisted log of executed queries, so users can revisit,
  * re-run, view, or edit a query they ran earlier (see the query-history page).
  *
- * Entries are recorded by `queryStore.ensure()` (the single choke point every
+ * Entries are recorded by `BeaconClient.ensureQuery()` (the single choke point every
  * visualizer runs a query through) and deduplicated by the query store's cache
  * `key`, which already folds in the Beacon instance URL — so the same query run
  * against two instances is correctly two rows. Re-running an existing query updates
@@ -40,19 +40,26 @@ export interface QueryHistoryEntry {
 	duration: number;
 }
 
-/** The fields a caller supplies when recording an execution. */
+/**
+ * The fields a caller supplies when recording an execution. `rowCount` and
+ * `duration` are optional: a client-side download server-materializes the result
+ * and never learns the row count, so those fields fall back to any existing entry's
+ * values (see the query store's `recordDownload`).
+ */
 export type RecordExecutionInput = Pick<
 	QueryHistoryEntry,
-	'key' | 'query' | 'instanceId' | 'instanceName' | 'instanceUrl' | 'rowCount' | 'duration'
->;
+	'key' | 'query' | 'instanceId' | 'instanceName' | 'instanceUrl'
+> &
+	Partial<Pick<QueryHistoryEntry, 'rowCount' | 'duration'>>;
 
 /** The persisted, app-wide query history (newest activity anywhere in the list). */
 export const queryHistory = persisted<QueryHistoryEntry[]>('beacon-query-history', []);
 
 /**
  * Records (or refreshes) an executed query. Upserts by `key`: an existing entry has
- * its timestamp, row count and duration updated and its execution count bumped; a
- * new query is prepended. The list is capped to {@link MAX_HISTORY} by dropping the
+ * its timestamp updated and its execution count bumped, with row count / duration
+ * refreshed when the caller supplies them and preserved otherwise; a new query is
+ * prepended. The list is capped to {@link MAX_HISTORY} by dropping the
  * least-recently-executed entries.
  */
 export function recordExecution(input: RecordExecutionInput): void {
@@ -61,9 +68,15 @@ export function recordExecution(input: RecordExecutionInput): void {
 		const existing = entries.find((entry) => entry.key === input.key);
 
 		const updated: QueryHistoryEntry = {
-			...input,
+			key: input.key,
+			query: input.query,
+			instanceId: input.instanceId,
+			instanceName: input.instanceName,
+			instanceUrl: input.instanceUrl,
 			lastExecutedAt: now,
-			executionCount: (existing?.executionCount ?? 0) + 1
+			executionCount: (existing?.executionCount ?? 0) + 1,
+			rowCount: input.rowCount ?? existing?.rowCount ?? 0,
+			duration: input.duration ?? existing?.duration ?? 0
 		};
 
 		const rest = entries.filter((entry) => entry.key !== input.key);

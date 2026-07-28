@@ -4,7 +4,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '$lib/stores/config';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import AddBeaconModal from './AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
@@ -16,7 +16,6 @@
 	import Card from '../card/Card.svelte';
 
 	import { BeaconClient } from '@/beacon-api/client';
-	import { getCachedTables, getCachedSchema } from '@/beacon-api/metadata-cache';
 
 	export let onClose: () => void;
 
@@ -41,10 +40,10 @@
 	// how to do this on application start when beacon instance is already selected?
 	async function handleClose(){
 		const client = BeaconClient.new(currentBeaconInstanceValue);
-		const tables = await getCachedTables(client);
+		const tables = await client.getCachedTables();
 		
 		for (const table of tables){
-			await getCachedSchema(client, table);
+			await client.getCachedSchema(table);
 		}
 
 		onClose();
@@ -143,7 +142,7 @@
 		{/if}
 		{#each beaconInstanceArray as instance (instance.id)}
 
-			<Card onClick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
+			<Card onclick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<h3>{instance.name}</h3>
 				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}

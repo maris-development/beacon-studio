@@ -112,7 +112,7 @@ This file is a quick operational guide for coding agents working in this reposit
 - Run: `npm run check`
 - Run: `npm run lint`
 - If behavior changed, smoke-test relevant route(s):
-  - `/queries/query-builder`
+  - `/queries/query-workbench`
   - `/queries/query-editor`
   - `/visualisations/map-viewer`
   - `/visualisations/table-explorer`

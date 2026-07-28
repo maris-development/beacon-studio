@@ -4,9 +4,10 @@
 
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
-	import Button from '../ui/button/button.svelte';
+	import Button from '../buttons/Button.svelte';
 	import AddAdvancedFilter, { type SelectedFilterType } from './AddAdvancedFilter.svelte';
 	import AdvancedParameterFilter from './AdvancedParameterFilter.svelte';
+	import { Utils } from '@/utils';
 
 	let {
 		column = $bindable(),
@@ -17,51 +18,89 @@
 	} = $props();
 </script>
 
-<Label class="grid items-center gap-3 rounded-lg border border-blue-600 bg-blue-50 p-3">
-	<div class="flex w-full flex-row gap-4">
-		<div class="flex w-full flex-row items-center justify-between gap-1">
-			<div class="flex flex-col gap-1">
-				<Label for={column.name} class="text-sm font-normal">{column.name}</Label>
-			</div>
-			<div class="flex flex-col gap-1">
-				<span class="text-muted-foreground text-xs">{column.type}</span>
-			</div>
+<div class="parameter-card">
+	<div class="parameter-card-header">
+		<div class="parameter-title">
+			<Label for={column.name} class="font-bold">{column.name}</Label>
+			<span class="text-muted-foreground text-xs">{Utils.dataTypeToString(column.type)}</span>
 		</div>
-		<div>
-			<AddAdvancedFilter data_type={column.type} bind:selected_filters={column.selected_filters} />
-		</div>
-		<div>
-			<Button
-				onclick={() => {
-					// console.log('Removing column.');
-					remove_column(column.name);
-				}}
-				title="Remove column"
-				variant="destructive"><CircleXIcon /></Button
-			>
-		</div>
+
+		<AddAdvancedFilter data_type={column.type} bind:selected_filters={column.selected_filters} />
+
+		<Button
+			onclick={() => {
+				// console.log('Removing column.');
+				remove_column(column.name);
+			}}
+			title="Remove column"
+			variant="ghost"
+		>
+			<CircleXIcon />
+		</Button>
 	</div>
+
 	{#if column.selected_filters.length > 0}
 		<Separator />
-		<div class="flex flex-col gap-2 p-4">
+		<div class="parameter-filters">
 			{#each column.selected_filters as filter, index (index)}
-				<div class="flex items-center justify-between">
-					<span>{filter.label}</span>
-					<div class="flex items-center gap-2">
-						<AdvancedParameterFilter filter={filter.filter_value} />
-						<Button
-							variant="ghost"
-							size="icon"
-							onclick={() => {
-								// console.log('Removing filter:', filter);
-								column.selected_filters = column.selected_filters.filter((f) => f !== filter);
-							}}
-						>
-							<CircleXIcon />
-						</Button>
-					</div>
+
+				<div class="filter-wrapper">
+			
+					<AdvancedParameterFilter class="advanced-filter" filter={filter.filter_value} />
+			
+					<Button variant="ghost" size="icon" onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
+						<CircleXIcon class="circle-x" />
+					</Button>
+
 				</div>
+			
 			{/each}
 		</div>
 	{/if}
-</Label>
+</div>
+
+<style lang="scss">
+	.parameter-card {
+		display: grid;
+		align-items: center;
+		gap: 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid #2563eb;
+		background-color: var(--selected-background);
+		padding: 0.6rem;
+		align-items: start;
+
+		.parameter-card-header {
+			display: flex;
+			flex-direction: row;
+			gap: .5rem;
+			
+			.parameter-title {
+				display: flex;
+				width: 100%;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.25rem;
+			}
+
+		}
+
+		.parameter-filters {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+			// padding: 1rem;
+
+			.filter-wrapper {
+				display: flex;
+				flex-direction: row;
+				// align-items: center;
+				gap: 0.5rem;
+				padding: 0.5rem;
+				border-radius: 0.5rem;
+				background-color: white;
+			}
+		}
+	}
+</style>

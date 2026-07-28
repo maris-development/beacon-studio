@@ -2,7 +2,7 @@
 	import { formatDistanceToNow } from 'date-fns';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import { queryHistory, removeHistoryEntry, clearHistory } from '@/stores/query-history';
 	import type { QueryHistoryEntry } from '@/stores/query-history';
 	import { Utils } from '@/utils';
@@ -17,9 +17,7 @@
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
 
 	// Newest activity first.
-	const entries = $derived(
-		[...$queryHistory].sort((a, b) => b.lastExecutedAt - a.lastExecutedAt)
-	);
+	const entries = $derived([...$queryHistory].sort((a, b) => b.lastExecutedAt - a.lastExecutedAt));
 
 	/** Comma-separated selected columns, for a compact query summary. */
 	function columnSummary(entry: QueryHistoryEntry): string {
@@ -56,7 +54,6 @@
 	function closeInfo(): void {
 		showInfoModal = false;
 	}
-
 </script>
 
 <svelte:head>
@@ -67,88 +64,81 @@
 	<CacheInfoModal onClose={() => closeInfo()} />
 {/if}
 
-
-
-
 <Cookiecrumb crumbs={[{ label: 'Queries', href: resolve('/queries') }]} />
 
-<div class="page-container">
-	<div class="header">
-		<div>
-			<h2>Query History</h2>
-			<p>Queries you've executed. Re-run, view, or edit any of them.</p>
-		</div>
-		<div class="buttons">
-			<Button variant="outline" onclick={() => showInfo()}>
-				<InfoIcon />
-			</Button>
-
-			{#if entries.length > 0}
-		
-				<Button variant="outline" onclick={() => clearHistory()}>
-					Clear history
-					<Trash2Icon />
+<div class="page-wrapper">
+	<div class="page-container">
+		<div class="header">
+			<div>
+				<h2>Query History</h2>
+				<p>Queries you've executed. Re-run, view, or edit any of them.</p>
+			</div>
+			<div class="buttons">
+				<Button variant="outline" onclick={() => showInfo()}>
+					<InfoIcon />
 				</Button>
-			{/if}
 
+				{#if entries.length > 0}
+					<Button variant="outline" onclick={() => clearHistory()}>
+						Clear history
+						<Trash2Icon />
+					</Button>
+				{/if}
+			</div>
 		</div>
-		
-	</div>
 
-	{#if entries.length === 0}
-		<Card>
-			<h2>No queries yet</h2>
-			<p>Once you execute a query, it will show up here.</p>
-		</Card>
-	{:else}
-		<div class="executed-queries">
-			{#each entries as entry (entry.key)}
-				<Card>
-					<div class="entry">
-						<div class="entry-main">
-							<h2 class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</h2>
-							<div class="meta">
-								<span class="badge">{entry.instanceName || entry.instanceUrl}</span>
-								<span>{entry.rowCount.toLocaleString()} rows</span>
-								<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-								<span>{Math.round(entry.duration).toLocaleString()} ms</span>
-								<span
-									title={new Date(entry.lastExecutedAt).toLocaleString()}
-								>
-									{lastExecuted(entry)}
-								</span>
-								{#if entry.executionCount > 1}
-									<span>· run {entry.executionCount}×</span>
-								{/if}
+		{#if entries.length === 0}
+			<Card>
+				<h2>No queries yet</h2>
+				<p>Once you execute a query, it will show up here.</p>
+			</Card>
+		{:else}
+			<div class="executed-queries">
+				{#each entries as entry (entry.key)}
+					<Card>
+						<div class="entry">
+							<div class="entry-main">
+								<h2 class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</h2>
+								<div class="meta">
+									<span class="badge">{entry.instanceName || entry.instanceUrl}</span>
+									<span>{entry.rowCount.toLocaleString()} rows</span>
+									<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
+									<span>{Math.round(entry.duration).toLocaleString()} ms</span>
+									<span title={new Date(entry.lastExecutedAt).toLocaleString()}>
+										{lastExecuted(entry)}
+									</span>
+									{#if entry.executionCount > 1}
+										<span>· run {entry.executionCount}×</span>
+									{/if}
+								</div>
 							</div>
-						</div>
 
-						<div class="actions">
-							<Button
-								size="sm"
-								variant="outline"
-								onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
-							>
-								Table
-								<TableIcon />
-							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
-							>
-								Map
-								<MapIcon />
-							</Button>
-							<Button
-								size="sm"
-								variant="outline"
-								onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
-							>
-								Chart
-								<ChartPieIcon />
-							</Button>
-							<!-- <Button
+							<div class="actions">
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
+								>
+									Table
+									<TableIcon />
+								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
+								>
+									Map
+									<MapIcon />
+								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
+								>
+									Chart
+									<ChartPieIcon />
+								</Button>
+								<!-- <Button
 								size="sm"
 								variant="outline"
 								onclick={() => openWith(resolve('/queries/query-editor'), entry)}
@@ -156,20 +146,21 @@
 								Edit
 								<PencilIcon />
 							</Button> -->
-							<Button
-								size="sm"
-								variant="ghost"
-								onclick={() => removeHistoryEntry(entry.key)}
-								title="Remove from history"
-							>
-								<Trash2Icon />
-							</Button>
+								<Button
+									size="sm"
+									variant="ghost"
+									onclick={() => removeHistoryEntry(entry.key)}
+									title="Remove from history"
+								>
+									<Trash2Icon />
+								</Button>
+							</div>
 						</div>
-					</div>
-				</Card>
-			{/each}
-		</div>
-	{/if}
+					</Card>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </div>
 
 <style lang="scss">
@@ -183,7 +174,6 @@
 		.buttons {
 			display: flex;
 			gap: 0.5rem;
-			
 		}
 	}
 

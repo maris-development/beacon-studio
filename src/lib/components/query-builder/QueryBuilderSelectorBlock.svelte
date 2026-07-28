@@ -5,15 +5,15 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
  -->
 
 <script lang="ts">
-    import { Button } from '$lib/components/ui/button/index.js';
+    import Button from '$lib/components/buttons/Button.svelte';
     import { Badge } from '$lib/components/ui/badge/index.js';
     import Card from '@/components/card/Card.svelte';
-    import PlusIcon from '@lucide/svelte/icons/plus';
+    import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
     import CopyIcon from '@lucide/svelte/icons/copy';
     import XIcon from '@lucide/svelte/icons/x';
-    import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
-    import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
-    import type { QueryWorkspace } from './QueryWorkspace.svelte';
+    // import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
+    // import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
+    import { QueryWorkspace } from './QueryWorkspace.svelte';
 
     // All state lives in the workspace; this component only reads/acts on it.
     let { workspace }: { workspace: QueryWorkspace } = $props();
@@ -32,9 +32,9 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
     <div class="query-blocks-row">
         {#each workspace.blocks as block (block.id)}
             <!-- Derive display data for this block from the workspace. -->
-            {@const status = workspace.statusFor(block)}
-            {@const columns = workspace.selectedColumnsFor(block)}
-            {@const run = workspace.runStateFor(block)}
+            {@const status = QueryWorkspace.getStatus(block)}
+            {@const columns = QueryWorkspace.getSelectedColumns(block)}
+            {@const run = workspace.getRunState(block)}
             <div
                 class="query-block-wrapper"
                 class:query-block-wrapper--active={block.id === workspace.activeBlockId}
@@ -46,7 +46,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             >
                 <Card class="query-block">
                     <div class="query-block-header">
-                        <span class="query-block-name" title={block.name}>{block.name}</span>
+                        <span class="query-block-name" title={block.name}>{block.name} - {status.dataTable || 'No table'}</span>
 
                         <div class="query-block-actions">
                             <Button
@@ -81,17 +81,37 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                     </div>
 
                     <div class="query-block-body">
-                        <div class="query-block-line">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Table</span>
                             <span class="query-block-value" title={status.dataTable}>
                                 {status.dataTable || 'No table'}
                             </span>
+                        </div> -->
+
+                        <div class="query-stats">
+                            <span class="query-stat">
+                                {status.columns} columns
+                            </span>
+                            <span class="query-stat">
+                                {status.filters} {status.filters == 1 ? 'filter' : 'filters'}
+                            </span>
+                            <span class="query-stat">
+                                {#if run.isRunning}
+                                    Running...
+                                {:else if run.hasRun}
+                                    {run.rows} {run.rows == 1 ? 'row' : 'rows'}
+                                {:else}
+                                    Not run yet
+                                {/if}
+                            </span>
+                            
+
                         </div>
 
-                        <div class="query-block-line">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Columns</span>
                             <span class="query-block-value">{status.columns} selected</span>
-                        </div>
+                        </div> -->
 
                         <div class="query-block-columns">
                             {#if columns.length > 0}
@@ -108,7 +128,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                             {/if}
                         </div>
 
-                        <div class="query-block-line">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Rows</span>
                             <span class="query-block-value">{run.rows ?? 'N/A'}</span>
                         </div>
@@ -124,7 +144,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                                 <CircleDashedIcon class="query-block-status-icon" />
                                 <span>Not run yet</span>
                             {/if}
-                        </div>
+                        </div> -->
                     </div>
                 </Card>
             </div>
@@ -137,24 +157,37 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             aria-label="New query"
             onclick={() => workspace.addBlock()}
         >
-            <PlusIcon />
+            <CirclePlusIcon />
         </button>
     </div>
 </div>
 
 <style lang="scss">
+    div.query-stats {
+        display: flex;
+        flex-direction: row;
+        gap: 0.5rem;
+
+        .query-stat {
+            font-size: 0.75rem;
+            color: var(--muted-foreground);
+
+        }
+    }
+
+
     .query-blocks {
         display: flex;
         flex-direction: column;
         gap: 1rem;
-    }
 
-    .query-blocks-row {
-        display: flex;
-        align-items: stretch;
-        gap: 0.75rem;
-        overflow-x: auto;
-        padding-bottom: 0.25rem;
+        .query-blocks-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.75rem;
+            overflow-x: auto;
+            padding-bottom: 0.25rem;
+        }
     }
 
     .query-block-wrapper {
@@ -162,119 +195,125 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
         min-width: 15rem;
         max-width: 18rem;
         cursor: pointer;
+
+        :global(.query-block.card) {
+            width: 100%;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
+
+        &:hover {
+            :global(.query-block.card) {
+                border-color: var(--primary);
+            }
+        }
+
+        &.query-block-wrapper--active {
+            :global(.query-block.card) {
+                border-color: var(--primary);
+            }
+        }
     }
 
-    :global(.query-block-wrapper .query-block.card) {
-        width: 100%;
-        gap: 0.5rem;
-        padding: 0.75rem;
-        transition:
-            border-color 0.15s ease,
-            box-shadow 0.15s ease;
-    }
+    .query-blocks {
+        .query-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
 
-    .query-block-wrapper:hover :global(.query-block.card) {
-        border-color: var(--primary);
-    }
+        .query-block-name {
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
 
-    .query-block-wrapper--active :global(.query-block.card) {
-        border-color: var(--primary);
-    }
+        .query-block-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
 
-    .query-block-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-    }
+        .query-block-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            font-size: 0.8125rem;
+        }
 
-    .query-block-name {
-        font-weight: 600;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+        // .query-block-line {
+        //     display: flex;
+        //     align-items: center;
+        //     justify-content: space-between;
+        //     gap: 0.5rem;
+        // }
 
-    .query-block-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        flex-shrink: 0;
-    }
+        // .query-block-label {
+        //     color: var(--muted-foreground);
+        // }
 
-    :global(.query-block-icon-button) {
-        width: 1.75rem;
-        height: 1.75rem;
-    }
+        // .query-block-value {
+        //     font-weight: 500;
+        //     overflow: hidden;
+        //     text-overflow: ellipsis;
+        //     white-space: nowrap;
+        // }
 
-    .query-block-body {
-        display: flex;
-        flex-direction: column;
-        gap: 0.375rem;
-        font-size: 0.8125rem;
-    }
+        .query-block-columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            min-height: 1.5rem;
+        }
 
-    .query-block-line {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-    }
+        .query-block-muted {
+            color: var(--muted-foreground);
+        }
 
-    .query-block-label {
-        color: var(--muted-foreground);
-    }
+        // .query-block-status {
+        //     display: flex;
+        //     align-items: center;
+        //     gap: 0.375rem;
+        //     color: var(--muted-foreground);
+        // }
 
-    .query-block-value {
-        font-weight: 500;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+        .query-block-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3rem;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius, 0.5rem);
+            background: transparent;
+            cursor: pointer;
+            transition:
+                border-color 0.15s ease,
+                color 0.15s ease;
 
-    .query-block-columns {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        min-height: 1.5rem;
-    }
+            &:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+        }
 
-    .query-block-muted {
-        color: var(--muted-foreground);
-    }
+        :global(.query-block-icon-button) {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
 
-    .query-block-status {
-        display: flex;
-        align-items: center;
-        gap: 0.375rem;
-        color: var(--muted-foreground);
-    }
+        :global(.query-block-status-icon) {
+            width: 1rem;
+            height: 1rem;
+        }
 
-    :global(.query-block-status-icon) {
-        width: 1rem;
-        height: 1rem;
-    }
-
-    :global(.query-block-status-icon--ok) {
-        color: var(--primary);
-    }
-
-    .query-block-add {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 3rem;
-        border: 1px dashed var(--border);
-        border-radius: var(--radius, 0.5rem);
-        background: transparent;
-        cursor: pointer;
-        transition:
-            border-color 0.15s ease,
-            color 0.15s ease;
-    }
-
-    .query-block-add:hover {
-        border-color: var(--primary);
-        color: var(--primary);
+        :global(.query-block-status-icon--ok) {
+            color: var(--primary);
+        }
     }
 </style>

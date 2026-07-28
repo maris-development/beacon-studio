@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
-  	import { resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
@@ -53,21 +53,23 @@
 
 <Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }]} />
 
-<div class="page-container">
-	<h2>Data Browser</h2>
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Data Browser</h2>
 
-	<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
+		<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
 
-	<div class="data-browser-functions">
-		<Card href={resolve('/data-browser/datasets')}>
-			<h3>{datasetsTitle}</h3>
-			<p>View and manage individual datasets.</p>
-		</Card>
+		<div class="data-browser-functions">
+			<Card href={resolve('/data-browser/datasets')}>
+				<h3>{datasetsTitle}</h3>
+				<p>View and manage individual datasets.</p>
+			</Card>
 
-		<Card href={resolve('/data-browser/data-tables')}>
-			<h3>{dataTablesTitle}</h3>
-			<p>View and manage data tables.</p>
-		</Card>
+			<Card href={resolve('/data-browser/data-tables')}>
+				<h3>{dataTablesTitle}</h3>
+				<p>View and manage data tables.</p>
+			</Card>
+		</div>
 	</div>
 </div>
 

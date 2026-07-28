@@ -5,26 +5,39 @@ import { PythonQueryBuilder } from "@/beacon-api/query";
 
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
+    let result: CompiledQuery | null = null;
+    let error: Error | null = null;
+
     try {
-        return compileQuery();
-    } catch (error) {
-        console.error(error);
+        result = compileQuery();
+    } catch (_error) {
+        console.error(_error);
+        error = _error as Error;
+    }
+
+    if(!result){
+        let message = 'Error compiling query: compileQuery function returned null.';
+
+        if(error?.message){
+            message += `Error compiling query: ${error.message}`;
+        }
 
         addToast({
-            message: `Error compiling query: ${(error as Error).message}`,
+            message: message,
             type: "error"
         });
-
-        return null;
     }
+
+    return result;
 }
 
 export function copyJSON(compileQuery: () => CompiledQuery): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
+
     if (!compiledQuery) return;
 
-    let queryJson = JSON.stringify(compiledQuery, null, 2);
+    const queryJson = JSON.stringify(compiledQuery, null, 2);
 
     Utils.copyToClipboard(queryJson);
 
@@ -38,7 +51,7 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for downloading query as JSON for compiled query:", compiledQuery);
+    notImplementedYetToast('Download JSON');
 }
 
 export function copyPython(compileQuery: () => CompiledQuery): void {
@@ -96,9 +109,10 @@ export function downloadPython(compileQuery: () => CompiledQuery): void {
 export function copySQL(compileQuery: () => CompiledQuery): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
+
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for copying query as SQL for compiled query:", compiledQuery);
+    notImplementedYetToast('Copy SQL');
 }
 export function downloadSQL(compileQuery: () => CompiledQuery): void {
     
@@ -106,13 +120,27 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
     if (!compiledQuery) return;
 
     console.log("Placeholder function for downloading query as SQL for compiled query:", compiledQuery);
+
+    notImplementedYetToast('Download SQL');
 }
 
 
 export function copyUrl(compileQuery: () => CompiledQuery): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
+
     if (!compiledQuery) return;
 
     console.log("Placeholder function for share query as URL for compiled query:", compiledQuery);
+
+    notImplementedYetToast('Copy URL');
+}
+
+function notImplementedYetToast(feature: string = ''): void {
+    const message = feature ? `The feature "${feature}" is not implemented yet.` : 'This feature is not implemented yet.';
+
+    addToast({
+        message,
+        type: 'info'
+    });
 }

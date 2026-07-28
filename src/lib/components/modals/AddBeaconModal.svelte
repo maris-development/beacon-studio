@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '$lib/stores/config';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import { Utils } from '@/utils';
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import LinkIcon from '@lucide/svelte/icons/link';

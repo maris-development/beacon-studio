@@ -1,6 +1,6 @@
 <!--
  QueryVisualisationTable — renders a run query result (Arrow table) as a paginated,
- sortable data grid. Reuses the same DataTable + pagination + queryStore.sort helpers
+ sortable data grid. Reuses the same DataTable + pagination  helpers
  as the standalone table-explorer page, but driven by an in-memory DatasetEntry
  instead of the ?query= URL.
 -->
@@ -8,7 +8,7 @@
 	import * as ApacheArrow from 'apache-arrow';
 	import DataTable from '@/components/data-table.svelte';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
-	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
+	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 	import type { Column, SortDirection } from '@/util-types';
 
@@ -56,12 +56,12 @@
 		showPage();
 	}
 
-	// Sorting is delegated to the shared worker via queryStore.sort.
+	// Sorting is delegated to the shared worker via BeaconClient.sortQueryTable
 	async function onChangeSort(columnKey: string, direction: SortDirection) {
 		if (!entry) return;
 		sorting = true;
 		try {
-			const sorted = await queryStore.sort(entry, columnKey, direction);
+			const sorted = await BeaconClient.sortQueryTable(entry, columnKey, direction);
 			pagination.setData(sorted);
 			showPage();
 		} catch (error) {

@@ -129,22 +129,23 @@
     { label: `Table ${tableName}`, href: '' }]} 
 />
 
-<div class="page-container">
-	<h2>Table '{tableName}' ({totalRows} fields)</h2>
+<div class="page-wrapper">
+    <div class="page-container">
+        <h2>Table '{tableName}' ({totalRows} fields)</h2>
 
-    <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+        <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
 
-    <DataTable
-        {onPageChange}
-        {onChangeSort}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-        {pageIndex}
-		{isLoading}
-	/>
-
+        <DataTable
+            {onPageChange}
+            {onChangeSort}
+            {columns}
+            {rows}
+            {totalRows}
+            {pageSize}
+            {pageIndex}
+            {isLoading}
+        />
+    </div>
 </div>
 
 <style lang="scss">

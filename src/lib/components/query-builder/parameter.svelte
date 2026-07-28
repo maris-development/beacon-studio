@@ -3,8 +3,9 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 
 	import Separator from '../ui/separator/separator.svelte';
-	import Filter, { type QueryFilterValue } from './filters/filter.svelte';
 	import { Utils } from '@/utils';
+	import type { QueryFilterValue } from './filters/Filter.svelte';
+	import Filter from './filters/Filter.svelte';
 
 	let {
 		column = $bindable(),

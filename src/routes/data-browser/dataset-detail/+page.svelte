@@ -20,7 +20,8 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
-    let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
+	let virtualSchemaData: VirtualPaginationData<SchemaField> =
+		new VirtualPaginationData<SchemaField>([]);
 	let columns: Column[] = $state([
 		{ key: 'name', header: 'Field', sortable: true },
 		{ key: 'data_type', header: 'Data Type', sortable: true },
@@ -29,7 +30,7 @@
 		{ key: 'dict_is_ordered', header: 'Is Ordered', sortable: true },
 		{ key: 'metadata', header: 'Metadata', sortable: false }
 	]);
-	
+
 	let rows: SchemaField[] = $state([]);
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
@@ -123,28 +124,29 @@
 		{ label: `Dataset ${file}`, href: '#' }
 	]}
 />
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Dataset {file} ({totalRows} fields)</h2>
 
-<div class="page-container">
-	<h2>Dataset {file} ({totalRows} fields)</h2>
+		<input
+			type="search"
+			id="search"
+			placeholder="Search..."
+			class="search-input"
+			onchange={onSearchBoxChange}
+		/>
 
-	<input
-		type="search"
-		id="search"
-		placeholder="Search..."
-		class="search-input"
-		onchange={onSearchBoxChange}
-	/>
-
-	<DataTable
-		{onPageChange}
-		{onChangeSort}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
+		<DataTable
+			{onPageChange}
+			{onChangeSort}
+			{columns}
+			{rows}
+			{totalRows}
+			{pageSize}
+			{pageIndex}
+			{isLoading}
+		/>
+	</div>
 </div>
 
 <style lang="scss">

@@ -13,7 +13,7 @@
 	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
 	import type { CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
-	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
+	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import MapInfo from '@/components/map-info.svelte';
 	import MapPopupContent from '@/components/map-popup-content.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -95,7 +95,7 @@
 
 		map.addControl(new NavigationControl());
 		// map.addControl(new GlobeControl(), 'top-right'); //doesnt work with deck.gl overlay...
-		
+
 		mapOverlay = new MapboxOverlay({
 			interleaved: true,
 			layers: []
@@ -139,7 +139,7 @@
 		try {
 			deriveColumnNames();
 
-			entry = await queryStore.ensure(query);
+			entry = await BeaconClient.ensureQuery(query);
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -163,7 +163,6 @@
 
 	function deriveColumnNames() {
 		// console.log('Deriving column names from query parameters...', query);
-
 
 		availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
 			return param.alias ?? param.column;
@@ -197,7 +196,7 @@
 		}
 
 		try {
-			table = await queryStore.mapTable(
+			table = await BeaconClient.queryMapTable(
 				entry,
 				latitudeColumnName,
 				longitudeColumnName,
@@ -266,7 +265,7 @@
 			colorScaleMin == SCALE_DEFAULT_MIN &&
 			colorScaleMax == SCALE_DEFAULT_MAX
 		) {
-			const minMax = await queryStore.minMax(entry, selectedDataColumnName);
+			const minMax = await BeaconClient.queryColumnMinMax(entry, selectedDataColumnName);
 			colorScaleMin = minMax.min;
 			colorScaleMax = minMax.max;
 		}
@@ -387,17 +386,14 @@
 
 	async function handleEditQuery() {
 		if (!query) {
-			addToast({
-				type: 'error',
-				message: 'No query available to edit.'
-			});
+			goto(resolve('/queries/workbench'));
 			return;
 		}
 
 		const gzippedQuery = Utils.objectToGzipString(query);
 
 		if (gzippedQuery) {
-			goto(resolve('/queries/query-builder') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/queries/workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>
@@ -413,42 +409,50 @@
 	]}
 />
 
-<div class="map-wrapper">
-	<div bind:this={mapContainer} class="map"></div>
-	<div class="map-info-wrapper">
-		<MapInfo onEditClick={openEditQueryModal} onEditBuilderClick={handleEditQuery} compiledQuery={query}>
-			<p>
-				{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
-			</p>
+<div class="page-wrapper">
+	<div class="map-wrapper">
+		<div bind:this={mapContainer} class="map"></div>
+		<div class="map-info-wrapper">
+			<MapInfo
+				onEditClick={openEditQueryModal}
+				onEditBuilderClick={handleEditQuery}
+				compiledQuery={query}
+			>
+				<p>
+					{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(
+						queryDurationMs / 1000
+					)}.
+				</p>
 
-			<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
-				<Select.Trigger
-					>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger
-				>
-				<Select.Content>
-					<Select.Group>
-						<Select.Label>Available columns</Select.Label>
-						{#each availableColumnNames as column, index (index)}
-							<Select.Item value={column} label={column}>
-								{column}
-							</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-			</Select.Root>
+				<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
+					<Select.Trigger
+						>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger
+					>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Available columns</Select.Label>
+							{#each availableColumnNames as column, index (index)}
+								<Select.Item value={column} label={column}>
+									{column}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
 
-			<br />
+				<br />
 
-			<Legend bind:colorScaleMin bind:colorScaleMax bind:colorScale />
-		</MapInfo>
-	</div>
-
-	{#if isLoading}
-		<div class="loading-overlay">
-			<LoadingSpinner></LoadingSpinner>
-			<h3>Loading...</h3>
+				<Legend bind:colorScaleMin bind:colorScaleMax bind:colorScale />
+			</MapInfo>
 		</div>
-	{/if}
+
+		{#if isLoading}
+			<div class="loading-overlay">
+				<LoadingSpinner></LoadingSpinner>
+				<h3>Loading...</h3>
+			</div>
+		{/if}
+	</div>
 </div>
 
 {#if editQueryModalOpen}
@@ -466,6 +470,10 @@
 {/if}
 
 <style lang="scss">
+	:global(.page-wrapper) {
+		padding: 0;
+	}
+
 	.map-wrapper {
 		flex-grow: 1;
 		position: relative;

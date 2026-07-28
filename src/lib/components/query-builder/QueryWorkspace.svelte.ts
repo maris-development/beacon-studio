@@ -12,7 +12,6 @@
  * Data flow:
  *   builder edit -> updateActiveDraft(draft) -> block.draft
  *   block.draft  -> queryFor()/statusFor()   -> JSON view + action bar + cards
- *   queryFor()   -> queryStore.ensure()      -> visualisation result (on run)
  */
 import type { CompiledQuery } from '@/beacon-api/types';
 import { Utils } from '@/utils';
@@ -149,14 +148,24 @@ export class QueryWorkspace {
 	closeBlock(id: string): void {
 		if (this.blocks.length === 1) return;
 
+	
+
 		const index = this.blocks.findIndex((b) => b.id === id);
+		
 		if (index === -1) return;
 
+		if(this.blocks[index].draft.selectedFields.length > 0) {
+			const shouldContinue = confirm('Are you sure you want to close this query?');
+			if (!shouldContinue) return;
+		}
+
 		this.blocks.splice(index, 1);
+
 		if (this.activeBlockId === id) {
 			const fallback = this.blocks[index] ?? this.blocks[index - 1] ?? this.blocks[0];
 			this.activeBlockId = fallback.id;
 		}
+
 		this.persistState();
 	}
 
@@ -187,7 +196,7 @@ export class QueryWorkspace {
 	}
 
 	/** Compiles a block's draft into the runnable/JSON query (null if incomplete). */
-	queryFor(block: QueryBlock | null): CompiledQuery | null {
+	static getQuery(block: QueryBlock | null): CompiledQuery | null {
 		return compileDraft(block?.draft);
 	}
 
@@ -202,7 +211,7 @@ export class QueryWorkspace {
 	}
 
 	/** Derives badge status (table, #columns, #filters) from a block's draft. */
-	statusFor(block: QueryBlock | null): QuerySelectionStatus {
+	static getStatus(block: QueryBlock | null): QuerySelectionStatus {
 		const status = makeEmptyQuerySelectionStatus();
 		const draft = block?.draft;
 		if (!draft) return status;
@@ -218,12 +227,12 @@ export class QueryWorkspace {
 	}
 
 	/** Column-name preview for a block card. */
-	selectedColumnsFor(block: QueryBlock | null): string[] {
+	static getSelectedColumns(block: QueryBlock | null): string[] {
 		return block?.draft?.selectedFields.map((f) => f.name) ?? [];
 	}
 
 	/** Run/cache state used by the block cards. */
-	runStateFor(block: QueryBlock | null): BlockRunState {
+	getRunState(block: QueryBlock | null): BlockRunState {
 		const info = block ? this.runInfo[block.id] : undefined;
 		return {
 			hasRun: !!info,

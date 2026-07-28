@@ -6,7 +6,7 @@
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
+	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import DataTable from '@/components/data-table.svelte';
 	import { Button } from '@/components/ui/button';
 
@@ -71,7 +71,7 @@
 		isLoading = true;
 
 		try {
-			entry = await queryStore.ensure(query);
+			entry = await BeaconClient.ensureQuery(query);
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -128,7 +128,7 @@
 		isLoading = true;
 
 		try {
-			const sortedTable = await queryStore.sort(entry, columnKey, direction);
+			const sortedTable = await BeaconClient.sortQueryTable(entry, columnKey, direction);
 
 			virtualPaginationData.setData(sortedTable);
 
@@ -212,17 +212,14 @@
 
 	async function handleEditQuery() {
 		if (!query) {
-			addToast({
-				type: 'error',
-				message: 'No query available to edit.'
-			});
+			goto(resolve('/queries/query-workbench'));
 			return;
 		}
 
 		const gzippedQuery = Utils.objectToGzipString(query);
 
 		if (gzippedQuery) {
-			goto(resolve('/queries/query-builder') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/queries/query-workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>
@@ -252,50 +249,52 @@
 	]}
 />
 
-<div class="page-container">
-	<h2>Table explorer</h2>
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Table explorer</h2>
 
-	<div class="buttons-header">
-		<Button onclick={handleEditQuery}>
-			Edit query
-			<PencilIcon size="1rem" />
-		</Button>
+		<div class="buttons-header">
+			<Button onclick={handleEditQuery}>
+				Edit query
+				<PencilIcon size="1rem" />
+			</Button>
 
-		<Button onclick={openEditQueryModal}>
-			Edit query JSON
-			<FileJson2Icon size="1rem" />
-		</Button>
+			<Button onclick={openEditQueryModal}>
+				Edit query JSON
+				<FileJson2Icon size="1rem" />
+			</Button>
 
-		<span>or</span>
+			<span>or</span>
 
-		<Button onclick={handleChartVisualise}>
-			View on chart
-			<ChartPieIcon />
-		</Button>
+			<Button onclick={handleChartVisualise}>
+				View on chart
+				<ChartPieIcon />
+			</Button>
 
-		<Button onclick={handleMapVisualise}>
-			View on map
-			<MapIcon />
-		</Button>
+			<Button onclick={handleMapVisualise}>
+				View on map
+				<MapIcon />
+			</Button>
+		</div>
+
+		<!-- turn the loading into a func? -->
+		<p>
+			{#if table?.numRows == null}
+				Loading rows…
+			{:else}
+				{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+			{/if}
+		</p>
+
+		<DataTable
+			{onPageChange}
+			{onChangeSort}
+			{columns}
+			rows={displayRows}
+			{totalRows}
+			{pageSize}
+			{pageIndex}
+			{isLoading}
+		/>
 	</div>
-
-	<!-- turn the loading into a func? -->
-	<p>
-		{#if table?.numRows == null}
-			Loading rows…
-		{:else}
-			{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
-		{/if}
-	</p>
-
-	<DataTable
-		{onPageChange}
-		{onChangeSort}
-		{columns}
-		rows={displayRows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
 </div>

@@ -5,7 +5,7 @@
 	import { Utils } from '@/utils';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import { queryStore, type DatasetEntry } from '@/stores/query-store.svelte';
+	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { Button } from '@/components/ui/button';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -56,7 +56,7 @@
 		isLoading = true;
 
 		try {
-			entry = await queryStore.ensure(query);
+			entry = await BeaconClient.ensureQuery(query);
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -141,16 +141,14 @@
 
 	async function handleEditQuery() {
 		if (!query) {
-			addToast({
-				type: 'error',
-				message: 'No query available to edit.'
-			});
+			goto(resolve('/queries/query-workbench'));
 			return;
 		}
 
 		const gzippedQuery = Utils.objectToGzipString(query);
+
 		if (gzippedQuery) {
-			goto(resolve('/queries/query-builder') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/queries/query-workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>
@@ -180,60 +178,69 @@
 	]}
 />
 
-<div class="page-container">
-	<div class="header">
-		<h2>Chart explorer</h2>
+<div class="page-wrapper">
+	<div class="page-container">
+		<div class="header">
+			<h2>Chart explorer</h2>
 
-		<div class="buttons-header">
-			<Button onclick={handleEditQuery}>
-				Edit query
-				<PencilIcon />
-			</Button>
+			<div class="buttons-header">
+				<Button onclick={handleEditQuery}>
+					Edit query
+					<PencilIcon />
+				</Button>
 
-			<Button onclick={openEditQueryModal}>
-				Edit query JSON
-				<FileJson2Icon />
-			</Button>
+				<Button onclick={openEditQueryModal}>
+					Edit query JSON
+					<FileJson2Icon />
+				</Button>
 
-			<span>or</span>
+				<span>or</span>
 
-			<Button onclick={handleTableVisualise}>
-				View as table
-				<SheetIcon />
-			</Button>
+				<Button onclick={handleTableVisualise}>
+					View as table
+					<SheetIcon />
+				</Button>
 
-			<Button onclick={handleMapVisualise}>
-				View on map
-				<MapIcon />
-			</Button>
+				<Button onclick={handleMapVisualise}>
+					View on map
+					<MapIcon />
+				</Button>
+			</div>
+
+			<!-- turn the loading into a func? -->
+			<p>
+				{#if table?.numRows == null}
+					Loading rows…
+				{:else}
+					{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
+						queryDurationMs / 1000
+					)}.
+				{/if}
+			</p>
+
+			<p>
+				Below you can find a <a
+					href="https://perspective.finos.org/"
+					target="blank"
+					rel="noopener noreferrer">Perspective viewer</a
+				> that allows you to explore the query results interactively. By default it opens a table, but
+				you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
+				button in the top right.
+			</p>
 		</div>
 
-		<!-- turn the loading into a func? -->
-		<p>
-			{#if table?.numRows == null}
-				Loading rows…
-			{:else}
-				{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
-			{/if}
-		</p>
-
-		<p>
-			Below you can find a <a
-				href="https://perspective.finos.org/"
-				target="blank"
-				rel="noopener noreferrer">Perspective viewer</a
-			> that allows you to explore the query results interactively. By default it opens a table, but
-			you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
-			button in the top right.
-		</p>
-	</div>
-
-	<div class="viewer">
-		<GraphViewer class="flex-1" {table} />
+		<div class="viewer">
+			<GraphViewer class="flex-1" {table} />
+		</div>
 	</div>
 </div>
 
 <style lang="scss">
+	:global(.page-wrapper) {
+		display: flex;
+		flex-direction: column;
+		height: 100%;
+	}
 	.page-container {
 		flex-grow: 1;
 		display: flex;

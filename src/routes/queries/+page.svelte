@@ -11,14 +11,16 @@
 
 <Cookiecrumb crumbs={[{ label: 'Queries', href: resolve('/queries') }]} />
 
+<div class="page-wrapper">
+
 <div class="page-container">
 	<h2>Queries</h2>
 
 	<p>Use the following ways to query your Beacon contents.</p>
 
 	<div class="queries-functions">
-		<Card href={resolve('/queries/query-builder')}>
-			<h3>Query builder</h3>
+		<Card href={resolve('/queries/workbench')}>
+			<h3>Query Workbench</h3>
 			<p>
 				Build queries using a user-friendly interface.
 			</p>
@@ -30,12 +32,19 @@
 			<p>Edit queries in a raw text editor, this is for advanced users and developers.</p>
 		</Card>
 		 -->
-		<Card href={resolve('/queries/query-history')} >
+		<Card href={resolve('/queries/saved')}>
+			<h3>Saved queries</h3>
+
+			<p>Queries you've explicitly saved from the workbench.</p>
+		</Card>
+
+		<Card href={resolve('/queries/history')} >
 			<h3>Query history</h3>
 			
 			<p>View the history of executed queries.</p>
 		</Card>
 	</div>
+</div>
 </div>
 
 <style lang="scss">

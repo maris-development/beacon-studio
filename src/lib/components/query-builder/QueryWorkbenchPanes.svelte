@@ -12,15 +12,13 @@
      re-hydrates from that block's stored query (initialQuery).
 -->
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button/index.js';
-	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
-	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
-	import PanelRightCloseIcon from '@lucide/svelte/icons/panel-right-close';
-	import PanelRightOpenIcon from '@lucide/svelte/icons/panel-right-open';
+	import Button from '$lib/components/buttons/Button.svelte';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from './QueryDraft';
-	import type { QueryWorkspace } from './QueryWorkspace.svelte';
+	import { QueryWorkspace } from './QueryWorkspace.svelte';
 
 	let { workspace }: { workspace: QueryWorkspace } = $props();
 
@@ -30,7 +28,7 @@
 
 	// Live JSON of the active block's compiled query (read-only reflection).
 	const activeQueryJson = $derived.by(() => {
-		const query = workspace.queryFor(workspace.activeBlock);
+		const query = QueryWorkspace.getQuery(workspace.activeBlock);
 		return query
 			? JSON.stringify(query, null, 2)
 			: '// No query yet. Pick a table and columns on the left.';
@@ -51,14 +49,14 @@
 	<!-- Left: builder -->
 	<section class="pane" class:pane--collapsed={!leftOpen}>
 		<header class="pane-header">
-			<span class="pane-title">Query builder</span>
+			<h2 class="pane-title">Query builder</h2>
 			<Button
 				variant="ghost"
 				size="icon"
 				title={leftOpen ? 'Collapse builder' : 'Expand builder'}
 				onclick={() => (leftOpen = !leftOpen)}
 			>
-				{#if leftOpen}<PanelLeftCloseIcon />{:else}<PanelLeftOpenIcon />{/if}
+				{#if leftOpen}<ChevronLeft />{:else}<ChevronRight />{/if}
 			</Button>
 		</header>
 
@@ -77,22 +75,24 @@
 	</section>
 
 	<!-- Right: JSON editor -->
-	<section class="pane" class:pane--collapsed={!rightOpen}>
+	<section class="pane right" class:pane--collapsed={!rightOpen}>
+		
 		<header class="pane-header">
-			<span class="pane-title">Query JSON</span>
+			<h2 class="pane-title">Query JSON</h2>
+
 			<Button
 				variant="ghost"
 				size="icon"
 				title={rightOpen ? 'Collapse JSON' : 'Expand JSON'}
 				onclick={() => (rightOpen = !rightOpen)}
 			>
-				{#if rightOpen}<PanelRightCloseIcon />{:else}<PanelRightOpenIcon />{/if}
+				{#if rightOpen}<ChevronRight />{:else}<ChevronLeft />{/if}
 			</Button>
 		</header>
 
 		{#if rightOpen}
 			<div class="pane-body">
-				<QueryTextEditor sourceCode={activeQueryJson} height="70vh" readOnly />
+				<QueryTextEditor sourceCode={activeQueryJson} height="100%" readOnly />
 			</div>
 		{/if}
 	</section>
@@ -102,7 +102,7 @@
 	.builder-pane {
 		display: flex;
 		gap: 1rem;
-		align-items: flex-start;
+		// align-items: flex-start;
 	}
 
 	.pane {
@@ -111,12 +111,33 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
+		background: white;
+		border-radius: 0.75rem;
+		border: 1px solid rgb(231, 231, 236);
+
 	
 		// A collapsed pane shrinks to just its header so the other pane expands.
 		&.pane--collapsed {
 			flex: 0 0 auto;
+
+			.pane-header {
+				border-bottom: none;
+				flex-direction: column-reverse;
+
+				.pane-title {
+					writing-mode: sideways-lr;
+    				text-orientation: mixed;
+					white-space: nowrap;
+					width: auto;           
+				}
+			}
+
+			&.right {
+				.pane-header {
+					flex-direction: column-reverse;
+				}
+			}
+			
 		}
 
 		.pane-header {
@@ -128,11 +149,19 @@
 			gap: 0.5rem;
 
 			.pane-title {
-				font-weight: 600;
+				margin: 0;
+				flex-grow: 1;
+			}
+		}
+
+		&.right {
+			.pane-header {
+				flex-direction: row-reverse;
 			}
 		}
 		.pane-body {
 			min-width: 0;
+			height: 100%;
 			padding: 0.75rem;
 		}
 	}

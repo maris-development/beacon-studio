@@ -4,7 +4,7 @@
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 	import QueryEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 
 	let { editQueryString = $bindable(), onClose = (saveQuery) => {} } = $props();
 </script>

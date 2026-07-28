@@ -51,9 +51,9 @@ export type PrimitiveType =
     | 'Float64'
     | 'Int8';
 
-export interface TimestampDataType {
+export type TimestampDataType = {
     Timestamp: [string, string | null];
-}
+};
 
 export type DataType = PrimitiveType | TimestampDataType;
 

@@ -20,7 +20,7 @@ import * as ApacheArrow from 'apache-arrow';
 import { get } from 'svelte/store';
 import type { QueryInput } from '@beacon/client';
 import { getArrowDecoder } from '@/beacon-api/arrow-zstd';
-import { makeBeaconClient } from '@/beacon-api/sdk-client';
+import { makeBeaconClient } from '@/beacon-api/client';
 import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { currentBeaconInstance } from '@/stores/config';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
@@ -104,6 +104,29 @@ class QueryStore {
 	private mapTableCache = new Map<string, Promise<ApacheArrow.Table>>();
 
 	/**
+	 * When `false`, caching is bypassed end-to-end: `ensure()` never reads from or
+	 * writes to the in-memory or OPFS tiers, so every call re-executes the query.
+	 * Concurrent identical calls are still de-duped via {@link inFlight} while the
+	 * request is in flight. Toggled through the client facade.
+	 */
+	private cacheEnabled = true;
+
+	/** Whether the result cache (memory + OPFS) is currently active. */
+	isCacheEnabled(): boolean {
+		return this.cacheEnabled;
+	}
+
+	/**
+	 * Enables or disables the result cache. Disabling also drops everything already
+	 * cached (memory + OPFS), so a disabled cache can never serve a stale result.
+	 */
+	setCacheEnabled(enabled: boolean): void {
+		if (this.cacheEnabled === enabled) return;
+		this.cacheEnabled = enabled;
+		if (!enabled) this.invalidate();
+	}
+
+	/**
 	 * Computes a stable cache key for a query (object key order doesn't matter).
 	 * The current Beacon instance's URL is part of the key: results persist across
 	 * sessions (OPFS tier), so the same query against a different instance must
@@ -130,12 +153,14 @@ class QueryStore {
 	async ensure(query: CompiledQuery): Promise<DatasetEntry> {
 		const key = this.keyFor(query);
 
-		const cached = this.cache.get(key);
-		if (cached) {
-			this.touch(key, cached);
-			this.current = cached;
-			this.recordHistory(cached);
-			return cached;
+		if (this.cacheEnabled) {
+			const cached = this.cache.get(key);
+			if (cached) {
+				this.touch(key, cached);
+				this.current = cached;
+				this.recordHistory(cached);
+				return cached;
+			}
 		}
 
 		const existing = this.inFlight.get(key);
@@ -147,7 +172,7 @@ class QueryStore {
 		const promise = this.load(query, key)
 			.then((entry) => {
 				// console.log('QueryStore.ensure: loaded', entry.key, entry.rowCount, 'rows in', entry.duration.toFixed(1), 'ms');
-				this.insert(entry);
+				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
 				this.recordHistory(entry);
 				return entry;
@@ -198,6 +223,30 @@ class QueryStore {
 			});
 		} catch (error) {
 			console.warn('Failed to record query history entry.', error);
+		}
+	}
+
+	/**
+	 * Records a client-side download in the persisted query history. Downloads are
+	 * server-materialized — they bypass {@link ensure} and the result cache — so no
+	 * row count is available here; {@link recordExecution} preserves any existing
+	 * entry's count. Best-effort, mirroring {@link recordHistory}: never throws into
+	 * the caller.
+	 */
+	recordDownload(query: CompiledQuery, duration: number): void {
+		const instance = get(currentBeaconInstance);
+		if (!instance) return;
+		try {
+			recordExecution({
+				key: this.keyFor(query),
+				query,
+				instanceId: instance.id,
+				instanceName: instance.name,
+				instanceUrl: instance.url,
+				duration
+			});
+		} catch (error) {
+			console.warn('Failed to record download in query history.', error);
 		}
 	}
 
@@ -307,8 +356,10 @@ class QueryStore {
 
 	/** Loads a dataset: rehydrate from the OPFS tier if present, else fetch. */
 	private async load(query: CompiledQuery, key: string): Promise<DatasetEntry> {
-		const restored = await this.restore(query, key);
-		if (restored) return restored;
+		if (this.cacheEnabled) {
+			const restored = await this.restore(query, key);
+			if (restored) return restored;
+		}
 		return this.fetch(query, key);
 	}
 
@@ -393,7 +444,9 @@ class QueryStore {
 		// the table re-serialized as an uncompressed Arrow IPC stream, so the rehydrate
 		// path is a plain `tableFromIPC` with no zstd dependency.
 		// const ipcBytes = ApacheArrow.tableToIPC(table, 'stream');
-		void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+		if (this.cacheEnabled) {
+			void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+		}
 
 		return {
 			key,

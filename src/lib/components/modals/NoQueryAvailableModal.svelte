@@ -2,7 +2,7 @@
 <script lang="ts">
 	import HammerIcon from '@lucide/svelte/icons/hammer';
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
   	import { resolve } from '$app/paths';
 
@@ -20,7 +20,7 @@
 <Modal title="No query to view" onClose={() => onCancel()} width="50vw">
     <p>Please build or enter a query to visualize data.</p>
 	<div class="buttons">
-        <Button href={resolve('/queries/query-builder')}>
+        <Button href={resolve('/queries/query-workbench')}>
 			Build a query
     		<HammerIcon size=1rem />
 		</Button>

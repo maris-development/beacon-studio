@@ -1,25 +1,25 @@
 <!--
  QueryVisualisationView — the Visualise-mode content of the workbench.
 
- Runs the active block's query (via queryStore) and shows the result under
+ Runs the active block's query (via BeaconClient) and shows the result under
  Table / Chart / Map sub-tabs. Selecting a different block automatically runs it
- if it hasn't been run before (reusing the queryStore cache otherwise).
+ if it hasn't been run before (reusing the BeaconClient cache otherwise).
 
  Table is rendered inline; Chart and Map are placeholders that open the existing
  full-page explorers with the current query until inline versions are built.
 -->
 <script lang="ts">
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
-	import { queryStore } from '@/stores/query-store.svelte';
+	import { BeaconClient } from '@/beacon-api/client';
 	import QueryVisualisationTable from './QueryVisualisationTable.svelte';
-	import type { QueryWorkspace } from './QueryWorkspace.svelte';
+	import { QueryWorkspace } from './QueryWorkspace.svelte';
 
 	let { workspace, onRunQuery }: { workspace: QueryWorkspace; onRunQuery?: () => Promise<void> } =
 		$props();
@@ -27,27 +27,15 @@
 	let subTab = $state<'table' | 'chart' | 'map'>('table');
 
 	// The active block's compiled query, derived from its draft.
-	const activeQuery = $derived(workspace.queryFor(workspace.activeBlock));
+	const activeQuery = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+
 	// Reactive run-state (drives loading + entry lookup below).
-	const runState = $derived(workspace.runStateFor(workspace.activeBlock));
+	const runState = $derived(workspace.getRunState(workspace.activeBlock));
+
 	// The cached result for the active query, once it has been run.
 	const entry = $derived(
-		activeQuery && runState.hasRun ? (queryStore.peek(activeQuery) ?? null) : null
+		activeQuery && runState.hasRun ? (BeaconClient.peekQuery(activeQuery) ?? null) : null
 	);
-
-	// Run the active block whenever it changes — no-op if already run or running.
-	// $effect(() => {
-	//     const id = workspace.activeBlockId;
-	//     const query = workspace.activeBlock?.query;
-	//     if (!id || !query) return;
-	//     const runState = workspace.runStateFor(workspace.activeBlock);
-	//     if (runState.hasRun || runState.isRunning) return;
-		
-	//     workspace.markBlockRunning(id, true);
-	//     queryStore.ensure(query)
-	//         .then((entry) => workspace.markBlockRun(id, entry.rowCount))
-	//         .catch(() => workspace.markBlockRunning(id, false));
-	// });
 
 	/** Opens the current query in a full-page explorer (chart/map placeholders). */
 	function openInExplorer(path: '/visualisations/chart-explorer' | '/visualisations/map-viewer') {
@@ -61,7 +49,7 @@
 
 <div class="visualisation-view">
 	{#if !activeQuery}
-		<p class="empty">Build a query (pick a table and columns) to visualise it.</p>
+		<p class="empty">Please select a table and at least one column to visualise the query.</p>
 	{:else}
 		<Tabs.Root bind:value={subTab} class="w-full">
 			<Tabs.List>

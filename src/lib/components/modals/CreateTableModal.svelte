@@ -1,7 +1,7 @@
 <!-- src/lib/components/modals/NoQueryAvailableModal.svelte -->
 <script lang="ts">
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import HammerIcon from '@lucide/svelte/icons/hammer';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';

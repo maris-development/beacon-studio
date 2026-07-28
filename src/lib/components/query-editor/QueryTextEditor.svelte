@@ -37,7 +37,7 @@
     let {
         sourceCode = $bindable(),
         width = '100%',
-        height = '90vh',
+        height = '40vh',
         readOnly = false
     } = $props();
 

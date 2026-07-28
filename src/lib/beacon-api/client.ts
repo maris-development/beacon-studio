@@ -1,16 +1,53 @@
 
+import type { Table as ArrowTable } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
 import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
+import type { SortDirection } from '@/util-types';
+import { BeaconClient as BeaconSdkClient } from '@beacon/client';
+
+import {
+    queryStore,
+    type DatasetEntry,
+    type MemoryCacheStats
+} from '@/stores/query-store.svelte';
+
+export type {
+    DatasetEntry,
+    MemoryCacheStats,
+}
+
+// Re-exported so consumers depend only on the client facade, never on the
+// underlying modules directly.
+
+// -- Metadata cache (shared across per-page BeaconClient instances) --------------
+// These caches are module-level so they survive client-side navigation even though
+// `BeaconClient.new()` is called per page. Keyed by host so multiple instances
+// don't collide. Previously lived in the deleted `metadata-cache.ts`.
+const tablesCache = new Map<string, Promise<string[]>>();
+const defaultTableCache = new Map<string, Promise<string>>();
+const schemaCache = new Map<string, Promise<Schema>>();
 
 
 /**
- * Legacy Beacon HTTP client. Query execution has moved to `@beacon/client`
- * (see `sdk-client.ts` and `stores/query-store.svelte.ts`); this client is kept
- * for metadata endpoints (datasets, tables, schemas, system info) and for
- * server-materialized downloads via {@link queryToDownload}.
+ * Unified Beacon client facade. This is the single entry point the app uses to talk
+ * to a Beacon instance. It wraps three concerns that used to be separate:
+ *
+ *  1. **Metadata + downloads** (this class' instance methods): datasets, tables,
+ *     schemas, system info, and server-materialized downloads via
+ *     {@link queryToDownload}, over plain JSON/`fetch`.
+ *  2. **Cached metadata** ({@link getCachedTables} / {@link getCachedDefaultTable} /
+ *     {@link getCachedSchema}): host-keyed memoization that survives navigation.
+ *  3. **Query execution + result cache** (the `static` query methods below): the
+ *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
+ *     (memory + OPFS) result cache and off-main-thread transforms. These are
+ *     `static` because the result cache is app-wide and keyed by the live Beacon
+ *     instance, independent of any single client instance's host.
+ *
+ * Prefer this facade everywhere; do not import `@beacon/client` or the query-store
+ * module directly from app code.
  */
 export class BeaconClient {
     host: string;
@@ -55,6 +92,47 @@ export class BeaconClient {
         return client;
     }
 
+    // -- Cached metadata --------------------------------------------------------
+    // Host-keyed memoization of the (immutable-per-session) metadata endpoints.
+    // Shared across every BeaconClient for the same host, so repeated builder
+    // mounts and instance re-selection don't refetch.
+
+    /** Cached list of table names for this instance's host. */
+    getCachedTables(): Promise<string[]> {
+        let cached = tablesCache.get(this.host);
+        if (!cached) {
+            cached = this.getTables();
+            tablesCache.set(this.host, cached);
+        }
+        return cached;
+    }
+
+    /** Cached default table name for this instance's host. */
+    getCachedDefaultTable(): Promise<string> {
+        let cached = defaultTableCache.get(this.host);
+        if (!cached) {
+            cached = this.getDefaultTable();
+            defaultTableCache.set(this.host, cached);
+        }
+        return cached;
+    }
+
+    /** Cached schema for a table on this instance's host. */
+    getCachedSchema(tableName: string): Promise<Schema> {
+        const key = `${this.host}::${tableName}`;
+        let cached = schemaCache.get(key);
+        if (!cached) {
+            cached = this.getTableSchema(tableName);
+            schemaCache.set(key, cached);
+        }
+        return cached;
+    }
+
+    /** Drops cached metadata for this instance's host (tables, default table, schemas). */
+    clearMetadataCache(): void {
+        BeaconClient.clearMetadataCache(this.host);
+    }
+
     async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob'): Promise<void> {
         const endpoint = `${this.host}/api/query`;
 
@@ -65,6 +143,7 @@ export class BeaconClient {
             cache: 'no-cache',
         };
 
+        const started = performance.now();
         const response = await fetch(endpoint, request_info);
 
         if (!response.ok) {
@@ -73,6 +152,10 @@ export class BeaconClient {
         }
 
         const blob = await response.blob();
+
+        // Downloads are server-materialized and bypass the result cache, so record
+        // them in the query history here (row count is unknown from a blob).
+        BeaconClient.recordDownload(query, performance.now() - started);
 
         // Try to get the filename from the headers
         const contentDisposition = response.headers.get('Content-Disposition');
@@ -163,7 +246,6 @@ export class BeaconClient {
 
     async getTables(): Promise<Array<string>> {
         const url = new URL(`${this.host}/api/tables`);
-        console.log('Fetching tables from URL:', url.toString());
         const response: Array<string> = await this.fetch(url);
         return response;
     }
@@ -337,6 +419,152 @@ export class BeaconClient {
     }
 
 
+    // ============================================================================
+    // Static members
+    //
+    // Grouped here so the instance (per-host) methods above stay contiguous. The
+    // query result cache is app-wide and keyed by the live Beacon instance, so its
+    // facade is static and independent of any single client's host.
+    // ============================================================================
+
+    /**
+     * Drops cached metadata. With a `host`, only that host's entries are removed;
+     * with no argument, the entire metadata cache is cleared.
+     */
+    static clearMetadataCache(host?: string): void {
+        if (host) {
+            tablesCache.delete(host);
+            defaultTableCache.delete(host);
+            for (const key of schemaCache.keys()) {
+                if (key.startsWith(`${host}::`)) schemaCache.delete(key);
+            }
+        } else {
+            tablesCache.clear();
+            defaultTableCache.clear();
+            schemaCache.clear();
+        }
+    }
+
+    // -- Query execution + result cache (app-wide, live-instance keyed) ----------
+    // Static: the result cache is a single app-wide store keyed by the currently
+    // selected Beacon instance, so it must not be bound to one client's host.
+
+    /**
+     * Executes `query` (or returns the cached result) and caches the resulting Arrow
+     * table across navigations. Concurrent identical calls share one request. See
+     * {@link setQueryCacheEnabled} to bypass the cache entirely.
+     */
+    static ensureQuery(query: CompiledQuery): Promise<DatasetEntry> {
+        return queryStore.ensure(query);
+    }
+
+    /** Returns a cached result without executing, or `undefined` if absent. */
+    static peekQuery(query: CompiledQuery): DatasetEntry | undefined {
+        return queryStore.peek(query);
+    }
+
+    /**
+     * Invalidates cached query results. With a `query`, removes just that entry
+     * (memory + OPFS); with no argument, clears the whole result cache.
+     */
+    static invalidateQueryCache(query?: CompiledQuery): void {
+        queryStore.invalidate(query);
+    }
+
+    /** Snapshot of the in-memory result cache, for the cache-info UI. */
+    static queryCacheStats(): MemoryCacheStats {
+        return queryStore.stats();
+    }
+
+    /** Whether the query result cache (memory + OPFS) is currently active. */
+    static isQueryCacheEnabled(): boolean {
+        return queryStore.isCacheEnabled();
+    }
+
+    /**
+     * Enables or disables the query result cache. Disabling also clears everything
+     * already cached, so a disabled cache can never serve a stale result.
+     */
+    static setQueryCacheEnabled(enabled: boolean): void {
+        queryStore.setCacheEnabled(enabled);
+    }
+
+    /** Sorts a cached dataset by a column (off-main-thread), returning a new table. */
+    static sortQueryTable(
+        entry: DatasetEntry,
+        column: string,
+        direction: SortDirection
+    ): Promise<ArrowTable> {
+        return queryStore.sort(entry, column, direction);
+    }
+
+    /** Computes a column's numeric min/max for a cached dataset. */
+    static queryColumnMinMax(
+        entry: DatasetEntry,
+        column: string
+    ): Promise<{ min: number; max: number }> {
+        return queryStore.minMax(entry, column);
+    }
+
+    /** Deduplicates a cached dataset by lat/lon, returning a new table. */
+    static dedupQueryTable(
+        entry: DatasetEntry,
+        latitudeColumnName?: string,
+        longitudeColumnName?: string,
+        amountOfRows?: number,
+        decimals?: number
+    ): Promise<ArrowTable> {
+        return queryStore.dedup(
+            entry,
+            latitudeColumnName,
+            longitudeColumnName,
+            amountOfRows,
+            decimals
+        );
+    }
+
+    /** Finds rows near a lat/lon in a cached dataset. */
+    static findSimilarQueryRows(
+        entry: DatasetEntry,
+        latLon: [number, number],
+        groupByDecimals?: number,
+        latitudeColumnName?: string,
+        longitudeColumnName?: string,
+        maxRows?: number
+    ): Promise<unknown[]> {
+        return queryStore.findSimilar(
+            entry,
+            latLon,
+            groupByDecimals,
+            latitudeColumnName,
+            longitudeColumnName,
+            maxRows
+        );
+    }
+
+    /**
+     * Returns the map display table for a dataset (deduplicated by lat/lon with a
+     * GeoArrow point geometry column), memoized per dataset + lat/lon + precision.
+     */
+    static queryMapTable(
+        entry: DatasetEntry,
+        latitudeColumnName: string,
+        longitudeColumnName: string,
+        groupByDecimals: number = 3
+    ): Promise<ArrowTable> {
+        return queryStore.mapTable(entry, latitudeColumnName, longitudeColumnName, groupByDecimals);
+    }
+
+    /**
+     * Records a server-materialized download in the query history. Downloads bypass
+     * {@link ensureQuery} and the result cache, so the row count is unknown here; an
+     * existing history entry's count is preserved. `duration` is the client-observed
+     * round-trip time in milliseconds.
+     */
+    static recordDownload(query: CompiledQuery, duration: number): void {
+        queryStore.recordDownload(query, duration);
+    }
+
     static responseToTextOrError(response: Response): Promise<string> {
         if (!response.ok) {
             return response.text().then(text => {
@@ -369,4 +597,31 @@ export class BeaconClient {
         });
     }
 
+}
+
+
+/**
+ * Builds a `@beacon/client` client for the given Beacon instance.
+ *
+ * - A bearer token (if configured on the instance) is sent via the `Authorization`
+ *   header on every request. The SDK's own `username`/`password` option is for
+ *   HTTP Basic super-user auth and is intentionally not used here.
+ * - `timeoutMs: 0` disables the SDK's default 60s per-request timeout so large
+ *   query results aren't cut off mid-download — matching the legacy client, which
+ *   sets no timeout.
+ *
+ * @throws if no instance (or no URL) is provided.
+ */
+export function makeBeaconClient(instance: BeaconInstance | null): BeaconSdkClient {
+	if (!instance?.url) {
+		throw new Error('No Beacon instance selected');
+	}
+
+	const headers = instance.token ? { Authorization: 'Bearer ' + instance.token } : undefined;
+
+	return new BeaconSdkClient({
+		url: instance.url,
+		headers,
+		timeoutMs: 0
+	});
 }

@@ -21,16 +21,16 @@
 	} = $props();
 
 	const context = getSearchSelectContext();
-	const queryStore = context.searchQuery;
+	const queryString = context.searchQuery;
 
 	$effect(() => {
-		if (value !== get(queryStore)) {
-			queryStore.set(value);
+		if (value !== get(queryString)) {
+			queryString.set(value);
 		}
 	});
 
 	$effect(() => {
-		const next = $queryStore;
+		const next = $queryString;
 		if (next !== value) {
 			value = next;
 		}
@@ -39,7 +39,7 @@
 	function onInput(event: Event) {
 		const nextValue = (event.currentTarget as HTMLInputElement).value;
 		value = nextValue;
-		queryStore.set(nextValue);
+		queryString.set(nextValue);
 	}
 </script>
 
