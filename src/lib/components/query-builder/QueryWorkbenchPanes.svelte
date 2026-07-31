@@ -13,14 +13,20 @@
 -->
 <script lang="ts">
 	import Button from '$lib/components/buttons/Button.svelte';
+	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from './QueryDraft';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
+	import type { QuerySelectionActions } from './QuerySelectionActions';
+	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
 
-	let { workspace }: { workspace: QueryWorkspace } = $props();
+	let { 
+		workspace, 
+		queryActions
+	 }: { workspace: QueryWorkspace, queryActions: QuerySelectionActions } = $props();
 
 	// Independent collapse state for each pane.
 	let leftOpen = $state(true);
@@ -29,18 +35,16 @@
 	// Live JSON of the active block's compiled query (read-only reflection).
 	const activeQueryJson = $derived.by(() => {
 		const query = QueryWorkspace.getQuery(workspace.activeBlock);
-		return query
-			? JSON.stringify(query, null, 2)
-			: '// No query yet. Pick a table and columns on the left.';
-	});
 
-	// onMount(() => {
-	// 	console.log('workspace.activeBlock?.draft', workspace.activeBlock?.draft);
-	// });
+		if(query){
+			return JSON.stringify(query, null, 2);
+		}
+
+		return '// No query yet. Pick a table and columns on the left.';
+	});
 
 	/** Builder edits flow into the active block's draft. */
 	function handleDraftChange(draft: QueryDraft) {
-		// console.log('handleDraftChange', draft);
 		workspace.updateActiveDraft(draft);
 	}
 </script>
@@ -56,7 +60,11 @@
 				title={leftOpen ? 'Collapse builder' : 'Expand builder'}
 				onclick={() => (leftOpen = !leftOpen)}
 			>
-				{#if leftOpen}<ChevronLeft />{:else}<ChevronRight />{/if}
+				{#if leftOpen}
+					<ChevronLeft />
+				{:else}
+					<ChevronRight />
+				{/if}
 			</Button>
 		</header>
 
@@ -78,7 +86,18 @@
 	<section class="pane right" class:pane--collapsed={!rightOpen}>
 		
 		<header class="pane-header">
-			<h2 class="pane-title">Query JSON</h2>
+			<h2 class="pane-title ">
+				Query JSON
+				<Button
+					class="copy-json"
+					variant="ghost"
+					size="icon"
+					title="Copy JSON to clipboard"
+					onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}
+				>
+					<CopyIcon />
+				</Button>
+			</h2>
 
 			<Button
 				variant="ghost"
@@ -86,7 +105,11 @@
 				title={rightOpen ? 'Collapse JSON' : 'Expand JSON'}
 				onclick={() => (rightOpen = !rightOpen)}
 			>
-				{#if rightOpen}<ChevronRight />{:else}<ChevronLeft />{/if}
+				{#if rightOpen}
+					<ChevronRight />
+				{:else}
+					<ChevronLeft />
+				{/if}
 			</Button>
 		</header>
 
@@ -102,7 +125,15 @@
 	.builder-pane {
 		display: flex;
 		gap: 1rem;
-		// align-items: flex-start;
+
+		@media (max-width: 1024px) {
+			flex-direction: column;
+			align-items: flex-start;
+
+			> .pane:not(.pane--collapsed) {
+				width: 100%;
+			}
+		}
 	}
 
 	.pane {
@@ -114,6 +145,7 @@
 		background: white;
 		border-radius: 0.75rem;
 		border: 1px solid rgb(231, 231, 236);
+		max-width: 100%;
 
 	
 		// A collapsed pane shrinks to just its header so the other pane expands.
@@ -135,6 +167,9 @@
 			&.right {
 				.pane-header {
 					flex-direction: column-reverse;
+					:global(.copy-json) {
+						display: none;
+					}
 				}
 			}
 			
@@ -157,6 +192,12 @@
 		&.right {
 			.pane-header {
 				flex-direction: row-reverse;
+
+				h2 {
+					display: flex;
+					justify-content: space-between;
+					align-items: center;
+				}
 			}
 		}
 		.pane-body {

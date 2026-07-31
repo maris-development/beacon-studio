@@ -78,6 +78,7 @@
         flex: 1;
 		width: var(--width);
         height: var(--height);
+		min-height: 10ch;
 		border-width: 1px;
 		border-style: solid;
 			border-radius: 0.5rem;

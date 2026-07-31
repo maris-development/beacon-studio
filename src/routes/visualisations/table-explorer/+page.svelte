@@ -8,7 +8,6 @@
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import DataTable from '@/components/data-table.svelte';
-	import { Button } from '@/components/ui/button';
 
 	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
@@ -20,6 +19,7 @@
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import Button from '@/components/buttons/Button.svelte';
 
 	let query: CompiledQuery | undefined = $state(undefined);
 
@@ -212,14 +212,14 @@
 
 	async function handleEditQuery() {
 		if (!query) {
-			goto(resolve('/queries/query-workbench'));
+			goto(resolve('/queries/workbench'));
 			return;
 		}
 
 		const gzippedQuery = Utils.objectToGzipString(query);
 
 		if (gzippedQuery) {
-			goto(resolve('/queries/query-workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(resolve('/queries/workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 </script>

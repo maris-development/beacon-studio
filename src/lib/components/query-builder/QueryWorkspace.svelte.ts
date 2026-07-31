@@ -68,11 +68,13 @@ function createId(): string {
 export class QueryWorkspace {
 	/** All query drafts shown in the selector row. */
 	blocks = $state<QueryBlock[]>([]);
+	
 	/** Currently edited/visualised block id. */
 	activeBlockId = $state<string | null>(null);
 
 	/** Per-block run result (presence = "has been run"), keyed by block id. */
 	private runInfo = $state<Record<string, { rows: number }>>({});
+
 	/** Per-block "currently running" flag, keyed by block id. */
 	private running = $state<Record<string, boolean>>({});
 
@@ -142,6 +144,17 @@ export class QueryWorkspace {
 		this.blocks.splice(index + 1, 0, copy);
 		this.activeBlockId = copy.id;
 		this.persistState();
+	}
+
+	/** Renames a block title and persists the workspace state. */
+	renameBlock(id: string, name: string): boolean {
+		const block = this.blocks.find((candidate) => candidate.id === id);
+		if (!block) return false;
+
+		if (block.name === name) return true;
+		block.name = name;
+		this.persistState();
+		return true;
 	}
 
 	/** Removes a block, keeping at least one and fixing up the active selection. */
@@ -277,13 +290,18 @@ export class QueryWorkspace {
 
 	private loadPersistedState(): void {
 		const state = get(persistedWorkspaceState);
+
+		console.log('Loaded persisted workspace state: ', state);
+
 		if (!state.blocks.length) {
 			this.addBlock();
 			return;
 		}
 
 		this.blocks = state.blocks.map((block) => this.normalizeBlock(block));
+
 		this.counter = state.counter || this.blocks.length;
+
 		this.activeBlockId =
 			state.activeBlockId && this.blocks.some((block) => block.id === state.activeBlockId)
 				? state.activeBlockId

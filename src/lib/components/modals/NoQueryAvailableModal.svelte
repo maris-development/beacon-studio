@@ -20,7 +20,7 @@
 <Modal title="No query to view" onClose={() => onCancel()} width="50vw">
     <p>Please build or enter a query to visualize data.</p>
 	<div class="buttons">
-        <Button href={resolve('/queries/query-workbench')}>
+        <Button href={resolve('/queries/workbench')}>
 			Build a query
     		<HammerIcon size=1rem />
 		</Button>

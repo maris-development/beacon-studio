@@ -15,8 +15,8 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery, DataType, Filter, OutputFormat } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-	import AdvancedParameter from './AdvancedParameter.svelte';
-	import type { SelectedFilterType } from './AddAdvancedFilter.svelte';
+	import Parameter from './Parameter.svelte';
+	import type { SelectedFilterType } from './AddFilterDropdown.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
@@ -44,7 +44,7 @@
             visualiseTable: handleTableVisualise,
             visualiseChart: handleChartVisualise,
             visualiseMap: handleMapVisualise,
-            reset: undefined
+            resetQuery: undefined
         }),
 	}: {
 		table_name: string;
@@ -216,7 +216,7 @@
 	}
 
 	// onReset = resetBuilder;
-    actions.reset = resetBuilder;
+    actions.resetQuery = resetBuilder;
 
 	function compileQuery(): CompiledQuery {
 		let builder = new QueryBuilder();
@@ -543,17 +543,14 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
-	<div class="flex flex-col gap-2">
-		<div class="grid grid-cols-1 gap-2 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-2">
+	<div class="parameters-grid">
 		{#if selectedFields.length > 0}
 			{#each Utils.range(0, selectedFields.length) as index (index)}
-				<AdvancedParameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
+				<Parameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
 			{/each}
 		{:else}
 			<h4 class="no-selection">No parameters selected, use the 'Add Parameter' button above.</h4>
 		{/if}
-			
-		</div>
 	</div>
 
 	<h3>Output Format</h3>
@@ -573,6 +570,29 @@
 </div>
 
 <style lang="scss">
+
+	.parameters-grid {
+		display: grid;
+		gap: 0.5rem;
+
+		grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+
+
+		// // sm: ≥ 640px
+		// @media (min-width: 640px) {
+		// 	grid-template-columns: repeat(1, minmax(0, 1fr));
+		// }
+
+		// // md: ≥ 768px
+		// @media (min-width: 768px) {
+		// 	grid-template-columns: repeat(2, minmax(0, 1fr));
+		// }
+
+		// lg: ≥ 1024px
+		// @media (min-width: 1024px) {
+		// 	grid-template-columns: repeat(2, minmax(0, 1fr));
+		// }
+	}
 	#new-query-builder {
 		display: flex;
 		flex-direction: column;

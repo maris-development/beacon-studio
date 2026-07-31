@@ -1,24 +1,27 @@
 <script lang="ts">
-	import PlusIcon from '@lucide/svelte/icons/plus';
+	import FunnelPlusIcon from '@lucide/svelte/icons/funnel-plus';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
-	import type { ParameterFilterType } from './AdvancedParameterFilter.svelte';
+	import type { ParameterFilterType } from './ParameterFilter.svelte';
 
-	export type SelectedFilterType = { label: string; filter_value: ParameterFilterType };
+	export type SelectedFilterType = { 
+		label: string; 
+		filter_value: ParameterFilterType 
+	};
 
 	let {
 		data_type,
 		selected_filters = $bindable()
 	}: {
 		data_type: DataType;
-		selected_filters: { label: string; filter_value: ParameterFilterType }[];
+		selected_filters: SelectedFilterType[];
 	} = $props();
 
-	const untyped_filters: { label: string; filter_value: ParameterFilterType }[] = [
+	const untyped_filters: SelectedFilterType[] = [
 		{
 			label: 'Is Null',
 			filter_value: { type: 'is_null' }
@@ -30,7 +33,7 @@
 	];
 	function getTypedFilters(
 		data_type: DataType
-	): { label: string; filter_value: ParameterFilterType }[] {
+	): SelectedFilterType[] {
 
 		if (Utils.isNumericDataType(data_type)) {
 			return [
@@ -96,34 +99,39 @@
 			];
 			
 		} else if (Utils.isTimestampDataType(data_type)) {
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity
+			const d = new Date();
+			d.setUTCFullYear(d.getUTCFullYear() - 1);
+			const minDefaultDateValue = d.toISOString().slice(0, 10) + 'T00:00:00Z';
+			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + 'T00:00:00Z';
 			return [
 				{
 					label: 'Between',
-					filter_value: { type: 'range_timestamp', min: null, max: null }
+					filter_value: { type: 'range_timestamp', min: minDefaultDateValue, max: maxDefaultDateValue }
 				},
 				{
 					label: 'Greater Than',
-					filter_value: { type: 'greater_than_timestamp', value: null }
+					filter_value: { type: 'greater_than_timestamp', value: minDefaultDateValue }
 				},
 				{
 					label: 'Greater Than or Equals',
-					filter_value: { type: 'greater_than_or_equals_timestamp', value: null }
+					filter_value: { type: 'greater_than_or_equals_timestamp', value: minDefaultDateValue }
 				},
 				{
 					label: 'Less Than',
-					filter_value: { type: 'less_than_timestamp', value: null }
+					filter_value: { type: 'less_than_timestamp', value: maxDefaultDateValue }
 				},
 				{
 					label: 'Less Than or Equals',
-					filter_value: { type: 'less_than_or_equals_timestamp', value: null }
+					filter_value: { type: 'less_than_or_equals_timestamp', value: maxDefaultDateValue }
 				},
 				{
 					label: 'Equals',
-					filter_value: { type: 'equals_timestamp', value: null }
+					filter_value: { type: 'equals_timestamp', value: maxDefaultDateValue }
 				},
 				{
 					label: 'Not Equals',
-					filter_value: { type: 'not_equals_timestamp', value: null }
+					filter_value: { type: 'not_equals_timestamp', value: maxDefaultDateValue }
 				}
 			];
 		} else {
@@ -140,15 +148,15 @@
 	<Popover.Trigger>
 		{#snippet child({ props })}
 			<Button
-				variant="confirm"
+				variant="outline"
 				class="add-filter-trigger"
 				{...props}
 				role="combobox"
 				aria-expanded={open}
+				title="Add filter"
+				aria-label="Add filter"
 			>
-				<PlusIcon class="add-filter-trigger-icon" />
-				Add Filter
-				<!-- <ChevronsUpDownIcon class="ml-2 size-4 shrink-0 opacity-50" /> -->
+				<FunnelPlusIcon class="add-filter-trigger-icon" />
 			</Button>
 		{/snippet}
 	</Popover.Trigger>

@@ -32,7 +32,7 @@
 		margin: 0;
 
 		min-height: 100vh;
-		overflow: hidden;
+		overflow-x: hidden;
 	}
 
 	

@@ -5,7 +5,7 @@ import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
 import type { CompiledQuery, DataType, Filter } from "./beacon-api/types";
-import type { ParameterFilterType } from "./components/query-builder/AdvancedParameterFilter.svelte";
+import type { ParameterFilterType } from "./components/query-builder/ParameterFilter.svelte";
 import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';
@@ -249,26 +249,26 @@ export class Utils {
             case "range_timestamp":
                 return {
                     for_query_parameter: column,
-                    min: new Date(filter.min.toString()).toISOString(),
-                    max: new Date(filter.max.toString()).toISOString()
+                    min: filter.min,
+                    max: filter.max
                 };
             case "equals_timestamp":
-                return { for_query_parameter: column, eq: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, eq: filter.value };
 
             case "not_equals_timestamp":
-                return { for_query_parameter: column, neq: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, neq: filter.value };
 
             case "greater_than_timestamp":
-                return { for_query_parameter: column, gt: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, gt: filter.value };
 
             case "greater_than_or_equals_timestamp":
-                return { for_query_parameter: column, gt_eq: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, gt_eq: filter.value };
 
             case "less_than_timestamp":
-                return { for_query_parameter: column, lt: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, lt: filter.value };
 
             case "less_than_or_equals_timestamp":
-                return { for_query_parameter: column, lt_eq: new Date(filter.value.toString()).toISOString() };
+                return { for_query_parameter: column, lt_eq: filter.value };
 
             case "is_null":
                 return { is_null: { for_query_parameter: column } };

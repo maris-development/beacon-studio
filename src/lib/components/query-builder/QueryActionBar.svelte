@@ -23,28 +23,22 @@
 
 
 	let {
-		compileQuery,
-		downloadData,
-		visualiseTable,
-		visualiseChart,
-		visualiseMap,
-		saveQuery,
-		resetQuery
-	}: QuerySelectionActions = $props();
+		queryActions
+	}: { queryActions: QuerySelectionActions } = $props();
 
-	let showInfoModal = $state(false);
+	let showingCacheInfoModal = $state(false);
 
-	function showInfo(): void {
-		showInfoModal = true;
+	function showCacheInfoModal(): void {
+		showingCacheInfoModal = true;
 	}
 
-	function closeInfo(): void {
-		showInfoModal = false;
+	function closeCacheInfoModal(): void {
+		showingCacheInfoModal = false;
 	}
 </script>
 
-{#if showInfoModal}
-	<CacheInfoModal onClose={() => closeInfo()} />
+{#if showingCacheInfoModal}
+	<CacheInfoModal onClose={() => closeCacheInfoModal()} />
 {/if}
 
 
@@ -52,7 +46,7 @@
 
 	<div class="query-action-group">
 
-		<DownloadDataButton {downloadData} />
+		<DownloadDataButton downloadData={queryActions.downloadData} />
 
 		<!-- dropdown for visualisations -->
         <DropdownMenu.Root>
@@ -63,16 +57,16 @@
 		        </Button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content class="w-48">
-				<DropdownMenu.Item onclick={visualiseTable}>
+				<DropdownMenu.Item onclick={queryActions.visualiseTable}>
 					<TableIcon class="text-muted-foreground" />
 					<span>Table</span>
 				</DropdownMenu.Item>
-				<DropdownMenu.Item onclick={visualiseChart}>
+				<DropdownMenu.Item onclick={queryActions.visualiseChart}>
 					<ChartPie class="text-muted-foreground" />
 					<span>Chart</span>
 				</DropdownMenu.Item>
 				<!-- <DropdownMenu.Separator /> -->
-				<DropdownMenu.Item onclick={visualiseMap}>
+				<DropdownMenu.Item onclick={queryActions.visualiseMap}>
 					<MapIcon class="text-muted-foreground" />
 					<span>Map</span>
 				</DropdownMenu.Item>
@@ -80,7 +74,7 @@
 		</DropdownMenu.Root>
 
 		<!-- dropdown for copy options -->
-		{#if compileQuery}
+		{#if queryActions.compileQuery}
 			<!-- Add name of active query on top of dropdown -->
 			<DropdownMenu.Root>
 				<DropdownMenu.Trigger>
@@ -90,39 +84,39 @@
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content class="w-48">
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.compileQuery)}>
 						<UrlIcon class="text-muted-foreground" />
 						<span>Share URL</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyJSON(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}>
 						<CopyIcon class="text-muted-foreground" />
 						<span>Copy JSON</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(queryActions.compileQuery)}>
 						<CopyIcon class="text-muted-foreground" />
 						<span>Copy Python</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.copySQL(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copySQL(queryActions.compileQuery)}>
 						<CopyIcon class="text-muted-foreground" />
 						<span>Copy SQL</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Separator />
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.downloadJSON(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.downloadJSON(queryActions.compileQuery)}>
 						<JsonIcon class="text-muted-foreground" />
 						<span>Download JSON</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(queryActions.compileQuery)}>
 						<PythonIcon class="text-muted-foreground" />
 						<span>Download Python</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.downloadSQL(compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.downloadSQL(queryActions.compileQuery)}>
 						<SQLIcon class="text-muted-foreground" />
 						<span>Download SQL</span>
 					</DropdownMenu.Item>
@@ -132,32 +126,35 @@
 			
 		{/if}
 
-		{#if saveQuery}
-			<Button variant="outline" onclick={saveQuery} title="Save query">
+		{#if queryActions.saveQuery}
+			<Button variant="outline" onclick={queryActions.saveQuery} title="Save query">
 				<SaveIcon />
 				Save Query
 			</Button>
 		{/if}	
 		
 
-		<Button onclick={resetQuery} variant="destructive" title="Reset query selection">
+		<Button onclick={queryActions.resetQuery} variant="destructive" title="Reset query selection">
 			<ResetIcon />
 			Reset
 		</Button>
 
-		<Button variant="outline" onclick={() => showInfo()} title="Query caching information">
-				<InfoIcon />
+		<Button variant="outline" onclick={() => showCacheInfoModal()} title="Query caching information">
+			<InfoIcon />
 		</Button>
 	</div>
 </div>
 
 <style lang="scss">
+	
 	.query-action-bar {
 		display: flex;
 		justify-content: flex-end;
 		align-items: center;
 		gap: 0.5rem;
 		flex-wrap: wrap;
+
+		
 	}
 
 	.query-action-group {

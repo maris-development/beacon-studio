@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { RangeFilterColumn } from '@/beacon-api/types';
 	import Input from '@/components/ui/input/input.svelte';
+	import { Temporal } from '@js-temporal/polyfill'; // native in 2026; drop import to use the global
 
 	let {
 		range_filter,
@@ -40,17 +41,42 @@
 		timestamp_max_value = toDatetimeLocalStringFromUTC(max_value);
 	}
 
+	// ISO-achtige string -> datetime-local value ("YYYY-MM-DDTHH:mm")
 	function toDatetimeLocalStringFromUTC(value: string): string {
-		if (!value) return '';
-		const date = new Date(value);
-		return date.toISOString().slice(0, 16); // Strip seconds, keep local format
+		return value;
+		// console.log('toDatetimeLocalStringFromUTC input', value);
+		// if (!value) return '';
+		// const output = Temporal.Instant.from(value)
+		// 	.toZonedDateTimeISO('UTC')
+		// 	.toPlainDateTime()
+		// 	.toString();
+		// // console.log('toDatetimeLocalStringFromUTC output', output);
+		// return output;
 	}
 
-	function toUTCString(localString: string): string {
-		const localDate = new Date(localString);
-		const utcDate = new Date(localDate.getTime() + localDate.getTimezoneOffset() * 60000);
-		return utcDate.toISOString();
+	// datetime-local value -> ISO string, exact dezelfde waarden
+	function toISOString(localString: string): string {
+		console.log('toISOString input', localString);
+		if (!localString) return '';
+		const output = Temporal.Instant.from(localString)
+			.toZonedDateTimeISO('UTC')
+			.toInstant()
+			.toString();
+		console.log('toISOString output', output);
+		return output;
 	}
+
+	// function toDatetimeLocalStringFromUTC(value: string): string {
+	// 	if (!value) return '';
+	// 	const date = new Date(value);
+	// 	return date.toISOString().slice(0, 16); // Strip seconds, keep local format
+	// }
+
+	// function toUTCString(localString: string): string {
+	// 	const localDate = new Date(localString);
+	// 	const utcDate = new Date(localDate.getTime() + localDate.getTimezoneOffset() * 60000);
+	// 	return utcDate.toISOString();
+	// }
 
 	$effect(() => {
 		if (range_filter !== origin_filter) {
@@ -83,7 +109,7 @@
 				class="w-[200px]"
 				type="datetime-local"
 				bind:value={timestamp_min_value}
-				onchange={(e) => (min_value = toUTCString((e.target as HTMLInputElement).value))}
+				onchange={(e) => (min_value = toISOString((e.target as HTMLInputElement).value))}
 			/>
 		{:else if is_number_filter}
 			<Input type="number" lang="en" step="any" bind:value={min_value} class="w-[200px]" />
@@ -98,7 +124,7 @@
 				class="w-[200px]"	
 				type="datetime-local"
 				bind:value={timestamp_max_value}
-				onchange={(e) => (max_value = toUTCString((e.target as HTMLInputElement).value))}
+				onchange={(e) => (max_value = toISOString((e.target as HTMLInputElement).value))}
 			/>
 		{:else if is_number_filter}
 				<Input type="number" step="any" bind:value={max_value} class="w-[200px]" />

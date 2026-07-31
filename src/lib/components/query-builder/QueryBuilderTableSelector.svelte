@@ -112,7 +112,8 @@
         gap: 0.5rem;
 
         :global(.card){
-            padding: 1rem;
+            padding: 0.6rem;
+            
         }
 
         :global(.card.selected) {
