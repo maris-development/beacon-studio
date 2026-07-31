@@ -14,28 +14,41 @@
 		onEditClick = () => {},
 		onEditBuilderClick = () => {},
 		compiledQuery,
+		storedQueryId,
         children
 	}: {
 		onEditClick: () => void;
 		onEditBuilderClick?: () => void;
 		compiledQuery: CompiledQuery
+		/** The library record of the current query, if the page opened from one. */
+		storedQueryId?: string;
         children?: Snippet
 	} = $props();
 
-	async function handleChartVisualise() {
+	/**
+	 * Send the current query to another page. The link uses `?q=<record id>`. If
+	 * the query has no record, the link carries the query as gzip.
+	 */
+	function handOff(resolvedPath: string) {
+		if (storedQueryId) {
+			goto(`${resolvedPath}?q=${encodeURIComponent(storedQueryId)}`);
+			return;
+		}
+
 		const gzippedQuery = Utils.objectToGzipString(compiledQuery);
-		if(gzippedQuery){
-			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+		if (gzippedQuery) {
+			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
 		}
 	}
 
-	async function handleTableVisualise() {
-		const gzippedQuery = Utils.objectToGzipString(compiledQuery);
-		if(gzippedQuery){
-			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
-		}
+	async function handleChartVisualise() {
+		handOff(resolve('/visualisations/chart-explorer'));
 	}
-	
+
+	async function handleTableVisualise() {
+		handOff(resolve('/visualisations/table-explorer'));
+	}
+
 </script>
 
 

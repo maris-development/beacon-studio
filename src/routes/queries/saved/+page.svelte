@@ -4,8 +4,8 @@
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { savedQueries, removeSavedQuery, clearSavedQueries, renameSavedQuery } from '@/stores/saved-queries';
-	import type { SavedQueryEntry } from '@/stores/saved-queries';
-	import { Utils } from '@/utils';
+	import { buildShareLink, SHARE_LINK_PATH, type StoredQuery } from '@/stores/stored-query';
+	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -13,38 +13,68 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import Share2Icon from '@lucide/svelte/icons/share-2';
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import WorkbenchIcon from '@lucide/svelte/icons/square-terminal';
 
 	const entries = $derived([...$savedQueries]);
 
-	function columnSummary(entry: SavedQueryEntry): string {
-		const columns = (entry.query.query_parameters ?? []).map((p) => p.alias ?? p.column);
-		return columns.length ? columns.join(', ') : '(no columns)';
+	function columnSummary(entry: StoredQuery): string {
+		const columns = (entry.compiled?.query_parameters ?? []).map((p) => p.alias ?? p.column);
+		if (!columns.length) return '(no columns)';
+		return columns.join(', ');
 	}
 
-	function filterCount(entry: SavedQueryEntry): number {
-		return entry.query.filters?.length ?? 0;
+	function filterCount(entry: StoredQuery): number {
+		return entry.compiled?.filters?.length ?? 0;
 	}
 
-	function savedAgo(entry: SavedQueryEntry): string {
+	function savedAgo(entry: StoredQuery): string {
 		return formatDistanceToNow(entry.createdAt, { addSuffix: true });
 	}
 
-	function openWith(resolvedPath: string, entry: SavedQueryEntry): void {
-		const gzipped = Utils.objectToGzipString(entry.query);
-		if (gzipped) goto(resolvedPath + `?query=${encodeURIComponent(gzipped)}`);
+	/**
+	 * Open a page that runs the query. The link carries only the record id. The
+	 * target page finds the record in the library. Therefore the workbench gets
+	 * the saved builder state, and does not rebuild it from the compiled query.
+	 */
+	function openWith(resolvedPath: string, entry: StoredQuery): void {
+		if (!entry.compiled) return;
+		goto(`${resolvedPath}?q=${encodeURIComponent(entry.id)}`);
 	}
 
-	function openInWorkbench(entry: SavedQueryEntry): void {
+	function openInWorkbench(entry: StoredQuery): void {
 		openWith(resolve('/queries/workbench'), entry);
+	}
+
+	/**
+	 * Copy a link for the browser of another person. A record id works only in the
+	 * storage of this browser. Therefore a shared link carries the query itself.
+	 * Every shared link opens the workbench. That page accepts a query with no
+	 * record.
+	 */
+	async function copyShareLink(entry: StoredQuery): Promise<void> {
+		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH));
+
+		if (!link) {
+			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
+			return;
+		}
+
+		try {
+			await navigator.clipboard.writeText(link);
+			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
+		} catch (error) {
+			console.error('Failed to copy share link.', error);
+			addToast({ type: 'error', message: 'Could not copy the share link.' });
+		}
 	}
 
 	// Inline rename state
 	let renamingId = $state<string | null>(null);
 	let renameValue = $state('');
 
-	function startRename(entry: SavedQueryEntry): void {
+	function startRename(entry: StoredQuery): void {
 		renamingId = entry.id;
 		renameValue = entry.name;
 	}
@@ -115,8 +145,8 @@
 									<h2 class="entry-name" title={entry.name}>{entry.name}</h2>
 								{/if}
 								<div class="meta">
-									{#if entry.instanceName || entry.instanceUrl}
-										<span class="badge">{entry.instanceName || entry.instanceUrl}</span>
+									{#if entry.instance.name || entry.instance.url}
+										<span class="badge">{entry.instance.name || entry.instance.url}</span>
 									{/if}
 									<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
 									<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
@@ -165,6 +195,14 @@
 									title="Rename"
 								>
 									<PencilLineIcon />
+								</Button>
+								<Button
+									size="sm"
+									variant="ghost"
+									onclick={() => copyShareLink(entry)}
+									title="Copy a link that works in any browser"
+								>
+									<Share2Icon />
 								</Button>
 								<Button
 									size="sm"

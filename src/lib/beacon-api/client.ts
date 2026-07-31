@@ -133,7 +133,7 @@ export class BeaconClient {
         BeaconClient.clearMetadataCache(this.host);
     }
 
-    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob'): Promise<void> {
+    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob', storedQueryId?: string): Promise<void> {
         const endpoint = `${this.host}/api/query`;
 
         const request_info: RequestInit = {
@@ -155,7 +155,7 @@ export class BeaconClient {
 
         // Downloads are server-materialized and bypass the result cache, so record
         // them in the query history here (row count is unknown from a blob).
-        BeaconClient.recordDownload(query, performance.now() - started);
+        BeaconClient.recordDownload(query, performance.now() - started, storedQueryId);
 
         // Try to get the filename from the headers
         const contentDisposition = response.headers.get('Content-Disposition');
@@ -454,13 +454,21 @@ export class BeaconClient {
      * table across navigations. Concurrent identical calls share one request. See
      * {@link setQueryCacheEnabled} to bypass the cache entirely.
      */
-    static ensureQuery(query: CompiledQuery): Promise<DatasetEntry> {
-        return queryStore.ensure(query);
+    static ensureQuery(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
+        return queryStore.ensure(query, storedQueryId);
     }
 
     /** Returns a cached result without executing, or `undefined` if absent. */
     static peekQuery(query: CompiledQuery): DatasetEntry | undefined {
         return queryStore.peek(query);
+    }
+
+    /**
+     * Returns a cached result by its cache key — for callers holding a StoredQuery's
+     * `datasetKey` rather than the query itself, e.g. a page deep-linked with `?q=`.
+     */
+    static peekQueryByKey(key: string | null | undefined): DatasetEntry | undefined {
+        return queryStore.peekByKey(key);
     }
 
     /**
@@ -561,8 +569,8 @@ export class BeaconClient {
      * existing history entry's count is preserved. `duration` is the client-observed
      * round-trip time in milliseconds.
      */
-    static recordDownload(query: CompiledQuery, duration: number): void {
-        queryStore.recordDownload(query, duration);
+    static recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
+        queryStore.recordDownload(query, duration, storedQueryId);
     }
 
     static responseToTextOrError(response: Response): Promise<string> {

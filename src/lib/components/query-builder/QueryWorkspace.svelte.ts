@@ -1,56 +1,47 @@
 /**
- * QueryWorkspace — single source of truth for the combined query builder +
- * visualiser page. Holds the list of "query blocks" (independent query drafts),
- * tracks which one is active, and derives badge-status + run-state per block.
+ * QueryWorkspace is the source of truth for the query builder and visualiser
+ * page. It holds the list of query blocks. It marks one block active. It derives
+ * the badge status and the run state of each block.
  *
- * Each block owns a {@link QueryDraft} — the builder's editable state (table,
- * selected columns, filters, output format). That draft is the source of truth:
- * the CompiledQuery used for the JSON view, the run request and downloads is
- * always *derived* from it via {@link compileDraft}. Switching between blocks
- * restores the exact draft, so a block is never reset just by selecting it.
+ * A block is a {@link StoredQuery} with `role: 'block'`. Blocks live in the
+ * persisted `queryBlocks` collection. Saved queries and history use the same
+ * record type.
+ *
+ * This class is a view of that collection. {@link blocks} is a reactive mirror.
+ * A subscription keeps the mirror correct. Every change writes to the
+ * collection, not to the mirror. Therefore the app persists blocks
+ * automatically. It can also copy a block into another collection, for example
+ * for "save this query". No conversion is necessary.
+ *
+ * Each block holds a {@link QueryDraft}. The draft is the editable builder
+ * state: table, columns, filters and output format. The draft is the source of
+ * truth. {@link compileDraft} derives `compiled` from it. Therefore a change of
+ * block restores the exact builder state.
+ *
+ * A block with a null `draft` and a set `compiled` comes from a share link or
+ * from the JSON editor. The builder fills the draft after the schema loads. See
+ * {@link seedFor}. From that point the draft leads.
  *
  * Data flow:
- *   builder edit -> updateActiveDraft(draft) -> block.draft
- *   block.draft  -> queryFor()/statusFor()   -> JSON view + action bar + cards
+ *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
+ *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
 import type { CompiledQuery } from '@/beacon-api/types';
 import { Utils } from '@/utils';
-import { persisted } from 'svelte-local-storage-store';
-import { get } from 'svelte/store';
 import {
-	makeEmptyQuerySelectionStatus,
-	type QuerySelectionStatus
-} from './QuerySelectionStatus';
+	ensureBlockCounter,
+	getBlocksState,
+	needsDraftSeed,
+	nextBlockNumber,
+	queryBlocks,
+	setActiveBlockId
+} from '@/stores/query-blocks';
+import type { ResolvedUrlQuery } from '@/stores/query-library';
+import { cloneStoredQuery, snapshotInstance, type StoredQuery } from '@/stores/stored-query';
+import { currentBeaconInstance } from '@/stores/config';
+import { get } from 'svelte/store';
+import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from './QuerySelectionStatus';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from './QueryDraft';
-
-export type QueryBlock = {
-	id: string;
-	name: string;
-	/** Builder state for this block (table, columns, filters, output). */
-	draft: QueryDraft;
-	/**
-	 * One-time CompiledQuery to hydrate the draft from once the schema loads
-	 * (used for URL deep-links). Cleared as soon as the builder emits a draft.
-	 */
-	pendingSeed: CompiledQuery | null;
-};
-
-type PersistedQueryWorkspaceState = {
-	blocks: QueryBlock[];
-	activeBlockId: string | null;
-	counter: number;
-};
-
-const EMPTY_WORKSPACE_STATE: PersistedQueryWorkspaceState = {
-	blocks: [],
-	activeBlockId: null,
-	counter: 0
-};
-
-const persistedWorkspaceState = persisted<PersistedQueryWorkspaceState>(
-	'query-builder-workspace-state',
-	EMPTY_WORKSPACE_STATE
-);
 
 /** Small run/cache summary used by the block cards. */
 export type BlockRunState = {
@@ -59,172 +50,207 @@ export type BlockRunState = {
 	isRunning: boolean;
 };
 
-function createId(): string {
-	return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-		? crypto.randomUUID()
-		: `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 export class QueryWorkspace {
-	/** All query drafts shown in the selector row. */
-	blocks = $state<QueryBlock[]>([]);
-	
-	/** Currently edited/visualised block id. */
+	/**
+	 * A reactive mirror of the persisted block collection. Do not assign to this
+	 * field. The subscription below is the only writer.
+	 */
+	blocks = $state<StoredQuery[]>([]);
+
+	/** The id of the block that the user edits or visualises now. */
 	activeBlockId = $state<string | null>(null);
 
-	/** Per-block run result (presence = "has been run"), keyed by block id. */
-	private runInfo = $state<Record<string, { rows: number }>>({});
-
-	/** Per-block "currently running" flag, keyed by block id. */
+	/**
+	 * A "runs now" flag for each block. The record does not hold this flag. An
+	 * active run is a fact about this tab at this moment, not about the stored
+	 * query. A persisted flag would keep a spinner on a block after a reload.
+	 */
 	private running = $state<Record<string, boolean>>({});
 
-	/** Monotonic counter used only for default block names. */
-	private counter = 0;
+	/** Releases the collection subscription. See {@link destroy}. */
+	private unsubscribe: () => void;
 
-	constructor(seedQuery: CompiledQuery | null = null) {
-		if (seedQuery) {
-			this.seedFromQuery(seedQuery);
+	constructor() {
+		this.unsubscribe = queryBlocks.subscribe((entries) => {
+			this.blocks = entries;
+		});
+
+		this.restoreSelection();
+	}
+
+	/**
+	 * Detach from the block collection. The workbench builds a new workspace at
+	 * every mount. Without this method each visit leaves one more subscriber. That
+	 * subscriber writes into an object that the app no longer uses.
+	 */
+	destroy(): void {
+		this.unsubscribe();
+	}
+
+	/**
+	 * Add the query from a deep-link as a new block. The method does not replace
+	 * the workspace. "Open in workbench" must not close the tabs of the user.
+	 *
+	 * A second visit to the same link has no extra effect. If `?q=` names a block
+	 * that is already open, the method selects that block.
+	 */
+	openFromUrl(resolved: ResolvedUrlQuery): void {
+		if (resolved.entry) {
+			const alreadyOpen = this.blocks.find((block) => block.id === resolved.entry?.id);
+			if (alreadyOpen) {
+				this.select(alreadyOpen.id);
+				return;
+			}
+			this.addFromStoredQuery(resolved.entry);
 			return;
 		}
 
-		this.loadPersistedState();
+		if (resolved.query) {
+			this.addFromQuery(resolved.query);
+		}
 	}
 
-	/** The active block object (or null). */
-	get activeBlock(): QueryBlock | null {
+	/** The active block, or null. */
+	get activeBlock(): StoredQuery | null {
 		return this.blocks.find((b) => b.id === this.activeBlockId) ?? null;
 	}
 
-	/** Adds a new empty block and selects it. */
-	addBlock(name?: string): QueryBlock {
-		this.counter += 1;
-		const block: QueryBlock = {
-			id: createId(),
-			name: name ?? `Query ${this.counter}`,
+	/** Add an empty block and select it. */
+	addBlock(name?: string): StoredQuery {
+		const block = queryBlocks.append({
+			name: name ?? `Query ${nextBlockNumber()}`,
 			draft: makeEmptyDraft(),
-			pendingSeed: null
-		};
-		this.blocks.push(block);
-		this.activeBlockId = block.id;
-		this.persistState();
+			instance: snapshotInstance(get(currentBeaconInstance))
+		});
+		this.select(block.id);
 		return block;
 	}
 
-	/** Adds a saved query as a NEW block and selects it (action bar: saved queries). */
-	addFromSavedQuery(query: CompiledQuery, name?: string): QueryBlock {
-		this.counter += 1;
-		const block: QueryBlock = {
-			id: createId(),
-			name: name ?? `Query ${this.counter}`,
-			draft: {
-				...makeEmptyDraft(),
-				tableName: typeof query.from === 'string' ? query.from : ''
-			},
-			pendingSeed: Utils.cloneObject(query)
-		};
-		this.blocks.push(block);
-		this.activeBlockId = block.id;
-		this.persistState();
+	/**
+	 * Open a saved query or a history entry as a new block, and select it. The
+	 * block is an independent copy. An edit to the block must not change the
+	 * source record.
+	 */
+	addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
+		const block = cloneStoredQuery(source, {
+			role: 'block',
+			name: name ?? source.name ?? `Query ${nextBlockNumber()}`
+		});
+		queryBlocks.insertAt(this.blocks.length, block);
+		this.select(block.id);
 		return block;
 	}
 
-	/** Inserts an independent copy after the source block and selects it. */
+	/** Open a query with no draft as a new block. Share links and the JSON editor use this. */
+	addFromQuery(query: CompiledQuery, name?: string): StoredQuery {
+		const block = queryBlocks.append({
+			name: name ?? `Query ${nextBlockNumber()}`,
+			draft: null,
+			compiled: Utils.cloneObject(query),
+			instance: snapshotInstance(get(currentBeaconInstance))
+		});
+		this.select(block.id);
+		return block;
+	}
+
+	/** Put an independent copy after the source block and select it. */
 	duplicateBlock(id: string): void {
 		const index = this.blocks.findIndex((b) => b.id === id);
 		if (index === -1) return;
 
-		const source = this.blocks[index];
-		this.counter += 1;
-		const copy: QueryBlock = {
-			id: createId(),
-			name: `${source.name} (copy)`,
-			draft: Utils.cloneObject(source.draft),
-			pendingSeed: source.pendingSeed ? Utils.cloneObject(source.pendingSeed) : null
-		};
-		this.blocks.splice(index + 1, 0, copy);
-		this.activeBlockId = copy.id;
-		this.persistState();
+		const copy = cloneStoredQuery(this.blocks[index], {
+			role: 'block',
+			name: `${this.blocks[index].name} (copy)`
+		});
+		queryBlocks.insertAt(index + 1, copy);
+		this.select(copy.id);
 	}
 
-	/** Renames a block title and persists the workspace state. */
+	/** Give a block a new name. */
 	renameBlock(id: string, name: string): boolean {
 		const block = this.blocks.find((candidate) => candidate.id === id);
 		if (!block) return false;
-
 		if (block.name === name) return true;
-		block.name = name;
-		this.persistState();
+
+		queryBlocks.update(id, { name });
 		return true;
 	}
 
-	/** Removes a block, keeping at least one and fixing up the active selection. */
+	/** Remove a block. Keep one block, and correct the active selection. */
 	closeBlock(id: string): void {
 		if (this.blocks.length === 1) return;
 
-	
-
 		const index = this.blocks.findIndex((b) => b.id === id);
-		
 		if (index === -1) return;
 
-		if(this.blocks[index].draft.selectedFields.length > 0) {
+		if ((this.blocks[index].draft?.selectedFields.length ?? 0) > 0) {
 			const shouldContinue = confirm('Are you sure you want to close this query?');
 			if (!shouldContinue) return;
 		}
 
-		this.blocks.splice(index, 1);
+		queryBlocks.remove(id);
 
 		if (this.activeBlockId === id) {
 			const fallback = this.blocks[index] ?? this.blocks[index - 1] ?? this.blocks[0];
-			this.activeBlockId = fallback.id;
+			this.select(fallback?.id ?? null);
 		}
-
-		this.persistState();
 	}
 
 	selectBlock(id: string): void {
-		this.activeBlockId = id;
-		this.persistState();
-		console.log('Selecting block', id, this.blocks.find((b) => b.id === id)?.draft);
+		this.select(id);
 	}
 
 	/**
-	 * Writes the builder draft into the active block (called on every builder
-	 * edit). Clears the one-time seed and invalidates the block's run result.
+	 * Write the builder draft to the active block, and derive a new compiled
+	 * query. The builder calls this method at every edit.
+	 *
+	 * The method also removes the link to the last result. That cached dataset
+	 * belongs to the query before the edit.
 	 */
 	updateActiveDraft(draft: QueryDraft): void {
 		const block = this.activeBlock;
 		if (!block) return;
 
-		const currentDraftKey = JSON.stringify(block.draft);
-		const nextDraftKey = JSON.stringify(draft);
-		if (currentDraftKey === nextDraftKey && block.pendingSeed === null) {
-			return;
+		if (JSON.stringify(block.draft) === JSON.stringify(draft)) return;
+
+		queryBlocks.update(block.id, {
+			draft: Utils.cloneObject(draft),
+			compiled: compileDraft(draft),
+			datasetKey: null,
+			rowCount: null
+		});
+	}
+
+	/** Compile the draft of a block. Returns null if the draft is incomplete. */
+	static getQuery(block: StoredQuery | null): CompiledQuery | null {
+		return block?.compiled ?? compileDraft(block?.draft);
+	}
+
+	/**
+	 * The query that the builder uses one time to fill the draft of a block.
+	 * Returns null after the block has its own draft.
+	 */
+	static seedFor(block: StoredQuery | null): CompiledQuery | null {
+		if (!needsDraftSeed(block)) {
+			return null;
 		}
-
-		block.draft = draft;
-		block.pendingSeed = null;
-		this.invalidateRun(block.id);
-		this.persistState();
+		return block?.compiled ?? null;
 	}
 
-	/** Compiles a block's draft into the runnable/JSON query (null if incomplete). */
-	static getQuery(block: QueryBlock | null): CompiledQuery | null {
-		return compileDraft(block?.draft);
-	}
-
-	/** Reset button — clears the active block back to an empty draft. */
+	/** Set the active block back to an empty draft. The Reset button uses this. */
 	resetActive(): void {
 		const block = this.activeBlock;
 		if (!block) return;
-		block.draft = makeEmptyDraft();
-		block.pendingSeed = null;
-		this.invalidateRun(block.id);
-		this.persistState();
+		queryBlocks.update(block.id, {
+			draft: makeEmptyDraft(),
+			compiled: null,
+			datasetKey: null,
+			rowCount: null
+		});
 	}
 
-	/** Derives badge status (table, #columns, #filters) from a block's draft. */
-	static getStatus(block: QueryBlock | null): QuerySelectionStatus {
+	/** Derive the badge status from the draft of a block: table, columns and filters. */
+	static getStatus(block: StoredQuery | null): QuerySelectionStatus {
 		const status = makeEmptyQuerySelectionStatus();
 		const draft = block?.draft;
 		if (!draft) return status;
@@ -239,111 +265,57 @@ export class QueryWorkspace {
 		return status;
 	}
 
-	/** Column-name preview for a block card. */
-	static getSelectedColumns(block: QueryBlock | null): string[] {
+	/** The column names for a block card. */
+	static getSelectedColumns(block: StoredQuery | null): string[] {
 		return block?.draft?.selectedFields.map((f) => f.name) ?? [];
 	}
 
-	/** Run/cache state used by the block cards. */
-	getRunState(block: QueryBlock | null): BlockRunState {
-		const info = block ? this.runInfo[block.id] : undefined;
+	/**
+	 * The run state for the block cards. The link from the record to a cached
+	 * result gives the value of `hasRun`. The app does not track it separately.
+	 * Therefore the value survives a reload. An edit also clears it.
+	 */
+	getRunState(block: StoredQuery | null): BlockRunState {
 		return {
-			hasRun: !!info,
-			rows: info?.rows ?? null,
+			hasRun: !!block?.datasetKey,
+			rows: block?.rowCount ?? null,
 			isRunning: !!(block && this.running[block.id])
 		};
 	}
 
-	/**
-	 * Called by the visualisation view when a run starts/ends.
-	 * Marks the block card as "running" (shows spinner).
-	 */
+	/** Start or stop the spinner of a block. The visualisation view calls this. */
 	markBlockRunning(id: string, running: boolean): void {
-	    this.running = { ...this.running, [id]: running };
+		this.running = { ...this.running, [id]: running };
 	}
-	
+
 	/**
-	 * Called by the visualisation view after a successful run.
-	 * Stores the row count so the block card can display it.
+	 * Stop the spinner after a successful run. The query store writes the row
+	 * count and the dataset link, because it holds the cache key. This method
+	 * keeps its name, so a caller can read the start and the end as a pair.
 	 */
-	markBlockRun(id: string, rows: number): void {
-	    this.runInfo = { ...this.runInfo, [id]: { rows } };
-	    this.running = { ...this.running, [id]: false };
+	markBlockRun(id: string, _rows: number): void {
+		void _rows;
+		this.markBlockRunning(id, false);
 	}
 
-	private seedFromQuery(query: CompiledQuery): void {
-		this.blocks = [
-			{
-				id: createId(),
-				name: 'Query 1',
-				draft: {
-					...makeEmptyDraft(),
-					tableName: typeof query.from === 'string' ? query.from : ''
-				},
-				pendingSeed: Utils.cloneObject(query)
-			}
-		];
-		this.activeBlockId = this.blocks[0].id;
-		this.counter = 1;
-		this.persistState();
+	private select(id: string | null): void {
+		this.activeBlockId = id;
+		setActiveBlockId(id);
 	}
 
-	private loadPersistedState(): void {
-		const state = get(persistedWorkspaceState);
-
-		console.log('Loaded persisted workspace state: ', state);
-
-		if (!state.blocks.length) {
+	private restoreSelection(): void {
+		if (!this.blocks.length) {
 			this.addBlock();
 			return;
 		}
 
-		this.blocks = state.blocks.map((block) => this.normalizeBlock(block));
+		ensureBlockCounter(this.blocks.length);
 
-		this.counter = state.counter || this.blocks.length;
-
-		this.activeBlockId =
-			state.activeBlockId && this.blocks.some((block) => block.id === state.activeBlockId)
-				? state.activeBlockId
-				: (this.blocks[0]?.id ?? null);
-
-		if (!this.activeBlockId && this.blocks.length === 0) {
-			this.addBlock();
-			return;
+		const persistedId = getBlocksState().activeBlockId;
+		if (persistedId && this.blocks.some((block) => block.id === persistedId)) {
+			this.select(persistedId);
+		} else {
+			this.select(this.blocks[0].id);
 		}
-
-		this.persistState();
-	}
-
-	/** Coerces a persisted (possibly legacy-shaped) block into the current shape. */
-	private normalizeBlock(block: Partial<QueryBlock> & { id?: string; name?: string }): QueryBlock {
-		const draft = block.draft ? Utils.cloneObject(block.draft) : makeEmptyDraft();
-		return {
-			id: block.id ?? createId(),
-			name: block.name ?? 'Query',
-			draft,
-			pendingSeed: block.pendingSeed ? Utils.cloneObject(block.pendingSeed) : null
-		};
-	}
-
-	private persistState(): void {
-		persistedWorkspaceState.set({
-			blocks: this.blocks.map((block) => ({
-				id: block.id,
-				name: block.name,
-				draft: Utils.cloneObject(block.draft),
-				pendingSeed: block.pendingSeed ? Utils.cloneObject(block.pendingSeed) : null
-			})),
-			activeBlockId: this.activeBlockId,
-			counter: this.counter
-		});
-	}
-
-	/** Drops a block's cached run result so it is considered "not run" again. */
-	private invalidateRun(id: string): void {
-		if (!this.runInfo[id]) return;
-		const next = { ...this.runInfo };
-		delete next[id];
-		this.runInfo = next;
 	}
 }

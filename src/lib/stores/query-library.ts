@@ -1,0 +1,119 @@
+/**
+ * The query library shows the three {@link StoredQuery} collections as one.
+ *
+ * An internal deep-link carries a record id as `?q=`. It does not carry the
+ * query. Therefore every page that shows a dataset must find the record for an
+ * id. The page must not know the collection of that record.
+ * {@link resolveStoredQuery} does this. It is the benefit of one shared record
+ * type: a block, a saved query and a history entry all use the same link form.
+ */
+
+import { queryBlocks } from '@/stores/query-blocks';
+import { queryHistory } from '@/stores/query-history';
+import { savedQueries } from '@/stores/saved-queries';
+import type { StoredQuery } from '@/stores/stored-query';
+import type { QueryCollection } from '@/stores/query-collection';
+import type { CompiledQuery } from '@/beacon-api/types';
+import { Utils } from '@/utils';
+
+/** The search order for {@link resolveStoredQuery}. The most active collection is first. */
+const COLLECTIONS: QueryCollection[] = [queryBlocks, savedQueries, queryHistory];
+
+/**
+ * Find a record by id in blocks, saved queries and history.
+ *
+ * The function returns null for an unknown id. This is a normal result, not an
+ * error. History has a limit, so a bookmark to a dropped entry stops to work.
+ * A caller must then show the "no query available" state.
+ */
+export function resolveStoredQuery(id: string | null | undefined): StoredQuery | null {
+	if (!id) return null;
+	for (const collection of COLLECTIONS) {
+		const found = collection.find(id);
+		if (found) return found;
+	}
+	return null;
+}
+
+/**
+ * Write the result of a run to the record that started it. The function ignores
+ * an unknown id. A user can close a block, or the app can drop an entry, while
+ * the query runs.
+ */
+export function recordRunResult(
+	id: string | null | undefined,
+	result: { datasetKey: string; rowCount: number; duration: number }
+): void {
+	if (!id) return;
+	const now = Date.now();
+	for (const collection of COLLECTIONS) {
+		if (!collection.find(id)) continue;
+		const existing = collection.find(id);
+		collection.update(id, {
+			datasetKey: result.datasetKey,
+			rowCount: result.rowCount,
+			duration: result.duration,
+			lastExecutedAt: now,
+			executionCount: (existing?.executionCount ?? 0) + 1
+		});
+		return;
+	}
+}
+
+// -- URL resolution ----------------------------------------------------------
+
+/** The result for a page that a deep-link opened. */
+export interface ResolvedUrlQuery {
+	/**
+	 * The library record that the link named. A `?q=` link has one. A share link
+	 * (`?query=`) has none, because it carries a query but no identity. A page
+	 * uses the `datasetKey` of this record to show a cached result immediately.
+	 */
+	entry: StoredQuery | null;
+	/** The query to run. Null if the URL carried no usable data. */
+	query: CompiledQuery | null;
+	/**
+	 * The value of `entry.id`, or undefined if there is no record. Send it to
+	 * `ensureQuery(query, storedQueryId)`. The app then writes the run to the
+	 * record. See `QueryStore.ensure` for the effects of this link.
+	 */
+	storedQueryId?: string;
+}
+
+/**
+ * Find the query that a page must show. The URL has one of two forms:
+ *
+ *   `?q=<id>`      Internal navigation. The link is short. The record holds the
+ *                  builder state and the cache key of the last result. Therefore
+ *                  the page can show a cached dataset with no query payload.
+ *   `?query=<gz>`  A share link. An id works only in the storage of one browser.
+ *                  Therefore a link for another person must carry the query.
+ *
+ * If the URL has both forms, `?q=` wins. If `?q=` finds no record, the function
+ * reads `?query=`. History has a limit, so a bookmark can outlive its entry.
+ * If both fail, the query is null. A page shows "no query available" for that
+ * result. It is not an error.
+ */
+export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
+	const id = url.searchParams.get('q');
+	const entry = resolveStoredQuery(id);
+
+	if (entry?.compiled) {
+		return { entry, query: entry.compiled, storedQueryId: entry.id };
+	}
+
+	const shared = url.searchParams.get('query');
+	if (shared) {
+		try {
+			let query = Utils.gzipStringToObject<CompiledQuery>(shared);
+			if (typeof query === 'string') {
+				query = JSON.parse(query) as CompiledQuery;
+			}
+			return { entry: null, query };
+		} catch (error) {
+			console.error('Failed to decode a shared query from the URL.', error);
+		}
+	}
+
+	return { entry: null, query: null };
+}

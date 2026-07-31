@@ -3,9 +3,9 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
-	import { queryHistory, removeHistoryEntry, clearHistory } from '@/stores/query-history';
-	import type { QueryHistoryEntry } from '@/stores/query-history';
-	import { Utils } from '@/utils';
+	import { queryHistory, clearHistory } from '@/stores/query-history';
+	import { buildShareLink, SHARE_LINK_PATH, type StoredQuery } from '@/stores/stored-query';
+	import { addToast } from '@/stores/toasts';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -13,35 +13,63 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import Share2Icon from '@lucide/svelte/icons/share-2';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
 
 	// Newest activity first.
-	const entries = $derived([...$queryHistory].sort((a, b) => b.lastExecutedAt - a.lastExecutedAt));
+	const entries = $derived(
+		[...$queryHistory].sort((a, b) => (b.lastExecutedAt ?? 0) - (a.lastExecutedAt ?? 0))
+	);
 
 	/** Comma-separated selected columns, for a compact query summary. */
-	function columnSummary(entry: QueryHistoryEntry): string {
-		const columns = (entry.query.query_parameters ?? []).map((p) => p.alias ?? p.column);
-		return columns.length ? columns.join(', ') : '(no columns)';
+	function columnSummary(entry: StoredQuery): string {
+		const columns = (entry.compiled?.query_parameters ?? []).map((p) => p.alias ?? p.column);
+		if (!columns.length) return '(no columns)';
+		return columns.join(', ');
 	}
 
-	function filterCount(entry: QueryHistoryEntry): number {
-		return entry.query.filters?.length ?? 0;
+	function filterCount(entry: StoredQuery): number {
+		return entry.compiled?.filters?.length ?? 0;
 	}
 
-	function lastExecuted(entry: QueryHistoryEntry): string {
+	function lastExecuted(entry: StoredQuery): string {
+		if (!entry.lastExecutedAt) return 'never';
 		return formatDistanceToNow(entry.lastExecutedAt, { addSuffix: true });
 	}
 
 	/**
-	 * Navigates to a page that runs the query, passing it via the gzipped `?query=`
-	 * payload. `resolvedPath` is a route already run through `resolve()` at the call
-	 * site (SvelteKit's `resolve` only accepts route literals, not a generic string).
+	 * Open a page that runs the query. The link carries only the record id. The
+	 * target page finds the record in the library.
+	 *
+	 * The caller sends `resolvedPath` through `resolve()` first, because
+	 * SvelteKit accepts only a route literal there, not a string.
 	 */
-	function openWith(resolvedPath: string, entry: QueryHistoryEntry): void {
-		const gzipped = Utils.objectToGzipString(entry.query);
-		if (gzipped) {
-			goto(resolvedPath + `?query=${encodeURIComponent(gzipped)}`);
+	function openWith(resolvedPath: string, entry: StoredQuery): void {
+		if (!entry.compiled) return;
+		goto(`${resolvedPath}?q=${encodeURIComponent(entry.id)}`);
+	}
+
+	/**
+	 * Copy a link for the browser of another person. A record id works only in the
+	 * storage of this browser. Therefore a shared link carries the query itself.
+	 * Every shared link opens the workbench. That page accepts a query with no
+	 * record.
+	 */
+	async function copyShareLink(entry: StoredQuery): Promise<void> {
+		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH));
+
+		if (!link) {
+			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
+			return;
+		}
+
+		try {
+			await navigator.clipboard.writeText(link);
+			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
+		} catch (error) {
+			console.error('Failed to copy share link.', error);
+			addToast({ type: 'error', message: 'Could not copy the share link.' });
 		}
 	}
 
@@ -94,17 +122,17 @@
 			</Card>
 		{:else}
 			<div class="executed-queries">
-				{#each entries as entry (entry.key)}
+				{#each entries as entry (entry.id)}
 					<Card>
 						<div class="entry">
 							<div class="entry-main">
 								<h2 class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</h2>
 								<div class="meta">
-									<span class="badge">{entry.instanceName || entry.instanceUrl}</span>
-									<span>{entry.rowCount.toLocaleString()} rows</span>
+									<span class="badge">{entry.instance.name || entry.instance.url}</span>
+									<span>{(entry.rowCount ?? 0).toLocaleString()} rows</span>
 									<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-									<span>{Math.round(entry.duration).toLocaleString()} ms</span>
-									<span title={new Date(entry.lastExecutedAt).toLocaleString()}>
+									<span>{Math.round(entry.duration ?? 0).toLocaleString()} ms</span>
+									<span title={entry.lastExecutedAt ? new Date(entry.lastExecutedAt).toLocaleString() : ''}>
 										{lastExecuted(entry)}
 									</span>
 									{#if entry.executionCount > 1}
@@ -149,7 +177,15 @@
 								<Button
 									size="sm"
 									variant="ghost"
-									onclick={() => removeHistoryEntry(entry.key)}
+									onclick={() => copyShareLink(entry)}
+									title="Copy a link that works in any browser"
+								>
+									<Share2Icon />
+								</Button>
+								<Button
+									size="sm"
+									variant="ghost"
+									onclick={() => queryHistory.remove(entry.id)}
 									title="Remove from history"
 								>
 									<Trash2Icon />

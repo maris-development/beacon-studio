@@ -8,13 +8,8 @@
     import type { CompiledQuery } from '@/beacon-api/types';
     import type { QueryDraft } from './QueryDraft';
     import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
-	import Button from '../buttons/Button.svelte';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import TableIcon from '@lucide/svelte/icons/table';
-	import ChartPie from '@lucide/svelte/icons/chart-pie';
-    import MapIcon from '@lucide/svelte/icons/map';
-    import VisualiseIcon from '@lucide/svelte/icons/eye';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
+	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
 		
 
     let {
@@ -28,14 +23,22 @@
             filters: 0,
             selection: 0,
         }),
-        actions = $bindable<QuerySelectionActions>(makeEmptyQuerySelectionActions()),
+        actions: queryActions = $bindable<QuerySelectionActions>(makeEmptyQuerySelectionActions()),
+        workbenchActions,
     }: {
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
         onDraftChange?: (draft: QueryDraft) => void;
         onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
+        /** Bound to the parent. The builder puts `compileQuery` here. */
         actions?: QuerySelectionActions;
+        /**
+         * The download and visualise handlers of the workbench. Navigation needs
+         * the id of the StoredQuery block. Only the workbench holds that id.
+         * Therefore these handlers come from the parent.
+         */
+        workbenchActions: QuerySelectionActions;
     } = $props();
 
     let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
@@ -72,37 +75,18 @@
 
 <QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
 
-<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} {pendingSeed} {onDraftChange} bind:status bind:actions />
+<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} {pendingSeed} {onDraftChange} bind:status bind:actions={queryActions} />
 
 <hr>
 
-<DownloadDataButton downloadData={actions.downloadData} />
+<DownloadDataButton downloadData={workbenchActions.downloadData} />
 
 
-<!-- dropdown for visualisations -->
-<DropdownMenu.Root>
-    <DropdownMenu.Trigger>
-        <Button>
-            <VisualiseIcon />
-            Visualise Query
-        </Button>
-    </DropdownMenu.Trigger>
-    <DropdownMenu.Content class="w-48">
-        <DropdownMenu.Item onclick={actions.visualiseTable}>
-            <TableIcon class="text-muted-foreground" />
-            <span>Table</span>
-        </DropdownMenu.Item>
-        <DropdownMenu.Item onclick={actions.visualiseChart}>
-            <ChartPie class="text-muted-foreground" />
-            <span>Chart</span>
-        </DropdownMenu.Item>
-        <!-- <DropdownMenu.Separator /> -->
-        <DropdownMenu.Item onclick={actions.visualiseMap}>
-            <MapIcon class="text-muted-foreground" />
-            <span>Map</span>
-        </DropdownMenu.Item>
-    </DropdownMenu.Content>
-</DropdownMenu.Root>
+<VisualiseDataButton
+    visualiseTable={workbenchActions.visualiseTable}
+    visualiseChart={workbenchActions.visualiseChart}
+    visualiseMap={workbenchActions.visualiseMap}
+/>
 
 <style lang="scss">
     hr {

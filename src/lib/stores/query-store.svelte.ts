@@ -25,6 +25,8 @@ import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { currentBeaconInstance } from '@/stores/config';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
+import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
+import { snapshotInstance } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
@@ -143,14 +145,44 @@ class QueryStore {
 	}
 
 	/**
+	 * Return a cached entry for a cache key. Use it if you hold the `datasetKey`
+	 * of a {@link StoredQuery} and not the query. A deep-linked page can show a
+	 * cached result at once, and call `ensure()` after that.
+	 *
+	 * This method reads the memory tier only. A miss here can still be a hit in
+	 * the OPFS tier.
+	 */
+	peekByKey(key: string | null | undefined): DatasetEntry | undefined {
+		return key ? this.cache.get(key) : undefined;
+	}
+
+	/**
 	 * Returns the cached result for `query`: from memory, else rehydrated from the
 	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`). Concurrent
 	 * calls for the same query share a single request. On success the entry becomes
 	 * {@link current}.
 	 *
 	 * Does not throw on empty results — callers should check `entry.rowCount === 0`.
+	 *
+	 * `storedQueryId` is the id of the {@link StoredQuery} record that started this
+	 * run. It is the workbench block of the "Visualise" button, or the saved query
+	 * from a `?q=` link. Omit it if the query has no record. A share link and the
+	 * JSON editor have no record.
+	 *
+	 * The id is only bookkeeping. It does not change the cache, the request or the
+	 * result. It makes a link in two directions:
+	 *
+	 *   forward   The record gets the `datasetKey` of its result. Therefore a
+	 *             later visit shows the cached dataset with no new run.
+	 *   backward  The history entry gets the name and the builder state of the
+	 *             record. Therefore "open in workbench" restores the true draft.
+	 *             It does not build an approximate draft from the compiled query.
+	 *
+	 * Without the id, the app still runs the query, caches the result and adds a
+	 * history row. That row has no name and no draft. No record points to its
+	 * result.
 	 */
-	async ensure(query: CompiledQuery): Promise<DatasetEntry> {
+	async ensure(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
 		const key = this.keyFor(query);
 
 		if (this.cacheEnabled) {
@@ -158,7 +190,7 @@ class QueryStore {
 			if (cached) {
 				this.touch(key, cached);
 				this.current = cached;
-				this.recordHistory(cached);
+				this.recordHistory(cached, storedQueryId);
 				return cached;
 			}
 		}
@@ -174,7 +206,7 @@ class QueryStore {
 				// console.log('QueryStore.ensure: loaded', entry.key, entry.rowCount, 'rows in', entry.duration.toFixed(1), 'ms');
 				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry);
+				this.recordHistory(entry, storedQueryId);
 				return entry;
 			})
 			.finally(() => {
@@ -204,20 +236,28 @@ class QueryStore {
 	}
 
 	/**
-	 * Records a resolved dataset in the persisted query history. Best-effort: a
-	 * history failure must never break query execution. Snapshots the current Beacon
-	 * instance so the entry stays meaningful if that instance is later changed.
+	 * Add a dataset to the persisted query history. Also write the run stats to
+	 * the {@link StoredQuery} record that started the run. See
+	 * {@link QueryStore.ensure}.
+	 *
+	 * A failure here must never stop the execution of a query.
 	 */
-	private recordHistory(entry: DatasetEntry): void {
+	private recordHistory(entry: DatasetEntry, storedQueryId?: string): void {
 		const instance = get(currentBeaconInstance);
 		if (!instance) return;
 		try {
+			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
-				key: entry.key,
-				query: entry.query,
-				instanceId: instance.id,
-				instanceName: instance.name,
-				instanceUrl: instance.url,
+				datasetKey: entry.key,
+				compiled: entry.query,
+				draft: origin?.draft ?? null,
+				name: origin?.name,
+				instance: snapshotInstance(instance),
+				rowCount: entry.rowCount,
+				duration: entry.duration
+			});
+			recordRunResult(storedQueryId, {
+				datasetKey: entry.key,
 				rowCount: entry.rowCount,
 				duration: entry.duration
 			});
@@ -233,16 +273,17 @@ class QueryStore {
 	 * entry's count. Best-effort, mirroring {@link recordHistory}: never throws into
 	 * the caller.
 	 */
-	recordDownload(query: CompiledQuery, duration: number): void {
+	recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
 		const instance = get(currentBeaconInstance);
 		if (!instance) return;
 		try {
+			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
-				key: this.keyFor(query),
-				query,
-				instanceId: instance.id,
-				instanceName: instance.name,
-				instanceUrl: instance.url,
+				datasetKey: this.keyFor(query),
+				compiled: query,
+				draft: origin?.draft ?? null,
+				name: origin?.name,
+				instance: snapshotInstance(instance),
 				duration
 			});
 		} catch (error) {

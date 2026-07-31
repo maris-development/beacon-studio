@@ -74,8 +74,9 @@
 				{#key workspace.activeBlockId}
 					<QueryBuilder
 						initialDraft={workspace.activeBlock?.draft ?? null}
-						pendingSeed={workspace.activeBlock?.pendingSeed ?? null}
+						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
 						onDraftChange={handleDraftChange}
+						workbenchActions={queryActions}
 					/>
 				{/key}
 			</div>

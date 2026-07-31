@@ -19,8 +19,6 @@
 	import type { SelectedFilterType } from './AddFilterDropdown.svelte';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import type { QuerySelectionStatus } from './QuerySelectionStatus';
     import type { QuerySelectionActions } from './QuerySelectionActions';
 	import { type QueryDraft } from './QueryDraft';
@@ -38,12 +36,11 @@
 			filters: 0,
 			selection: 0,
 		}),
+        // Only the query actions live here. The workbench owns navigation, because
+        // it holds the StoredQuery block id for visualisation links.
         actions = $bindable<QuerySelectionActions>({
 			compileQuery: compileQuery,
             downloadData: handleSubmit,
-            visualiseTable: handleTableVisualise,
-            visualiseChart: handleChartVisualise,
-            visualiseMap: handleMapVisualise,
             resetQuery: undefined
         }),
 	}: {
@@ -238,19 +235,6 @@
 	}
 	actions.compileQuery = compileQuery;
 
-	function compileAndGZipQuery(): string | undefined {
-		try {
-			let compiledQuery = compileQuery();
-			return Utils.objectToGzipString(compiledQuery);
-		} catch (error) {
-			console.error('Error compiling and gzipping query:', error);
-			addToast({
-				message: `Error compiling query: ${error.message}`,
-				type: 'error'
-			});
-		}
-	}
-
 	async function handleSubmit() {
 		let compiledQuery: CompiledQuery;
 
@@ -274,34 +258,11 @@
 	}
 	actions.downloadData = handleSubmit;
 
-	async function handleMapVisualise() {
-		const gzippedQuery = compileAndGZipQuery();
-		if (gzippedQuery) {
-			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-    actions.visualiseMap = handleMapVisualise;
-
-	async function handleChartVisualise() {
-		const gzippedQuery = compileAndGZipQuery();
-		if (gzippedQuery) {
-			goto(
-				resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
-			);
-		}
-	}
-    actions.visualiseChart = handleChartVisualise;
-
-	async function handleTableVisualise() {
-		const gzippedQuery = compileAndGZipQuery();
-		if (gzippedQuery) {
-			goto(
-				resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`
-			);
-		}
-	}
-    actions.visualiseTable = handleTableVisualise;
-
+	// Navigation does not belong here. The builder emits drafts. Only the workbench
+	// knows the StoredQuery block that the user edits. Visualisation links carry
+	// that id as `?q=`. A handler here must put the full query on the URL instead.
+	// The parent binds `actions`, so such a handler also replaces the one of the
+	// workbench without a warning.
 
 	function hydrateFromSeed() {
 		const initialQuery = pendingSeed;

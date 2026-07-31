@@ -32,18 +32,19 @@
 	// Reactive run-state (drives loading + entry lookup below).
 	const runState = $derived(workspace.getRunState(workspace.activeBlock));
 
-	// The cached result for the active query, once it has been run.
-	const entry = $derived(
-		activeQuery && runState.hasRun ? (BeaconClient.peekQuery(activeQuery) ?? null) : null
-	);
+	// The cached result of the active block after a run. The lookup uses the dataset
+	// key of the block. The query store writes that key at the end of a run.
+	const entry = $derived.by(() => {
+		const block = workspace.activeBlock;
+		if (!block?.datasetKey) return null;
+		return BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+	});
 
-	/** Opens the current query in a full-page explorer (chart/map placeholders). */
+	/** Open the active block in a full-page explorer. The link uses the block id. */
 	function openInExplorer(path: '/visualisations/chart-explorer' | '/visualisations/map-viewer') {
-		if (!activeQuery) return;
-		const gz = Utils.objectToGzipString(activeQuery);
-		if (gz) {
-			goto(resolve(path) + `?query=${encodeURIComponent(gz)}`);
-		}
+		const block = workspace.activeBlock;
+		if (!activeQuery || !block) return;
+		goto(`${resolve(path)}?q=${encodeURIComponent(block.id)}`);
 	}
 </script>
 

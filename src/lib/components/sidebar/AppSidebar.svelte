@@ -44,7 +44,7 @@
 			items: [
 				{
 					title: 'Queries',
-					url: resolve('/queries'),
+					url: resolve('/queries/workbench'),
 					icon: TextSearchIcon,
 					children: [
 						{ title: 'Workbench', url: resolve('/queries/workbench') },

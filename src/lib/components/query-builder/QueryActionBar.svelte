@@ -4,9 +4,10 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
+	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
+	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
     // icons
 	import ShareIcon2 from '@lucide/svelte/icons/share-2';
-	import TableIcon from '@lucide/svelte/icons/table';
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
     import CopyIcon from '@lucide/svelte/icons/copy';
@@ -14,11 +15,7 @@
     import PythonIcon from '@lucide/svelte/icons/file-code-corner';
     import SQLIcon from '@lucide/svelte/icons/database';
     import UrlIcon from '@lucide/svelte/icons/link-2';
-	import ChartPie from '@lucide/svelte/icons/chart-pie';
-    import MapIcon from '@lucide/svelte/icons/map';
-    import VisualiseIcon from '@lucide/svelte/icons/eye';
 	import InfoIcon from '@lucide/svelte/icons/info';
-	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	
 
 
@@ -48,31 +45,12 @@
 
 		<DownloadDataButton downloadData={queryActions.downloadData} />
 
-		<!-- dropdown for visualisations -->
-        <DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-                <Button>
-			        <VisualiseIcon />
-			        Visualise Query
-		        </Button>
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content class="w-48">
-				<DropdownMenu.Item onclick={queryActions.visualiseTable}>
-					<TableIcon class="text-muted-foreground" />
-					<span>Table</span>
-				</DropdownMenu.Item>
-				<DropdownMenu.Item onclick={queryActions.visualiseChart}>
-					<ChartPie class="text-muted-foreground" />
-					<span>Chart</span>
-				</DropdownMenu.Item>
-				<!-- <DropdownMenu.Separator /> -->
-				<DropdownMenu.Item onclick={queryActions.visualiseMap}>
-					<MapIcon class="text-muted-foreground" />
-					<span>Map</span>
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-
+		<VisualiseDataButton 
+			visualiseTable={queryActions.visualiseTable}
+			visualiseChart={queryActions.visualiseChart}
+			visualiseMap={queryActions.visualiseMap}
+		/>
+	
 		<!-- dropdown for copy options -->
 		{#if queryActions.compileQuery}
 			<!-- Add name of active query on top of dropdown -->

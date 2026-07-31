@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## ASD-STE100 Style Rule
+Write strictly using **ASD-STE100 (Simplified Technical English)** constraints:
+* **Limits:** Max 20 words per instruction, 25 per description. One thought per sentence.
+* **Grammar:** Active voice, simple present tense, imperative for steps (e.g., "Push button"). Avoid `-ing` verbs and em-dashes.
+* **Vocabulary:** Strict consistency (one word = one meaning; no synonyms). No filler ("Furthermore", "In conclusion") or jargon. Max 3 nouns in a row.
+
 ## Purpose
 This file is a quick operational guide for coding agents working in this repository.
 
@@ -91,6 +97,9 @@ This file is a quick operational guide for coding agents working in this reposit
 - Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
+- Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
+  branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
+  Inline expressions in Svelte markup, where a statement is not possible, are exempt.
 
 ## Performance and Safety Patterns
 - Use the shared worker via `getArrowWorker()` (or the `queryStore` transform methods) for sorting/dedup/min-max/geometry; it keeps tables loaded by key (load-once) across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.

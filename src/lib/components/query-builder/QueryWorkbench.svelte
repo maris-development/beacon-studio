@@ -12,20 +12,20 @@
     import QueryActionBar from '@/components/query-builder/QueryActionBar.svelte';
     import QueryBuilderSelectorBlock from './QueryBuilderSelectorBlock.svelte';
     import QueryWorkbenchPanes from './QueryWorkbenchPanes.svelte';
-    import type { CompiledQuery } from '@/beacon-api/types';
+    import { page } from '$app/state';
     import { QueryWorkspace } from './QueryWorkspace.svelte';
+    import { resolveUrlQuery } from '@/stores/query-library';
     import { currentBeaconInstance } from '@/stores/config';
     import { BeaconClient } from '@/beacon-api/client';
     import { addToast } from '@/stores/toasts';
-    import { addSavedQuery } from '@/stores/saved-queries';
-    import { get } from 'svelte/store';
+    import { saveQueryFrom } from '@/stores/saved-queries';
+    import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import Button from '../buttons/Button.svelte';
-	import { Utils } from '@/utils';
 
-	const initialQuery: CompiledQuery | null = Utils.getUrlSuppliedQuery();
-    const workspace = $state(new QueryWorkspace(initialQuery));
+	const workspace = $state(new QueryWorkspace());
 
     let client: BeaconClient | null = $state(null);
     let showQuerySelectionBlock = $state(true);
@@ -33,6 +33,12 @@
     onMount(() => {
         const instance = $currentBeaconInstance;
         if (instance) client = BeaconClient.new(instance);
+
+        // A deep-link opens one more block. `?q=` comes from "open in workbench"
+        // and brings the saved builder state. `?query=` comes from a share link.
+        workspace.openFromUrl(resolveUrlQuery(page.url));
+
+        return () => workspace.destroy();
     });
 
     // const status = $derived(workspace.statusFor(workspace.activeBlock));
@@ -54,16 +60,30 @@
         if (workspace.getRunState(block).isRunning) return null;
 
         workspace.markBlockRunning(block.id, true);
-        
+
         try {
-            const entry = await BeaconClient.ensureQuery(query);
+            // With `storedQueryId` the store writes the cache key of the result to
+            // this block. The visualisation pages then link to that block.
+            const entry = await BeaconClient.ensureQuery(query, block.id);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
             workspace.markBlockRunning(block.id, false);
             addToast({ message: `Query failed: ${e?.message ?? e}`, type: 'error' });
+            return null;
         }
 
         return block.id;
+    }
+
+    /**
+     * Run the active block, then open a visualiser for it. The query stays in the
+     * library. Only `?q=<block id>` goes on the URL. Therefore the target page
+     * reads the cached dataset, and does not decode a query payload.
+     */
+    async function visualiseOn(resolvedPath: string): Promise<void> {
+        const blockId = await runActive();
+        if (!blockId) return;
+        await goto(`${resolvedPath}?q=${encodeURIComponent(blockId)}`);
     }
 
     async function downloadData(): Promise<void> {
@@ -97,40 +117,37 @@
     }
 
     async function visualiseTable(): Promise<void> {
-        await runActive();
+        await visualiseOn(resolve('/visualisations/table-explorer'));
     }
 
     async function visualiseChart(): Promise<void> {
-        await runActive();
+        await visualiseOn(resolve('/visualisations/chart-explorer'));
     }
 
     async function visualiseMap(): Promise<void> {
-        await runActive();
+        await visualiseOn(resolve('/visualisations/map-viewer'));
     }
 
     function resetQuery() {
         workspace.resetActive();
     }
 
+    /**
+     * Save the active block as an independent copy in the saved queries. It is a
+     * copy, not a reference. A later edit to the block must not change the saved
+     * query. The copy holds the draft of the block. Therefore a second open
+     * restores the exact builder state, and not a state from the compiled query.
+     */
     function saveQuery(): void {
         const block = workspace.activeBlock;
-        
-        const query = QueryWorkspace.getQuery(block);
 
-        if (!block || !query) {
+        if (!block || !QueryWorkspace.getQuery(block)) {
             addToast({ message: 'Can not save: please select a table and at least one column.', type: 'warning' });
             return;
         }
 
-        const instance = get(currentBeaconInstance);
         try {
-            addSavedQuery({
-                name: block.name,
-                query,
-                instanceId: instance?.id ?? '',
-                instanceName: instance?.name ?? '',
-                instanceUrl: instance?.url ?? ''
-            });
+            saveQueryFrom(block);
             addToast({ message: `Query "${block.name}" saved.`, type: 'success' });
         } catch (e) {
             addToast({ message: `Failed to save query: ${e?.message ?? e}`, type: 'error' });

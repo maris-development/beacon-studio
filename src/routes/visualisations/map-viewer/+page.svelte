@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
 	import { onDestroy, onMount, unmount } from 'svelte';
+	import { page } from '$app/state';
 	import { MapboxOverlay as MapboxOverlay } from '@deck.gl/mapbox';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
@@ -23,6 +24,7 @@
 	import type { Rendered } from '@/util-types';
 	import type { ScaleSequential } from 'd3-scale';
 	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
+	import { resolveUrlQuery } from '@/stores/query-library';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -36,6 +38,8 @@
 	let mapPopupContent: Rendered;
 
 	let query: CompiledQuery | undefined = $state(undefined);
+	/** Library record this page was opened from, so runs are attributed back to it. */
+	let storedQueryId: string | undefined = $state(undefined);
 
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let amountOfRows: number = $derived(entry?.rowCount ?? 0);
@@ -117,10 +121,14 @@
 	}
 
 	function getUrlSuppliedQuery() {
-		query = Utils.getUrlSuppliedQuery();
+		// Internal navigation uses `?q=<record id>`. A share link uses `?query=<gzip>`.
+		const resolved = resolveUrlQuery(page.url);
+		query = resolved.query ?? undefined;
+		storedQueryId = resolved.storedQueryId;
 
 		if (query) {
-			// Use the decoded query for your logic
+			// Show a cached result at once if the record already has one.
+			entry = BeaconClient.peekQueryByKey(resolved.entry?.datasetKey) ?? null;
 			executeAndDisplayQuery();
 		} else {
 			// TODO: Ask user for query json
@@ -139,7 +147,7 @@
 		try {
 			deriveColumnNames();
 
-			entry = await BeaconClient.ensureQuery(query);
+			entry = await BeaconClient.ensureQuery(query, storedQueryId);
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -384,17 +392,32 @@
 		}
 	}
 
+	/**
+	 * Send the current query to another page. The link uses `?q=<record id>`. The
+	 * target page then reads the same library record and its cached result.
+	 *
+	 * If this page opened from a share link, it has no record. The link then
+	 * carries the query as gzip.
+	 */
+	function handOff(resolvedPath: string) {
+		if (storedQueryId) {
+			goto(`${resolvedPath}?q=${encodeURIComponent(storedQueryId)}`);
+			return;
+		}
+
+		const gzippedQuery = Utils.objectToGzipString(query);
+		if (gzippedQuery) {
+			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
+		}
+	}
+
 	async function handleEditQuery() {
 		if (!query) {
 			goto(resolve('/queries/workbench'));
 			return;
 		}
 
-		const gzippedQuery = Utils.objectToGzipString(query);
-
-		if (gzippedQuery) {
-			goto(resolve('/queries/workbench') + `?query=${encodeURIComponent(gzippedQuery)}`);
-		}
+		handOff(resolve('/queries/workbench'));
 	}
 </script>
 
@@ -409,7 +432,7 @@
 	]}
 />
 
-<div class="page-wrapper">
+<div class="page-wrapper ">
 	<div class="map-wrapper">
 		<div bind:this={mapContainer} class="map"></div>
 		<div class="map-info-wrapper">
@@ -417,6 +440,7 @@
 				onEditClick={openEditQueryModal}
 				onEditBuilderClick={handleEditQuery}
 				compiledQuery={query}
+				{storedQueryId}
 			>
 				<p>
 					{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(
@@ -470,7 +494,7 @@
 {/if}
 
 <style lang="scss">
-	:global(.page-wrapper) {
+	.page-wrapper {
 		padding: 0;
 	}
 
