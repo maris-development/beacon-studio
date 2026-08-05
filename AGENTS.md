@@ -105,6 +105,7 @@ This file is a quick operational guide for coding agents working in this reposit
 - Use the shared worker via `getArrowWorker()` (or the `queryStore` transform methods) for sorting/dedup/min-max/geometry; it keeps tables loaded by key (load-once) across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.
 - Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
+- `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including `markBlockRun`/`markBlockRunning` and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
 
 ## Editing Guidance for Agents
 - Make minimal, localized changes; avoid broad refactors unless requested.

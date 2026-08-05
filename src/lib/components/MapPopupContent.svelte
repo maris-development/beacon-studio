@@ -5,7 +5,7 @@
 	import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 	import * as ApacheArrow from 'apache-arrow';
 	import { onMount } from 'svelte';
-	import DataTable from './data-table.svelte';
+	import DataTable from './visualisation/DataTable.svelte';
 
 	let {
 		rowData,

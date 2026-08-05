@@ -6,7 +6,7 @@
 -->
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
-	import DataTable from '@/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';

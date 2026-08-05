@@ -1,32 +1,33 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import { onDestroy, onMount, unmount } from 'svelte';
+	import { onDestroy, onMount, unmount, untrack } from 'svelte';
 	import { page } from '$app/state';
-	import { MapboxOverlay as MapboxOverlay } from '@deck.gl/mapbox';
+	import { MapboxOverlay } from '@deck.gl/mapbox';
 	import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
 	import { color as d3Color } from 'd3-color';
 	import maplibregl, { NavigationControl } from 'maplibre-gl';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
-	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import { addToast } from '@/stores/toasts';
 	import { Utils } from '@/utils';
 	import * as ApacheArrow from 'apache-arrow';
 	import type { CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-	import MapInfo from '@/components/map-info.svelte';
-	import MapPopupContent from '@/components/map-popup-content.svelte';
+	import MapPopupContent from '@/components/MapPopupContent.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import Legend, { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/Legend.svelte';
 
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Rendered } from '@/util-types';
 	import type { ScaleSequential } from 'd3-scale';
-	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { resolveUrlQuery } from '@/stores/query-library';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
+	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
+	import type { StoredQuery } from '@/stores/stored-query';
+	import { currentBeaconInstance } from '@/stores/config';
+	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
+	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 
 	const GROUP_BY_DECIMALS = 3; // Number of decimals to group by for lat/lon (4 = 11m, 3 = 111m, 2 = 1111m, 1 = 11111m, 0 = 111111m)
 
@@ -37,10 +38,6 @@
 	let mapPopup: maplibregl.Popup | null = null;
 	let mapPopupContent: Rendered;
 
-	let query: CompiledQuery | undefined = $state(undefined);
-	/** Library record this page was opened from, so runs are attributed back to it. */
-	let storedQueryId: string | undefined = $state(undefined);
-
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let amountOfRows: number = $derived(entry?.rowCount ?? 0);
 	let queryDurationMs: number | null = $derived(entry?.duration ?? 0);
@@ -48,10 +45,6 @@
 	let table: ApacheArrow.Table | null = null; // display table (de-duplicated by lat/lon + geometry)
 
 	let isLoading = $state(true);
-	let firstLoad = $state(true);
-	let editQueryModalOpen = $state(false);
-	let noQueryAvailableModalOpen = $state(false);
-	let editQueryString = $state('');
 	let availableColumnNames: string[] = $state([]);
 	let selectedDataColumnName: string = $state(undefined);
 	let latitudeColumnName = 'latitude';
@@ -60,6 +53,33 @@
 	let colorScaleMin: number = $state(-1000);
 	let colorScaleMax: number = $state(1000);
 	let colorScale: ScaleSequential<string, never> = $state(undefined);
+
+	const workspace = $state(new QueryWorkspace());
+	let client: BeaconClient | null = $state(null);
+
+	onMount(() => {
+		const instance = $currentBeaconInstance;
+		if (instance) client = BeaconClient.new(instance);
+
+		// A deep-link opens one more block. `?q=` comes from "open in workbench"
+		// and brings the saved builder state. `?query=` comes from a share link.
+		workspace.openFromUrl(resolveUrlQuery(page.url));
+
+		return () => workspace.destroy();
+	});
+
+	const queryActions = $derived(getDefaultQueryActions(workspace, client));
+
+	// `workspace.activeBlock` is a new object on every write to the block
+	// collection — including our own `markBlockRun` below. Tracking that object
+	// (or `compiledQuery` derived from it) as an effect dependency would re-fire
+	// the effect after every run, forever. Track primitives instead: the block id
+	// and a content key for the compiled query.
+	const activeBlockId = $derived(workspace.activeBlockId);
+	const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+
+	let lastRunKey: string | null = $state(null);
 
 	$effect(() => {
 		if (colorScale && layer) {
@@ -72,6 +92,36 @@
 		if (selectedDataColumnName) {
 			addGeoArrowLayer();
 		}
+	});
+
+	// Re-run only when the selected block, or its compiled query content, actually changes.
+	$effect(() => {
+		const blockId = activeBlockId;
+		const key = queryKey;
+
+		if (!blockId || !key) {
+			entry = null;
+			isLoading = false;
+			lastRunKey = null;
+			return;
+		}
+
+		const runKey = `${blockId}:${key}`;
+		if (runKey === lastRunKey) return;
+		lastRunKey = runKey;
+
+		// Read the live block/query untracked: we only want blockId+key above to
+		// drive re-runs, not every downstream write this triggers.
+		const { block, query } = untrack(() => ({
+			block: workspace.activeBlock,
+			query: compiledQuery
+		}));
+		if (!block || !query) return;
+
+		// Show a cached result at once if the block already has one.
+		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+
+		executeAndDisplayQuery(block, query);
 	});
 
 	onMount(() => {
@@ -113,41 +163,17 @@
 			className: 'map-popup',
 			maxWidth: 'none'
 		});
-
-		map.once('load', () => {
-			// console.log('Map loaded successfully');
-			getUrlSuppliedQuery();
-		});
 	}
 
-	function getUrlSuppliedQuery() {
-		// Internal navigation uses `?q=<record id>`. A share link uses `?query=<gzip>`.
-		const resolved = resolveUrlQuery(page.url);
-		query = resolved.query ?? undefined;
-		storedQueryId = resolved.storedQueryId;
-
-		if (query) {
-			// Show a cached result at once if the record already has one.
-			entry = BeaconClient.peekQueryByKey(resolved.entry?.datasetKey) ?? null;
-			executeAndDisplayQuery();
-		} else {
-			// TODO: Ask user for query json
-			isLoading = false;
-			editQueryString = '{ "message": "Enter a JSON query" }';
-			noQueryAvailableModalOpen = true;
-		}
-	}
-
-	async function executeAndDisplayQuery() {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
-
-		firstLoad = false;
+	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
 		isLoading = true;
+		workspace.markBlockRunning(block.id, true);
 
 		try {
-			deriveColumnNames();
+			deriveColumnNames(query);
 
-			entry = await BeaconClient.ensureQuery(query, storedQueryId);
+			entry = await BeaconClient.ensureQuery(query, block.id);
+			workspace.markBlockRun(block.id, entry.rowCount);
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -160,8 +186,9 @@
 
 			await prepareTableForDisplay();
 		} catch (error) {
-			console.error(error);
+			console.error('Failed to execute query:', error);
 			isLoading = false;
+			workspace.markBlockRunning(block.id, false);
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${error.message}`
@@ -169,7 +196,7 @@
 		}
 	}
 
-	function deriveColumnNames() {
+	function deriveColumnNames(query: CompiledQuery) {
 		// console.log('Deriving column names from query parameters...', query);
 
 		availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
@@ -355,70 +382,6 @@
 
 		return [color.r, color.g, color.b, 192];
 	}
-
-	function updateQuery(newQuery) {
-		query = newQuery;
-
-		firstLoad = true;
-		isLoading = true;
-
-		executeAndDisplayQuery();
-	}
-
-	function openEditQueryModal() {
-		if (query) editQueryString = JSON.stringify(query, null, 2);
-		editQueryModalOpen = true;
-	}
-
-	function closeEditQueryModal(save = true) {
-		editQueryModalOpen = false;
-
-		if (!save) {
-			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
-			if (confirmation) {
-				return;
-			}
-		}
-
-		try {
-			const parsedQuery = JSON.parse(editQueryString);
-			updateQuery(parsedQuery);
-		} catch (error) {
-			addToast({
-				type: 'error',
-				message: `Failed to parse query JSON: ${error.message}`
-			});
-			return;
-		}
-	}
-
-	/**
-	 * Send the current query to another page. The link uses `?q=<record id>`. The
-	 * target page then reads the same library record and its cached result.
-	 *
-	 * If this page opened from a share link, it has no record. The link then
-	 * carries the query as gzip.
-	 */
-	function handOff(resolvedPath: string) {
-		if (storedQueryId) {
-			goto(`${resolvedPath}?q=${encodeURIComponent(storedQueryId)}`);
-			return;
-		}
-
-		const gzippedQuery = Utils.objectToGzipString(query);
-		if (gzippedQuery) {
-			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
-	async function handleEditQuery() {
-		if (!query) {
-			goto(resolve('/queries/workbench'));
-			return;
-		}
-
-		handOff(resolve('/queries/workbench'));
-	}
 </script>
 
 <svelte:head>
@@ -432,108 +395,142 @@
 	]}
 />
 
-<div class="page-wrapper ">
-	<div class="map-wrapper">
-		<div bind:this={mapContainer} class="map"></div>
-		<div class="map-info-wrapper">
-			<MapInfo
-				onEditClick={openEditQueryModal}
-				onEditBuilderClick={handleEditQuery}
-				compiledQuery={query}
-				{storedQueryId}
-			>
-				<p>
-					{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(
-						queryDurationMs / 1000
-					)}.
-				</p>
+<div class="page-wrapper">
+	<QuerySelectorHeader {workspace} {queryActions} mode="view" />
 
-				<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
-					<Select.Trigger
-						>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger
-					>
-					<Select.Content>
-						<Select.Group>
-							<Select.Label>Available columns</Select.Label>
-							{#each availableColumnNames as column, index (index)}
-								<Select.Item value={column} label={column}>
-									{column}
-								</Select.Item>
-							{/each}
-						</Select.Group>
-					</Select.Content>
-				</Select.Root>
+	<div class="vertical-tabs-wrapper">
+		<VisualisationTabs />
 
-				<br />
+		<div class="content page-container">
+			<div class="map-wrapper">
+				<div bind:this={mapContainer} class="map"></div>
 
-				<Legend bind:colorScaleMin bind:colorScaleMax bind:colorScale />
-			</MapInfo>
-		</div>
+				{#if compiledQuery}
+					<div class="map-info-wrapper">
+						<div class="my-ctrl-group">
+							<p>
+								{amountOfRows} rows selected in {Utils.formatSecondsToReadableTime(
+									queryDurationMs / 1000
+								)}.
+							</p>
 
-		{#if isLoading}
-			<div class="loading-overlay">
-				<LoadingSpinner></LoadingSpinner>
-				<h3>Loading...</h3>
+							<Select.Root type="single" name="dataColumn" bind:value={selectedDataColumnName}>
+								<Select.Trigger
+									>{selectedDataColumnName || 'Select a data column to display'}</Select.Trigger
+								>
+								<Select.Content>
+									<Select.Group>
+										<Select.Label>Available columns</Select.Label>
+										{#each availableColumnNames as column, index (index)}
+											<Select.Item value={column} label={column}>
+												{column}
+											</Select.Item>
+										{/each}
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+
+							<br />
+
+							<Legend bind:colorScaleMin bind:colorScaleMax bind:colorScale />
+						</div>
+					</div>
+				{/if}
+
+				{#if !compiledQuery}
+					<div class="loading-overlay">
+						<p>Select a valid query above to see it on the map.</p>
+					</div>
+				{:else if isLoading}
+					<div class="loading-overlay">
+						<LoadingSpinner></LoadingSpinner>
+						<h3>Loading...</h3>
+					</div>
+				{/if}
 			</div>
-		{/if}
+		</div>
 	</div>
 </div>
 
-{#if editQueryModalOpen}
-	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
-{/if}
-
-{#if noQueryAvailableModalOpen}
-	<NoQueryAvailableModal
-		onCancel={() => (noQueryAvailableModalOpen = false)}
-		openQueryJsonEditor={() => {
-			noQueryAvailableModalOpen = false;
-			openEditQueryModal();
-		}}
-	/>
-{/if}
-
 <style lang="scss">
 	.page-wrapper {
-		padding: 0;
+		flex-grow: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
-	.map-wrapper {
+	.vertical-tabs-wrapper {
 		flex-grow: 1;
-		position: relative;
-		width: 100%;
-		height: 100%;
+		min-height: 0;
+		display: flex;
+		flex-direction: row;
+		gap: 1rem;
 
-		.map-info-wrapper {
-			position: absolute;
-			top: 0;
-			left: 0;
-			overflow-x: hidden;
-			overflow-y: auto;
-			z-index: 4; // Ensure it overlays the map
-		}
-
-		.map {
-			z-index: 3;
-			height: 100%;
-			width: 100%;
-			border-radius: 0 0 calc(0.625rem + 4px) calc(0.625rem + 4px);
-		}
-
-		.loading-overlay {
-			position: absolute;
-			top: 0;
-			left: 0;
-			width: 100%;
-			height: 100%;
+		.content.page-container {
+			padding: 0;
 			display: flex;
 			flex-direction: column;
-			gap: 1rem;
-			align-items: center;
-			justify-content: center;
+			min-height: 0;
+		}
 
-			background-color: rgba(255, 255, 255, 0.5);
-			z-index: 5; // Ensure it overlays the map
+		.content {
+			flex-grow: 1;
+		}
+
+		.map-wrapper {
+			flex-grow: 1;
+			min-height: 0; // let the grid fill the flex parent instead of growing past it
+			display: grid;
+			grid-template-columns: 1fr;
+			grid-template-rows: 1fr;
+
+			> * {
+				// stack every child in the same cell instead of position: absolute
+				grid-column: 1;
+				grid-row: 1;
+			}
+
+			.map-info-wrapper {
+				justify-self: start;
+				align-self: start;
+				max-height: 100%;
+				overflow-x: hidden;
+				overflow-y: auto;
+				z-index: 4; // Ensure it overlays the map
+
+				.my-ctrl-group {
+					// largely copied from maplibregl's ctrl group
+					border-radius: 0.5rem;
+					border: 1px solid var(--border);
+					background-color: white;
+					padding: 0.5rem;
+					margin: 0.5rem;
+				}
+			}
+
+			.map {
+				z-index: 3;
+				height: 100%;
+				width: 100%;
+				border-radius: 0.5rem;
+
+			
+			}
+
+			.loading-overlay {
+				width: 100%;
+				height: 100%;
+				display: flex;
+				flex-direction: column;
+				gap: 1rem;
+				align-items: center;
+				justify-content: center;
+
+				background-color: rgba(255, 255, 255, 0.5);
+				z-index: 5; // Ensure it overlays the map
+			}
 		}
 	}
 </style>

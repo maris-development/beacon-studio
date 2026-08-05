@@ -20,13 +20,13 @@
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from './QueryDraft';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
-	import type { QuerySelectionActions } from './QuerySelectionActions';
+	import type { QueryActions } from './QueryActions';
 	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
 
 	let { 
 		workspace, 
 		queryActions
-	 }: { workspace: QueryWorkspace, queryActions: QuerySelectionActions } = $props();
+	 }: { workspace: QueryWorkspace, queryActions: QueryActions } = $props();
 
 	// Independent collapse state for each pane.
 	let leftOpen = $state(true);

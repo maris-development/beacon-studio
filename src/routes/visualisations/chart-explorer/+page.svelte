@@ -1,73 +1,91 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils } from '@/utils';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import SheetIcon from '@lucide/svelte/icons/sheet';
-	import MapIcon from '@lucide/svelte/icons/map';
-	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
 	import GraphViewer from '@/components/graph-viewer/GraphViewer.svelte';
-	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { resolveUrlQuery } from '@/stores/query-library';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import Button from '@/components/buttons/Button.svelte';
-
-	let query: CompiledQuery | undefined = $state(undefined);
-	/** Library record this page was opened from, so runs are attributed back to it. */
-	let storedQueryId: string | undefined = $state(undefined);
+	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
+	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
+	import type { StoredQuery } from '@/stores/stored-query';
+	import { currentBeaconInstance } from '@/stores/config';
+	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
+	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
 	let queryDurationMs: number | null = $derived(entry?.duration ?? 0);
 
-	let isLoading = $state(true);
-	let firstLoad = $state(true);
+	const workspace = $state(new QueryWorkspace());
 
-	// Modal for editing query
-	let editQueryModalOpen = $state(false);
-	let editQueryString = $state('');
-
-	let noQueryAvailableModalOpen = $state(false);
+	let client: BeaconClient | null = $state(null);
 
 	onMount(() => {
-		getUrlSuppliedQuery();
+		const instance = $currentBeaconInstance;
+	
+		if (instance) client = BeaconClient.new(instance);
+
+		// A deep-link opens one more block. `?q=` comes from "open in workbench"
+		// and brings the saved builder state. `?query=` comes from a share link.
+		workspace.openFromUrl(resolveUrlQuery(page.url));
+
+		return () => workspace.destroy();
 	});
 
-	function getUrlSuppliedQuery() {
-		// Internal navigation uses `?q=<record id>`. A share link uses `?query=<gzip>`.
-		const resolved = resolveUrlQuery(page.url);
-		query = resolved.query ?? undefined;
-		storedQueryId = resolved.storedQueryId;
+	const queryActions = $derived(getDefaultQueryActions(workspace, client));
 
-		if (query) {
-			// Show a cached result at once if the record already has one.
-			entry = BeaconClient.peekQueryByKey(resolved.entry?.datasetKey) ?? null;
-			executeAndDisplayQuery();
-		} else {
-			// TODO: Ask user for query json
-			editQueryString = '{ "message": "Enter a JSON query" }';
-			noQueryAvailableModalOpen = true;
+	// `workspace.activeBlock` is a new object on every write to the block
+	// collection — including our own `markBlockRun` below. Tracking that object
+	// (or `compiledQuery` derived from it) as an effect dependency would re-fire
+	// the effect after every run, forever. Track primitives instead: the block id
+	// and a content key for the compiled query.
+	const activeBlockId = $derived(workspace.activeBlockId);
+	const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+
+	let lastRunKey: string | null = $state(null);
+
+	// Re-run only when the selected block, or its compiled query content, actually changes.
+	$effect(() => {
+		const blockId = activeBlockId;
+		const key = queryKey;
+
+		if (!blockId || !key) {
+			entry = null;
+			lastRunKey = null;
+			return;
 		}
-	}
 
-	async function executeAndDisplayQuery() {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+		const runKey = `${blockId}:${key}`;
+		if (runKey === lastRunKey) return;
+		lastRunKey = runKey;
 
-		firstLoad = false;
-		isLoading = true;
+		// Read the live block/query untracked: we only want blockId+key above to
+		// drive re-runs, not every downstream write this triggers.
+		const { block, query } = untrack(() => ({
+			block: workspace.activeBlock,
+			query: compiledQuery
+		}));
+		if (!block || !query) return;
+
+		// Show a cached result at once if the block already has one.
+		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+
+		executeAndDisplayQuery(block, query);
+	});
+
+	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
+		workspace.markBlockRunning(block.id, true);
 
 		try {
-			entry = await BeaconClient.ensureQuery(query, storedQueryId);
+			entry = await BeaconClient.ensureQuery(query, block.id);
+			workspace.markBlockRun(block.id, entry.rowCount);
 
 			if (entry.rowCount === 0) {
-				isLoading = false;
 				addToast({
 					type: 'info',
 					message: `Query executed successfully but returned no data.`
@@ -77,7 +95,8 @@
 
 			prepareTableForDisplay();
 		} catch (error) {
-			isLoading = false;
+			console.error('Failed to execute query:', error);
+			workspace.markBlockRunning(block.id, false);
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${error.message}`
@@ -94,97 +113,12 @@
 			return;
 		}
 
-		isLoading = false;
-	}
-
-	function updateQuery(newQuery) {
-		query = newQuery;
-		firstLoad = true;
-		isLoading = true;
-		executeAndDisplayQuery();
-	}
-
-	function openEditQueryModal() {
-		editQueryString = JSON.stringify(query, null, 2);
-		editQueryModalOpen = true;
-	}
-
-	function closeEditQueryModal(save = true) {
-		editQueryModalOpen = false;
-
-		if (!save) {
-			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
-			if (confirmation) {
-				return;
-			}
-		}
-
-		try {
-			const parsedQuery = JSON.parse(editQueryString);
-			updateQuery(parsedQuery);
-		} catch (error) {
-			addToast({
-				type: 'error',
-				message: `Failed to parse query JSON: ${error.message}`
-			});
-			return;
-		}
-	}
-
-	/**
-	 * Send the current query to another page. The link uses `?q=<record id>`. The
-	 * target page then reads the same library record and its cached result.
-	 *
-	 * If this page opened from a share link, it has no record. The link then
-	 * carries the query as gzip.
-	 */
-	function handOff(resolvedPath: string) {
-		if (storedQueryId) {
-			goto(`${resolvedPath}?q=${encodeURIComponent(storedQueryId)}`);
-			return;
-		}
-
-		const gzippedQuery = Utils.objectToGzipString(query);
-		if (gzippedQuery) {
-			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
-	async function handleMapVisualise() {
-		handOff(resolve('/visualisations/map-viewer'));
-	}
-
-	async function handleTableVisualise() {
-		handOff(resolve('/visualisations/table-explorer'));
-	}
-
-	async function handleEditQuery() {
-		if (!query) {
-			goto(resolve('/queries/workbench'));
-			return;
-		}
-
-		handOff(resolve('/queries/workbench'));
 	}
 </script>
 
 <svelte:head>
 	<title>Chart explorer - Beacon Studio</title>
 </svelte:head>
-
-{#if editQueryModalOpen}
-	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
-{/if}
-
-{#if noQueryAvailableModalOpen}
-	<NoQueryAvailableModal
-		onCancel={() => (noQueryAvailableModalOpen = false)}
-		openQueryJsonEditor={() => {
-			noQueryAvailableModalOpen = false;
-			openEditQueryModal();
-		}}
-	/>
-{/if}
 
 <Cookiecrumb
 	crumbs={[
@@ -194,77 +128,86 @@
 />
 
 <div class="page-wrapper">
-	<div class="page-container">
-		<div class="header">
-			<h2>Chart explorer</h2>
+	<QuerySelectorHeader {workspace} {queryActions} mode="view" />
 
-			<div class="buttons-header">
-				<Button onclick={handleEditQuery}>
-					Edit query
-					<PencilIcon />
-				</Button>
+	<div class="vertical-tabs-wrapper">
+		<VisualisationTabs />
 
-				<Button onclick={openEditQueryModal}>
-					Edit query JSON
-					<FileJson2Icon />
-				</Button>
+		<div class="content page-container">
+			{#if !compiledQuery}
+				<p>Select a valid query above to see it on a chart.</p>
+			{:else}
+				<div class="header">
+					<p>
+						{#if table?.numRows == null}
+							Loading rows…
+						{:else}
+							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
+								queryDurationMs / 1000
+							)}.
+						{/if}
+					</p>
 
-				<span>or</span>
+					<p>
+						Below you can find a <a
+							href="https://perspective.finos.org/"
+							target="blank"
+							rel="noopener noreferrer">Perspective viewer</a
+						> that allows you to explore the query results interactively. By default it opens a table, but
+						you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
+						button in the top right.
+					</p>
+				</div>
+			{/if}
 
-				<Button onclick={handleTableVisualise}>
-					View as table
-					<SheetIcon />
-				</Button>
-
-				<Button onclick={handleMapVisualise}>
-					View on map
-					<MapIcon />
-				</Button>
+			<!--
+				GraphViewer must stay mounted once created: `@finos/perspective-viewer`
+				registers its custom element inside `init_client()`, which GraphViewer
+				calls from `onMount`. A second mount re-registers the same tag name and
+				throws. Toggling this with `{#if}` (destroy/recreate) is what caused
+				that; a `hidden` class only hides it instead.
+			-->
+			<div class="viewer" class:hidden={!compiledQuery}>
+				<GraphViewer class="flex-1" {table} />
 			</div>
-
-			<!-- turn the loading into a func? -->
-			<p>
-				{#if table?.numRows == null}
-					Loading rows…
-				{:else}
-					{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
-						queryDurationMs / 1000
-					)}.
-				{/if}
-			</p>
-
-			<p>
-				Below you can find a <a
-					href="https://perspective.finos.org/"
-					target="blank"
-					rel="noopener noreferrer">Perspective viewer</a
-				> that allows you to explore the query results interactively. By default it opens a table, but
-				you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
-				button in the top right.
-			</p>
-		</div>
-
-		<div class="viewer">
-			<GraphViewer class="flex-1" {table} />
 		</div>
 	</div>
 </div>
 
 <style lang="scss">
-	:global(.page-wrapper) {
+	.page-wrapper {
 		display: flex;
 		flex-direction: column;
-		height: 100%;
-	}
-	.page-container {
+		gap: 1rem;
+		padding: 1rem;
 		flex-grow: 1;
+	}
+
+	.vertical-tabs-wrapper {
+		flex-grow: 1;
+		min-height: 0;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
+		gap: 1rem;
+
+		.page-container {
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		}
+
+		.content {
+			flex-grow: 1;
+		}
 
 		.viewer {
 			flex-grow: 1;
 			display: flex;
 			flex-direction: column;
+
+			&.hidden {
+				display: none;
+			}
 		}
 	}
 </style>

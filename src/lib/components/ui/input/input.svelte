@@ -1,8 +1,7 @@
 <script lang="ts">
 	import type { HTMLInputAttributes, HTMLInputTypeAttribute } from "svelte/elements";
-	import { cn, Utils, type WithElementRef } from "$lib/utils.js";
-	import { onMount } from "svelte";
-
+	import { cn, type WithElementRef } from "$lib/utils.js";
+	
 	type InputType = Exclude<HTMLInputTypeAttribute, "file">;
 
 	type Props = WithElementRef<

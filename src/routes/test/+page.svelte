@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { beaconInstances, currentBeaconInstance } from '$lib/stores/config';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { PythonQueryBuilder } from '@/beacon-api/query';
@@ -122,6 +121,7 @@
 
         
 	});
+
 </script>
 
 <svelte:head>
@@ -139,27 +139,43 @@
 				maris-development.github.io/beacon/
 			</a> to read the documentation.
 		</p>
-
-		<h3>Button variants</h3>
-
-		<div>
-			<Button variant="default">Default</Button>
-			<Button variant="destructive">Destructive</Button>
-			<Button variant="outline">Outline</Button>
-			<Button variant="secondary">Secondary</Button>
-			<Button variant="ghost">Ghost</Button>
-			<Button variant="link">Link</Button>
-			<Button variant="confirm">Confirm</Button>
-			<Button variant="deny">Deny</Button>
-
-
-		</div>
-
-
-		<div>
-			
-			<pre>{pythonCode}</pre>
-
-		</div>
 	</div>
+
+
+		<div class=" page-container">
+			
+			<h3>Button variants</h3>
+
+			<div>
+				<Button variant="default">Default</Button>
+				<Button variant="destructive">Destructive</Button>
+				<Button variant="outline">Outline</Button>
+				<Button variant="secondary">Secondary</Button>
+				<Button variant="ghost">Ghost</Button>
+				<Button variant="link">Link</Button>
+				<Button variant="confirm">Confirm</Button>
+				<Button variant="deny">Deny</Button>
+
+
+			</div>
+
+
+			<div>
+				
+				<pre>{pythonCode}</pre>
+
+			</div>
+		</div>
 </div>
+
+
+<style lang="scss">
+	.page-wrapper {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+
+	
+	}
+</style>

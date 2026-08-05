@@ -3,7 +3,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';

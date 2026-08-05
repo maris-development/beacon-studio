@@ -6,14 +6,14 @@
 	import type { Column, SortDirection } from '@/util-types';
 	import { Utils } from '@/utils';
 
-
+	type RowDataType = Record<string, string> | Record<string, number> | Record<number, number>;
 
 	type Props = {
 		onChangeSort?: (column: string, direction: SortDirection) => void;
 		onPageChange?: (page: number) => void;
-		onCellClick?: (row: Record<string, string>, column: Column) => void;
+		onCellClick?: (row: RowDataType, column: Column) => void;
 		columns: Column[];
-		rows: Record<string, string>[];
+		rows: RowDataType[];
 		pageSize?: number;
 		pageIndex?: number;
 		totalRows?: number;
@@ -116,6 +116,7 @@
 						<tr class={rowClass}>
 							{#each columns as column (column.key)}
 								{#if column.rawHtml === true}
+									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(row[column.key])}</td>
 								{:else}
 									<td onclick={() => onCellClick(row, column)}>{Utils.toString(row[column.key])}</td>
@@ -154,16 +155,18 @@
 		border-radius: 8px;
 		overflow: hidden;
 		position: relative;
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+		min-height: 0;
+		overflow: hidden;
+
 
 
 		.table-wrapper {
-			overflow-x: auto;
-			//nice scrollbar
-			// &::-webkit-scrollbar {
-			// 	display: none;
-			// }
-			// -ms-overflow-style: none;
-			// scrollbar-width: none;
+			overflow: auto;
+			flex-grow: 1;
+			min-height: 0;
 
 			table.dataset-table {
 				width: 100%;
@@ -197,6 +200,10 @@
 					background-color: #f9f9f9;
 
 					th {
+						position: sticky;
+						top: 0;
+						z-index: 1;
+						background-color: #f9f9f9;
 						text-align: left;
 						font-weight: 600;
 						text-transform: uppercase;

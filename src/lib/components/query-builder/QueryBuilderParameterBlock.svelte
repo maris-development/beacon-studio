@@ -20,7 +20,7 @@
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
 	import type { QuerySelectionStatus } from './QuerySelectionStatus';
-    import type { QuerySelectionActions } from './QuerySelectionActions';
+    import type { QueryActions } from './QueryActions';
 	import { type QueryDraft } from './QueryDraft';
 
 
@@ -38,7 +38,7 @@
 		}),
         // Only the query actions live here. The workbench owns navigation, because
         // it holds the StoredQuery block id for visualisation links.
-        actions = $bindable<QuerySelectionActions>({
+        actions = $bindable<QueryActions>({
 			compileQuery: compileQuery,
             downloadData: handleSubmit,
             resetQuery: undefined
@@ -51,7 +51,7 @@
 		/** Emitted on every builder edit with the current draft. */
 		onDraftChange?: (draft: QueryDraft) => void;
 		status?: QuerySelectionStatus;
-        actions?: QuerySelectionActions; // todo
+        actions?: QueryActions; // todo
 	} = $props();
 
 	let searchInput;

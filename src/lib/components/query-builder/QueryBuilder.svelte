@@ -4,7 +4,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import type { QuerySelectionStatus } from './QuerySelectionStatus';
-    import { type QuerySelectionActions, makeEmptyQuerySelectionActions } from './QuerySelectionActions';
+    import type { QueryActions } from './QueryActions';
     import type { CompiledQuery } from '@/beacon-api/types';
     import type { QueryDraft } from './QueryDraft';
     import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
@@ -23,7 +23,7 @@
             filters: 0,
             selection: 0,
         }),
-        actions: queryActions = $bindable<QuerySelectionActions>(makeEmptyQuerySelectionActions()),
+        actions: queryActions = $bindable<QueryActions>({}),
         workbenchActions,
     }: {
         initialDraft?: QueryDraft | null;
@@ -32,13 +32,13 @@
         onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
         /** Bound to the parent. The builder puts `compileQuery` here. */
-        actions?: QuerySelectionActions;
+        actions?: QueryActions;
         /**
          * The download and visualise handlers of the workbench. Navigation needs
          * the id of the StoredQuery block. Only the workbench holds that id.
          * Therefore these handlers come from the parent.
          */
-        workbenchActions: QuerySelectionActions;
+        workbenchActions: QueryActions;
     } = $props();
 
     let currentBeaconInstanceValue: BeaconInstance | null = $state(null);

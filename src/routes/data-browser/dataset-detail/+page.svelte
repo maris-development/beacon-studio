@@ -4,7 +4,7 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';

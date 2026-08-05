@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Button from '$lib/components/buttons/Button.svelte';
-	import type { QuerySelectionActions } from '@/components/query-builder/QuerySelectionActions';
+	import type { QueryActions } from '@/components/query-builder/QueryActions';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
@@ -21,7 +21,7 @@
 
 	let {
 		queryActions
-	}: { queryActions: QuerySelectionActions } = $props();
+	}: { queryActions: QueryActions } = $props();
 
 	let showingCacheInfoModal = $state(false);
 

@@ -8,6 +8,7 @@
 	import { color, type RGBColor } from 'd3-color';
 	import { interpolatePuOr } from 'd3-scale-chromatic';
 	import { scaleSequential, type ScaleSequential } from 'd3-scale';
+	import { Input } from '../ui/input';
 
 	let {
 		colorScaleMin = $bindable(SCALE_DEFAULT_MIN),
@@ -64,7 +65,7 @@
 
 <div class="legend-range">
 	<div class="input-wrapper">
-		<input
+		<Input
 			type="number"
 			name="colorScaleMin"
 			id="colorScaleMin"
@@ -73,7 +74,7 @@
 			bind:value={colorScaleMin}
 		/>
 
-		<input
+		<Input
 			type="number"
 			name="colorScaleMax"
 			id="colorScaleMax"
@@ -84,7 +85,7 @@
 	</div>
 
 	<div class="colors" style="--blips: {COLOR_SCALE_BLIPS};">
-		{#each currentScaleColors as { color, value }}
+		{#each currentScaleColors as { color, value } (value)}
 			<span class="color" style="background-color: {color};" data-value={value}></span>
 		{/each}
 	</div>
@@ -96,14 +97,6 @@
 			display: flex;
 			gap: 1rem;
 			margin-bottom: 1rem;
-
-			input {
-				width: 100px;
-				padding: 0.5rem;
-				border: 1px solid #ccc;
-				border-radius: 4px;
-				font-size: 1rem;
-			}
 		}
 
 		.colors {

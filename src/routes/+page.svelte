@@ -7,7 +7,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import { resolve } from '$app/paths';
 	import { Utils } from '@/utils';
-	import ExternalLink from '@/components/external-link.svelte';
+	import ExternalLink from '@/components/ExternalLink.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	let beaconInstanceArray: BeaconInstance[] = $beaconInstances;

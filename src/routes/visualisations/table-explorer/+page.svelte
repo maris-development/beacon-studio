@@ -1,30 +1,22 @@
 <script lang="ts">
 	import * as ApacheArrow from 'apache-arrow';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-	import DataTable from '@/components/data-table.svelte';
-
-	import FileJson2Icon from '@lucide/svelte/icons/file-json-2';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
-	import MapIcon from '@lucide/svelte/icons/map';
-
-	import EditQueryJsonModal from '@/components/modals/EditQueryJsonModal.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import type { Column, SortDirection } from '@/util-types';
-	import NoQueryAvailableModal from '@/components/modals/NoQueryAvailableModal.svelte';
 	import { resolveUrlQuery } from '@/stores/query-library';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import Button from '@/components/buttons/Button.svelte';
-
-	let query: CompiledQuery | undefined = $state(undefined);
-	/** Library record this page was opened from, so runs are attributed back to it. */
-	let storedQueryId: string | undefined = $state(undefined);
+	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
+	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
+	import type { StoredQuery } from '@/stores/stored-query';
+	import { currentBeaconInstance } from '@/stores/config';
+	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
+	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
+	import { Input } from '@/components/ui/input';
 
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
@@ -38,88 +30,122 @@
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
 	let offset = $state(0);
-	let pageSize: number = $state(20);
+	let pageSize: number = $state(30);
 	let isLoading = $state(true);
-	let firstLoad = $state(true);
 
-	// Modal for editing query
-	let editQueryModalOpen = $state(false);
-	let editQueryString = $state('');
+	const workspace = $state(new QueryWorkspace());
+    let client: BeaconClient | null = $state(null);
 
-	let noQueryAvailableModalOpen = $state(false);
+    onMount(() => {
+        const instance = $currentBeaconInstance;
+        if (instance) client = BeaconClient.new(instance);
 
-	// $inspect(query);
+        // A deep-link opens one more block. `?q=` comes from "open in workbench"
+        // and brings the saved builder state. `?query=` comes from a share link.
+        workspace.openFromUrl(resolveUrlQuery(page.url));
 
-	onMount(() => {
-		getUrlSuppliedQuery();
-	});
+        return () => workspace.destroy();
+    });
 
-	async function getUrlSuppliedQuery() {
-		// Internal navigation uses `?q=<record id>`. A share link uses `?query=<gzip>`.
-		const resolved = resolveUrlQuery(page.url);
-		query = resolved.query ?? undefined;
-		storedQueryId = resolved.storedQueryId;
+    const queryActions = $derived(getDefaultQueryActions(workspace, client));
 
-		if (query) {
-			// Show a cached result at once if the record already has one.
-			entry = BeaconClient.peekQueryByKey(resolved.entry?.datasetKey);
-			executeAndDisplayQuery();
-		} else {
-			// TODO: Ask user for query json
-			editQueryString = '{ "message": "Enter a JSON query" }';
-			noQueryAvailableModalOpen = true;
-		}
-	}
+    // `workspace.activeBlock` is a new object on every write to the block
+    // collection — including our own `markBlockRun` below. Tracking that object
+    // (or `compiledQuery` derived from it) as an effect dependency would re-fire
+    // the effect after every run, forever. Track primitives instead: the block id
+    // and a content key for the compiled query.
+    const activeBlockId = $derived(workspace.activeBlockId);
+    const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+    const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
-	async function executeAndDisplayQuery() {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+    let lastRunKey: string | null = $state(null);
 
-		firstLoad = false;
-		isLoading = true;
+    // Re-run only when the selected block, or its compiled query content, actually changes.
+    $effect(() => {
+        const blockId = activeBlockId;
+        const key = queryKey;
 
-		try {
-			entry = await BeaconClient.ensureQuery(query, storedQueryId);
+        if (!blockId || !key) {
+            entry = null;
+            columns = [];
+            displayRows = [];
+            totalRows = 0;
+            isLoading = false;
+            lastRunKey = null;
+            return;
+        }
 
-			if (entry.rowCount === 0) {
-				isLoading = false;
-				addToast({
-					type: 'info',
-					message: `Query executed successfully but returned no data.`
-				});
-				return;
-			}
+        const runKey = `${blockId}:${key}`;
+        if (runKey === lastRunKey) return;
+        lastRunKey = runKey;
 
-			prepareTableForDisplay();
-		} catch (error) {
-			console.error('Failed to execute query:', error);
-			isLoading = false;
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${error.message}`
-			});
-		}
-	}
+        // Read the live block/query untracked: we only want blockId+key above to
+        // drive re-runs, not every downstream write this triggers.
+        const { block, query } = untrack(() => ({
+            block: workspace.activeBlock,
+            query: compiledQuery
+        }));
+        if (!block || !query) return;
 
-	function prepareTableForDisplay() {
-		if (!table) {
-			addToast({
-				type: 'error',
-				message: 'No table data available to display.'
-			});
-			return;
-		}
+        // Show a cached result at once if the block already has one.
+        entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+        if (entry) prepareTableForDisplay();
 
-		totalRows = table.numRows;
-		virtualPaginationData.setData(table);
+        executeAndDisplayQuery(block, query);
+    });
 
-		columns = table.schema.fields.map((field) => ({
-			key: field.name,
-			header: Utils.ucfirst(field.name),
-			sortable: field.typeId != ApacheArrow.Type.Struct // Disable sorting for geometry columns
-		}));
+    async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
+        isLoading = true;
+        workspace.markBlockRunning(block.id, true);
 
-		getPage();
-	}
+        try {
+            entry = await BeaconClient.ensureQuery(query, block.id);
+            workspace.markBlockRun(block.id, entry.rowCount);
+
+            if (entry.rowCount === 0) {
+                isLoading = false;
+                columns = [];
+                displayRows = [];
+                totalRows = 0;
+                addToast({
+                    type: 'info',
+                    message: `Query executed successfully but returned no data.`
+                });
+                return;
+            }
+
+            prepareTableForDisplay();
+        } catch (error) {
+            console.error('Failed to execute query:', error);
+            isLoading = false;
+            workspace.markBlockRunning(block.id, false);
+            addToast({
+                type: 'error',
+                message: `Failed to execute query: ${error.message}`
+            });
+        }
+    }
+
+    function prepareTableForDisplay() {
+        if (!table) {
+            addToast({
+                type: 'error',
+                message: 'No table data available to display.'
+            });
+            return;
+        }
+
+        totalRows = table.numRows;
+        virtualPaginationData.setData(table);
+
+        columns = table.schema.fields.map((field) => ({
+            key: field.name,
+            header: Utils.ucfirst(field.name),
+            sortable: field.typeId != ApacheArrow.Type.Struct // Disable sorting for geometry columns
+        }));
+
+        getPage();
+    }
 
 	function onPageChange(newPageIndex: number) {
 		pageIndex = newPageIndex;
@@ -165,94 +191,16 @@
 		isLoading = false;
 	}
 
-	function updateQuery(newQuery) {
-		query = newQuery;
-		firstLoad = true;
-		isLoading = true;
-		executeAndDisplayQuery();
-	}
+	
 
-	function openEditQueryModal() {
-		editQueryString = JSON.stringify(query, null, 2);
-		editQueryModalOpen = true;
-	}
+	
 
-	function closeEditQueryModal(save = true) {
-		editQueryModalOpen = false;
-
-		if (!save) {
-			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
-			if (confirmation) {
-				return;
-			}
-		}
-
-		try {
-			const parsedQuery = JSON.parse(editQueryString);
-			updateQuery(parsedQuery);
-		} catch (error) {
-			addToast({
-				type: 'error',
-				message: `Failed to parse query JSON: ${error.message}`
-			});
-			return;
-		}
-	}
-
-	/**
-	 * Send the current query to another page. The link uses `?q=<record id>`. The
-	 * target page then reads the same library record and its cached result.
-	 *
-	 * If this page opened from a share link, it has no record. The link then
-	 * carries the query as gzip.
-	 */
-	function handOff(resolvedPath: string) {
-		if (storedQueryId) {
-			goto(`${resolvedPath}?q=${encodeURIComponent(storedQueryId)}`);
-			return;
-		}
-
-		const gzippedQuery = Utils.objectToGzipString(query);
-		if (gzippedQuery) {
-			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
-		}
-	}
-
-	async function handleChartVisualise() {
-		handOff(resolve('/visualisations/chart-explorer'));
-	}
-
-	async function handleMapVisualise() {
-		handOff(resolve('/visualisations/map-viewer'));
-	}
-
-	async function handleEditQuery() {
-		if (!query) {
-			goto(resolve('/queries/workbench'));
-			return;
-		}
-
-		handOff(resolve('/queries/workbench'));
-	}
 </script>
 
 <svelte:head>
 	<title>Table explorer - Beacon Studio</title>
 </svelte:head>
 
-{#if editQueryModalOpen}
-	<EditQueryJsonModal bind:editQueryString onClose={closeEditQueryModal} />
-{/if}
-
-{#if noQueryAvailableModalOpen}
-	<NoQueryAvailableModal
-		onCancel={() => (noQueryAvailableModalOpen = false)}
-		openQueryJsonEditor={() => {
-			noQueryAvailableModalOpen = false;
-			openEditQueryModal();
-		}}
-	/>
-{/if}
 
 <Cookiecrumb
 	crumbs={[
@@ -262,51 +210,93 @@
 />
 
 <div class="page-wrapper">
-	<div class="page-container">
-		<h2>Table explorer</h2>
+	<QuerySelectorHeader {workspace} {queryActions} mode="view" />
 
-		<div class="buttons-header">
-			<Button onclick={handleEditQuery}>
-				Edit query
-				<PencilIcon size="1rem" />
-			</Button>
+	<div class="vertical-tabs-wrapper">
+		<VisualisationTabs />
 
-			<Button onclick={openEditQueryModal}>
-				Edit query JSON
-				<FileJson2Icon size="1rem" />
-			</Button>
+		<div class="content page-container">
 
-			<span>or</span>
-
-			<Button onclick={handleChartVisualise}>
-				View on chart
-				<ChartPieIcon />
-			</Button>
-
-			<Button onclick={handleMapVisualise}>
-				View on map
-				<MapIcon />
-			</Button>
-		</div>
-
-		<!-- turn the loading into a func? -->
-		<p>
-			{#if table?.numRows == null}
-				Loading rows…
+			{#if !compiledQuery}
+				<p>Select a valid query above to see its data.</p>
 			{:else}
-				{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
-			{/if}
-		</p>
+				<div class="top-bar">
+					<p>
+						{#if table?.numRows == null}
+							Loading rows…
+						{:else}
+							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+						{/if}
+					</p>
 
-		<DataTable
-			{onPageChange}
-			{onChangeSort}
-			{columns}
-			rows={displayRows}
-			{totalRows}
-			{pageSize}
-			{pageIndex}
-			{isLoading}
-		/>
+
+					<div class="page-size-input">
+						<label for="page-size">Rows per page:</label>
+						<Input
+							id="page-size"
+							type="number"
+							min="10"
+							step="10"
+							bind:value={pageSize}
+							onchange={() => {
+								pageIndex = 1;
+								getPage();
+							}}
+						/>
+					</div>
+				</div>
+
+				<DataTable
+					{onPageChange}
+					{onChangeSort}
+					{columns}
+					rows={displayRows}
+					{totalRows}
+					{pageSize}
+					{pageIndex}
+					{isLoading}
+				/>
+			{/if}
+		</div>
 	</div>
 </div>
+
+<style lang="scss">
+	.page-wrapper {
+		flex-grow: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.vertical-tabs-wrapper {
+		flex-grow: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: row;
+		gap: 1rem;
+
+		.content.page-container {
+			flex-grow: 1;
+			min-height: 0;
+
+			display: flex;
+			flex-direction: column;
+
+			.top-bar {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 0.5rem;
+
+				.page-size-input {
+					// width: 4rem;
+				}
+
+			}
+
+		}
+	}
+</style>
