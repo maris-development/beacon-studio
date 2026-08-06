@@ -3,10 +3,10 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
-    import type { QuerySelectionStatus } from './QuerySelectionStatus';
+    import type { QuerySelectionStatus } from '@/query/selection-status';
     import type { QueryActions } from './QueryActions';
     import type { CompiledQuery } from '@/beacon-api/types';
-    import type { QueryDraft } from './QueryDraft';
+    import type { QueryDraft } from '@/query/draft';
     import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';

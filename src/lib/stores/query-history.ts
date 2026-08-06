@@ -19,18 +19,24 @@ import { get } from 'svelte/store';
 import { createQueryCollection } from '@/stores/query-collection';
 import { snapshotInstance, type InstanceRef, type StoredQuery } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
-import type { QueryDraft } from '@/components/query-builder/QueryDraft';
+import type { QueryDraft } from '@/query/draft';
 import { currentBeaconInstance } from '@/stores/config';
+import { getSettings } from '@/stores/settings';
 
-/** The maximum number of rows. Above this limit the oldest runs go away. */
-export const MAX_HISTORY = 100;
+/**
+ * The maximum number of rows. Above this limit the oldest runs go away. The user
+ * sets the value on the settings page (`queryHistoryMax`).
+ */
+export function maxHistory(): number {
+	return getSettings().queryHistoryMax;
+}
 
 /** The persisted query history for the full app. */
 export const queryHistory = createQueryCollection({
 	storageKey: 'beacon-query-library.history',
 	role: 'history',
 	identity: 'datasetKey',
-	max: MAX_HISTORY
+	max: maxHistory
 });
 
 /**
@@ -58,7 +64,7 @@ export interface RecordExecutionInput {
  * duration if the caller supplies them, else it keeps the old values.
  *
  * The function puts a new query at the front. The list holds at most
- * {@link MAX_HISTORY} rows.
+ * {@link maxHistory} rows.
  */
 export function recordExecution(input: RecordExecutionInput): StoredQuery {
 	const now = Date.now();

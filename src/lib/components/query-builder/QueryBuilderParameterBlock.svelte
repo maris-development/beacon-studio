@@ -13,15 +13,19 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { BeaconClient } from '@/beacon-api/client';
-	import type { CompiledQuery, DataType, Filter, OutputFormat } from '@/beacon-api/types';
+	import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import Parameter from './Parameter.svelte';
-	import type { SelectedFilterType } from './AddFilterDropdown.svelte';
+	import type { SelectedFilterType } from '@/query/filter-types';
 	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
-	import type { QuerySelectionStatus } from './QuerySelectionStatus';
+	import type { QuerySelectionStatus } from '@/query/selection-status';
     import type { QueryActions } from './QueryActions';
-	import { type QueryDraft } from './QueryDraft';
+	import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
+	import MapPinnedIcon from '@lucide/svelte/icons/map-pinned';
+	import XIcon from '@lucide/svelte/icons/x';
+	import { describeSelection, type SpatialSelection } from '@/geo/spatial-selection';
+	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
 
 
 	let {
@@ -56,9 +60,7 @@
 
 	let searchInput;
 	let searchQuery = $state('');
-	let selected_output_format = $state(
-		initialDraft?.outputFormat ?? BeaconClient.output_formats['Parquet']
-	);
+	let selected_output_format = $state(initialDraft?.outputFormat ?? defaultOutputFormat());
 	let fields: {
 		name: string;
 		type: DataType;
@@ -67,6 +69,12 @@
 
 	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
 		$state(initialDraft ? Utils.cloneObject(initialDraft.selectedFields) : []);
+	/**
+	 * The area drawn on the map viewer. The builder shows it, and can remove it,
+	 * but it cannot draw one. It applies to the latitude and the longitude column
+	 * together, so it has no card of its own.
+	 */
+	let spatialFilter: SpatialSelection | null = $state(initialDraft?.spatialFilter ?? null);
 	/** Table the current selection belongs to; used to reset on a real table change. */
 	let selectionTable = initialDraft?.tableName ?? null;
 	let hasInitialisedTable = $state(false);
@@ -160,7 +168,8 @@
 		const draft = {
 			tableName: table_name,
 			selectedFields: Utils.cloneObject(selectedFields),
-			outputFormat: selected_output_format
+			outputFormat: selected_output_format,
+			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
 		};
 		const draftKey = JSON.stringify(draft);
 		if (draftKey === lastEmittedDraftKey) {
@@ -209,7 +218,7 @@
 
 	function resetBuilder() {
 		selectedFields = [];
-		selected_output_format = BeaconClient.output_formats['Parquet'];
+		selected_output_format = defaultOutputFormat();
 	}
 
 	// onReset = resetBuilder;
@@ -265,190 +274,19 @@
 	// workbench without a warning.
 
 	function hydrateFromSeed() {
-		const initialQuery = pendingSeed;
-		if (!initialQuery || fields.length === 0) {
-			return;
+		const seed = hydrateDraftFromQuery(pendingSeed, fields);
+
+		spatialFilter = seed.spatialFilter;
+		selectedFields = seed.selectedFields;
+
+		if (seed.outputFormat) {
+			selected_output_format = seed.outputFormat;
 		}
 
-		let droppedParts = 0;
-		const normalizedSelectedFields: {
-			name: string;
-			type: DataType;
-			selected_filters: SelectedFilterType[];
-		}[] = [];
-
-		const findSelectedField = (fieldName: string) => {
-			return normalizedSelectedFields.find((field) => field.name === fieldName);
-		};
-
-		const addSelectedFieldIfMissing = (fieldName: string) => {
-			const existingField = findSelectedField(fieldName);
-			if (existingField) {
-				return existingField;
-			}
-
-			const schemaField = fields.find((field) => field.name === fieldName);
-			if (!schemaField) {
-				return null;
-			}
-
-			const selectedField = {
-				name: schemaField.name,
-				type: schemaField.type,
-				selected_filters: []
-			};
-
-			normalizedSelectedFields.push(selectedField);
-			return selectedField;
-		};
-
-		if (typeof initialQuery.from !== 'string') {
-			droppedParts += 1;
-		}
-
-		const normalizedQueryParameters = (initialQuery.query_parameters ?? []) as Array<{
-			column?: string;
-			column_name?: string;
-			alias?: string | null;
-		}>;
-
-		for (const queryParameter of normalizedQueryParameters) {
-			const columnName = queryParameter.column ?? queryParameter.column_name;
-
-			if (!columnName) {
-				droppedParts += 1;
-				continue;
-			}
-
-			const selectedField = addSelectedFieldIfMissing(columnName);
-
-			if (!selectedField) {
-				droppedParts += 1;
-				continue;
-			}
-		}
-
-		const flattenFilters = (filters: Filter[]): Filter[] => {
-			const result: Filter[] = [];
-
-			for (const filter of filters ?? []) {
-				if ('or' in filter) {
-					droppedParts += 1;
-					result.push(...flattenFilters(filter.or));
-					continue;
-				}
-
-				if ('and' in filter) {
-					droppedParts += 1;
-					result.push(...flattenFilters(filter.and));
-					continue;
-				}
-
-				result.push(filter);
-			}
-
-			return result;
-		};
-
-		const getFilterColumnName = (filter: Filter): string | null => {
-			if ('for_query_parameter' in filter) {
-				return filter.for_query_parameter;
-			}
-
-			if ('is_null' in filter) {
-				return filter.is_null.for_query_parameter;
-			}
-
-			if ('is_not_null' in filter) {
-				return filter.is_not_null.for_query_parameter;
-			}
-
-			return null;
-		};
-
-		const getFilterLabel = (filter: SelectedFilterType['filter_value']): string => {
-			switch (filter.type) {
-				case 'range_numeric':
-				case 'range_string':
-				case 'range_timestamp':
-					return 'Between';
-				case 'greater_than_numeric':
-				case 'greater_than_string':
-				case 'greater_than_timestamp':
-					return 'Greater Than';
-				case 'greater_than_or_equals_numeric':
-				case 'greater_than_or_equals_string':
-				case 'greater_than_or_equals_timestamp':
-					return 'Greater Than or Equals';
-				case 'less_than_numeric':
-				case 'less_than_string':
-				case 'less_than_timestamp':
-					return 'Less Than';
-				case 'less_than_or_equals_numeric':
-				case 'less_than_or_equals_string':
-				case 'less_than_or_equals_timestamp':
-					return 'Less Than or Equals';
-				case 'equals_numeric':
-				case 'equals_string':
-				case 'equals_timestamp':
-					return 'Equals';
-				case 'not_equals_numeric':
-				case 'not_equals_string':
-				case 'not_equals_timestamp':
-					return 'Not Equals';
-				case 'is_null':
-					return 'Is Null';
-				case 'is_not_null':
-					return 'Is Not Null';
-			}
-		};
-
-		for (const filter of flattenFilters(initialQuery.filters ?? [])) {
-			const filterColumnName = getFilterColumnName(filter);
-
-			if (!filterColumnName) {
-				droppedParts += 1;
-				continue;
-			}
-
-			let selectedField = findSelectedField(filterColumnName);
-
-			if (!selectedField) {
-				selectedField = addSelectedFieldIfMissing(filterColumnName);
-
-				if (!selectedField) {
-					droppedParts += 1;
-					continue;
-				}
-			}
-
-			const mappedFilter = Utils.filterToParameterFilterType(filter, selectedField.type);
-
-			if (!mappedFilter) {
-				droppedParts += 1;
-				continue;
-			}
-
-			selectedField.selected_filters.push({
-				label: getFilterLabel(mappedFilter),
-				filter_value: mappedFilter
-			});
-		}
-
-		const outputFormat = initialQuery.output?.format;
-
-		if (typeof outputFormat === 'string') {
-			selected_output_format = outputFormat;
-		} else if (outputFormat) {
-			droppedParts += 1;
-		}
-
-		selectedFields = normalizedSelectedFields;
-
-		if (droppedParts > 0) {
+		if (seed.droppedParts > 0) {
 			addToast({
 				type: 'warning',
-				message: `Loaded query with best effort. ${droppedParts} part(s) could not be represented in Advanced Builder.`
+				message: `Loaded query with best effort. ${seed.droppedParts} part(s) could not be represented in Advanced Builder.`
 			});
 		}
 	}
@@ -504,6 +342,21 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
+	{#if spatialFilter}
+		<div class="area-filter">
+			<MapPinnedIcon size={16} />
+			<span class="area-filter-label">Area: {describeSelection(spatialFilter)}</span>
+			<span class="area-filter-hint">Drawn on the map viewer</span>
+			<Button
+				variant="ghost"
+				title="Remove the area filter"
+				onclick={() => (spatialFilter = null)}
+			>
+				<XIcon size={16} />
+			</Button>
+		</div>
+	{/if}
+
 	<div class="parameters-grid">
 		{#if selectedFields.length > 0}
 			{#each Utils.range(0, selectedFields.length) as index (index)}
@@ -531,6 +384,26 @@
 </div>
 
 <style lang="scss">
+
+	.area-filter {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+
+		.area-filter-label {
+			font-weight: 600;
+		}
+
+		.area-filter-hint {
+			flex-grow: 1;
+			font-size: 0.8rem;
+			color: var(--muted-foreground);
+		}
+	}
 
 	.parameters-grid {
 		display: grid;

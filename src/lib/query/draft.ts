@@ -9,9 +9,17 @@
  * without a lossy round-trip through CompiledQuery.
  */
 import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
-import type { SelectedFilterType } from './AddFilterDropdown.svelte';
+import type { SelectedFilterType } from '@/query/filter-types';
 import { QueryBuilder } from '@/beacon-api/query';
+import { getSettings } from '@/stores/settings';
 import { Utils } from '@/utils';
+import {
+	isUsableSelection,
+	toBboxFilters,
+	toGeoJsonFilter,
+	type SpatialSelection
+} from '@/geo/spatial-selection';
+import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 
 /** A single selected column plus the filters applied to it. */
 export type SelectedField = {
@@ -25,16 +33,26 @@ export type QueryDraft = {
 	tableName: string;
 	selectedFields: SelectedField[];
 	outputFormat: string;
+	/**
+	 * An area drawn on the map viewer. It applies to the latitude and longitude
+	 * columns together, so it cannot live on a single selected field.
+	 */
+	spatialFilter?: SpatialSelection | null;
 };
 
-/** Default output format value (matches BeaconClient.output_formats['Parquet']). */
-export const DEFAULT_OUTPUT_FORMAT = 'parquet';
+/**
+ * The output format of a new draft. The user sets it on the settings page. The
+ * values match the keys of `BeaconClient.output_formats`.
+ */
+export function defaultOutputFormat(): string {
+	return getSettings().defaultOutputFormat;
+}
 
 export function makeEmptyDraft(): QueryDraft {
 	return {
 		tableName: '',
 		selectedFields: [],
-		outputFormat: DEFAULT_OUTPUT_FORMAT
+		outputFormat: defaultOutputFormat()
 	};
 }
 
@@ -65,11 +83,39 @@ export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuer
 			}
 		}
 
+		addSpatialFilters(builder, draft!);
+
 		builder.setFrom(draft!.tableName);
 		builder.setOutput({ format: draft!.outputFormat as OutputFormat });
 
 		return builder.compile();
 	} catch {
 		return null;
+	}
+}
+
+/**
+ * Add the drawn area to a query: one point-in-polygon filter, plus the bounding
+ * box of that polygon on the two columns. The box lets the server prune data
+ * before it runs the slower polygon test.
+ *
+ * The box is always derived here, and is never stored on a field. So one delete
+ * of `spatialFilter` removes every part of the area again.
+ *
+ * The query keeps no filter when it does not select both a latitude and a
+ * longitude column.
+ */
+function addSpatialFilters(builder: QueryBuilder, draft: QueryDraft): void {
+	const selection = draft.spatialFilter;
+	if (!isUsableSelection(selection)) return;
+
+	const names = draft.selectedFields.map((field) => field.name);
+	const { latitude, longitude } = detectCoordinateColumns(names);
+	if (!latitude || !longitude) return;
+
+	builder.addFilter(toGeoJsonFilter(selection!, latitude.name, longitude.name));
+
+	for (const filter of toBboxFilters(selection!, latitude.name, longitude.name)) {
+		builder.addFilter(filter);
 	}
 }

@@ -5,7 +5,7 @@
     import GridIcon from '@lucide/svelte/icons/grid';
     import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Card from '../card/Card.svelte';
-	import type { QuerySelectionStatus } from './QuerySelectionStatus';
+	import type { QuerySelectionStatus } from '@/query/selection-status';
 
     let {
         table_names = [],

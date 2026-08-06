@@ -4,8 +4,9 @@
 	import Separator from '../ui/separator/separator.svelte';
 	import type { DataType } from '@/beacon-api/types';
 	import Button from '../buttons/Button.svelte';
-	import AddFilterInput, { type SelectedFilterType } from './AddFilterDropdown.svelte';
+	import AddFilterInput from './AddFilterDropdown.svelte';
 	import ParameterFilter from './ParameterFilter.svelte';
+	import type { SelectedFilterType } from '@/query/filter-types';
 	import { Utils } from '@/utils';
 
 	let {

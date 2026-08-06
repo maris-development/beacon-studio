@@ -163,7 +163,16 @@ export class PythonQueryBuilder  {
             code += `query.add_filter(`;
         }
 
-        if ("min" in filter && "max" in filter) {
+        if ("geometry" in filter) {
+            // Point-in-polygon over the longitude and latitude columns. The Python
+            // client has no class for it, so the raw filter object goes out.
+            code += JSON.stringify({
+                longitude_query_parameter: filter.longitude_query_parameter,
+                latitude_query_parameter: filter.latitude_query_parameter,
+                geometry: filter.geometry
+            });
+
+        } else if ("min" in filter && "max" in filter) {
             let min = filter.min;
             let max = filter.max;
 

@@ -38,8 +38,11 @@ export interface QueryCollectionOptions {
 	/**
 	 * The maximum number of records. Above this limit the collection drops the
 	 * least recently active records. Omit the field for no limit.
+	 *
+	 * A function lets a user setting control the limit. The collection calls it on
+	 * every write, so a new value applies immediately.
 	 */
-	max?: number;
+	max?: number | (() => number);
 }
 
 /**
@@ -197,7 +200,10 @@ export class QueryCollection implements Readable<StoredQuery[]> {
 
 	/** Drop the least recently active records above the limit. */
 	private enforceMax(entries: StoredQuery[]): StoredQuery[] {
-		const max = this.options.max;
+		let max = this.options.max;
+		if (typeof max === 'function') {
+			max = max();
+		}
 		if (!max || entries.length <= max) return entries;
 		return [...entries].sort((a, b) => recencyOf(b) - recencyOf(a)).slice(0, max);
 	}

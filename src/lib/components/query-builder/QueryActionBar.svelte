@@ -2,7 +2,7 @@
 	import Button from '$lib/components/buttons/Button.svelte';
 	import type { QueryActions } from '@/components/query-builder/QueryActions';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
+	import * as QueryFunctions from '@/query/functions';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
@@ -16,6 +16,7 @@
     import SQLIcon from '@lucide/svelte/icons/database';
     import UrlIcon from '@lucide/svelte/icons/link-2';
 	import InfoIcon from '@lucide/svelte/icons/info';
+	import PencilIcon from '@lucide/svelte/icons/pencil';
 	
 
 
@@ -32,6 +33,8 @@
 	function closeCacheInfoModal(): void {
 		showingCacheInfoModal = false;
 	}
+
+	
 </script>
 
 {#if showingCacheInfoModal}
@@ -45,11 +48,19 @@
 
 		<DownloadDataButton downloadData={queryActions.downloadData} />
 
-		<VisualiseDataButton 
-			visualiseTable={queryActions.visualiseTable}
-			visualiseChart={queryActions.visualiseChart}
-			visualiseMap={queryActions.visualiseMap}
-		/>
+		{#if queryActions.editQuery}
+			<Button onclick={queryActions.editQuery} title="Edit query">
+				<PencilIcon />
+				Edit Query
+			</Button>
+		{:else}
+			<VisualiseDataButton 
+				visualiseTable={queryActions.visualiseTable}
+				visualiseChart={queryActions.visualiseChart}
+				visualiseMap={queryActions.visualiseMap}
+			/>
+		{/if}
+		
 	
 		<!-- dropdown for copy options -->
 		{#if queryActions.compileQuery}

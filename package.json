@@ -78,6 +78,8 @@
 		"fzstd": "0.1.1",
 		"maplibre-gl": "^5.6.0",
 		"svelte-local-storage-store": "^0.6.4",
+		"terra-draw": "^1.32.2",
+		"terra-draw-maplibre-gl-adapter": "^1.4.1",
 		"tom-select": "^2.4.3"
 	}
 }

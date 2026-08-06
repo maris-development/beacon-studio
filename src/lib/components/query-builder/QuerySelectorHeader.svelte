@@ -4,6 +4,8 @@
     import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
     import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
     import Button from '../buttons/Button.svelte';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     type QuerySelectorMode = 'view' | 'edit';
 
@@ -14,6 +16,20 @@
      } = $props();
 
     let showQuerySelectionBlock = $state(true);
+
+    let queryActionsForBar = $derived({
+        ...queryActions,
+        editQuery: mode === 'view' ? gotoQueryEditor : undefined
+    });
+
+    function gotoQueryEditor(){
+        const currentQueryId = workspace.activeBlockId;
+        if(currentQueryId){
+            const params = new SvelteURLSearchParams();
+            params.set('q', currentQueryId);
+            goto(`/queries/workbench?${params.toString()}`);
+        }
+    }
 </script>
 
 <div class="page-container">
@@ -30,7 +46,7 @@
                 <h2>{mode === 'edit' ? 'Editing' : 'Viewing'} {workspace.activeBlock.name}</h2>
             </div>
         </div>
-        <QueryActionBar {queryActions} />
+        <QueryActionBar queryActions={queryActionsForBar} />
     </div>
 
     {#if showQuerySelectionBlock}

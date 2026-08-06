@@ -16,6 +16,7 @@ export type QueryActions = {
     visualiseMap?: ActionCallback;   // links to visualise data in map page
     saveQuery?: ActionCallback;   // links to visualise data in map page
     resetQuery?: ActionCallback;          // reset query selection
+    editQuery?: ActionCallback;           // edit query selection
 };
 
 /**

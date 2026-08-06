@@ -2,33 +2,7 @@
 	import { Input } from '../ui/input';
 	import { cn } from '$lib/utils.js';
 	import DateTimeInput from '../input/DateTimeInput.svelte';
-
-	type DateString = string;
-
-	export type ParameterFilterType =
-		| { min?: number; max?: number; type: 'range_numeric' }
-		| { min?: string; max?: string; type: 'range_string' }
-		| { min?: DateString; max?: DateString; type: 'range_timestamp' }
-		| { value?: string; type: 'greater_than_string' }
-		| { value?: number; type: 'greater_than_numeric' }
-		| { value?: DateString; type: 'greater_than_timestamp' }
-		| { value?: string; type: 'less_than_string' }
-		| { value?: number; type: 'less_than_numeric' }
-		| { value?: DateString; type: 'less_than_timestamp' }
-		| { value?: string; type: 'greater_than_or_equals_string' }
-		| { value?: number; type: 'greater_than_or_equals_numeric' }
-		| { value?: DateString; type: 'greater_than_or_equals_timestamp' }
-		| { value?: string; type: 'less_than_or_equals_string' }
-		| { value?: number; type: 'less_than_or_equals_numeric' }
-		| { value?: DateString; type: 'less_than_or_equals_timestamp' }
-		| { value?: string; type: 'equals_string' }
-		| { value?: number; type: 'equals_numeric' }
-		| { value?: DateString; type: 'equals_timestamp' }
-		| { value?: string; type: 'not_equals_string' }
-		| { value?: number; type: 'not_equals_numeric' }
-		| { value?: DateString; type: 'not_equals_timestamp' }
-		| { type: 'is_null' }
-		| { type: 'is_not_null' };
+	import type { ParameterFilterType } from '@/query/filter-types';
 
 	const uid = $props.id();
 

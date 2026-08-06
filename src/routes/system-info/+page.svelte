@@ -2,17 +2,17 @@
 	import { BeaconClient } from '@/beacon-api/client';
 
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { settings } from '@/stores/settings';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 
-	const UPDATE_INTERVAL = 1000; // 5 seconds
-
 	let currentBeaconInstanceValue: BeaconInstance | null = null;
 	let client: BeaconClient;
 	let systemInfo: BeaconSystemInfo | undefined = $state(undefined);
+	let ready = $state(false);
 
 	onMount(() => {
 		currentBeaconInstanceValue = $currentBeaconInstance;
@@ -22,10 +22,17 @@
 		}
 
 		client = BeaconClient.new(currentBeaconInstanceValue);
+		ready = true;
+	});
 
+	// The user sets the period on the settings page. A new value restarts the timer.
+	$effect(() => {
+		if (!ready) return;
+
+		const period = $settings.systemInfoUpdateIntervalMs;
 		const updateInterval = setInterval(async () => {
 			await updateSystemInfo();
-		}, UPDATE_INTERVAL);
+		}, period);
 
 		updateSystemInfo();
 

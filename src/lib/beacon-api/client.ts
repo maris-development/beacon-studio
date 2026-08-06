@@ -554,7 +554,7 @@ export class BeaconClient {
      * Returns the map display table for a dataset (deduplicated by lat/lon with a
      * GeoArrow point geometry column), memoized per dataset + lat/lon + precision.
      */
-    static queryMapTable(
+    static createQueryDisplayDataset(
         entry: DatasetEntry,
         latitudeColumnName: string,
         longitudeColumnName: string,

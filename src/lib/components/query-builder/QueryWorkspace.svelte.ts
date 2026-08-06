@@ -26,8 +26,16 @@
  *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
  *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
-import type { CompiledQuery } from '@/beacon-api/types';
+import type { CompiledQuery, MinMaxFilter } from '@/beacon-api/types';
 import { Utils } from '@/utils';
+import {
+	isGeoJsonFilter,
+	isUsableSelection,
+	toBboxFilters,
+	toGeoJsonFilter,
+	type SpatialSelection
+} from '@/geo/spatial-selection';
+import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import {
 	ensureBlockCounter,
 	getBlocksState,
@@ -40,8 +48,8 @@ import type { ResolvedUrlQuery } from '@/stores/query-library';
 import { cloneStoredQuery, snapshotInstance, type StoredQuery } from '@/stores/stored-query';
 import { currentBeaconInstance } from '@/stores/config';
 import { get } from 'svelte/store';
-import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from './QuerySelectionStatus';
-import { compileDraft, makeEmptyDraft, type QueryDraft } from './QueryDraft';
+import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
+import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
 
 /** Small run/cache summary used by the block cards. */
 export type BlockRunState = {
@@ -221,6 +229,59 @@ export class QueryWorkspace {
 		});
 	}
 
+	/**
+	 * Write the area that the user drew on the map into the active block.
+	 *
+	 * A block that has a draft keeps the area in that draft, so the builder can
+	 * show it and a save or a share link keeps it. A block from a share link or
+	 * from the JSON editor has no draft yet. That block gets the filters written
+	 * straight into its compiled query.
+	 *
+	 * Both paths remove the link to the last result, because that result belongs
+	 * to the query before the change.
+	 *
+	 * Call this from an event handler. Do not call it from a tracked effect: the
+	 * write replaces the block object, and the effect would run again.
+	 */
+	updateActiveSpatialFilter(selection: SpatialSelection | null): void {
+		const block = this.activeBlock;
+		if (!block) return;
+
+		if (block.draft) {
+			this.updateActiveDraft({ ...block.draft, spatialFilter: selection });
+			return;
+		}
+
+		if (!block.compiled) return;
+
+		const compiled = Utils.cloneObject(block.compiled) as CompiledQuery;
+		const names = compiled.query_parameters.map((param) => param.alias ?? param.column);
+		const { latitude, longitude } = detectCoordinateColumns(names);
+		if (!latitude || !longitude) return;
+
+		// Drop the filters of the previous area: the polygon, and the box that
+		// belongs to it on the two columns.
+		const spatialColumns = [latitude.name, longitude.name];
+		let filters = (compiled.filters ?? []).filter((filter) => {
+			if (isGeoJsonFilter(filter)) return false;
+			const minMax = filter as MinMaxFilter;
+			const isBox = 'min' in minMax && 'max' in minMax;
+			return !(isBox && spatialColumns.includes(minMax.for_query_parameter));
+		});
+
+		if (isUsableSelection(selection)) {
+			filters = [
+				...filters,
+				toGeoJsonFilter(selection!, latitude.name, longitude.name),
+				...toBboxFilters(selection!, latitude.name, longitude.name)
+			];
+		}
+
+		compiled.filters = filters;
+
+		queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
+	}
+
 	/** Compile the draft of a block. Returns null if the draft is incomplete. */
 	static getQuery(block: StoredQuery | null): CompiledQuery | null {
 		return block?.compiled ?? compileDraft(block?.draft);
@@ -262,6 +323,12 @@ export class QueryWorkspace {
 			(total, field) => total + field.selected_filters.length,
 			0
 		);
+
+		// The drawn area is one more filter, but it belongs to no single column.
+		if (draft.spatialFilter) {
+			status.filters += 1;
+		}
+
 		return status;
 	}
 

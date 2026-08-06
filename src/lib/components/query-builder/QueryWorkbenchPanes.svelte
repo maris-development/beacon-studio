@@ -18,10 +18,10 @@
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
-	import type { QueryDraft } from './QueryDraft';
+	import type { QueryDraft } from '@/query/draft';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
-	import * as QueryFunctions from '@/components/query-builder/QueryFunctions';
+	import * as QueryFunctions from '@/query/functions';
 
 	let { 
 		workspace, 

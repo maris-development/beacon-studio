@@ -20,7 +20,7 @@ import {
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
-import type { QueryDraft } from '@/components/query-builder/QueryDraft';
+import type { QueryDraft } from '@/query/draft';
 import { get } from 'svelte/store';
 import { currentBeaconInstance } from '@/stores/config';
 

@@ -61,11 +61,19 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/beacon-api/client.ts` — legacy client, now metadata/download only
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
+- Domain modules (no Svelte, no DOM — plain TypeScript, safe to unit test):
+  - `src/lib/query/draft.ts` (`QueryDraft`, `compileDraft` — the builder's editable state, and the compile to `CompiledQuery`)
+  - `src/lib/query/seed-hydration.ts` (`hydrateDraftFromQuery` — the reverse: `CompiledQuery` back into a draft, best effort)
+  - `src/lib/query/filter-types.ts` (`ParameterFilterType`, `SelectedFilterType` — the filter shapes the builder edits)
+  - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
+  - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
+  - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/query-history`)
   - `src/lib/stores/config.ts` (persisted Beacon instance selection)
+  - `src/lib/stores/settings.ts` (persisted user settings; the `/settings` page builds its form from `SETTING_DEFINITIONS`. Read a value with `getSettings()` at the point of use, or `$settings` in a component. Never read it at module load.)
   - `src/lib/stores/toasts.ts` (global toasts)
 - Heavy data operations (off-main-thread, one shared worker via `getArrowWorker()`):
   - `src/lib/workers/ArrowProcessingWorker.ts`
@@ -82,9 +90,38 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
-- Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`).
-- `QUERY_CELL_LIMIT` (in the query store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
+- Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Use it; do not repeat the match.
+- `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
 - The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info); its Parquet query path and `parquet-wasm` have been removed.
+
+## Map Viewer and Spatial Filters
+- `MapViewController` imports `maplibre-gl/dist/maplibre-gl.css`. Keep that import. Without it the zoom controls have no styling, the canvas stays in the normal flow and the map grows on every resize, and the draw tools get the wrong pointer coordinates.
+- The map page (`routes/visualisations/map-viewer/+page.svelte`) keeps only the query effect, the area selection and the markup. `MapViewController` (`components/visualisation/MapViewController.svelte.ts`) owns the map, the deck.gl overlay, the popup and the result table. Add map behaviour to the controller, not to the page.
+- deck.gl writes an inline `cursor` on the MapLibre canvas on **every frame** (`@deck.gl/core` `deck.js`, `container.style.cursor = this.props.getCursor(...)`). CSS can never win, not even with `:global` on `.maplibregl-canvas-container`. Change the cursor with the `getCursor` prop of `MapboxOverlay`.
+- `MapboxOverlay.setProps({ layers })` replaces the **whole** layer array. Any other map overlay must use MapLibre sources and layers, not deck.gl layers, or the next data change deletes it.
+- The server supports point-in-polygon. `beacon-core` has a `GeoJsonFilter` (`beacon-core/src/query/filter/geo_json.rs`) that compiles to `st_within_point(st_geojson_as_wkt(<geometry>), lon, lat)`. Wire shape: `{ longitude_query_parameter, latitude_query_parameter, geometry }`. The variant is untagged, so it goes straight into `filters`.
+- Polygon, box and cross section all end as one closed ring, so there is one filter kind. A cross section is a line plus a width; `crossSectionRing` in `geo/spatial-selection.ts` converts it.
+- Always send the bounding box of the polygon beside it, as two `MinMaxFilter`s on the latitude and longitude columns. The server can prune data with those, but not with the polygon test. `compileDraft` derives the box; never store it on a field.
+- `QueryDraft.spatialFilter` holds the area, because it applies to two columns and has no card of its own. `QueryWorkspace.updateActiveSpatialFilter` writes it, and also handles a block that has no draft (share link, JSON editor) by patching `compiled.filters`.
+- Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
+
+## Layer Rule (Important)
+Imports point one way only:
+
+`beacon-api` → `query` / `geo` → `stores` → `components` → `routes`
+
+- `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
+  import a type out of a `.svelte` file. A type that both a component and the domain need belongs in
+  the domain layer. `query/filter-types.ts` exists for that reason: `ParameterFilter.svelte` and
+  `AddFilterDropdown.svelte` declared those types, and `utils.ts` plus `query/draft.ts` had to reach
+  up into a component to get them.
+- `src/lib/stores/*` must never import from `src/lib/components/*`. The persisted shape of a query
+  (`QueryDraft`) is domain, not view.
+- `src/lib/components/*` holds `.svelte` files, plus the `.svelte.ts` runes classes and the barrel
+  `index.ts` files that belong to one component folder. Anything with no Svelte dependency and more
+  than one consumer belongs below, in `query/` or `geo/`.
+- New non-component files under `src/lib/query/*` and `src/lib/geo/*` use kebab-case, matching
+  `stores/` and `beacon-api/`. Components keep PascalCase.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.

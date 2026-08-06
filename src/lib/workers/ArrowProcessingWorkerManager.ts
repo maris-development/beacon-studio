@@ -4,6 +4,7 @@ import * as ApacheArrow from 'apache-arrow';
 import ArrowProcessingWorker from '$lib/workers/ArrowProcessingWorker?worker';
 import type { WorkerRequest, WorkerResponse } from './ArrowProcessingWorker';
 import type { SortDirection } from '@/util-types';
+import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
 
 interface PendingTask {
@@ -11,8 +12,13 @@ interface PendingTask {
 	reject: (reason?: any) => void;
 }
 
-/** How many tables the worker keeps loaded at once (main thread mirrors this). */
-const MAX_LOADED_TABLES = 2;
+/**
+ * How many tables the worker keeps loaded at once (main thread mirrors this).
+ * The user sets the value on the settings page (`workerMaxLoadedTables`).
+ */
+function maxLoadedTables(): number {
+	return getSettings().workerMaxLoadedTables;
+}
 
 /**
  * Main-thread handle to the shared Arrow processing worker.
@@ -90,7 +96,7 @@ export class ArrowProcessingWorkerManager {
 	/**
 	 * Ensures `table` is loaded in the worker under `key`, transferring it at most
 	 * once. Bumps the key to most-recently-used and evicts the oldest table(s) when
-	 * over {@link MAX_LOADED_TABLES}.
+	 * over {@link maxLoadedTables}.
 	 */
 	private async ensureLoaded(key: string, table: ApacheArrow.Table): Promise<void> {
 		if (this.loadedOrder.includes(key)) {
@@ -127,7 +133,7 @@ export class ArrowProcessingWorkerManager {
 
 	/** Evicts least-recently-used tables from the worker, never the one just used. */
 	private evictLoaded(keep: string): void {
-		while (this.loadedOrder.length > MAX_LOADED_TABLES) {
+		while (this.loadedOrder.length > maxLoadedTables()) {
 			const oldest = this.loadedOrder[0];
 			if (oldest === keep) break;
 			this.loadedOrder.shift();

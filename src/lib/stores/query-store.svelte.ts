@@ -26,6 +26,7 @@ import { currentBeaconInstance } from '@/stores/config';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
 import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
+import { getSettings } from '@/stores/settings';
 import { snapshotInstance } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
@@ -36,14 +37,25 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser
  * stable. Mirrors the legacy client's `QUERY_LIMIT`; the per-query `limit` is this
- * divided by the number of selected columns.
+ * divided by the number of selected columns. The user sets the value on the
+ * settings page (`queryCellLimit`).
+ *
+ * Call this at the point of use. A read at module load would keep the value of
+ * the first page load for ever.
  */
-export const QUERY_CELL_LIMIT = 50_000_000;
+export function queryCellLimit(): number {
+	return getSettings().queryCellLimit;
+}
 
-/** Max number of cached datasets kept in memory at once. */
-const MAX_ENTRIES = 4;
+/** Max number of cached datasets kept in memory at once (`memoryCacheMaxEntries`). */
+function maxEntries(): number {
+	return getSettings().memoryCacheMaxEntries;
+}
+
 /** Max total cells across all cached datasets before oldest entries are evicted. */
-const MAX_TOTAL_CELLS = QUERY_CELL_LIMIT * 2;
+function maxTotalCells(): number {
+	return queryCellLimit() * 2;
+}
 
 /** Per-entry snapshot of the in-memory cache, for the cache-info UI. */
 export interface MemoryCacheEntryInfo {
@@ -310,9 +322,9 @@ class QueryStore {
 		entries.reverse(); // cache is insertion-ordered (oldest first); show newest first.
 		return {
 			entryCount: this.cache.size,
-			maxEntries: MAX_ENTRIES,
+			maxEntries: maxEntries(),
 			totalCells: this.totalCells(),
-			maxTotalCells: MAX_TOTAL_CELLS,
+			maxTotalCells: maxTotalCells(),
 			totalBytes,
 			derivedTableCount: this.mapTableCache.size,
 			entries
@@ -439,7 +451,8 @@ class QueryStore {
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;
 		const columnCount = Math.max(1, query.query_parameters?.length ?? 1);
-		const limit = Math.round(QUERY_CELL_LIMIT / columnCount);
+		const cellLimit = queryCellLimit();
+		const limit = Math.round(cellLimit / columnCount);
 		payload.limit = limit;
 
 		// Request the server's default (zstd) Arrow IPC stream by omitting `output`
@@ -475,7 +488,7 @@ class QueryStore {
 			warnings.push('limit_reached');
 			addToast({
 				type: 'warning',
-				message: `The query result reached the ${QUERY_CELL_LIMIT.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete. Refine your query to reduce the result size.`
+				message: `The query result reached the ${cellLimit.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete. Refine your query to reduce the result size.`
 			});
 		}
 
@@ -515,10 +528,10 @@ class QueryStore {
 
 	/** Evicts least-recently-used entries until within the count and cell caps. */
 	private evict(): void {
-		while (this.cache.size > MAX_ENTRIES) {
+		while (this.cache.size > maxEntries()) {
 			if (!this.deleteOldest()) break;
 		}
-		while (this.cache.size > 1 && this.totalCells() > MAX_TOTAL_CELLS) {
+		while (this.cache.size > 1 && this.totalCells() > maxTotalCells()) {
 			if (!this.deleteOldest()) break;
 		}
 	}
