@@ -39,6 +39,39 @@ export interface InstanceRef {
 /** Which collection a record belongs to. */
 export type StoredQueryRole = 'block' | 'saved' | 'history';
 
+/**
+ * The camera of the map viewer. The values match the MapLibre camera options.
+ * `center` is [longitude, latitude].
+ */
+export interface MapCameraState {
+	center: [number, number];
+	zoom: number;
+	bearing: number;
+	pitch: number;
+}
+
+/**
+ * The display state of the map viewer for one query: the column that the map
+ * paints, the range of the legend and the camera.
+ *
+ * This is not part of the query. It never reaches the server, and it never
+ * changes the cache key of a result. Therefore it lives beside `draft` and
+ * `compiled`, and not inside them. A change to it must not drop the result of
+ * the last run.
+ */
+export interface MapViewState {
+	/** The column that the map paints. Null while the user picked none. */
+	dataColumn: string | null;
+	colorScaleMin: number;
+	colorScaleMax: number;
+	camera: MapCameraState | null;
+}
+
+/** The display state of each visualisation page for one query. */
+export interface QueryViewState {
+	map?: MapViewState;
+}
+
 export interface StoredQuery {
 	/** Stable identity. Internal deep-links put this id on the URL as `?q=`. */
 	id: string;
@@ -50,6 +83,11 @@ export interface StoredQuery {
 	/** The runnable query. Null while the draft is incomplete. */
 	compiled: CompiledQuery | null;
 	instance: InstanceRef;
+	/**
+	 * How the visualisation pages show this query. Null for a record that the
+	 * user never opened on the map. See {@link QueryViewState}.
+	 */
+	view: QueryViewState | null;
 	/** The {@link QueryStore} cache key of the last result. Null before the first run. */
 	datasetKey: string | null;
 	createdAt: number;
@@ -110,6 +148,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 		draft,
 		compiled,
 		instance: input.instance ?? snapshotInstance(null),
+		view: input.view ?? null,
 		datasetKey: input.datasetKey ?? null,
 		createdAt: input.createdAt ?? now,
 		updatedAt: input.updatedAt ?? now,
@@ -143,11 +182,19 @@ export function cloneStoredQuery(
 		compiled = Utils.cloneObject(source.compiled);
 	}
 
+	// The copy keeps the map view of the source, as its own object. The user
+	// expects the same map after "duplicate" or "save this query".
+	let view: QueryViewState | null = null;
+	if (source.view) {
+		view = Utils.cloneObject(source.view);
+	}
+
 	return {
 		...source,
 		id: createId(),
 		draft,
 		compiled,
+		view,
 		instance: { ...source.instance },
 		datasetKey: null,
 		createdAt: now,

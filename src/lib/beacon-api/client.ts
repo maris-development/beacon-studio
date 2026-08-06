@@ -514,6 +514,19 @@ export class BeaconClient {
         return queryStore.minMax(entry, column);
     }
 
+    /**
+     * Counts the rows of a cached dataset that fall inside a drawn area. The map
+     * uses it to show the size of an area filter before the filter runs.
+     */
+    static countQueryRowsInRing(
+        entry: DatasetEntry,
+        ring: [number, number][],
+        latitudeColumnName: string,
+        longitudeColumnName: string
+    ): Promise<number> {
+        return queryStore.countInRing(entry, ring, latitudeColumnName, longitudeColumnName);
+    }
+
     /** Deduplicates a cached dataset by lat/lon, returning a new table. */
     static dedupQueryTable(
         entry: DatasetEntry,

@@ -38,6 +38,7 @@ import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
 import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/Legend.svelte';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
+import type { MapCameraState, MapViewState } from '@/stores/stored-query';
 
 /**
  * Decimals to group latitude and longitude by. The user sets the value on the
@@ -69,6 +70,23 @@ export class MapViewController {
 	/** False while a draw tool is active. See {@link setPicking}. */
 	private pickingEnabled = true;
 
+	/**
+	 * The block that {@link viewStateFor} reports on. The page restores the view
+	 * of a block, and writes the view of a block back. Both must name the same
+	 * block. Without this id, the write of the old view could reach the new
+	 * block, because the two effects of the page can run in any order.
+	 */
+	private viewBlockId: string | null = $state(null);
+	/** The camera, followed with the map. Null before the first move. */
+	private camera = $state.raw<MapCameraState | null>(null);
+	/** A camera to apply as soon as the map exists. See {@link applyViewState}. */
+	private pendingCamera: MapCameraState | null = null;
+	/**
+	 * True after a block restored its camera. The next run then keeps that
+	 * camera, and does not fit the map to the data.
+	 */
+	private hasRestoredCamera = false;
+
 	/** The raw query result. */
 	entry = $state.raw<DatasetEntry | null>(null);
 	isLoading = $state(true);
@@ -84,6 +102,8 @@ export class MapViewController {
 	longitudeColumnName = $state('longitude');
 
 	readonly rowCount = $derived(this.entry?.rowCount ?? 0);
+	/** The cache key of the current result. Changes with every new result. */
+	readonly datasetKey = $derived(this.entry?.key ?? null);
 	readonly durationMs = $derived(this.entry?.duration ?? 0);
 	/** True when the query selects both a latitude and a longitude column. */
 	readonly hasCoordinates = $derived.by(() => {
@@ -109,6 +129,10 @@ export class MapViewController {
 		});
 
 		map.addControl(new NavigationControl());
+
+		// Follow the camera, so the page can persist it. `moveend` fires one time
+		// at the end of a pan, a zoom or a `fitBounds`, and not on every frame.
+		map.on('moveend', () => this.readCamera(map));
 		// A GlobeControl does not work with the deck.gl overlay.
 
 		this.overlay = new MapboxOverlay({
@@ -130,6 +154,9 @@ export class MapViewController {
 
 		// Publish the handle last, so a reader never sees a half built map.
 		this.map = map;
+
+		// A block may have restored its camera before the map existed.
+		this.applyCamera();
 	}
 
 	destroy(): void {
@@ -155,6 +182,78 @@ export class MapViewController {
 
 		if (!this.layer) return;
 		this.showDataColumn(true, false);
+	}
+
+	// --------------------------------------------------------------- view state
+
+	/**
+	 * Restore the display state of a block: the painted column, the range of the
+	 * legend and the camera.
+	 *
+	 * Call this method at every change of block, also for a block with no stored
+	 * view. That block gets the defaults back, and does not keep the column of
+	 * the block before it.
+	 */
+	applyViewState(blockId: string | null, view: MapViewState | null | undefined): void {
+		this.viewBlockId = blockId;
+
+		this.selectedDataColumnName = view?.dataColumn ?? undefined;
+		this.colorScaleMin = view?.colorScaleMin ?? SCALE_DEFAULT_MIN;
+		this.colorScaleMax = view?.colorScaleMax ?? SCALE_DEFAULT_MAX;
+
+		// The layer of the block before this one painted another column. Clear the
+		// mark, so the next `showDataColumn` builds a new layer.
+		this.renderedColumn = undefined;
+
+		this.camera = view?.camera ?? null;
+		this.pendingCamera = view?.camera ?? null;
+		this.hasRestoredCamera = !!view?.camera;
+		this.applyCamera();
+	}
+
+	/**
+	 * The display state of a block, for the page to persist. Returns null when
+	 * the map does not hold the state of that block now.
+	 *
+	 * The page reads this method from an effect, and writes the result to the
+	 * active block. The two effects of the page can run in any order. Without the
+	 * id test, a read before {@link applyViewState} would write the view of the
+	 * block before this one onto the new block.
+	 */
+	viewStateFor(blockId: string | null): MapViewState | null {
+		// Read every rune first. Therefore the effect of the caller depends on all
+		// of them, also on a call that returns null.
+		const state: MapViewState = {
+			dataColumn: this.selectedDataColumnName ?? null,
+			colorScaleMin: this.colorScaleMin,
+			colorScaleMax: this.colorScaleMax,
+			camera: this.camera
+		};
+
+		if (!blockId || blockId !== this.viewBlockId) return null;
+		return state;
+	}
+
+	/** Copy the camera of the map into {@link camera}. */
+	private readCamera(map: maplibregl.Map): void {
+		const center = map.getCenter();
+		this.camera = {
+			center: [center.lng, center.lat],
+			zoom: map.getZoom(),
+			bearing: map.getBearing(),
+			pitch: map.getPitch()
+		};
+	}
+
+	/**
+	 * Move the map to {@link pendingCamera}. The method does nothing before
+	 * {@link init} builds the map. `init` calls it again at that moment.
+	 */
+	private applyCamera(): void {
+		const camera = this.pendingCamera;
+		if (!camera || !this.map) return;
+		this.pendingCamera = null;
+		this.map.jumpTo(camera);
 	}
 
 	// -------------------------------------------------------------- query cycle
@@ -247,11 +346,16 @@ export class MapViewController {
 
 		this.isLoading = false;
 
+		// A block with a stored camera keeps it. Only a block with no stored
+		// camera gets a map that fits the data.
+		const fitCamera = !keepCamera && !this.hasRestoredCamera;
+		this.hasRestoredCamera = false;
+
 		// Keep the column that the user picked, if the new result still has it.
 		// The user must not choose it again after every filter change.
 		if (this.selectedDataColumnName) {
 			if (this.availableColumnNames.includes(this.selectedDataColumnName)) {
-				await this.showDataColumn(true, !keepCamera);
+				await this.showDataColumn(true, fitCamera);
 				return;
 			}
 
@@ -260,6 +364,26 @@ export class MapViewController {
 		}
 
 		addToast({ type: 'info', message: 'Select a data column to display on the map.' });
+	}
+
+	/**
+	 * Count the rows of the current result inside a drawn area.
+	 *
+	 * The count comes from `entry.table`, the full result, not from the display
+	 * table. The display table holds one row per grouped coordinate, so it would
+	 * report fewer features than the filter selects.
+	 *
+	 * Returns null when no result is loaded. The work runs in the Arrow worker.
+	 */
+	async countFeaturesInRing(ring: [number, number][]): Promise<number | null> {
+		if (!this.entry || ring.length < 4) return null;
+
+		return BeaconClient.countQueryRowsInRing(
+			this.entry,
+			ring,
+			this.latitudeColumnName,
+			this.longitudeColumnName
+		);
 	}
 
 	// ------------------------------------------------------------ deck.gl layer

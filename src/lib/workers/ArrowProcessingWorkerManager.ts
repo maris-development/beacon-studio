@@ -66,6 +66,7 @@ export class ArrowProcessingWorkerManager {
 				case 'loadTable':
 				case 'unloadTable':
 				case 'getColumnMinMax':
+				case 'countPointsInRing':
 				case 'findSimilarRowsByLatLon':
 					task.resolve(event.data.result);
 					break;
@@ -151,6 +152,29 @@ export class ArrowProcessingWorkerManager {
 	): Promise<{ min: number; max: number }> {
 		await this.ensureLoaded(key, table);
 		return this.sendTask({ action: 'getColumnMinMax', payload: { key, columnName: column } });
+	}
+
+	/**
+	 * Counts the rows inside a closed ring of [longitude, latitude] pairs. The
+	 * caller uses it to preview an area filter before it applies the filter.
+	 */
+	async countPointsInRing(
+		key: string,
+		table: ApacheArrow.Table,
+		ring: [number, number][],
+		latitudeColumnName: string,
+		longitudeColumnName: string
+	): Promise<number> {
+		await this.ensureLoaded(key, table);
+
+		// A ring from the map comes out of Svelte state, so it is a proxy, and
+		// `postMessage` cannot clone a proxy. Copy it to plain arrays first.
+		const plainRing: [number, number][] = ring.map(([lon, lat]) => [Number(lon), Number(lat)]);
+
+		return this.sendTask({
+			action: 'countPointsInRing',
+			payload: { key, ring: plainRing, latitudeColumnName, longitudeColumnName }
+		});
 	}
 
 	async orderTableByColumn(

@@ -1,7 +1,7 @@
 <script module>
 	export const SCALE_DEFAULT_MIN = -1000;
 	export const SCALE_DEFAULT_MAX = 1000;
-	export const COLOR_SCALE_BLIPS = 60;
+	export const COLOR_SCALE_BLIPS = 100;
 </script>
 
 <script lang="ts">
@@ -20,7 +20,17 @@
 		colorScale?: ScaleSequential<string, never>;
 	} = $props();
 
-	let currentDomain: [number, number] = [colorScaleMin, colorScaleMax];
+	/**
+	 * The range that {@link colorScale} uses now. It is null until the effect
+	 * below builds the first scale.
+	 *
+	 * The scale is a function, so no caller can persist it. A caller restores the
+	 * range alone, and this component derives the scale again. Therefore the
+	 * first build must always run, also when the range never changes after the
+	 * mount. A seed of `[colorScaleMin, colorScaleMax]` would skip that build and
+	 * leave the map with no scale.
+	 */
+	let currentDomain: [number, number] | null = null;
 	let currentScaleColors: { color: RGBColor; value: number }[] = $state(getScaleColors());
 
 	$effect(() => {
@@ -45,7 +55,10 @@
 	}
 
 	$effect(() => {
-		if (currentDomain[0] !== colorScaleMin || currentDomain[1] !== colorScaleMax) {
+		const hasNewDomain =
+			!currentDomain || currentDomain[0] !== colorScaleMin || currentDomain[1] !== colorScaleMax;
+
+		if (hasNewDomain) {
 			currentDomain = [colorScaleMin, colorScaleMax];
 
 			if (colorScaleMin < colorScaleMax) {
@@ -85,9 +98,17 @@
 	</div>
 
 	<div class="colors" style="--blips: {COLOR_SCALE_BLIPS};">
-		{#each currentScaleColors as { color, value } (value)}
-			<span class="color" style="background-color: {color};" data-value={value}></span>
-		{/each}
+		<div class="colors-fill" aria-hidden="true">
+			{#each currentScaleColors as { color, value } (value)}
+				<span class="color-fill" style="background-color: {color};"></span>
+			{/each}
+		</div>
+
+		<div class="colors-hover">
+			{#each currentScaleColors as { value } (value)}
+				<span class="color-hit" data-value={value}></span>
+			{/each}
+		</div>
 	</div>
 </div>
 
@@ -100,14 +121,35 @@
 		}
 
 		.colors {
-			display: flex;
-			flex-direction: row;
-			gap: 0;
+			position: relative;
+			overflow: visible;
+			height: 0.75rem;
 
-			.color {
-				width: calc(100% / var(--blips, 100));
-				height: 1em;
+			.colors-fill {
+				display: grid;
+				grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
+				gap: 0;
+				overflow: hidden;
+				border-radius: 0.375rem;
+				height: 100%;
+			}
+
+			.color-fill {
+				height: 100%;
+			}
+
+			.colors-hover {
+				position: absolute;
+				inset: 0;
+				display: grid;
+				grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
+				gap: 0;
+			}
+
+			.color-hit {
 				position: relative;
+				height: 100%;
+
 				&:hover {
 					&:after {
 						content: attr(data-value);
@@ -126,7 +168,7 @@
 						z-index: 3;
 					}
 
-					&:before {
+					&::before {
 						content: '';
 						position: absolute;
 						bottom: calc(100% + 0.5em);

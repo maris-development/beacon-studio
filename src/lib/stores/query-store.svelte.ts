@@ -343,6 +343,22 @@ class QueryStore {
 		return getArrowWorker().getColumnMinMax(entry.key, entry.table, column);
 	}
 
+	/** Counts the rows of a cached dataset inside a ring of [lon, lat] pairs. */
+	countInRing(
+		entry: DatasetEntry,
+		ring: [number, number][],
+		latitudeColumnName: string,
+		longitudeColumnName: string
+	): Promise<number> {
+		return getArrowWorker().countPointsInRing(
+			entry.key,
+			entry.table,
+			ring,
+			latitudeColumnName,
+			longitudeColumnName
+		);
+	}
+
 	/** Deduplicates a cached dataset by lat/lon, returning a new Arrow table. */
 	dedup(
 		entry: DatasetEntry,

@@ -33,10 +33,13 @@
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import Button from '@/components/buttons/Button.svelte';
 	import { Input } from '@/components/ui/input';
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import {
 		defaultCrossSectionWidthKm,
 		describeSelection,
+		formatAreaKm2,
 		isUsableSelection,
+		ringAreaKm2,
 		makeCrossSectionSelection,
 		makeRingSelection,
 		type LngLat,
@@ -50,7 +53,9 @@
 		onApply,
 		canApply = true,
 		disabledReason = '',
-		onDrawingChange
+		onDrawingChange,
+		countFeatures,
+		countKey = null
 	}: {
 		map: maplibregl.Map | null;
 		selection?: SpatialSelection | null;
@@ -62,6 +67,13 @@
 		disabledReason?: string;
 		/** Reports a running draw action, so the page can stop the point picking. */
 		onDrawingChange?: (drawing: boolean) => void;
+		/**
+		 * Counts the features of the current result inside the ring. The component
+		 * shows the count beside the area label. Null means "no result loaded".
+		 */
+		countFeatures?: (ring: LngLat[]) => Promise<number | null>;
+		/** Identifies the counted result. A new value counts the area again. */
+		countKey?: string | null;
 	} = $props();
 
 	/**
@@ -76,6 +88,10 @@
 	const PREVIEW_SOURCE = 'spatial-selection-preview';
 	const PREVIEW_FILL_LAYER = `${PREVIEW_SOURCE}-fill`;
 	const PREVIEW_LINE_LAYER = `${PREVIEW_SOURCE}-line`;
+	const PREVIEW_CENTRE_LAYER = `${PREVIEW_SOURCE}-centre`;
+
+	/** Milliseconds to wait after the last shape change before the count runs. */
+	const COUNT_DEBOUNCE_MS = 250;
 
 	/** The Terra Draw mode name for each tool. */
 	const DRAW_MODES: Record<SpatialSelectionMode, string> = {
@@ -89,6 +105,12 @@
 	let ready = $state(false);
 	let activeTool: SpatialSelectionMode | null = $state(null);
 	let widthKm = $state(defaultCrossSectionWidthKm());
+
+	/** The features of the current result inside the area. Null while unknown. */
+	let featureCount: number | null = $state(null);
+	let isCounting = $state(false);
+	/** Identifies the newest count, so a late answer of an old ring falls away. */
+	let countToken = 0;
 
 	const shapeStyle = {
 		fillColor: '#2563eb' as const,
@@ -115,11 +137,51 @@
 		renderPreview(selection);
 	});
 
+	/**
+	 * Count the features in the area, off the main thread.
+	 *
+	 * The effect tracks the ring, so a new shape and a new width both start a new
+	 * count. A short wait keeps the width control smooth while the user drags it.
+	 * Every result carries the ring it belongs to, so a slow count of an old ring
+	 * cannot overwrite a newer one.
+	 */
+	$effect(() => {
+		const ring = selection?.ring;
+
+		// `countKey` names the result. It is null without one, and a new value
+		// counts the same area again.
+		if (!countFeatures || !countKey || !isUsableSelection(selection)) {
+			featureCount = null;
+			isCounting = false;
+			return;
+		}
+
+		isCounting = true;
+		const token = ++countToken;
+		const timer = setTimeout(() => runCount(ring!, token), COUNT_DEBOUNCE_MS);
+
+		return () => clearTimeout(timer);
+	});
+
 	onDestroy(() => {
 		draw?.stop();
 		draw = null;
 		ready = false;
 	});
+
+	async function runCount(ring: LngLat[], token: number) {
+		try {
+			const count = await countFeatures!(ring);
+			if (token !== countToken) return;
+			featureCount = count;
+		} catch (error) {
+			console.error('Failed to count the features in the area:', error);
+			if (token !== countToken) return;
+			featureCount = null;
+		} finally {
+			if (token === countToken) isCounting = false;
+		}
+	}
 
 	function initDraw(target: maplibregl.Map) {
 		draw = new TerraDraw({
@@ -189,6 +251,8 @@
 
 	/** A new width re-derives the band around the same centre line. */
 	function applyWidth(value: number) {
+		if (!Number.isFinite(value) || value <= 0) return;
+
 		widthKm = value;
 
 		if (selection?.mode === 'cross-section' && selection.line) {
@@ -208,6 +272,9 @@
 			id: PREVIEW_FILL_LAYER,
 			type: 'fill',
 			source: PREVIEW_SOURCE,
+			// Without the filter this layer also fills the centre line: a fill layer
+			// closes a LineString and paints the area inside it.
+			filter: ['==', ['geometry-type'], 'Polygon'],
 			paint: { 'fill-color': shapeStyle.fillColor, 'fill-opacity': shapeStyle.fillOpacity }
 		});
 
@@ -215,10 +282,29 @@
 			id: PREVIEW_LINE_LAYER,
 			type: 'line',
 			source: PREVIEW_SOURCE,
+			filter: ['==', ['geometry-type'], 'Polygon'],
 			paint: { 'line-color': shapeStyle.outlineColor, 'line-width': shapeStyle.outlineWidth }
+		});
+
+		// The centre line of a cross section, dashed, inside the band.
+		target.addLayer({
+			id: PREVIEW_CENTRE_LAYER,
+			type: 'line',
+			source: PREVIEW_SOURCE,
+			filter: ['==', ['geometry-type'], 'LineString'],
+			paint: {
+				'line-color': shapeStyle.outlineColor,
+				'line-width': 1.5,
+				'line-dasharray': [2, 2]
+			}
 		});
 	}
 
+	/**
+	 * Draw the selection: the ring that the filter uses, plus the centre line of a
+	 * cross section. The band and the line both come from the selection, so a new
+	 * width redraws both.
+	 */
 	function renderPreview(current: SpatialSelection | null) {
 		const source = map?.getSource(PREVIEW_SOURCE) as maplibregl.GeoJSONSource | undefined;
 		if (!source) return;
@@ -228,22 +314,75 @@
 			return;
 		}
 
-		source.setData({
-			type: 'FeatureCollection',
-			features: [
-				{
-					type: 'Feature',
-					properties: {},
-					geometry: { type: 'Polygon', coordinates: [current!.ring] }
-				}
-			]
-		});
+		const features: GeoJSON.Feature[] = [
+			{
+				type: 'Feature',
+				properties: {},
+				geometry: { type: 'Polygon', coordinates: [current!.ring] }
+			}
+		];
+
+		if (current!.mode === 'cross-section' && current!.line && current!.line.length >= 2) {
+			features.push({
+				type: 'Feature',
+				properties: {},
+				geometry: { type: 'LineString', coordinates: current!.line }
+			});
+		}
+
+		source.setData({ type: 'FeatureCollection', features });
 	}
 
 	const applyTitle = $derived(canApply ? 'Filter the query on this area' : disabledReason);
+	/** The size of the drawn area. Empty while no area is usable. */
+	const areaLabel = $derived(
+		isUsableSelection(selection) ? formatAreaKm2(ringAreaKm2(selection!.ring)) : ''
+	);
 </script>
 
 <div class="map-draw-tools">
+
+	{#if activeTool === 'cross-section' || selection?.mode === 'cross-section'}
+		<label class="width-row">
+			<span>Width</span>
+			<input
+				class="width-slider"
+				type="range"
+				min="0.5"
+				max="100"
+				step="0.5"
+				value={widthKm}
+				oninput={(event) => applyWidth(Number(event.currentTarget.value))}
+			/>
+			<Input
+				type="number"
+				min="0.1"
+				step="0.1"
+				value={widthKm}
+				oninput={(event) => applyWidth(Number(event.currentTarget.value))}
+			/>
+			<span>km</span>
+		</label>
+	{/if}
+
+	{#if selection}
+		<p class="selection-label">
+			<span>{describeSelection(selection)}</span>
+
+			{#if areaLabel}
+				<span class="area">{areaLabel}</span>
+			{/if}
+
+			{#if isCounting}
+				<span class="count">
+					<LoadingSpinner size="12px" ringColor="var(--muted-foreground)" />
+					counting features...
+				</span>
+			{:else if featureCount !== null}
+				<span class="count">{featureCount.toLocaleString()} features in this area</span>
+			{/if}
+		</p>
+	{/if}
 	<div class="tool-row">
 		<Button
 			variant={activeTool === 'polygon' ? 'default' : 'outline'}
@@ -272,27 +411,7 @@
 			<SplineIcon size={16} />
 			Cross section
 		</Button>
-	</div>
 
-	{#if activeTool === 'cross-section' || selection?.mode === 'cross-section'}
-		<label class="width-row">
-			<span>Width</span>
-			<Input
-				type="number"
-				min="0.1"
-				step="0.1"
-				value={widthKm}
-				oninput={(event) => applyWidth(Number(event.currentTarget.value))}
-			/>
-			<span>km</span>
-		</label>
-	{/if}
-
-	{#if selection}
-		<p class="selection-label">{describeSelection(selection)}</p>
-	{/if}
-
-	<div class="tool-row">
 		<Button
 			variant="outline"
 			title="Remove the area"
@@ -341,14 +460,39 @@
 			gap: 0.5rem;
 			font-size: 0.85rem;
 
-			:global(input) {
-				width: 6rem;
+			:global(input[type='number']) {
+				width: 5rem;
+			}
+
+			.width-slider {
+				width: 8rem;
 			}
 		}
 
 		.selection-label {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: 0.15rem;
 			font-size: 0.85rem;
 			color: var(--muted-foreground);
+			margin: 0;
+
+			span:not(:last-of-type) {
+				&:after {
+					content: '•';
+					display: inline-block;
+					margin: 0 0.15rem;
+				}
+			}
+
+			span {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				gap: 0.35rem;
+				font-weight: 500;
+			}
 		}
 	}
 </style>

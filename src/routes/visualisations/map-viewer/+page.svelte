@@ -111,9 +111,11 @@
 		}));
 		if (!block || !query) return;
 
-		// The saved area of this block belongs on the map again.
+		// The saved area and the saved map view of this block belong on the map
+		// again. A block with no saved view gets the defaults back.
 		if (!isSameBlock) {
 			selection = block.draft?.spatialFilter ?? null;
+			map.applyViewState(block.id, block.view?.map);
 		}
 
 		// Show a cached result at once if the block already has one.
@@ -121,6 +123,19 @@
 
 		// An edit of the same block keeps the camera where the user put it.
 		map.runAndShowQuery(query, block.id, isSameBlock);
+	});
+
+	// Keep the display state of the map with the block: the painted column, the
+	// range of the legend and the camera. Therefore a visit to the table or the
+	// chart page, and a reload, bring the same map back.
+	//
+	// `viewStateFor` returns null while the map still holds the state of another
+	// block. The write goes untracked: it replaces the block object, and a
+	// tracked read of that object would run this effect again.
+	$effect(() => {
+		const state = map.viewStateFor(activeBlockId);
+		if (!state) return;
+		untrack(() => workspace.updateActiveMapView(state));
 	});
 
 	/** Write the drawn area into the query. The effect above then re-runs it. */
@@ -197,6 +212,8 @@
 							canApply={map.hasCoordinates}
 							disabledReason="The query must select a latitude and a longitude column."
 							onDrawingChange={(drawing) => map.setPicking(!drawing)}
+							countFeatures={(ring) => map.countFeaturesInRing(ring)}
+							countKey={map.datasetKey}
 						/>
 					</div>
 				{/if}

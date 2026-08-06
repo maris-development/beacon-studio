@@ -135,6 +135,58 @@ function normalise(x: number, y: number): [number, number] {
     return [x / length, y / length];
 }
 
+/** The mean radius of the earth, in kilometres. */
+const EARTH_RADIUS_KM = 6371.0088;
+
+/**
+ * The area of a closed ring, in square kilometres.
+ *
+ * The formula is the spherical excess of the polygon, so the value stays correct
+ * for a large area and at a high latitude. A ring with less than four points has
+ * no area.
+ */
+export function ringAreaKm2(ring: LngLat[]): number {
+    const closed = closeRing(ring);
+    if (closed.length < 4) return 0;
+
+    const toRadians = Math.PI / 180;
+    let total = 0;
+
+    for (let i = 0; i < closed.length - 1; i++) {
+        const [lon1, lat1] = closed[i];
+        const [lon2, lat2] = closed[i + 1];
+
+        // Keep the step on the short way round, so a ring over the antimeridian
+        // does not wrap the globe.
+        let deltaLon = (lon2 - lon1) * toRadians;
+        if (deltaLon > Math.PI) deltaLon -= 2 * Math.PI;
+        if (deltaLon < -Math.PI) deltaLon += 2 * Math.PI;
+
+        total += deltaLon * (2 + Math.sin(lat1 * toRadians) + Math.sin(lat2 * toRadians));
+    }
+
+    return Math.abs((total * EARTH_RADIUS_KM * EARTH_RADIUS_KM) / 2);
+}
+
+/** A short label for an area in square kilometres. */
+export function formatAreaKm2(areaKm2: number): string {
+    if (areaKm2 === 0) return '0 km²';
+
+    let digits = 0;
+    if (areaKm2 < 10) {
+        digits = 2;
+    } else if (areaKm2 < 100) {
+        digits = 1;
+    }
+
+    const value = areaKm2.toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+    });
+
+    return `${value} km²`;
+}
+
 /** The bounding box of a ring. */
 export function ringBounds(ring: LngLat[]): Bounds | null {
     if (ring.length === 0) return null;

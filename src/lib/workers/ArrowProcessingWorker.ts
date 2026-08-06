@@ -118,6 +118,25 @@ type BuildMapPointTableResponse = {
 	result: Uint8Array; // IPC format of the deduplicated table with a geometry column
 };
 
+// -- count points inside a drawn ring ---------------------------------------
+type CountPointsInRingRequestPayload = {
+	key: string;
+	/** A closed ring of [longitude, latitude] pairs. */
+	ring: [number, number][];
+	latitudeColumnName: string;
+	longitudeColumnName: string;
+};
+type CountPointsInRingRequest = {
+	id: number;
+	action: 'countPointsInRing';
+	payload: CountPointsInRingRequestPayload;
+};
+type CountPointsInRingResponse = {
+	id: number;
+	action: 'countPointsInRing';
+	result: number;
+};
+
 // -- get column min and max -------------------------------------------------
 type GetColumnMinMaxRequestPayload = {
 	key: string;
@@ -148,7 +167,8 @@ export type WorkerRequest =
 	| OrderTableByColumnRequest
 	| GetColumnMinMaxRequest
 	| DeduplicateTableRequest
-	| BuildMapPointTableRequest;
+	| BuildMapPointTableRequest
+	| CountPointsInRingRequest;
 
 export type WorkerResponse =
 	| LoadTableResponse
@@ -158,6 +178,7 @@ export type WorkerResponse =
 	| GetColumnMinMaxResponse
 	| DeduplicateTableResponse
 	| BuildMapPointTableResponse
+	| CountPointsInRingResponse
 	| ErrorResponse;
 
 /** Looks up a loaded table, throwing a descriptive error when it isn't cached. */
@@ -244,6 +265,20 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
 					action,
 					result: ApacheArrow.tableToIPC(withGeometry)
 				} satisfies BuildMapPointTableResponse);
+				break;
+			}
+
+			case 'countPointsInRing': {
+				self.postMessage({
+					id,
+					action,
+					result: ApacheArrowUtils.countPointsInRing(
+						getTable(payload.key),
+						payload.ring,
+						payload.latitudeColumnName,
+						payload.longitudeColumnName
+					)
+				} satisfies CountPointsInRingResponse);
 				break;
 			}
 

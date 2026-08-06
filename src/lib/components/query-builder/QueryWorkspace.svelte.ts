@@ -45,7 +45,12 @@ import {
 	setActiveBlockId
 } from '@/stores/query-blocks';
 import type { ResolvedUrlQuery } from '@/stores/query-library';
-import { cloneStoredQuery, snapshotInstance, type StoredQuery } from '@/stores/stored-query';
+import {
+	cloneStoredQuery,
+	snapshotInstance,
+	type MapViewState,
+	type StoredQuery
+} from '@/stores/stored-query';
 import { currentBeaconInstance } from '@/stores/config';
 import { get } from 'svelte/store';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
@@ -280,6 +285,33 @@ export class QueryWorkspace {
 		compiled.filters = filters;
 
 		queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
+	}
+
+	/**
+	 * Write the display state of the map viewer to the active block: the painted
+	 * column, the range of the legend and the camera.
+	 *
+	 * This state is not part of the query. Therefore the method keeps
+	 * `datasetKey` and `rowCount`. A change of the legend must not drop the
+	 * result of the last run.
+	 *
+	 * The method does nothing when the state did not change. The map viewer
+	 * calls it from an effect, so this guard stops a write loop.
+	 */
+	updateActiveMapView(state: MapViewState): void {
+		const block = this.activeBlock;
+		if (!block) return;
+
+		if (JSON.stringify(block.view?.map) === JSON.stringify(state)) return;
+
+		// A block with no stored view, and no column and no camera to store, stays
+		// untouched. A range alone restores nothing. This keeps a short visit to
+		// the map viewer out of the storage.
+		if (!block.view?.map && !state.dataColumn && !state.camera) return;
+
+		queryBlocks.update(block.id, {
+			view: { ...block.view, map: Utils.cloneObject(state) }
+		});
 	}
 
 	/** Compile the draft of a block. Returns null if the draft is incomplete. */
