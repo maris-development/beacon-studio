@@ -18,8 +18,7 @@
 
 import * as ApacheArrow from 'apache-arrow';
 import { get } from 'svelte/store';
-import type { QueryInput } from '@beacon/client';
-import { getArrowDecoder } from '@/beacon-api/arrow-zstd';
+import { getArrowDecoder, type QueryInput } from '@beacon/client';
 import { makeBeaconClient } from '@/beacon-api/client';
 import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { currentBeaconInstance } from '@/stores/config';
@@ -433,9 +432,9 @@ class QueryStore {
 	}
 
 	/**
-	 * Rehydrates a dataset from the OPFS tier: decodes the persisted (uncompressed)
-	 * Arrow IPC bytes and rebuilds the entry from the sidecar metadata. Returns
-	 * `undefined` on any miss or decode failure (which falls through to a fetch).
+	 * Rehydrates a dataset from the OPFS tier: decodes the persisted (zstd) Arrow IPC
+	 * bytes and rebuilds the entry from the sidecar metadata. Returns `undefined` on
+	 * any miss or decode failure (which falls through to a fetch).
 	 */
 	private async restore(query: CompiledQuery, key: string): Promise<DatasetEntry | undefined> {
 		const hit = await opfsArrowCache.get(key);
@@ -478,11 +477,11 @@ class QueryStore {
 		delete payload.output;
 
 		const start = performance.now();
-		// Decode via the SDK's `queryBatches`: it reads the zstd Arrow IPC stream with
-		// the SDK's own (correct) streaming decoder, so we don't re-implement zstd/IPC
-		// decoding here. It also surfaces the query id. Runtime batches are real
-
-		// apache-arrow RecordBatches (arrow is deduped to one copy).
+		// `queryRaw` hands back the untouched Response, so we keep both the query-id
+		// header and the raw bytes for the OPFS tier. Decoding then goes through the
+		// SDK's own `getArrowDecoder`, which registers the zstd codec and the buffer
+		// alignment patch, so we never re-implement zstd/IPC decoding here. The Table
+		// is a real apache-arrow Table (arrow is deduped to one copy).
 		const response = await client.queryRaw(payload as unknown as QueryInput);
 
 		// console.log('headers', [...response.headers.entries()]);
