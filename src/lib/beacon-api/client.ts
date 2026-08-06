@@ -1,11 +1,9 @@
 
-import type { Table as ArrowTable } from 'apache-arrow';
 import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
 import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
-import type { SortDirection } from '@/util-types';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
 
 import {
@@ -42,12 +40,17 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *     {@link getCachedSchema}): host-keyed memoization that survives navigation.
  *  3. **Query execution + result cache** (the `static` query methods below): the
  *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
- *     (memory + OPFS) result cache and off-main-thread transforms. These are
- *     `static` because the result cache is app-wide and keyed by the live Beacon
- *     instance, independent of any single client instance's host.
+ *     (memory + OPFS) result cache. These are `static` because the result cache is
+ *     app-wide and keyed by the live Beacon instance, independent of any single
+ *     client instance's host.
  *
- * Prefer this facade everywhere; do not import `@beacon/client` or the query-store
- * module directly from app code.
+ * Prefer this facade for anything that talks to a Beacon instance; do not import
+ * `@beacon/client` directly from app code.
+ *
+ * Transforms of a fetched result (sort, dedup, min/max, geometry) are *not* here.
+ * They do no I/O, and they key the worker's loaded tables by the dataset cache
+ * key, so they live on `queryStore` (`@/stores/query-store.svelte`). Call it
+ * directly for those.
  */
 export class BeaconClient {
     host: string;
@@ -495,85 +498,6 @@ export class BeaconClient {
      */
     static setQueryCacheEnabled(enabled: boolean): void {
         queryStore.setCacheEnabled(enabled);
-    }
-
-    /** Sorts a cached dataset by a column (off-main-thread), returning a new table. */
-    static sortQueryTable(
-        entry: DatasetEntry,
-        column: string,
-        direction: SortDirection
-    ): Promise<ArrowTable> {
-        return queryStore.sort(entry, column, direction);
-    }
-
-    /** Computes a column's numeric min/max for a cached dataset. */
-    static queryColumnMinMax(
-        entry: DatasetEntry,
-        column: string
-    ): Promise<{ min: number; max: number }> {
-        return queryStore.minMax(entry, column);
-    }
-
-    /**
-     * Counts the rows of a cached dataset that fall inside a drawn area. The map
-     * uses it to show the size of an area filter before the filter runs.
-     */
-    static countQueryRowsInRing(
-        entry: DatasetEntry,
-        ring: [number, number][],
-        latitudeColumnName: string,
-        longitudeColumnName: string
-    ): Promise<number> {
-        return queryStore.countInRing(entry, ring, latitudeColumnName, longitudeColumnName);
-    }
-
-    /** Deduplicates a cached dataset by lat/lon, returning a new table. */
-    static dedupQueryTable(
-        entry: DatasetEntry,
-        latitudeColumnName?: string,
-        longitudeColumnName?: string,
-        amountOfRows?: number,
-        decimals?: number
-    ): Promise<ArrowTable> {
-        return queryStore.dedup(
-            entry,
-            latitudeColumnName,
-            longitudeColumnName,
-            amountOfRows,
-            decimals
-        );
-    }
-
-    /** Finds rows near a lat/lon in a cached dataset. */
-    static findSimilarQueryRows(
-        entry: DatasetEntry,
-        latLon: [number, number],
-        groupByDecimals?: number,
-        latitudeColumnName?: string,
-        longitudeColumnName?: string,
-        maxRows?: number
-    ): Promise<unknown[]> {
-        return queryStore.findSimilar(
-            entry,
-            latLon,
-            groupByDecimals,
-            latitudeColumnName,
-            longitudeColumnName,
-            maxRows
-        );
-    }
-
-    /**
-     * Returns the map display table for a dataset (deduplicated by lat/lon with a
-     * GeoArrow point geometry column), memoized per dataset + lat/lon + precision.
-     */
-    static createQueryDisplayDataset(
-        entry: DatasetEntry,
-        latitudeColumnName: string,
-        longitudeColumnName: string,
-        groupByDecimals: number = 3
-    ): Promise<ArrowTable> {
-        return queryStore.mapTable(entry, latitudeColumnName, longitudeColumnName, groupByDecimals);
     }
 
     /**

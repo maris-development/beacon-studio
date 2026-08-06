@@ -8,7 +8,8 @@
 	import * as ApacheArrow from 'apache-arrow';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
-	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
+	import type { DatasetEntry } from '@/beacon-api/client';
+	import { queryStore } from '@/stores/query-store.svelte';
 	import { addToast } from '@/stores/toasts';
 	import type { Column, SortDirection } from '@/util-types';
 
@@ -56,12 +57,12 @@
 		showPage();
 	}
 
-	// Sorting is delegated to the shared worker via BeaconClient.sortQueryTable
+	// Sorting is delegated to the shared worker via queryStore.sort
 	async function onChangeSort(columnKey: string, direction: SortDirection) {
 		if (!entry) return;
 		sorting = true;
 		try {
-			const sorted = await BeaconClient.sortQueryTable(entry, columnKey, direction);
+			const sorted = await queryStore.sort(entry, columnKey, direction);
 			pagination.setData(sorted);
 			showPage();
 		} catch (error) {

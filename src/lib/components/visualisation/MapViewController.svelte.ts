@@ -29,6 +29,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import * as ApacheArrow from 'apache-arrow';
 import { unmount } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
+import { queryStore } from '@/stores/query-store.svelte';
 import type { CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
 import { ApacheArrowUtils } from '@/arrow-utils';
 import { getSettings } from '@/stores/settings';
@@ -330,7 +331,7 @@ export class MapViewController {
 		}
 
 		try {
-			this.table = await BeaconClient.createQueryDisplayDataset(
+			this.table = await queryStore.mapTable(
 				this.entry,
 				this.latitudeColumnName,
 				this.longitudeColumnName,
@@ -378,7 +379,7 @@ export class MapViewController {
 	async countFeaturesInRing(ring: [number, number][]): Promise<number | null> {
 		if (!this.entry || ring.length < 4) return null;
 
-		return BeaconClient.countQueryRowsInRing(
+		return queryStore.countInRing(
 			this.entry,
 			ring,
 			this.latitudeColumnName,
@@ -433,7 +434,7 @@ export class MapViewController {
 			this.colorScaleMin === SCALE_DEFAULT_MIN &&
 			this.colorScaleMax === SCALE_DEFAULT_MAX
 		) {
-			const minMax = await BeaconClient.queryColumnMinMax(this.entry, this.selectedDataColumnName);
+			const minMax = await queryStore.minMax(this.entry, this.selectedDataColumnName);
 			this.colorScaleMin = minMax.min;
 			this.colorScaleMax = minMax.max;
 		}
@@ -490,8 +491,7 @@ export class MapViewController {
 
 		this.popupContent = Utils.renderComponent(MapPopupContent, {
 			rowData: info.object.toArray(),
-			table: this.entry.table,
-			datasetKey: this.entry.key,
+			entry: this.entry,
 			latitudeColumnName: this.latitudeColumnName,
 			longitudeColumnName: this.longitudeColumnName,
 			groupByDecimals: groupByDecimals()

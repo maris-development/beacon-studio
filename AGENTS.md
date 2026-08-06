@@ -92,7 +92,8 @@ This file is a quick operational guide for coding agents working in this reposit
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
 - Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Use it; do not repeat the match.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
-- The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info); its Parquet query path and `parquet-wasm` have been removed.
+- The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info), plus the `static` execution and cache-control facade (`ensureQuery`, `peekQuery*`, `invalidateQueryCache`, cache stats/toggle). Its Parquet query path and `parquet-wasm` have been removed.
+- `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
 
 ## Map Viewer and Spatial Filters
 - `MapViewController` imports `maplibre-gl/dist/maplibre-gl.css`. Keep that import. Without it the zoom controls have no styling, the canvas stays in the normal flow and the map grows on every resize, and the draw tools get the wrong pointer coordinates.
@@ -139,7 +140,8 @@ Imports point one way only:
   Inline expressions in Svelte markup, where a statement is not possible, are exempt.
 
 ## Performance and Safety Patterns
-- Use the shared worker via `getArrowWorker()` (or the `queryStore` transform methods) for sorting/dedup/min-max/geometry; it keeps tables loaded by key (load-once) across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.
+- Transform a cached result through the `queryStore` methods (`sort`, `minMax`, `countInRing`, `dedup`, `findSimilar`, `mapTable`), not through `getArrowWorker()` directly. They key the worker's loaded tables by the dataset cache key, which is what makes the load-once transfer correct, and `mapTable` is memoized and purged on eviction. Reach for `getArrowWorker()` only for a table that is not a `DatasetEntry`.
+- One shared worker keeps tables loaded by key across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.
 - Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
 - `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including `markBlockRun`/`markBlockRunning` and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.

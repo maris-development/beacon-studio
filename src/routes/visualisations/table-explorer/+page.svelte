@@ -7,6 +7,7 @@
 	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
+	import { queryStore } from '@/stores/query-store.svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import type { Column, SortDirection } from '@/util-types';
 	import { resolveUrlQuery } from '@/stores/query-library';
@@ -161,7 +162,7 @@
 		isLoading = true;
 
 		try {
-			const sortedTable = await BeaconClient.sortQueryTable(entry, columnKey, direction);
+			const sortedTable = await queryStore.sort(entry, columnKey, direction);
 
 			virtualPaginationData.setData(sortedTable);
 

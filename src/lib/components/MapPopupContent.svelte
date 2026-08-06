@@ -2,26 +2,27 @@
 	import { ApacheArrowUtils } from '@/arrow-utils';
 	import type { Column, SortDirection } from '@/util-types';
 	import { VirtualPaginationData } from '@/utils';
-	import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
-	import * as ApacheArrow from 'apache-arrow';
+	import type { DatasetEntry } from '@/beacon-api/client';
+	import { queryStore } from '@/stores/query-store.svelte';
 	import { onMount } from 'svelte';
 	import DataTable from './visualisation/DataTable.svelte';
 
 	let {
 		rowData,
-		table,
-		datasetKey,
+		entry,
 		latitudeColumnName,
 		longitudeColumnName,
 		groupByDecimals = 3 // Default to 3 decimals for grouping
 	}: {
 		rowData: unknown[];
-		table: ApacheArrow.Table;
-		datasetKey: string;
+		/** The cached result the clicked point belongs to. */
+		entry: DatasetEntry;
 		latitudeColumnName: string;
 		longitudeColumnName: string;
 		groupByDecimals?: number;
 	} = $props();
+
+	const table = entry.table;
 
 	let columns: Column[] = $state([]);
 	let virtualSchemaData: VirtualPaginationData<number[]> = new VirtualPaginationData<number[]>([]);
@@ -48,9 +49,8 @@
 			Number(record[longitudeColumnName])
 		];
 
-		const otherData = getArrowWorker().findSimilarRowsByLatLon(
-			datasetKey,
-			table,
+		const otherData = queryStore.findSimilar(
+			entry,
 			currentLatLon,
 			groupByDecimals,
 			latitudeColumnName,
