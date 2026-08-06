@@ -183,7 +183,7 @@ export class BeaconClient {
     }
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
-        const url = new URL(`${this.host}/api/query/explain`);
+        const url = new URL(`${this.host}/api/explain-query`);
 
         const request_info: RequestInit = {
             method: 'POST',
@@ -206,7 +206,7 @@ export class BeaconClient {
     }
 
     async getQueryFunctions(): Promise<Array<FunctionNameObject>> {
-        const request: Array<FunctionNameObject> = await this.fetch(`${this.host}/api/query/functions`);
+        const request: Array<FunctionNameObject> = await this.fetch(`${this.host}/api/functions`);
 
         return request;
     }
@@ -301,6 +301,12 @@ export class BeaconClient {
         return response;
     }
 
+    // TODO: `/api/table-config` is retired. Beacon 2.0 routes only
+    // `/api/admin/table-config`, which needs super-user credentials and answers a
+    // `{ message }` stub instead of a TableDefinition. This method therefore always
+    // fails. It has no callers today. Either delete it and {@link getPresetTables},
+    // or rebuild both on `/api/table-schema` (columns) plus
+    // `SHOW EXTENSIONS FOR <table>` (extensions), which is what the SDK now advises.
     async getTableConfig(table: string): Promise<TableDefinition> {
         const url = new URL(`${this.host}/api/table-config`);
 
@@ -311,6 +317,8 @@ export class BeaconClient {
         return response;
     }
 
+    // TODO: broken while {@link getTableConfig} is broken — see the note there. Also
+    // unused today.
     async getPresetTables(): Promise<Array<TableDefinition>> {
         const table_names = await this.getTables();
 

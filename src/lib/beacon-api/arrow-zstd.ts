@@ -23,9 +23,10 @@
 
 import type { ArrowRecordBatch, ArrowTable } from '@beacon/client';
 
-// TODO: the `ArrowModule` structural type below is copied from the SDK; a future
-// `@beacon/client` release is expected to export these types, so replace the local
-// copy with the package's exports once available.
+// The `ArrowModule` type and the setup below are copied from the SDK's `src/arrow.ts`.
+// As of @beacon/client 2.0.0-rc.2 that module stays internal: the package entry point
+// exports only `rowsFromTable`, `rowsFromBatch`, and the `ArrowTable`/`ArrowRecordBatch`
+// types, so `getArrowDecoder` is not reachable. Drop this copy once the SDK exports it.
 
 /** Same flag the SDK stamps on the patched prototype, so we never double-patch. */
 const ALIGN_PATCH_FLAG = '__beaconAligned8';
