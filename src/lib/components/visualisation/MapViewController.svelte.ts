@@ -19,8 +19,6 @@
  */
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { GeoArrowScatterplotLayer } from '@geoarrow/deck.gl-layers';
-import { color as d3Color } from 'd3-color';
-import type { ScaleSequential } from 'd3-scale';
 import maplibregl, { NavigationControl } from 'maplibre-gl';
 // Required. Without it the controls have no styling, the canvas stays in the
 // normal flow (so the map grows on every resize), and the draw tools get the
@@ -37,7 +35,8 @@ import { addToast } from '@/stores/toasts';
 import { Utils } from '@/utils';
 import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
-import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/Legend.svelte';
+import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend-defaults';
+import { DEFAULT_PALETTE_ID, getRgbTable, loadColormaps, paletteIndex } from '@/colors/palettes';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
 
@@ -50,6 +49,12 @@ import type { MapCameraState, MapViewState } from '@/stores/stored-query';
  */
 function groupByDecimals(): number {
 	return getSettings().mapGroupByDecimals;
+}
+
+/** Drop the float noise from a value that goes into a number field. */
+function roundForDisplay(value: number): number {
+	if (!Number.isFinite(value)) return 0;
+	return Number(value.toPrecision(6));
 }
 
 export class MapViewController {
@@ -96,7 +101,18 @@ export class MapViewController {
 
 	colorScaleMin: number = $state(SCALE_DEFAULT_MIN);
 	colorScaleMax: number = $state(SCALE_DEFAULT_MAX);
-	colorScale: ScaleSequential<string, never> | undefined = $state(undefined);
+	/** The id of the colormap that paints the points. See `colors/palettes.ts`. */
+	palette: string = $state(DEFAULT_PALETTE_ID);
+	paletteReverse: boolean = $state(false);
+
+	/**
+	 * The colours of {@link palette}, as bytes. `getFillColor` runs once per row
+	 * on every redraw, so it reads this table instead of building a colour.
+	 *
+	 * It is a plain field, not a rune: the layer is rebuilt through
+	 * `updateTriggers`, and reactivity here would redraw the map twice.
+	 */
+	private rgbTable: Uint8Array = getRgbTable(DEFAULT_PALETTE_ID);
 
 	/** Column names of the current query. Empty until a query runs. */
 	latitudeColumnName = $state('latitude');
@@ -158,6 +174,9 @@ export class MapViewController {
 
 		// A block may have restored its camera before the map existed.
 		this.applyCamera();
+
+		// The real palette arrives after the colormap file. Repaint then.
+		loadColormaps().then(() => this.redrawColors());
 	}
 
 	destroy(): void {
@@ -201,6 +220,11 @@ export class MapViewController {
 		this.selectedDataColumnName = view?.dataColumn ?? undefined;
 		this.colorScaleMin = view?.colorScaleMin ?? SCALE_DEFAULT_MIN;
 		this.colorScaleMax = view?.colorScaleMax ?? SCALE_DEFAULT_MAX;
+		// An unknown palette id is not repaired here. `getRgbTable` falls back to
+		// the default for it, so an old record still paints.
+		this.palette = view?.palette ?? DEFAULT_PALETTE_ID;
+		this.paletteReverse = view?.paletteReverse === true;
+		this.rgbTable = getRgbTable(this.palette);
 
 		// The layer of the block before this one painted another column. Clear the
 		// mark, so the next `showDataColumn` builds a new layer.
@@ -228,6 +252,8 @@ export class MapViewController {
 			dataColumn: this.selectedDataColumnName ?? null,
 			colorScaleMin: this.colorScaleMin,
 			colorScaleMax: this.colorScaleMax,
+			palette: this.palette,
+			paletteReverse: this.paletteReverse,
 			camera: this.camera
 		};
 
@@ -435,8 +461,12 @@ export class MapViewController {
 			this.colorScaleMax === SCALE_DEFAULT_MAX
 		) {
 			const minMax = await queryStore.minMax(this.entry, this.selectedDataColumnName);
-			this.colorScaleMin = minMax.min;
-			this.colorScaleMax = minMax.max;
+
+			// Round the range for the legend inputs. A float column gives values
+			// like 27.856000900268555, which fills the field and tells the user
+			// nothing. Six digits keep every range this app shows apart.
+			this.colorScaleMin = roundForDisplay(minMax.min);
+			this.colorScaleMax = roundForDisplay(minMax.max);
 		}
 
 		return new GeoArrowScatterplotLayer({
@@ -453,14 +483,27 @@ export class MapViewController {
 			autoHighlight: this.pickingEnabled,
 			highlightColor: [255, 255, 0, 128],
 			updateTriggers: {
-				getFillColor: [this.colorScale, this.selectedDataColumnName]
+				getFillColor: [
+					this.palette,
+					this.paletteReverse,
+					this.colorScaleMin,
+					this.colorScaleMax,
+					this.selectedDataColumnName
+				]
 			}
 		});
 	}
 
-	/** Redraw after the Legend changed the colour scale. */
+	/**
+	 * Redraw after the Legend changed the palette or the range.
+	 *
+	 * The colour table is rebuilt here, and not inside `getFillColor`, so the
+	 * lookup per row stays a plain array read.
+	 */
 	redrawColors(): void {
-		if (!this.colorScale || !this.layer) return;
+		this.rgbTable = getRgbTable(this.palette);
+
+		if (!this.layer) return;
 		this.layer.setNeedsRedraw();
 		this.showDataColumn(true, false);
 	}
@@ -475,15 +518,18 @@ export class MapViewController {
 		const value = row[this.selectedDataColumnName!];
 		if (typeof value !== 'number' || isNaN(value)) return [0, 0, 0, 0];
 
-		const color = d3Color(this.colorScale!(value))?.rgb();
-		if (!color) return [0, 0, 0, 0];
+		const offset =
+			paletteIndex(value, this.colorScaleMin, this.colorScaleMax, this.paletteReverse) * 3;
 
-		return [color.r, color.g, color.b, 192];
+		return [this.rgbTable[offset], this.rgbTable[offset + 1], this.rgbTable[offset + 2], 192];
 	}
 
 	// -------------------------------------------------------------------- popup
 
-	private onPointClick(info: { object?: { toArray: () => unknown[] }; coordinate?: number[] }): void {
+	private onPointClick(info: {
+		object?: { toArray: () => unknown[] };
+		coordinate?: number[];
+	}): void {
 		if (!this.entry || !this.popup || !this.map || !info.object || !info.coordinate) return;
 
 		this.destroyPopupContent();

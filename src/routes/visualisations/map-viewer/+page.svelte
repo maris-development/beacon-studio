@@ -9,6 +9,7 @@
 	import { BeaconClient } from '@/beacon-api/client';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import Legend from '@/components/legend/Legend.svelte';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
 	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
@@ -66,17 +67,20 @@
 	// the effect after every run, forever. Track primitives instead: the block id
 	// and a content key for the compiled query.
 	const activeBlockId = $derived(workspace.activeBlockId);
-	const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+	const compiledQuery: CompiledQuery | null = $derived(
+		QueryWorkspace.getQuery(workspace.activeBlock)
+	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
 	let lastRunKey: string | null = $state(null);
 	/** The block of the last run. A new block may move the camera; a re-run may not. */
 	let lastRunBlockId: string | null = $state(null);
 
+	// Repaint when the Legend changes the palette or the range. The reads below
+	// are the dependencies; the redraw itself rebuilds the colour table.
 	$effect(() => {
-		if (map.colorScale) {
-			map.redrawColors();
-		}
+		void [map.palette, map.paletteReverse, map.colorScaleMin, map.colorScaleMax];
+		map.redrawColors();
 	});
 
 	$effect(() => {
@@ -168,38 +172,41 @@
 				{#if compiledQuery}
 					<div class="map-info-wrapper">
 						<div class="my-ctrl-group">
-							<p>
+							<p class="summary">
 								{map.rowCount} rows selected in {Utils.formatSecondsToReadableTime(
 									map.durationMs / 1000
 								)}.
 							</p>
 
-							<Select.Root
-								type="single"
-								name="dataColumn"
-								bind:value={map.selectedDataColumnName}
-							>
-								<Select.Trigger
-									>{map.selectedDataColumnName || 'Select a data column to display'}</Select.Trigger
-								>
-								<Select.Content>
-									<Select.Group>
-										<Select.Label>Available columns</Select.Label>
-										{#each map.availableColumnNames as column, index (index)}
-											<Select.Item value={column} label={column}>
-												{column}
-											</Select.Item>
-										{/each}
-									</Select.Group>
-								</Select.Content>
-							</Select.Root>
+							<div class="field">
+								<Label size="sm" for="dataColumn">Data column</Label>
 
-							<br />
+								<Select.Root
+									type="single"
+									name="dataColumn"
+									bind:value={map.selectedDataColumnName}
+								>
+									<Select.Trigger id="dataColumn" class="full-width"
+										>{map.selectedDataColumnName || 'Select a column'}</Select.Trigger
+									>
+									<Select.Content>
+										<Select.Group>
+											<Select.Label>Available columns</Select.Label>
+											{#each map.availableColumnNames as column, index (index)}
+												<Select.Item value={column} label={column}>
+													{column}
+												</Select.Item>
+											{/each}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
+							</div>
 
 							<Legend
 								bind:colorScaleMin={map.colorScaleMin}
 								bind:colorScaleMax={map.colorScaleMax}
-								bind:colorScale={map.colorScale}
+								bind:palette={map.palette}
+								bind:paletteReverse={map.paletteReverse}
 							/>
 						</div>
 					</div>
@@ -289,8 +296,35 @@
 					border-radius: 0.5rem;
 					border: 1px solid var(--border);
 					background-color: white;
-					padding: 0.5rem;
+					padding: 0.75rem;
 					margin: 0.5rem;
+
+					// The box floats over the map, so it takes a fixed width. Without
+					// one a long column name or a raw data value stretches it across
+					// the map.
+					width: 17rem;
+					display: flex;
+					flex-direction: column;
+					gap: 0.625rem;
+
+					.summary {
+						font-size: 0.8125rem;
+						color: var(--muted-foreground, #6b7280);
+						margin: 0;
+					}
+
+					.field {
+						display: flex;
+						flex-direction: column;
+						gap: 0.1875rem;
+						min-width: 0;
+					}
+
+					// The select trigger sizes to its content by default, which leaves
+					// it ragged beside the palette picker.
+					:global(.full-width) {
+						width: 100%;
+					}
 				}
 			}
 

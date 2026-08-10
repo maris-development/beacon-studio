@@ -21,6 +21,7 @@
 
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { BeaconInstance } from '@/stores/config';
+import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';
 import { Utils } from '@/utils';
@@ -64,12 +65,21 @@ export interface MapViewState {
 	dataColumn: string | null;
 	colorScaleMin: number;
 	colorScaleMax: number;
+	/**
+	 * The id of the colormap that paints the points. See `colors/palettes.ts`.
+	 * An unknown id falls back to the default, so an old record still draws.
+	 */
+	palette: string;
+	/** Turn the palette around. A depth column often needs this. */
+	paletteReverse: boolean;
 	camera: MapCameraState | null;
 }
 
 /** The display state of each visualisation page for one query. */
 export interface QueryViewState {
 	map?: MapViewState;
+	/** The plots of the chart explorer. See {@link ChartViewState}. */
+	chart?: ChartViewState;
 }
 
 export interface StoredQuery {
@@ -182,8 +192,9 @@ export function cloneStoredQuery(
 		compiled = Utils.cloneObject(source.compiled);
 	}
 
-	// The copy keeps the map view of the source, as its own object. The user
-	// expects the same map after "duplicate" or "save this query".
+	// The copy keeps the view state of the source — the map and the plots — as
+	// its own object. The user expects the same map and the same charts after
+	// "duplicate" or "save this query".
 	let view: QueryViewState | null = null;
 	if (source.view) {
 		view = Utils.cloneObject(source.view);

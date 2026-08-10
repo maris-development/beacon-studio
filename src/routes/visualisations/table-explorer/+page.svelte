@@ -35,118 +35,120 @@
 	let isLoading = $state(true);
 
 	const workspace = $state(new QueryWorkspace());
-    let client: BeaconClient | null = $state(null);
+	let client: BeaconClient | null = $state(null);
 
-    onMount(() => {
-        const instance = $currentBeaconInstance;
-        if (instance) client = BeaconClient.new(instance);
+	onMount(() => {
+		const instance = $currentBeaconInstance;
+		if (instance) client = BeaconClient.new(instance);
 
-        // A deep-link opens one more block. `?q=` comes from "open in workbench"
-        // and brings the saved builder state. `?query=` comes from a share link.
-        workspace.openFromUrl(resolveUrlQuery(page.url));
+		// A deep-link opens one more block. `?q=` comes from "open in workbench"
+		// and brings the saved builder state. `?query=` comes from a share link.
+		workspace.openFromUrl(resolveUrlQuery(page.url));
 
-        return () => workspace.destroy();
-    });
+		return () => workspace.destroy();
+	});
 
-    const queryActions = $derived(getDefaultQueryActions(workspace, client));
+	const queryActions = $derived(getDefaultQueryActions(workspace, client));
 
-    // `workspace.activeBlock` is a new object on every write to the block
-    // collection — including our own `markBlockRun` below. Tracking that object
-    // (or `compiledQuery` derived from it) as an effect dependency would re-fire
-    // the effect after every run, forever. Track primitives instead: the block id
-    // and a content key for the compiled query.
-    const activeBlockId = $derived(workspace.activeBlockId);
-    const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
-    const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+	// `workspace.activeBlock` is a new object on every write to the block
+	// collection — including our own `markBlockRun` below. Tracking that object
+	// (or `compiledQuery` derived from it) as an effect dependency would re-fire
+	// the effect after every run, forever. Track primitives instead: the block id
+	// and a content key for the compiled query.
+	const activeBlockId = $derived(workspace.activeBlockId);
+	const compiledQuery: CompiledQuery | null = $derived(
+		QueryWorkspace.getQuery(workspace.activeBlock)
+	);
+	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
-    let lastRunKey: string | null = $state(null);
+	let lastRunKey: string | null = $state(null);
 
-    // Re-run only when the selected block, or its compiled query content, actually changes.
-    $effect(() => {
-        const blockId = activeBlockId;
-        const key = queryKey;
+	// Re-run only when the selected block, or its compiled query content, actually changes.
+	$effect(() => {
+		const blockId = activeBlockId;
+		const key = queryKey;
 
-        if (!blockId || !key) {
-            entry = null;
-            columns = [];
-            displayRows = [];
-            totalRows = 0;
-            isLoading = false;
-            lastRunKey = null;
-            return;
-        }
+		if (!blockId || !key) {
+			entry = null;
+			columns = [];
+			displayRows = [];
+			totalRows = 0;
+			isLoading = false;
+			lastRunKey = null;
+			return;
+		}
 
-        const runKey = `${blockId}:${key}`;
-        if (runKey === lastRunKey) return;
-        lastRunKey = runKey;
+		const runKey = `${blockId}:${key}`;
+		if (runKey === lastRunKey) return;
+		lastRunKey = runKey;
 
-        // Read the live block/query untracked: we only want blockId+key above to
-        // drive re-runs, not every downstream write this triggers.
-        const { block, query } = untrack(() => ({
-            block: workspace.activeBlock,
-            query: compiledQuery
-        }));
-        if (!block || !query) return;
+		// Read the live block/query untracked: we only want blockId+key above to
+		// drive re-runs, not every downstream write this triggers.
+		const { block, query } = untrack(() => ({
+			block: workspace.activeBlock,
+			query: compiledQuery
+		}));
+		if (!block || !query) return;
 
-        // Show a cached result at once if the block already has one.
-        entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
-        if (entry) prepareTableForDisplay();
+		// Show a cached result at once if the block already has one.
+		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+		if (entry) prepareTableForDisplay();
 
-        executeAndDisplayQuery(block, query);
-    });
+		executeAndDisplayQuery(block, query);
+	});
 
-    async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
-        isLoading = true;
-        workspace.markBlockRunning(block.id, true);
+	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
+		isLoading = true;
+		workspace.markBlockRunning(block.id, true);
 
-        try {
-            entry = await BeaconClient.ensureQuery(query, block.id);
-            workspace.markBlockRun(block.id, entry.rowCount);
+		try {
+			entry = await BeaconClient.ensureQuery(query, block.id);
+			workspace.markBlockRun(block.id, entry.rowCount);
 
-            if (entry.rowCount === 0) {
-                isLoading = false;
-                columns = [];
-                displayRows = [];
-                totalRows = 0;
-                addToast({
-                    type: 'info',
-                    message: `Query executed successfully but returned no data.`
-                });
-                return;
-            }
+			if (entry.rowCount === 0) {
+				isLoading = false;
+				columns = [];
+				displayRows = [];
+				totalRows = 0;
+				addToast({
+					type: 'info',
+					message: `Query executed successfully but returned no data.`
+				});
+				return;
+			}
 
-            prepareTableForDisplay();
-        } catch (error) {
-            console.error('Failed to execute query:', error);
-            isLoading = false;
-            workspace.markBlockRunning(block.id, false);
-            addToast({
-                type: 'error',
-                message: `Failed to execute query: ${error.message}`
-            });
-        }
-    }
+			prepareTableForDisplay();
+		} catch (error) {
+			console.error('Failed to execute query:', error);
+			isLoading = false;
+			workspace.markBlockRunning(block.id, false);
+			addToast({
+				type: 'error',
+				message: `Failed to execute query: ${error.message}`
+			});
+		}
+	}
 
-    function prepareTableForDisplay() {
-        if (!table) {
-            addToast({
-                type: 'error',
-                message: 'No table data available to display.'
-            });
-            return;
-        }
+	function prepareTableForDisplay() {
+		if (!table) {
+			addToast({
+				type: 'error',
+				message: 'No table data available to display.'
+			});
+			return;
+		}
 
-        totalRows = table.numRows;
-        virtualPaginationData.setData(table);
+		totalRows = table.numRows;
+		virtualPaginationData.setData(table);
 
-        columns = table.schema.fields.map((field) => ({
-            key: field.name,
-            header: Utils.ucfirst(field.name),
-            sortable: field.typeId != ApacheArrow.Type.Struct // Disable sorting for geometry columns
-        }));
+		columns = table.schema.fields.map((field) => ({
+			key: field.name,
+			header: Utils.ucfirst(field.name),
+			sortable: field.typeId != ApacheArrow.Type.Struct // Disable sorting for geometry columns
+		}));
 
-        getPage();
-    }
+		getPage();
+	}
 
 	function onPageChange(newPageIndex: number) {
 		pageIndex = newPageIndex;
@@ -191,17 +193,11 @@
 
 		isLoading = false;
 	}
-
-	
-
-	
-
 </script>
 
 <svelte:head>
 	<title>Table explorer - Beacon Studio</title>
 </svelte:head>
-
 
 <Cookiecrumb
 	crumbs={[
@@ -217,7 +213,6 @@
 		<VisualisationTabs />
 
 		<div class="content page-container">
-
 			{#if !compiledQuery}
 				<p>Select a valid query above to see its data.</p>
 			{:else}
@@ -226,10 +221,11 @@
 						{#if table?.numRows == null}
 							Loading rows…
 						{:else}
-							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(queryDurationMs / 1000)}.
+							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
+								queryDurationMs / 1000
+							)}.
 						{/if}
 					</p>
-
 
 					<div class="page-size-input">
 						<label for="page-size">Rows per page:</label>
@@ -295,9 +291,7 @@
 				.page-size-input {
 					// width: 4rem;
 				}
-
 			}
-
 		}
 	}
 </style>

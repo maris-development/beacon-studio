@@ -1,32 +1,41 @@
 <script lang="ts">
-	import * as ApacheArrow from 'apache-arrow';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { Utils } from '@/utils';
-	import { addToast } from '@/stores/toasts';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-	import GraphViewer from '@/components/graph-viewer/GraphViewer.svelte';
+	import { BeaconClient } from '@/beacon-api/client';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
 	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
-	import type { StoredQuery } from '@/stores/stored-query';
 	import { currentBeaconInstance } from '@/stores/config';
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
-
-	let entry = $state.raw<DatasetEntry | null>(null);
-	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
-	let queryDurationMs: number | null = $derived(entry?.duration ?? 0);
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
+	import PlotCanvas from '@/components/plots/PlotCanvas.svelte';
+	import PlotConfigPanel from '@/components/plots/PlotConfigPanel.svelte';
+	import PlotTabs from '@/components/plots/PlotTabs.svelte';
+	import { ChartExplorerController } from '@/components/plots/ChartExplorerController.svelte';
+	import { type ChartViewState } from '@/plots/plot-config';
 
 	const workspace = $state(new QueryWorkspace());
-
 	let client: BeaconClient | null = $state(null);
+
+	// The controller owns the result, the plots and the numbers behind them. The
+	// page keeps only the query effect and the markup.
+	const charts = new ChartExplorerController(
+		(running) => {
+			const id = workspace.activeBlockId;
+			if (id) workspace.markBlockRunning(id, running);
+		},
+		(rows) => {
+			const id = workspace.activeBlockId;
+			if (id) workspace.markBlockRun(id, rows);
+		}
+	);
 
 	onMount(() => {
 		const instance = $currentBeaconInstance;
-	
 		if (instance) client = BeaconClient.new(instance);
 
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
@@ -44,10 +53,14 @@
 	// the effect after every run, forever. Track primitives instead: the block id
 	// and a content key for the compiled query.
 	const activeBlockId = $derived(workspace.activeBlockId);
-	const compiledQuery: CompiledQuery | null = $derived(QueryWorkspace.getQuery(workspace.activeBlock));
+	const compiledQuery: CompiledQuery | null = $derived(
+		QueryWorkspace.getQuery(workspace.activeBlock)
+	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
 	let lastRunKey: string | null = $state(null);
+	/** The block of the last run. A new block brings its own plots. */
+	let lastRunBlockId: string | null = $state(null);
 
 	// Re-run only when the selected block, or its compiled query content, actually changes.
 	$effect(() => {
@@ -55,14 +68,17 @@
 		const key = queryKey;
 
 		if (!blockId || !key) {
-			entry = null;
+			charts.clearQueryResult();
 			lastRunKey = null;
 			return;
 		}
 
 		const runKey = `${blockId}:${key}`;
 		if (runKey === lastRunKey) return;
+
+		const isSameBlock = blockId === lastRunBlockId;
 		lastRunKey = runKey;
+		lastRunBlockId = blockId;
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
@@ -72,47 +88,84 @@
 		}));
 		if (!block || !query) return;
 
-		// Show a cached result at once if the block already has one.
-		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
+		// The saved plots of this block belong on the page again. A block with no
+		// saved plots gets one default plot.
+		if (!isSameBlock) {
+			charts.applyViewState(block.id, block.view?.chart, block.draft?.spatialFilter ?? null);
+		} else {
+			// The same block can carry a new area, for example after the user applied
+			// a cross section on the map. A cross section plot reads that line.
+			charts.setSelection(block.draft?.spatialFilter ?? null);
+		}
 
-		executeAndDisplayQuery(block, query);
+		// Show a cached result at once if the block already has one.
+		charts.showQueryFromCache(block.datasetKey);
+
+		charts.runAndShowQuery(query, block.id);
 	});
 
-	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
-		workspace.markBlockRunning(block.id, true);
+	// Keep the plots with the block. Therefore a visit to the map or the table
+	// page, and a reload, bring the same plots back.
+	//
+	// The write is delayed. It serialises every block into localStorage, which is
+	// far too much work for one keystroke in a title field. The delay collects a
+	// burst of edits into one write.
+	//
+	// `viewStateFor` returns null while the controller still holds the plots of
+	// another block.
+	const PERSIST_DELAY_MS = 400;
 
-		try {
-			entry = await BeaconClient.ensureQuery(query, block.id);
-			workspace.markBlockRun(block.id, entry.rowCount);
+	let persistTimer: ReturnType<typeof setTimeout> | null = null;
+	let pendingWrite: { blockId: string; state: ChartViewState } | null = null;
 
-			if (entry.rowCount === 0) {
-				addToast({
-					type: 'info',
-					message: `Query executed successfully but returned no data.`
-				});
-				return;
-			}
+	$effect(() => {
+		const blockId = activeBlockId;
+		const state = charts.viewStateFor(blockId);
+		if (!blockId || !state) return;
 
-			prepareTableForDisplay();
-		} catch (error) {
-			console.error('Failed to execute query:', error);
-			workspace.markBlockRunning(block.id, false);
-			addToast({
-				type: 'error',
-				message: `Failed to execute query: ${error.message}`
-			});
-		}
+		// The block id travels with the state. By the time the write runs, the user
+		// can have selected another block, and this state belongs to the old one.
+		pendingWrite = { blockId, state };
+
+		if (persistTimer) clearTimeout(persistTimer);
+		persistTimer = setTimeout(flushPersist, PERSIST_DELAY_MS);
+	});
+
+	onDestroy(flushPersist);
+
+	function flushPersist() {
+		if (persistTimer) clearTimeout(persistTimer);
+		persistTimer = null;
+
+		const write = pendingWrite;
+		pendingWrite = null;
+		if (!write) return;
+
+		untrack(() => workspace.updateChartView(write.blockId, write.state));
 	}
 
-	function prepareTableForDisplay() {
-		if (!table) {
-			addToast({
-				type: 'error',
-				message: 'No table data available to display.'
-			});
-			return;
-		}
+	// Rebuild the numbers of the plot when the choices behind them change.
+	//
+	// The reads below are the dependencies. The work itself is deferred past the
+	// next paint, because it walks every row: at 600k rows a synchronous build
+	// here would hold the navigation and leave the user on the previous page,
+	// with a frozen window, until the whole chart was ready.
+	$effect(() => {
+		void [charts.seriesKey, charts.contourKey, charts.table];
+		untrack(() => charts.schedulePrepare());
+	});
 
+	onDestroy(() => charts.cancelPrepare());
+
+	// -- export --------------------------------------------------------------
+
+	let plotCanvas: ReturnType<typeof PlotCanvas> | null = $state(null);
+
+	function exportPng() {
+		const plot = charts.activePlot;
+		if (!plot || !plotCanvas) return;
+
+		plotCanvas.exportPng(plot.title || plot.name);
 	}
 </script>
 
@@ -137,39 +190,48 @@
 			{#if !compiledQuery}
 				<p>Select a valid query above to see it on a chart.</p>
 			{:else}
-				<div class="header">
-					<p>
-						{#if table?.numRows == null}
-							Loading rows…
-						{:else}
-							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
-								queryDurationMs / 1000
-							)}.
-						{/if}
-					</p>
+				<p class="result-summary">
+					{#if charts.isLoading && !charts.entry}
+						Loading rows…
+					{:else}
+						{charts.rowCount} rows selected in {Utils.formatSecondsToReadableTime(
+							charts.durationMs / 1000
+						)}{#if charts.series?.skippedRows}, {charts.series.skippedRows} without a value on every
+							axis{/if}.
+					{/if}
+				</p>
 
-					<p>
-						Below you can find a <a
-							href="https://perspective.finos.org/"
-							target="blank"
-							rel="noopener noreferrer">Perspective viewer</a
-						> that allows you to explore the query results interactively. By default it opens a table, but
-						you can adjust it's behaviour by modifying the viewer's configuration options using the 'Configure'
-						button in the top right.
-					</p>
+				<PlotTabs controller={charts} onExport={exportPng} />
+
+				<div class="plot-layout">
+					<PlotConfigPanel controller={charts} />
+
+					<div class="plot-area">
+						{#if charts.activePlot}
+							<PlotCanvas
+								bind:this={plotCanvas}
+								plot={charts.activePlot}
+								series={charts.series}
+								contours={charts.contours}
+								message={charts.message}
+								onBusyChange={(busy) => charts.setCanvasBusy(busy)}
+							/>
+						{/if}
+
+						{#if charts.isLoading || charts.isBusy}
+							<div class="loading-overlay">
+								<LoadingSpinner></LoadingSpinner>
+
+								{#if charts.isLoading}
+									<h3>Running the query…</h3>
+								{:else}
+									<h3>Drawing the plot…</h3>
+								{/if}
+							</div>
+						{/if}
+					</div>
 				</div>
 			{/if}
-
-			<!--
-				GraphViewer must stay mounted once created: `@finos/perspective-viewer`
-				registers its custom element inside `init_client()`, which GraphViewer
-				calls from `onMount`. A second mount re-registers the same tag name and
-				throws. Toggling this with `{#if}` (destroy/recreate) is what caused
-				that; a `hidden` class only hides it instead.
-			-->
-			<div class="viewer" class:hidden={!compiledQuery}>
-				<GraphViewer class="flex-1" {table} />
-			</div>
 		</div>
 	</div>
 </div>
@@ -181,6 +243,7 @@
 		gap: 1rem;
 		padding: 1rem;
 		flex-grow: 1;
+		min-height: 0;
 	}
 
 	.vertical-tabs-wrapper {
@@ -193,21 +256,55 @@
 		.page-container {
 			display: flex;
 			flex-direction: column;
-			gap: 1rem;
+			gap: 0.75rem;
+			min-height: 0;
 		}
 
 		.content {
 			flex-grow: 1;
 		}
+	}
 
-		.viewer {
-			flex-grow: 1;
+	.result-summary {
+		font-size: 0.875rem;
+	}
+
+	.plot-layout {
+		flex-grow: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: row;
+		gap: 1rem;
+	}
+
+	.plot-area {
+		flex-grow: 1;
+		min-width: 0;
+		min-height: 0;
+		// Stack the canvas and the overlay in one cell, instead of positioning the
+		// overlay absolutely.
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr);
+
+		// `:global` is required. Svelte scopes a bare `> *` to this component, and
+		// the root element of PlotCanvas carries that component's scope class, not
+		// this one. The rule would skip the canvas, which would then land in an
+		// implicit second row and sit below the spinner instead of behind it.
+		> :global(*) {
+			grid-column: 1;
+			grid-row: 1;
+		}
+
+		.loading-overlay {
 			display: flex;
 			flex-direction: column;
-
-			&.hidden {
-				display: none;
-			}
+			gap: 1rem;
+			align-items: center;
+			justify-content: center;
+			background-color: rgba(255, 255, 255, 0.6);
+			border-radius: 0.5rem;
+			z-index: 2;
 		}
 	}
 </style>

@@ -55,6 +55,7 @@ import { currentBeaconInstance } from '@/stores/config';
 import { get } from 'svelte/store';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
+import { isPlotRenderable, type ChartViewState } from '@/plots/plot-config';
 
 /** Small run/cache summary used by the block cards. */
 export type BlockRunState = {
@@ -311,6 +312,36 @@ export class QueryWorkspace {
 
 		queryBlocks.update(block.id, {
 			view: { ...block.view, map: Utils.cloneObject(state) }
+		});
+	}
+
+	/**
+	 * Write the plots of the chart explorer to one block.
+	 *
+	 * The rules are the ones of {@link updateActiveMapView}. This state is not
+	 * part of the query, so the method keeps `datasetKey` and `rowCount`. A new
+	 * palette must not drop the result of the last run.
+	 *
+	 * The method does nothing when the state did not change. The chart page calls
+	 * it from an effect, so this guard stops a write loop.
+	 *
+	 * A block with no stored chart state, and no configured plot to store, stays
+	 * untouched. Therefore a short visit to the chart page writes nothing.
+	 *
+	 * The block is named, and not taken from the selection. The chart page delays
+	 * this write until the user stops typing, and by then the active block can be
+	 * another one.
+	 */
+	updateChartView(blockId: string, state: ChartViewState): void {
+		const block = this.blocks.find((candidate) => candidate.id === blockId);
+		if (!block) return;
+
+		if (JSON.stringify(block.view?.chart) === JSON.stringify(state)) return;
+
+		if (!block.view?.chart && !state.plots.some(isPlotRenderable)) return;
+
+		queryBlocks.update(block.id, {
+			view: { ...block.view, chart: Utils.cloneObject(state) }
 		});
 	}
 

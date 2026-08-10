@@ -1,123 +1,148 @@
-<script module>
-	export const SCALE_DEFAULT_MIN = -1000;
-	export const SCALE_DEFAULT_MAX = 1000;
-	export const COLOR_SCALE_BLIPS = 100;
-</script>
+<!--
+	The colour legend of the map viewer: the palette, the range it spans, and a
+	strip that reads the two together.
 
+	The component holds no scale. It reports a palette id, a direction and a
+	range, and the map builds its own colour table from those. A function cannot
+	be persisted, so a stored view can only carry those four values anyway.
+
+	The strip is built from the same `samplePalette` call as the colour bar of the
+	chart explorer. Therefore a palette looks the same on both pages.
+-->
 <script lang="ts">
-	import { color, type RGBColor } from 'd3-color';
-	import { interpolatePuOr } from 'd3-scale-chromatic';
-	import { scaleSequential, type ScaleSequential } from 'd3-scale';
 	import { Input } from '../ui/input';
+	import { Label } from '../ui/label';
+	import PalettePicker from '@/components/palette/PalettePicker.svelte';
+	import { loadColormaps, samplePalette } from '@/colors/palettes';
+	import { COLOR_SCALE_BLIPS, SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from './legend-defaults';
+	import { onMount } from 'svelte';
 
 	let {
 		colorScaleMin = $bindable(SCALE_DEFAULT_MIN),
 		colorScaleMax = $bindable(SCALE_DEFAULT_MAX),
-		colorScale = $bindable(undefined)
+		palette = $bindable(''),
+		paletteReverse = $bindable(false)
 	}: {
 		colorScaleMin?: number;
 		colorScaleMax?: number;
-		colorScale?: ScaleSequential<string, never>;
+		palette?: string;
+		paletteReverse?: boolean;
 	} = $props();
 
 	/**
-	 * The range that {@link colorScale} uses now. It is null until the effect
-	 * below builds the first scale.
-	 *
-	 * The scale is a function, so no caller can persist it. A caller restores the
-	 * range alone, and this component derives the scale again. Therefore the
-	 * first build must always run, also when the range never changes after the
-	 * mount. A seed of `[colorScaleMin, colorScaleMax]` would skip that build and
-	 * leave the map with no scale.
+	 * Flips once the colormap file has loaded. The strip below reads the palette
+	 * synchronously, so it must be built again after the load.
 	 */
-	let currentDomain: [number, number] | null = null;
-	let currentScaleColors: { color: RGBColor; value: number }[] = $state(getScaleColors());
+	let palettesLoaded = $state(false);
 
-	$effect(() => {
-		if (colorScale) {
-			currentScaleColors = getScaleColors();
-		}
+	onMount(() => {
+		loadColormaps().then(() => {
+			palettesLoaded = true;
+		});
 	});
 
-	function getScaleColors(length = COLOR_SCALE_BLIPS) {
-		if (!colorScale) {
-			return [];
-		}
-		const colorScaleSize = colorScaleMax - colorScaleMin;
-		const stepSize = colorScaleSize / (length - 1);
+	/**
+	 * The blocks of the strip, with the value each one stands for.
+	 *
+	 * A reversed palette is drawn reversed, so the strip matches the map. The
+	 * values still run from the minimum to the maximum, left to right.
+	 */
+	const strip = $derived.by(() => {
+		void palettesLoaded;
 
-		const colors: { color: RGBColor; value: number }[] = [];
-		for (let i = 0; i < length; i++) {
-			const value = colorScaleMin + i * stepSize;
-			colors.push({ color: color(colorScale(value)).rgb(), value: Math.round(value * 100) / 100 });
-		}
-		return colors;
-	}
+		const colors = samplePalette(palette, COLOR_SCALE_BLIPS, paletteReverse);
+		const span = colorScaleMax - colorScaleMin;
+		const step = span / (COLOR_SCALE_BLIPS - 1);
 
-	$effect(() => {
-		const hasNewDomain =
-			!currentDomain || currentDomain[0] !== colorScaleMin || currentDomain[1] !== colorScaleMax;
-
-		if (hasNewDomain) {
-			currentDomain = [colorScaleMin, colorScaleMax];
-
-			if (colorScaleMin < colorScaleMax) {
-				colorScale = scaleSequential<string, never>(interpolatePuOr).domain([
-					colorScaleMin,
-					colorScaleMax
-				]);
-			} else {
-				colorScale = scaleSequential<string, never>(interpolatePuOr).domain([
-					colorScaleMax,
-					colorScaleMin
-				]);
-			}
-		}
+		return colors.map((color, index) => ({
+			color,
+			value: Math.round((colorScaleMin + index * step) * 100) / 100
+		}));
 	});
 </script>
 
-<div class="legend-range">
-	<div class="input-wrapper">
-		<Input
-			type="number"
-			name="colorScaleMin"
-			id="colorScaleMin"
-			min={SCALE_DEFAULT_MIN}
-			max={SCALE_DEFAULT_MAX}
-			bind:value={colorScaleMin}
+<div class="legend">
+	<div class="field">
+		<Label size="sm" for="legendPalette">Palette</Label>
+		<PalettePicker
+			id="legendPalette"
+			value={palette}
+			reverse={paletteReverse}
+			onSelect={(id) => (palette = id)}
 		/>
+	</div>
 
-		<Input
-			type="number"
-			name="colorScaleMax"
-			id="colorScaleMax"
-			min={SCALE_DEFAULT_MIN}
-			max={SCALE_DEFAULT_MAX}
-			bind:value={colorScaleMax}
-		/>
+	<div class="reverse">
+		<input id="legendReverse" type="checkbox" bind:checked={paletteReverse} />
+		<Label for="legendReverse">Reverse the palette</Label>
+	</div>
+
+	<div class="range">
+		<div class="field">
+			<Label size="sm" for="colorScaleMin">Minimum</Label>
+			<Input
+				type="number"
+				step="any"
+				name="colorScaleMin"
+				id="colorScaleMin"
+				bind:value={colorScaleMin}
+				title="The value at the left of the scale"
+			/>
+		</div>
+
+		<div class="field">
+			<Label size="sm" for="colorScaleMax">Maximum</Label>
+			<Input
+				type="number"
+				step="any"
+				name="colorScaleMax"
+				id="colorScaleMax"
+				bind:value={colorScaleMax}
+				title="The value at the right of the scale"
+			/>
+		</div>
 	</div>
 
 	<div class="colors" style="--blips: {COLOR_SCALE_BLIPS};">
 		<div class="colors-fill" aria-hidden="true">
-			{#each currentScaleColors as { color, value } (value)}
-				<span class="color-fill" style="background-color: {color};"></span>
+			{#each strip as block, index (index)}
+				<span class="color-fill" style="background-color: {block.color};"></span>
 			{/each}
 		</div>
 
 		<div class="colors-hover">
-			{#each currentScaleColors as { value } (value)}
-				<span class="color-hit" data-value={value}></span>
+			{#each strip as block, index (index)}
+				<span class="color-hit" data-value={block.value}></span>
 			{/each}
 		</div>
 	</div>
 </div>
 
 <style lang="scss">
-	.legend-range {
-		.input-wrapper {
+	.legend {
+		display: flex;
+		flex-direction: column;
+		gap: 0.625rem;
+
+		.field {
 			display: flex;
-			gap: 1rem;
-			margin-bottom: 1rem;
+			flex-direction: column;
+			gap: 0.1875rem;
+			min-width: 0;
+		}
+
+		.reverse {
+			display: flex;
+			align-items: center;
+			gap: 0.375rem;
+			font-size: 0.8125rem;
+		}
+
+		// Two equal columns that may shrink. A long value must not widen the box.
+		.range {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+			gap: 0.5rem;
 		}
 
 		.colors {

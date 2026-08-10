@@ -11,6 +11,7 @@
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import Button from '@/components/buttons/Button.svelte';
 	import { Input } from '@/components/ui/input';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import {
 		DEFAULT_SETTINGS,
 		resetSetting,
@@ -38,6 +39,21 @@
 		return String(Math.round(value * 1000) / 1000);
 	});
 
+	/** The selected value of a select setting. */
+	const selectValue = $derived.by(() => {
+		if (definition.type !== 'select') return '';
+		return stored as string;
+	});
+
+	/** The selected label of a select setting. */
+	const selectLabel = $derived.by(() => {
+		if (definition.type !== 'select') return '';
+
+		const option = definition.options.find((entry) => entry.value === selectValue);
+		if (option) return option.label;
+		return selectValue;
+	});
+
 	function onNumberChange(event: Event): void {
 		if (definition.type !== 'number') return;
 
@@ -59,9 +75,8 @@
 		setSetting(definition.key, input.value.trim());
 	}
 
-	function onSelectChange(event: Event): void {
-		const select = event.currentTarget as HTMLSelectElement;
-		setSetting(definition.key, select.value);
+	function onSelectChange(value: string): void {
+		setSetting(definition.key, value);
 	}
 </script>
 
@@ -88,11 +103,16 @@
 				{/if}
 			</div>
 		{:else if definition.type === 'select'}
-			<select id={inputId} value={stored} onchange={onSelectChange}>
-				{#each definition.options as option (option.value)}
-					<option value={option.value}>{option.label}</option>
-				{/each}
-			</select>
+			<Select.Root type="single" value={selectValue} onValueChange={onSelectChange}>
+				<Select.Trigger id={inputId} class="w-full">{selectLabel}</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						{#each definition.options as option (option.value)}
+							<Select.Item value={option.value} label={option.label}>{option.label}</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
 		{:else}
 			<Input
 				id={inputId}
@@ -157,20 +177,8 @@
 				}
 			}
 
-			select {
+			:global([data-slot='select-trigger']) {
 				flex: 1;
-				height: 2.25rem;
-				padding: 0 0.75rem;
-				border: 1px solid var(--border);
-				border-radius: 0.375rem;
-				background-color: var(--background);
-				color: var(--foreground);
-				font-size: 0.875rem;
-
-				&:focus-visible {
-					outline: 2px solid var(--ring);
-					outline-offset: 1px;
-				}
 			}
 		}
 
