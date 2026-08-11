@@ -1,3 +1,12 @@
+/**
+ * Context and shared state for the SearchSelect component tree.
+ *
+ * This module provides a Svelte context that coordinates the search query,
+ * selected value, visible item/group counts, and item registration between
+ * SearchSelect, its items, and its groups. It also exposes helpers for
+ * normalising and matching search terms.
+ */
+
 import { getContext, setContext } from 'svelte';
 import { writable, type Writable } from 'svelte/store';
 

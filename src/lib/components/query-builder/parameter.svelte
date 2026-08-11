@@ -1,95 +1,131 @@
 <script lang="ts">
-	import type { PresetColumn } from '@/beacon-api/types';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 
 	import Separator from '../ui/separator/separator.svelte';
-	import Filter, { type QueryFilterValue } from './filters/filter.svelte';
+	import type { DataType } from '@/beacon-api/types';
+	import Button from '../buttons/Button.svelte';
+	import AddFilterInput from './AddFilterDropdown.svelte';
+	import ParameterFilter from './ParameterFilter.svelte';
+	import type { SelectedFilterType } from '@/query/filter-types';
 	import { Utils } from '@/utils';
 
 	let {
 		column = $bindable(),
-		is_selected = $bindable(),
-		filter_value = $bindable(null)
+		remove_column = $bindable()
 	}: {
-		column: PresetColumn;
-		is_selected: boolean;
-		filter_value: QueryFilterValue;
+		column: { name: string; type: DataType; selected_filters: SelectedFilterType[] };
+		remove_column: (selected_field_name: string) => void;
 	} = $props();
-
-	let preset_filter_object = $derived(column.filter);
-
-	// let metadata_columns = $derived.by(() => {
-	// 	return (column.metadata_columns || []).concat(column.column_metadata_columns || []);
-	// });
 </script>
 
-<label class="parameter">
-	<div class="parameter-details">
-		<div class="checkbox-flex">
-			<Checkbox bind:checked={is_selected} id={column.column_name} />
-			<h4>{column.alias}</h4>
+<div class="parameter-card">
+	<div class="parameter-card-header">
+		<div class="parameter-title">
+			<h4>{column.name}</h4>
+			<span>{Utils.dataTypeToString(column.type)}</span>
 		</div>
 
-		<Separator />
+		<div class="parameter-buttons">
+			<AddFilterInput data_type={column.type} bind:selected_filters={column.selected_filters} />
 
-			{#each Object.entries(column).filter(([key]) => !['filter', 'alias', 'column_name'].includes(key)) as [key, value] (key)}			{#if typeof value === 'string' }
-				<div class="key-value">
-					<strong>{Utils.ucfirst(key)}:</strong>
-					{value}
-				</div>
-			{/if}
-		{/each}
+			<Button
+				onclick={() => {
+					// console.log('Removing column.');
+					remove_column(column.name);
+				}}
+				title="Remove column"
+				aria-label="Remove column"
+				variant="outline"
+			>
+				<CircleXIcon />
+			</Button>
+		</div>
 	</div>
 
-	{#if column.filter}
-		<Filter filter={preset_filter_object} bind:filter_value />
+	{#if column.selected_filters.length > 0}
+		<Separator />
+		<div class="parameter-filters">
+			{#each column.selected_filters as filter, index (index)}
+
+				<div class="filter-wrapper">
+			
+					<ParameterFilter class="advanced-filter" bind:filter={filter.filter_value} />
+			
+					<Button variant="ghost" size="icon" onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
+						<CircleXIcon class="circle-x" />
+					</Button>
+
+				</div>
+			
+			{/each}
+		</div>
 	{/if}
-</label>
+</div>
 
 <style lang="scss">
-	.parameter {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem; /* gap-3 */
-		border-width: 1px;
-		border-style: solid;
-		padding: 0.75rem; /* p-3 */
-		border-radius: 0.5rem; /* rounded-lg */
-		transition:
-			background-color 0.2s ease,
-			border-color 0.2s ease;
-		cursor: pointer;
+	.parameter-card {
+		display: grid;
+		align-items: center;
+		gap: 0.75rem;
+		border-radius: 0.5rem;
+		border: 1px solid #2563eb;
+		background-color: var(--selected-background);
+		padding: 0.6rem;
+		align-items: start;
 
-		&:hover {
-			background-color: color-mix(in oklab, var(--accent) 50%, transparent);
-		}
-
-		.parameter-details {
+		.parameter-card-header {
 			display: flex;
-			width: 100%;
-			flex-direction: column;
-			justify-content: space-between;
-			gap: 0.25rem; /* gap-1 */
-
-			.checkbox-flex {
+			flex-direction: row;
+			align-items: center;
+			gap: .5rem;
+			
+			.parameter-title {
 				display: flex;
-				justify-items: space-between;
-				align-items: center;
-				gap: 0.5rem; /* gap-2 */
+				width: 100%;
+				flex-direction: column;
+				justify-content: space-between;
+				gap: 0.25rem;
 
 				h4 {
 					margin: 0;
+					display: inline;
+				}
+
+				span {
+					color: var(--muted-foreground);
+					font-size: 0.75rem;
+					line-height: 1rem;
+
+					overflow: hidden;
+					text-overflow: ellipsis;
+					width: 100%;
 				}
 			}
 
-			.key-value {
-				color: var(--muted-foreground);
-				font-weight: normal;
+			.parameter-buttons {
+				display: flex;
+				flex-direction: row;
+				gap: 0.25rem;
+
+			}
+
+		}
+
+		.parameter-filters {
+			display: flex;
+			flex-direction: column;
+			gap: 0.5rem;
+			// padding: 1rem;
+
+			.filter-wrapper {
+				display: flex;
+				flex-direction: row;
+				// align-items: center;
+				gap: 0.5rem;
+				padding: 0.5rem;
+				border-radius: 0.5rem;
+				background-color: white;
 			}
 		}
-	}
-
-	:global(.parameter:has([aria-checked='true'])) {
-		border-color: rgb(37 99 235);
 	}
 </style>

@@ -19,15 +19,24 @@
  */
 
 import type { QueryWarning } from '@/beacon-api/types';
+import { getSettings } from '@/stores/settings';
 
 /** Bump to invalidate all previously persisted entries on format changes. */
 const CACHE_VERSION = 1;
-/** Max number of persisted results. */
-const MAX_ENTRIES = 50;
-/** Max total bytes of persisted `.arrows` payloads (compressed). */
-const MAX_TOTAL_BYTES = 1024 * 1024 * 1024; // 1 GiB
-/** Entries older than this are considered stale and dropped on read. */
-const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
+/**
+ * The budgets of this cache. The user sets them on the settings page:
+ * `diskCacheMaxEntries`, `diskCacheMaxTotalBytes` and `diskCacheMaxAgeMs`.
+ * Read them at the point of use, so a change applies to the next call.
+ */
+function limits(): { maxEntries: number; maxTotalBytes: number; maxAgeMs: number } {
+	const settings = getSettings();
+	return {
+		maxEntries: settings.diskCacheMaxEntries,
+		maxTotalBytes: settings.diskCacheMaxTotalBytes,
+		maxAgeMs: settings.diskCacheMaxAgeMs
+	};
+}
 
 const DIR_NAME = 'query-cache';
 const DATA_SUFFIX = '.arrows';
@@ -36,7 +45,6 @@ const META_SUFFIX = '.meta.json';
 /** Sidecar metadata persisted next to each `.arrows` payload. */
 export interface OpfsDatasetMeta {
 	version: number;
-	/** The full QueryStore cache key this entry belongs to (hash preimage). */
 	key: string;
 	rowCount: number;
 	/** Original fetch + decode duration (ms) — shown as-is on rehydrated entries. */
@@ -100,7 +108,7 @@ class OpfsArrowCache {
 
 			const meta = await readMeta(dir, name);
 			if (!meta || meta.version !== CACHE_VERSION || meta.key !== key) return undefined;
-			if (Date.now() - meta.createdAt > MAX_AGE_MS) {
+			if (Date.now() - meta.createdAt > limits().maxAgeMs) {
 				void this.removeByName(name);
 				return undefined;
 			}
@@ -142,7 +150,8 @@ class OpfsArrowCache {
 			}
 			try {
 				// Free roughly half the budget, then try once more.
-				await this.evict(MAX_TOTAL_BYTES / 2, Math.floor(MAX_ENTRIES / 2));
+				const { maxEntries, maxTotalBytes } = limits();
+				await this.evict(maxTotalBytes / 2, Math.floor(maxEntries / 2));
 				await this.write(key, bytes, meta);
 			} catch (retryError) {
 				console.warn('OPFS query cache: gave up persisting after quota error.', retryError);
@@ -185,13 +194,14 @@ class OpfsArrowCache {
 	async stats(): Promise<DiskCacheStats> {
 		const supported = isOpfsCacheSupported();
 		const entries = supported ? await this.list() : [];
+		const { maxEntries, maxTotalBytes, maxAgeMs } = limits();
 		return {
 			supported,
 			entryCount: entries.length,
-			maxEntries: MAX_ENTRIES,
+			maxEntries,
 			totalBytes: entries.reduce((sum, m) => sum + m.byteLength, 0),
-			maxTotalBytes: MAX_TOTAL_BYTES,
-			maxAgeMs: MAX_AGE_MS,
+			maxTotalBytes,
+			maxAgeMs,
 			entries
 		};
 	}
@@ -260,8 +270,8 @@ class OpfsArrowCache {
 	 * orphaned/torn files left behind by interrupted writes.
 	 */
 	private async evict(
-		maxBytes: number = MAX_TOTAL_BYTES,
-		maxEntries: number = MAX_ENTRIES
+		maxBytes: number = limits().maxTotalBytes,
+		maxEntries: number = limits().maxEntries
 	): Promise<void> {
 		const dir = await this.dir();
 

@@ -4,6 +4,7 @@ import * as ApacheArrow from 'apache-arrow';
 import ArrowProcessingWorker from '$lib/workers/ArrowProcessingWorker?worker';
 import type { WorkerRequest, WorkerResponse } from './ArrowProcessingWorker';
 import type { SortDirection } from '@/util-types';
+import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
 
 interface PendingTask {
@@ -11,8 +12,13 @@ interface PendingTask {
 	reject: (reason?: any) => void;
 }
 
-/** How many tables the worker keeps loaded at once (main thread mirrors this). */
-const MAX_LOADED_TABLES = 2;
+/**
+ * How many tables the worker keeps loaded at once (main thread mirrors this).
+ * The user sets the value on the settings page (`workerMaxLoadedTables`).
+ */
+function maxLoadedTables(): number {
+	return getSettings().workerMaxLoadedTables;
+}
 
 /**
  * Main-thread handle to the shared Arrow processing worker.
@@ -60,6 +66,7 @@ export class ArrowProcessingWorkerManager {
 				case 'loadTable':
 				case 'unloadTable':
 				case 'getColumnMinMax':
+				case 'countPointsInRing':
 				case 'findSimilarRowsByLatLon':
 					task.resolve(event.data.result);
 					break;
@@ -90,7 +97,7 @@ export class ArrowProcessingWorkerManager {
 	/**
 	 * Ensures `table` is loaded in the worker under `key`, transferring it at most
 	 * once. Bumps the key to most-recently-used and evicts the oldest table(s) when
-	 * over {@link MAX_LOADED_TABLES}.
+	 * over {@link maxLoadedTables}.
 	 */
 	private async ensureLoaded(key: string, table: ApacheArrow.Table): Promise<void> {
 		if (this.loadedOrder.includes(key)) {
@@ -127,7 +134,7 @@ export class ArrowProcessingWorkerManager {
 
 	/** Evicts least-recently-used tables from the worker, never the one just used. */
 	private evictLoaded(keep: string): void {
-		while (this.loadedOrder.length > MAX_LOADED_TABLES) {
+		while (this.loadedOrder.length > maxLoadedTables()) {
 			const oldest = this.loadedOrder[0];
 			if (oldest === keep) break;
 			this.loadedOrder.shift();
@@ -145,6 +152,29 @@ export class ArrowProcessingWorkerManager {
 	): Promise<{ min: number; max: number }> {
 		await this.ensureLoaded(key, table);
 		return this.sendTask({ action: 'getColumnMinMax', payload: { key, columnName: column } });
+	}
+
+	/**
+	 * Counts the rows inside a closed ring of [longitude, latitude] pairs. The
+	 * caller uses it to preview an area filter before it applies the filter.
+	 */
+	async countPointsInRing(
+		key: string,
+		table: ApacheArrow.Table,
+		ring: [number, number][],
+		latitudeColumnName: string,
+		longitudeColumnName: string
+	): Promise<number> {
+		await this.ensureLoaded(key, table);
+
+		// A ring from the map comes out of Svelte state, so it is a proxy, and
+		// `postMessage` cannot clone a proxy. Copy it to plain arrays first.
+		const plainRing: [number, number][] = ring.map(([lon, lat]) => [Number(lon), Number(lat)]);
+
+		return this.sendTask({
+			action: 'countPointsInRing',
+			payload: { key, ring: plainRing, latitudeColumnName, longitudeColumnName }
+		});
 	}
 
 	async orderTableByColumn(

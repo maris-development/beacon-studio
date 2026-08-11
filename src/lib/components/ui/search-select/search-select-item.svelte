@@ -30,7 +30,7 @@
 	} = $props();
 
 	const context = getSearchSelectContext();
-	const queryStore = context.searchQuery;
+	const queryString = context.searchQuery;
 	const groupId = getSearchSelectGroupContext();
 
 	let ref: HTMLButtonElement | null = $state(null);
@@ -57,7 +57,7 @@
 	});
 
 	$effect(() => {
-		hidden = !matchesSearch(resolvedValue, $queryStore, keywords);
+		hidden = !matchesSearch(resolvedValue, $queryString, keywords);
 		context.setItemVisible(itemId, !hidden);
 	});
 

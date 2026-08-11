@@ -534,5 +534,83 @@ export class ApacheArrowUtils {
         return new ApacheArrow.Table(newBatches);
     }
 
+    /**
+     * Counts the rows whose longitude/latitude fall inside a closed ring.
+     *
+     * The ring is a `[longitude, latitude]` list, as produced by the map draw
+     * tools. The test is the same one the server does: a ray cast over the ring
+     * (see `beacon-core/src/query/filter/geo_json.rs`). A bounding box check runs
+     * first, because it rejects most rows with two comparisons.
+     *
+     * Rows without a numeric coordinate do not count.
+     *
+     * @throws If the table has no latitude or longitude column.
+     */
+    static countPointsInRing<T extends ApacheArrow.TypeMap>(
+        table: ApacheArrow.Table<T>,
+        ring: [number, number][],
+        latitudeColumnName: string = 'Latitude',
+        longitudeColumnName: string = 'Longitude'
+    ): number {
+        if (ring.length < 4) return 0;
+
+        const latCol = table.getChild(latitudeColumnName);
+        const lonCol = table.getChild(longitudeColumnName);
+
+        if (!latCol || !lonCol) {
+            throw new Error(
+                `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to count an area.`
+            );
+        }
+
+        let minLon = Number.POSITIVE_INFINITY;
+        let maxLon = Number.NEGATIVE_INFINITY;
+        let minLat = Number.POSITIVE_INFINITY;
+        let maxLat = Number.NEGATIVE_INFINITY;
+
+        for (const [lon, lat] of ring) {
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+        }
+
+        const lons = lonCol.toArray();
+        const lats = latCol.toArray();
+        const rows = Math.min(lons.length, lats.length);
+
+        let count = 0;
+
+        for (let i = 0; i < rows; i++) {
+            const lon = Number(lons[i]);
+            const lat = Number(lats[i]);
+
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
+            if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) continue;
+            if (ApacheArrowUtils.pointInRing(lon, lat, ring)) count++;
+        }
+
+        return count;
+    }
+
+    /** Ray cast point-in-polygon test over a closed ring of `[longitude, latitude]`. */
+    private static pointInRing(lon: number, lat: number, ring: [number, number][]): boolean {
+        let inside = false;
+
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const [xi, yi] = ring[i];
+            const [xj, yj] = ring[j];
+
+            // Does the edge cross the ray that goes east from the point?
+            const crosses = yi > lat !== yj > lat;
+            if (!crosses) continue;
+
+            const crossingLon = ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+            if (lon < crossingLon) inside = !inside;
+        }
+
+        return inside;
+    }
+
 }
 

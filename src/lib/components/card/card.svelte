@@ -6,10 +6,10 @@
 		children?: Snippet;
 		class?: string;
 		href?: string;
-		onClick?: () => void;
+		onclick?: () => void;
 	}
 
-	let { children, class: cardClass, href, onClick }: Props = $props();
+	let { children, class: cardClass, href, onclick }: Props = $props();
 	let card: HTMLElement = $state(null);
 
 </script>
@@ -22,8 +22,8 @@
 			</div>
 		{/if}
 	</a>
-{:else if onClick}
-	<button type="button" class={cn("card clickable", cardClass)} onclick={onClick} bind:this={card} >
+{:else if onclick}
+	<button type="button" class={cn("card clickable", cardClass)} onclick={onclick} bind:this={card} >
 		{#if children}
 			<div class="card-content">
 				{@render children()}
@@ -51,7 +51,7 @@
 		padding: 1.5rem;
 		box-shadow: var(--shadow-sm);
 		border-style: var(--tw-border-style);
-		border-width: 1px;
+		border-width: 1.5px;
 		color: var(--foreground);
 		gap: 0.75rem;
 

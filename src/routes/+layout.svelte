@@ -1,37 +1,38 @@
 <script lang="ts">
-	import AppSidebar from '$lib/components/app-sidebar.svelte';
-	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
+	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
 	import Toasts from '@/components/toasts/toasts.svelte';
 	import '../app.scss';
 	import '../tailwind.css';
-
-
 </script>
 
 <Toasts />
 
-<Sidebar.Provider>
+<div class="app-wrapper">
 	<AppSidebar />
 	<main class="main-content">
-		<!-- this is where the current page’s +page.svelte will render -->
 		<slot />
 	</main>
-</Sidebar.Provider>
+</div>
 
 <style global lang="scss">
+	div.app-wrapper {
+		display: flex;
+		flex-direction: row;
+		width: 100%;
+		height: 100%;
+		background-color: var(--color-background);
+	}
+
+
 	main.main-content {
 		flex-grow: 1;
+		min-height: 0;
 		display: flex;
 		flex-direction: column;
-		background-color: white;
 
-		--margin: 0.75rem;
-		margin: var(--margin);
-		border-radius: 1rem;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		margin: 0;
 
-		min-height: calc(100vh - var(--margin) * 2);
-		overflow: hidden;
+		overflow-x: hidden;
 	}
 
 	

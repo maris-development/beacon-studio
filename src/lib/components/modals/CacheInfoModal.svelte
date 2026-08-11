@@ -3,10 +3,12 @@
 	import { onMount } from 'svelte';
 	import { formatDistanceToNow } from 'date-fns';
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import { queryStore, type MemoryCacheStats } from '@/stores/query-store.svelte';
+	import DatabaseIcon from '@lucide/svelte/icons/database';
+	import DatabaseZapIcon from '@lucide/svelte/icons/database-zap';
+	import { BeaconClient, type MemoryCacheStats } from '@/beacon-api/client';
 	import {
 		opfsArrowCache,
 		type DiskCacheStats,
@@ -18,17 +20,29 @@
 	let memory = $state<MemoryCacheStats | null>(null);
 	let disk = $state<DiskCacheStats | null>(null);
 	let loading = $state(true);
+	let cacheEnabled = $state(BeaconClient.isQueryCacheEnabled());
 
 	async function load(): Promise<void> {
 		loading = true;
-		memory = queryStore.stats();
+		cacheEnabled = BeaconClient.isQueryCacheEnabled();
+		memory = BeaconClient.queryCacheStats();
 		disk = await opfsArrowCache.stats();
 		loading = false;
 	}
 
 	async function clearAll(): Promise<void> {
-		// Clears the in-memory cache and the OPFS tier (see queryStore.invalidate()).
-		queryStore.invalidate();
+		// Clears the in-memory cache and the OPFS tier (see BeaconClient.invalidateQueryCache()).
+		BeaconClient.invalidateQueryCache();
+		await load();
+	}
+
+	/**
+	 * Toggles the query result cache on/off. Disabling also clears every cached
+	 * result (memory + OPFS), so subsequent queries always re-execute until it's
+	 * re-enabled.
+	 */
+	async function toggleCache(): Promise<void> {
+		BeaconClient.setQueryCacheEnabled(!cacheEnabled);
 		await load();
 	}
 
@@ -70,10 +84,15 @@
 		<p>Loading cache information…</p>
 	{:else}
 		<div class="cache-info">
+			{#if !cacheEnabled}
+				<p class="cache-disabled-note">
+					Caching is disabled — every query re-executes against Beacon and nothing is stored.
+				</p>
+			{/if}
 			<!-- Memory tier -->
 			<section>
 				<div class="section-head">
-					<h2>Memory cache</h2>
+					<h3>Memory cache</h3>
 					<span class="subtle">decoded Arrow tables, this session</span>
 				</div>
 
@@ -117,7 +136,7 @@
 								{#each memory.entries as entry (entry.key)}
 									<tr>
 										<td class="cols" title={entry.columns.join(', ')}>
-											{entry.columns.join(', ') || '—'}
+											{entry.columns.join(', ') || 'N/A'}
 											{#if entry.isCurrent}<span class="badge">current</span>{/if}
 										</td>
 										<td class="num">{entry.rowCount.toLocaleString()}</td>
@@ -136,9 +155,9 @@
 			<!-- Disk tier -->
 			<section>
 				<div class="section-head">
-					<h2>Disk cache (OPFS)</h2>
+					<h3>Disk cache (OPFS)</h3>
 					<span class="subtle">
-						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : '—'} after storing
+						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : 'N/A'} after storing
 					</span>
 				</div>
 
@@ -196,6 +215,15 @@
 	{/if}
 
 	<div slot="footer" class="footer-actions">
+		<Button variant="outline" size="sm" onclick={() => toggleCache()} disabled={loading}>
+			{#if cacheEnabled}
+				Disable caching
+				<DatabaseZapIcon />
+			{:else}
+				Enable caching
+				<DatabaseIcon />
+			{/if}
+		</Button>
 		<Button variant="outline" size="sm" onclick={() => load()} disabled={loading}>
 			Refresh
 			<RefreshCwIcon />
@@ -230,15 +258,20 @@
 		border-bottom: 1px solid #e5e5e5;
 		padding-bottom: 0.35rem;
 
-		h2 {
-			margin: 0;
-			font-size: 1.05rem;
-		}
 	}
 
 	.subtle {
 		font-size: 0.8rem;
 		color: #6b7280;
+	}
+
+	.cache-disabled-note {
+		margin: 0;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.375rem;
+		background: #fef3c7;
+		color: #92400e;
+		font-size: 0.85rem;
 	}
 
 	.stat-grid {

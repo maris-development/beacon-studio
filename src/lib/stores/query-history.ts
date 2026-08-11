@@ -1,93 +1,114 @@
 /**
- * Query history — a persisted log of executed queries, so users can revisit,
- * re-run, view, or edit a query they ran earlier (see the query-history page).
+ * Query history is a persisted log of executed queries. A user can open, run
+ * again, view or edit an earlier query. See the query-history page.
  *
- * Entries are recorded by `queryStore.ensure()` (the single choke point every
- * visualizer runs a query through) and deduplicated by the query store's cache
- * `key`, which already folds in the Beacon instance URL — so the same query run
- * against two instances is correctly two rows. Re-running an existing query updates
- * its timestamp / row count and bumps its execution count rather than duplicating.
+ * The query store writes these entries. Every visualiser runs its queries
+ * through that one point. Entries use {@link StoredQuery.datasetKey} as their
+ * identity. That key is the result-cache key, and it includes the Beacon
+ * instance URL. Therefore one query against two instances gives two rows.
  *
- * Persisted to localStorage (like the instance config) so history survives reloads
- * and app restarts. Timestamps are epoch milliseconds, not `Date` objects, to keep
- * JSON round-trips lossless.
+ * A second run of a known query sets a new timestamp and row count, and adds 1
+ * to the execution count. It does not add a row.
+ *
+ * The records are {@link StoredQuery} objects. Saved queries and workbench
+ * blocks use the same shape. The collection options below hold the identity
+ * policy and the limit that make this collection a history.
  */
 
 import { get } from 'svelte/store';
-import { persisted } from 'svelte-local-storage-store';
+import { createQueryCollection } from '@/stores/query-collection';
+import { snapshotInstance, type InstanceRef, type StoredQuery } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
-
-/** Max rows kept; oldest (by last execution) are dropped past this. */
-const MAX_HISTORY = 100;
-
-/** One executed query, with the metadata needed to display and replay it. */
-export interface QueryHistoryEntry {
-	/** The query store's cache key — stable identity for dedupe. */
-	key: string;
-	/** The executed query (a clone), for re-execute / view / edit. */
-	query: CompiledQuery;
-	/** Instance snapshot, so the row stays meaningful if the instance is later renamed or removed. */
-	instanceId: string;
-	instanceName: string;
-	instanceUrl: string;
-	/** Epoch ms of the most recent execution. */
-	lastExecutedAt: number;
-	/** How many times this query has been run (from history's perspective). */
-	executionCount: number;
-	/** Row count of the most recent result. */
-	rowCount: number;
-	/** Duration (ms) of the most recent execution. */
-	duration: number;
-}
-
-/** The fields a caller supplies when recording an execution. */
-export type RecordExecutionInput = Pick<
-	QueryHistoryEntry,
-	'key' | 'query' | 'instanceId' | 'instanceName' | 'instanceUrl' | 'rowCount' | 'duration'
->;
-
-/** The persisted, app-wide query history (newest activity anywhere in the list). */
-export const queryHistory = persisted<QueryHistoryEntry[]>('beacon-query-history', []);
+import type { QueryDraft } from '@/query/draft';
+import { currentBeaconInstance } from '@/stores/config';
+import { getSettings } from '@/stores/settings';
 
 /**
- * Records (or refreshes) an executed query. Upserts by `key`: an existing entry has
- * its timestamp, row count and duration updated and its execution count bumped; a
- * new query is prepended. The list is capped to {@link MAX_HISTORY} by dropping the
- * least-recently-executed entries.
+ * The maximum number of rows. Above this limit the oldest runs go away. The user
+ * sets the value on the settings page (`queryHistoryMax`).
  */
-export function recordExecution(input: RecordExecutionInput): void {
-	queryHistory.update((entries) => {
-		const now = Date.now();
-		const existing = entries.find((entry) => entry.key === input.key);
+export function maxHistory(): number {
+	return getSettings().queryHistoryMax;
+}
 
-		const updated: QueryHistoryEntry = {
-			...input,
+/** The persisted query history for the full app. */
+export const queryHistory = createQueryCollection({
+	storageKey: 'beacon-query-library.history',
+	role: 'history',
+	identity: 'datasetKey',
+	max: maxHistory
+});
+
+/**
+ * The fields that a caller supplies for one execution. `rowCount` and `duration`
+ * are optional. The server builds a download, so the client never learns the row
+ * count. In that case the values of the known entry stay.
+ */
+export interface RecordExecutionInput {
+	/** The result-cache key. History uses it as the identity. */
+	datasetKey: string;
+	compiled: CompiledQuery;
+	/** The builder state of the record that started the run, if it had one. */
+	draft?: QueryDraft | null;
+	name?: string;
+	instance?: InstanceRef;
+	rowCount?: number;
+	duration?: number;
+}
+
+/**
+ * Record one execution of a query.
+ *
+ * A known entry keeps its identity and its creation time. The function sets a
+ * new timestamp and adds 1 to the execution count. It sets a new row count and
+ * duration if the caller supplies them, else it keeps the old values.
+ *
+ * The function puts a new query at the front. The list holds at most
+ * {@link maxHistory} rows.
+ */
+export function recordExecution(input: RecordExecutionInput): StoredQuery {
+	const now = Date.now();
+
+	return queryHistory.upsert(
+		{
+			name: input.name ?? 'Query',
+			draft: input.draft ?? null,
+			compiled: input.compiled,
+			instance: input.instance ?? snapshotInstance(get(currentBeaconInstance)),
+			datasetKey: input.datasetKey,
+			rowCount: input.rowCount ?? null,
+			duration: input.duration ?? null
+		},
+		(existing, incoming) => ({
+			...incoming,
+			id: existing?.id ?? incoming.id,
+			// A share link and the JSON editor have no draft. A run from such a
+			// source must not delete the builder state from an earlier run.
+			draft: incoming.draft ?? existing?.draft ?? null,
+			name: input.name ?? existing?.name ?? incoming.name,
+			createdAt: existing?.createdAt ?? incoming.createdAt,
+			updatedAt: now,
 			lastExecutedAt: now,
-			executionCount: (existing?.executionCount ?? 0) + 1
-		};
-
-		const rest = entries.filter((entry) => entry.key !== input.key);
-		const next = [updated, ...rest];
-
-		if (next.length > MAX_HISTORY) {
-			next.sort((a, b) => b.lastExecutedAt - a.lastExecutedAt);
-			next.length = MAX_HISTORY;
-		}
-		return next;
-	});
+			executionCount: (existing?.executionCount ?? 0) + 1,
+			rowCount: input.rowCount ?? existing?.rowCount ?? null,
+			duration: input.duration ?? existing?.duration ?? null
+		})
+	);
 }
 
-/** Removes a single history entry by its cache key. */
-export function removeHistoryEntry(key: string): void {
-	queryHistory.update((entries) => entries.filter((entry) => entry.key !== key));
+/** Remove one history entry by the cache key of its result. */
+export function removeHistoryEntry(datasetKey: string): void {
+	const entry = queryHistory.findByDatasetKey(datasetKey);
+	if (entry) queryHistory.remove(entry.id);
 }
 
-/** Clears the entire query history. */
+/** Remove all history entries. */
 export function clearHistory(): void {
-	queryHistory.set([]);
+	queryHistory.clear();
 }
 
-/** A snapshot of the current history, sorted most-recently-executed first. */
-export function getHistorySnapshot(): QueryHistoryEntry[] {
-	return [...get(queryHistory)].sort((a, b) => b.lastExecutedAt - a.lastExecutedAt);
+/** A copy of the current history. The most recent run comes first. */
+export function getHistorySnapshot(): StoredQuery[] {
+	return queryHistory.byRecency();
 }
+

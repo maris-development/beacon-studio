@@ -4,9 +4,9 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
 	import { resolve } from '$app/paths';
@@ -20,7 +20,8 @@
 	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let client: BeaconClient;
 
-    let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
+	let virtualSchemaData: VirtualPaginationData<SchemaField> =
+		new VirtualPaginationData<SchemaField>([]);
 	let columns: Column[] = $state([
 		{ key: 'name', header: 'Field', sortable: true },
 		{ key: 'data_type', header: 'Data Type', sortable: true },
@@ -29,7 +30,7 @@
 		{ key: 'dict_is_ordered', header: 'Is Ordered', sortable: true },
 		{ key: 'metadata', header: 'Metadata', sortable: false }
 	]);
-	
+
 	let rows: SchemaField[] = $state([]);
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
@@ -123,28 +124,29 @@
 		{ label: `Dataset ${file}`, href: '#' }
 	]}
 />
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Dataset {file} ({totalRows} fields)</h2>
 
-<div class="page-container">
-	<h1>Dataset {file} ({totalRows} fields)</h1>
+		<input
+			type="search"
+			id="search"
+			placeholder="Search..."
+			class="search-input"
+			onchange={onSearchBoxChange}
+		/>
 
-	<input
-		type="search"
-		id="search"
-		placeholder="Search..."
-		class="search-input"
-		onchange={onSearchBoxChange}
-	/>
-
-	<DataTable
-		{onPageChange}
-		{onChangeSort}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
+		<DataTable
+			{onPageChange}
+			{onChangeSort}
+			{columns}
+			{rows}
+			{totalRows}
+			{pageSize}
+			{pageIndex}
+			{isLoading}
+		/>
+	</div>
 </div>
 
 <style lang="scss">

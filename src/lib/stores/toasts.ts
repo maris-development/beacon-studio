@@ -2,7 +2,7 @@ import { writable } from "svelte/store";
 
 export const toasts = writable([]);
 
-export const addToast = (toast: Partial<IToast>) => {
+export function addToast(toast: Partial<IToast>) {
   // Create a unique ID so we can easily find/remove it
   // if it is dismissible/has a timeout.
   const id = Math.floor(Math.random() * 10000);

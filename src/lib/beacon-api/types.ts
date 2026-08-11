@@ -51,9 +51,9 @@ export type PrimitiveType =
     | 'Float64'
     | 'Int8';
 
-export interface TimestampDataType {
+export type TimestampDataType = {
     Timestamp: [string, string | null];
-}
+};
 
 export type DataType = PrimitiveType | TimestampDataType;
 
@@ -157,12 +157,13 @@ export type Filter =
     | GreaterThanOrEqualFilter 
     | LessThanFilter 
     | LessThanOrEqualFilter 
-    | IsNotNullFilter 
-    | IsNullFilter 
-    | OrFilter 
-    | AndFilter; 
+    | IsNotNullFilter
+    | IsNullFilter
+    | GeoJsonFilter
+    | OrFilter
+    | AndFilter;
 
-    
+
 export type MinMaxFilter = {
     for_query_parameter: string;
     min: number | string;
@@ -205,6 +206,27 @@ export type IsNotNullFilter = {
 
 export type IsNullFilter = {
     is_null: { for_query_parameter: string };
+};
+
+/** A GeoJSON polygon. The ring is closed: the last point repeats the first. */
+export type GeoJsonPolygon = {
+    type: 'Polygon';
+    /** Rings of [longitude, latitude] pairs. Only the outer ring is used. */
+    coordinates: number[][][];
+};
+
+/**
+ * Point-in-polygon filter over a longitude and a latitude column.
+ *
+ * The server matches this variant by its fields, and compiles it to
+ * `st_within_point(st_geojson_as_wkt(<geometry>), lon, lat)`. The
+ * `*_query_parameter` names are serde aliases of `longitude_column` /
+ * `latitude_column`, and match the naming of the other filters here.
+ */
+export type GeoJsonFilter = {
+    longitude_query_parameter: string;
+    latitude_query_parameter: string;
+    geometry: GeoJsonPolygon;
 };
 
 export type OrFilter = {

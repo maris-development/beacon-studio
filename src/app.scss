@@ -1,45 +1,46 @@
-
-
 @font-face {
-    font-family: 'Open Sans';
-    src: url('/font/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
+	font-family: 'Open Sans';
+	src: url('/font/OpenSans-VariableFont_wdth,wght.ttf') format('truetype');
 }
 
 * {
-    box-sizing: border-box;
+	box-sizing: border-box;
 }
 
 /* base template */
 body,
 html {
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-    padding: 0;
-    margin: 0;
+	font-family: 'Open Sans', sans-serif;
+	font-size: 14px;
+	padding: 0;
+	margin: 0;
 }
 
 body {
-    background: var(--background-gradient);
-    background-attachment: fixed;
-    color: var(--foreground);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
+	background: var(--app-background);
+	background-attachment: fixed;
+	color: var(--foreground);
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+}
+
+.page-wrapper {
+	padding: 1rem;
 }
 
 .page-container {
-    padding: 1rem;
+	background: white;
+	padding: 0.75rem;
+	border-radius: 0.75rem;
+	border: 1px solid rgb(231, 231, 236);
 }
-
 
 #svelte-body {
-    display: contents;
+	display: contents;
 }
 
-
-
 $standard-margin: 0.5rem;
-
 
 // --- Base styles for all headings ---
 h1,
@@ -48,77 +49,82 @@ h3,
 h4,
 h5,
 h6 {
-    margin: 0;
-    font-family: inherit;
-    font-weight: 600;
-    line-height: 1.2;
-    margin-bottom: $standard-margin;
-    color: #333;
+	margin: 0;
+	font-family: inherit;
+	font-weight: 600;
+	line-height: 1.2;
+	margin-bottom: $standard-margin;
+	color: #333;
 }
 
 // --- Individual sizes ---
 h1 {
-    font-size: 2.25rem;
-    font-weight: 750;
+	font-size: 1.5rem;
+	font-weight: 650;
 }
 
 h2 {
-    font-size: 1.875rem;
-    font-weight: 725;
+	font-size: 1.375rem;
+	font-weight: 600;
 }
 
 h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
+	font-size: 1.25rem;
+	font-weight: 500;
 }
 
 h4 {
-    font-size: 1.25rem;
-    font-weight: 675;
+	font-size: 1.1rem;
+	font-weight: 450;
 }
 
 h5 {
-    font-size: 1rem;
-    font-weight: 625;
+	font-size: 1rem;
 }
 
 h6 {
-    font-size: 0.875rem;
+	font-size: 0.875rem;
 }
 
 p {
-    margin-top: $standard-margin;
-    margin-bottom: $standard-margin;
+	margin-top: $standard-margin;
+	margin-bottom: $standard-margin;
 
-    a {
-        color: #007bff;
-        text-decoration: underline;
+	a {
+		color: #007bff;
+		text-decoration: underline;
 
-        &:hover {
-            text-decoration: underline;
-        }
-    }
+		&:hover {
+			text-decoration: underline;
+		}
+	}
 }
 
 select,
-input[type="url"],
-input[type="number"],
-input[type="date"],
-input[type="email"],
-input[type="text"],
-input[type="search"],
+input[type='url'],
+input[type='number'],
+input[type='date'],
+input[type='email'],
+input[type='text'],
+input[type='search'],
 textarea {
-    // width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 0.5rem;
-    font: inherit;
-    // margin-bottom: 0.5rem;
+	// width: 100%;
+	padding: 0.5rem;
+	border: 1px solid #ccc;
+	border-radius: 0.5rem;
+	font: inherit;
+	// margin-bottom: 0.5rem;
+
+	// The page background is a light grey, so a control that inherits it reads
+	// as disabled. A form control is always the card colour: white in the light
+	// theme, and the panel colour in the dark one.
+	background-color: var(--card);
+	color: var(--card-foreground);
 }
 textarea {
-    resize: vertical;
+	resize: vertical;
 }
 
 .maplibregl-popup-close-button {
-    font-size: 1.5rem;
+	font-size: 1.5rem;
 }

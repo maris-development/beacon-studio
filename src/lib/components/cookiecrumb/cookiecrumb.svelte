@@ -2,41 +2,38 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import type { Snippet } from 'svelte';
 	import HouseIcon from '@lucide/svelte/icons/house';
-  	import { resolve } from '$app/paths';
+	import { resolve } from '$app/paths';
 
-    export type Crumb = {
-        label: string;
-        href: string | undefined;
-    }
+	export type Crumb = {
+		label: string;
+		href: string | undefined;
+	};
 
-    let {
-		crumbs,
-        children
-	}: { crumbs?: Crumb[]; children?: Snippet } = $props();
+	let { crumbs, children }: { crumbs?: Crumb[]; children?: Snippet } = $props();
+</script>
 
-</script>  
+<div class="cookiecrumb">
+	<Breadcrumb.Root flexChildren={children}>
+		<Breadcrumb.List>
+			<Breadcrumb.Item>
+				<Breadcrumb.Link href={resolve('/')}>
+					<span class="primary-color">
+						<HouseIcon size="1rem" />
+					</span>
+				</Breadcrumb.Link>
+			</Breadcrumb.Item>
 
-<Breadcrumb.Root flexChildren={children}>
-    <Breadcrumb.List>
-        <Breadcrumb.Item>
-            <Breadcrumb.Link href={resolve('/')}>
-                <span class="primary-color">
-                    <HouseIcon size=1rem />
-                </span>
-            </Breadcrumb.Link>
-        </Breadcrumb.Item>
-
-        {#each crumbs as crumb, index (index)}
-            <Breadcrumb.Item>
-                <Breadcrumb.Link href={crumb.href ?? '#'}>{crumb.label}</Breadcrumb.Link>
-            </Breadcrumb.Item>
-        {/each}
-    </Breadcrumb.List>
-</Breadcrumb.Root>
+			{#each crumbs as crumb, index (index)}
+				<Breadcrumb.Item>
+					<Breadcrumb.Link href={crumb.href ?? '#'}>{crumb.label}</Breadcrumb.Link>
+				</Breadcrumb.Item>
+			{/each}
+		</Breadcrumb.List>
+	</Breadcrumb.Root>
+</div>
 
 <style lang="scss">
-    .primary-color {
-        color: var(--primary);
-    }
-
+	.primary-color {
+		color: var(--primary);
+	}
 </style>

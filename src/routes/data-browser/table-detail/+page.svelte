@@ -5,9 +5,9 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
     import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
     import { resolve } from '$app/paths';
@@ -129,22 +129,23 @@
     { label: `Table ${tableName}`, href: '' }]} 
 />
 
-<div class="page-container">
-	<h1>Table '{tableName}' ({totalRows} fields)</h1>
+<div class="page-wrapper">
+    <div class="page-container">
+        <h2>Table '{tableName}' ({totalRows} fields)</h2>
 
-    <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+        <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
 
-    <DataTable
-        {onPageChange}
-        {onChangeSort}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-        {pageIndex}
-		{isLoading}
-	/>
-
+        <DataTable
+            {onPageChange}
+            {onChangeSort}
+            {columns}
+            {rows}
+            {totalRows}
+            {pageSize}
+            {pageIndex}
+            {isLoading}
+        />
+    </div>
 </div>
 
 <style lang="scss">

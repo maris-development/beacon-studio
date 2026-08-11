@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>In-Browser AI Column Classifier</title>
+<style>
+    :root {
+        --bg:        #0f172a;
+        --panel:     #1e293b;
+        --panel-2:   #172033;
+        --line:      #334155;
+        --text:      #e2e8f0;
+        --muted:     #94a3b8;
+        --faint:     #64748b;
+        --accent:    #818cf8;
+        --accent-bg: #4f46e5;
+        --good:      #34d399;
+        --warn:      #fbbf24;
+        --bad:       #fb7185;
+        --radius:    8px;
+        --mono:      ui-monospace, "Cascadia Code", "Consolas", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        padding: 2rem 1.5rem;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    main {
+        max-width: 68rem;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+    }
+
+    h1 { font-size: 1.5rem; margin: 0; color: var(--accent); }
+    h2 { font-size: 1.05rem; margin: 0 0 .6rem; font-weight: 600; }
+
+    header    { border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
+    header p  { margin: .4rem 0 0; color: var(--muted); font-size: .875rem; }
+
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1rem;
+    }
+
+    .hint  { color: var(--faint); font-size: .8rem; margin: .35rem 0 0; }
+    .mono  { font-family: var(--mono); }
+
+    code {
+        font-family: var(--mono);
+        background: var(--panel-2);
+        border-radius: 3px;
+        padding: .05rem .25rem;
+        color: var(--text);
+    }
+
+    /* --- form controls --- */
+    label {
+        display: block;
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--muted);
+        margin-bottom: .3rem;
+    }
+
+    input[type="text"], select, textarea {
+        width: 100%;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: .5rem .6rem;
+        font-family: var(--mono);
+        font-size: .8rem;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    textarea { resize: vertical; min-height: 5.5rem; }
+
+    button {
+        background: var(--accent-bg);
+        color: #fff;
+        border: 0;
+        border-radius: 6px;
+        padding: .6rem 1.1rem;
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    button:hover:not(:disabled) { filter: brightness(1.15); }
+    button:disabled             { opacity: .5; cursor: not-allowed; }
+
+    button.tab {
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: .8rem;
+        padding: .35rem .75rem;
+    }
+
+    button.tab[aria-selected="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: #312e8133;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .row    { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+    .spread { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+    .stack  { margin-top: 1rem; }
+    .meta   { font-size: .75rem; color: var(--muted); }
+
+    .check {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        margin: 0;
+        font-size: .8rem;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+    .check input { width: auto; }
+
+    /* --- status + progress --- */
+    #status  { font-size: .875rem; font-weight: 500; color: var(--warn); }
+    #status[data-state="busy"]  { color: var(--accent); }
+    #status[data-state="ready"] { color: var(--good); }
+    #status[data-state="error"] { color: var(--bad); }
+
+    #progress { display: none; }
+    #progress[data-visible="true"] { display: block; }
+
+    .bar {
+        height: 6px;
+        background: var(--panel-2);
+        border-radius: 99px;
+        overflow: hidden;
+        margin-top: .5rem;
+    }
+
+    .bar > i {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: var(--accent);
+        transition: width .15s;
+    }
+
+    /* --- data table --- */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .8rem;
+    }
+
+    th, td {
+        text-align: left;
+        padding: .5rem .75rem;
+        white-space: nowrap;
+    }
+
+    thead th {
+        background: var(--panel-2);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-weight: 500;
+        font-size: .75rem;
+    }
+
+    tbody tr + tr td { border-top: 1px solid var(--line); }
+    tbody td         { font-family: var(--mono); color: var(--muted); }
+
+    .scroll {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+    }
+
+    /* --- results --- */
+    #results {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr));
+        gap: .75rem;
+    }
+
+    .card { padding: .85rem; }
+
+    .card > header {
+        border: 0;
+        padding: 0 0 .5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: .5rem;
+    }
+
+    .card .col  { font-family: var(--mono); font-weight: 700; color: var(--accent); font-size: .85rem; }
+    .card .top  { font-size: .75rem; color: var(--good); }
+
+    .score {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: .15rem .5rem;
+        font-size: .72rem;
+        color: var(--muted);
+        margin-top: .3rem;
+    }
+
+    .score .track { grid-column: 1 / -1; height: 3px; background: var(--panel-2); border-radius: 99px; }
+    .score .track > i { display: block; height: 100%; background: var(--faint); border-radius: 99px; }
+    .score.is-top .track > i { background: var(--good); }
+    .score.is-top          { color: var(--text); }
+
+    .empty {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 2.5rem;
+        color: var(--faint);
+        font-style: italic;
+        border: 1px dashed var(--line);
+        border-radius: var(--radius);
+    }
+
+    @media (max-width: 640px) {
+        .grid-2 { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<main>
+    <header>
+        <h1>In-Browser AI Dataset Column Classifier</h1>
+        <p>
+            A zero-shot NLI model runs locally via WASM/ONNX and assigns a role to each column.
+            No data leaves the browser.
+        </p>
+    </header>
+
+    <!-- ============ classifier settings ============ -->
+    <section class="panel">
+        <h2>Classifier settings</h2>
+
+        <div class="grid-2">
+            <div>
+                <label for="model">Model</label>
+                <select id="model"></select>
+                <p class="hint">Larger models judge better and download slower.</p>
+            </div>
+            <div>
+                <label for="hypothesis">Hypothesis template &mdash; <code>{}</code> is replaced by each label</label>
+                <input type="text" id="hypothesis" />
+                <p class="hint">The NLI model scores how well this sentence follows from the premise below.</p>
+            </div>
+        </div>
+
+        <div class="grid-2 stack">
+            <div>
+                <label for="premise">Premise template</label>
+                <textarea id="premise" spellcheck="false"></textarea>
+                <p class="hint">
+                    Placeholders:
+                    <code>{name}</code> <code>{values}</code> <code>{range}</code>
+                    <code>{min}</code> <code>{max}</code> <code>{count}</code>
+                    <code>{unique}</code> <code>{siblings}</code>
+                </p>
+            </div>
+            <div>
+                <label for="labels">Candidate labels &mdash; one per line</label>
+                <textarea id="labels" spellcheck="false"></textarea>
+                <p class="hint">Each label is substituted into the hypothesis template, so it must read as a sentence.</p>
+            </div>
+        </div>
+
+        <div class="row stack">
+            <button id="reset-prompt" class="tab" type="button">Reset to defaults</button>
+            <label class="check">
+                <input type="checkbox" id="multi-label" />
+                Score labels independently (multi_label)
+            </label>
+        </div>
+    </section>
+
+    <!-- ============ dataset picker ============ -->
+    <section>
+        <h2>Example dataset</h2>
+        <div class="row" id="tabs" role="tablist"></div>
+        <p class="hint" id="dataset-note"></p>
+    </section>
+
+    <!-- ============ run ============ -->
+    <section class="panel spread">
+        <div>
+            <label>Model status</label>
+            <div id="status" data-state="idle">Model not loaded</div>
+        </div>
+        <button id="run" type="button">Run classification</button>
+    </section>
+
+    <section class="panel" id="progress">
+        <div class="spread meta">
+            <span id="progress-label">Downloading model weights&hellip;</span>
+            <span id="progress-percent">0%</span>
+        </div>
+        <div class="bar"><i id="progress-bar"></i></div>
+    </section>
+
+    <!-- ============ preview ============ -->
+    <section>
+        <h2>Input data</h2>
+        <div class="scroll">
+            <table>
+                <thead><tr id="thead"></tr></thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </div>
+        <p class="hint">Premise sent for the first column: <span class="mono" id="premise-preview"></span></p>
+    </section>
+
+    <!-- ============ results ============ -->
+    <section>
+        <h2>Results</h2>
+        <div id="results">
+            <p class="empty">Run the classifier to score each column.</p>
+        </div>
+    </section>
+</main>
+
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+env.allowLocalModels = false;
+
+/* =====================================================================
+ * 1. CLASSIFIER CORE
+ *    Pure logic. Knows nothing about the DOM.
+ * ===================================================================== */
+
+/* Every id below is a real ONNX repo on the Hub. A missing repo makes the
+ * CDN answer 401, which reads like an auth failure but is not one. */
+const MODELS = [
+    { id: 'Xenova/nli-deberta-v3-xsmall', name: 'DeBERTa v3 xsmall  (~83 MB)' },
+    { id: 'Xenova/nli-deberta-v3-small',  name: 'DeBERTa v3 small   (~165 MB)' },
+    { id: 'Xenova/nli-deberta-v3-base',   name: 'DeBERTa v3 base    (~233 MB)' },
+    { id: 'Xenova/bart-large-mnli',       name: 'BART large MNLI    (~392 MB)' }
+];
+
+const DEFAULTS = {
+    model: 'Xenova/nli-deberta-v3-small',
+    /* The NLI premise. This is the text the model reads.
+     * Sibling names ({siblings}) are deliberately left out: they let the model
+     * entail "latitude" from a neighbouring lat column, not from this one. */
+    premise: 'A data table has a column named "{name}". Values in that column look like: {values}. {range}',
+    /* The NLI hypothesis. transformers.js puts each label into {}. */
+    hypothesis: 'That column holds {}.',
+    /* Labels must complete the hypothesis as a grammatical sentence. */
+    labels: [
+        'a unique record identifier',
+        'a date or a time',
+        'a measured numeric value',
+        'a latitude coordinate in degrees north',
+        'a longitude coordinate in degrees east'
+    ].join('\n')
+};
+
+/**
+ * Derive the facts a premise can quote about one column.
+ * Numeric stats stay empty for non-numeric columns, and {range} degrades to a
+ * plain sentence so the premise never reads "from  to ".
+ */
+function summariseColumn(name, values, siblings) {
+    const cells = values.map((value) => String(value).trim());
+    const numbers = cells.map(Number);
+    const isNumeric = cells.every((cell) => cell !== '' && Number.isFinite(Number(cell)));
+
+    const facts = {
+        name,
+        values: cells.join(', '),
+        count: String(cells.length),
+        unique: String(new Set(cells).size),
+        siblings: siblings.join(', '),
+        table: siblings.join(', '),   // alias, kept for older templates
+        min: '',
+        max: '',
+        range: 'The values are not numbers.'
+    };
+
+    if (isNumeric) {
+        facts.min = String(Math.min(...numbers));
+        facts.max = String(Math.max(...numbers));
+        facts.range = `The values are numbers from ${facts.min} to ${facts.max}.`;
+    }
+
+    return facts;
+}
+
+/** Replace every {token} in a template with the matching fact. */
+function buildPremise(template, facts) {
+    return template.replace(/\{(\w+)\}/g, (match, key) => facts[key] ?? match);
+}
+
+/** Split a textarea into a clean label list. */
+function parseLabels(text) {
+    return text.split('\n').map((line) => line.trim()).filter(Boolean);
+}
+
+/** Load a pipeline. Cached per model id so switching back is instant. */
+const pipelineCache = new Map();
+
+async function loadClassifier(modelId, onProgress) {
+    if (pipelineCache.has(modelId)) {
+        return pipelineCache.get(modelId);
+    }
+    const task = pipeline('zero-shot-classification', modelId, {
+        quantized: true,
+        progress_callback: onProgress
+    });
+    pipelineCache.set(modelId, task);
+    return task;
+}
+
+/**
+ * Score one column.
+ * Returns { name, premise, ranked: [{ label, score }] } sorted best first.
+ */
+async function classifyColumn(classifier, column, config) {
+    const premise = buildPremise(config.premise, column.facts);
+    const output = await classifier(premise, config.labels, {
+        hypothesis_template: config.hypothesis,
+        multi_label: config.multiLabel
+    });
+
+    const ranked = output.labels.map((label, i) => ({ label, score: output.scores[i] }));
+    return { name: column.name, premise, ranked };
+}
+
+/** Turn an array of row objects into one column descriptor per key. */
+function describeColumns(rows) {
+    const names = Object.keys(rows[0]);
+    return names.map((name) => {
+        const values = rows.map((row) => row[name]);
+        const siblings = names.filter((other) => other !== name);
+        return { name, values, facts: summariseColumn(name, values, siblings) };
+    });
+}
+
+/** Score every column, reporting each result as it arrives. */
+async function classifyTable(classifier, rows, config, onResult) {
+    const results = [];
+    for (const column of describeColumns(rows)) {
+        const result = await classifyColumn(classifier, column, config);
+        results.push(result);
+        onResult?.(result);
+    }
+    return results;
+}
+
+/* =====================================================================
+ * 2. EXAMPLE DATA
+ * ===================================================================== */
+
+const DATASETS = [
+    {
+        id: 'ctd',
+        name: 'CTD profile',
+        note: 'Vertical cast from a research vessel. One row per depth bin.',
+        rows: [
+            { cast_ref: 'CTD-0417', profile_dt: '2024-04-08T09:12:00Z', lat_dd: '48.6112', lon_dd: '-9.2044', pres_dbar: '10.2', temp_c: '18.412', psal_psu: '35.128', doxy_umolkg: '241.8', ph_total: '8.093' },
+            { cast_ref: 'CTD-0417', profile_dt: '2024-04-08T09:12:00Z', lat_dd: '48.6112', lon_dd: '-9.2044', pres_dbar: '50.6', temp_c: '15.883', psal_psu: '35.402', doxy_umolkg: '228.1', ph_total: '8.041' },
+            { cast_ref: 'CTD-0418', profile_dt: '2024-04-08T14:47:00Z', lat_dd: '48.7530', lon_dd: '-9.4471', pres_dbar: '150.1', temp_c: '12.047', psal_psu: '35.611', doxy_umolkg: '196.4', ph_total: '7.972' },
+            { cast_ref: 'CTD-0418', profile_dt: '2024-04-08T14:47:00Z', lat_dd: '48.7530', lon_dd: '-9.4471', pres_dbar: '500.9', temp_c: '9.334', psal_psu: '35.288', doxy_umolkg: '158.7', ph_total: '7.901' }
+        ]
+    },
+    {
+        id: 'nutrients',
+        name: 'Nutrient bottles',
+        note: 'Discrete water samples from a cruise. Coordinates hide behind projection-style names.',
+        rows: [
+            { sample_bottle: 'NB-114', collected_on: '2023-09-14 06:20', y_wgs84: '-34.8821', x_wgs84: '18.4102', sample_depth_m: '25', no3_umol_l: '1.84', po4_umol_l: '0.21', sio4_umol_l: '3.07' },
+            { sample_bottle: 'NB-115', collected_on: '2023-09-14 11:05', y_wgs84: '-35.1044', x_wgs84: '18.7719', sample_depth_m: '200', no3_umol_l: '18.62', po4_umol_l: '1.34', sio4_umol_l: '12.88' },
+            { sample_bottle: 'NB-116', collected_on: '2023-09-14 17:38', y_wgs84: '-35.4390', x_wgs84: '19.0455', sample_depth_m: '1000', no3_umol_l: '31.07', po4_umol_l: '2.19', sio4_umol_l: '48.31' }
+        ]
+    },
+    {
+        id: 'buoy',
+        name: 'Moored buoy',
+        note: 'Hourly surface observations from a fixed mooring. Position repeats on every row.',
+        rows: [
+            { mooring_ref: 'BUOY-6201', obs_stamp: '2024-06-01T00:00:00Z', deploy_lat_deg: '-29.8814', deploy_lon_deg: '31.2277', sst_degc: '21.07', sea_surface_salinity: '36.02', wave_hs_m: '1.42', cur_spd_ms: '0.34' },
+            { mooring_ref: 'BUOY-6201', obs_stamp: '2024-06-01T01:00:00Z', deploy_lat_deg: '-29.8814', deploy_lon_deg: '31.2277', sst_degc: '20.98', sea_surface_salinity: '36.01', wave_hs_m: '1.55', cur_spd_ms: '0.29' },
+            { mooring_ref: 'BUOY-6201', obs_stamp: '2024-06-01T02:00:00Z', deploy_lat_deg: '-29.8814', deploy_lon_deg: '31.2277', sst_degc: '20.84', sea_surface_salinity: '36.03', wave_hs_m: '1.61', cur_spd_ms: '0.31' }
+        ]
+    },
+    {
+        id: 'argo',
+        name: 'Argo floats',
+        note: 'Short uppercase names in the Argo netCDF style. JULD is the timestamp.',
+        rows: [
+            { PLATFORM_NUMBER: '6903025', JULD: '2024-02-11T06:31:00Z', LAT: '56.7412', LON: '-12.3388', PRES: '4.9', TEMP: '9.884', PSAL: '35.221', DOXY: '271.4' },
+            { PLATFORM_NUMBER: '6903025', JULD: '2024-02-21T07:04:00Z', LAT: '56.9038', LON: '-12.1120', PRES: '99.8', TEMP: '9.442', PSAL: '35.318', DOXY: '265.0' },
+            { PLATFORM_NUMBER: '6903025', JULD: '2024-03-02T06:58:00Z', LAT: '57.0221', LON: '-11.8642', PRES: '1002.3', TEMP: '4.117', PSAL: '34.982', DOXY: '230.6' }
+        ]
+    },
+    {
+        id: 'plankton',
+        name: 'Plankton tows',
+        note: 'Biological samples. Mixes taxonomy with position and time of the haul.',
+        rows: [
+            { tow_ref: 'NT-2211', sampled_on: '2023-05-18', haul_lat: '60.1247', haul_lon: '4.8830', scientific_name: 'Calanus finmarchicus', abundance_ind_m3: '412.7', net_mesh_um: '200', bottom_temp_c: '7.44' },
+            { tow_ref: 'NT-2212', sampled_on: '2023-05-18', haul_lat: '60.1583', haul_lon: '4.9412', scientific_name: 'Oithona similis', abundance_ind_m3: '1880.4', net_mesh_um: '200', bottom_temp_c: '7.51' },
+            { tow_ref: 'NT-2213', sampled_on: '2023-05-19', haul_lat: '60.2904', haul_lon: '5.1076', scientific_name: 'Thalassiosira spp.', abundance_ind_m3: '96.2', net_mesh_um: '55', bottom_temp_c: '8.02' }
+        ]
+    },
+    {
+        id: 'commerce',
+        name: 'Customer transactions',
+        note: 'Non-scientific control set. Checks the model against a very different domain.',
+        rows: [
+            { usr_id: 'USR-94821', signup_dt: '2024-03-15', home_lat: '34.0901', home_lon: '-118.4065', email_addr: 'alice@company.io', transaction_amt: '$149.99', zip_code: '90210' },
+            { usr_id: 'USR-38291', signup_dt: '2023-11-02', home_lat: '40.7506', home_lon: '-73.9972', email_addr: 'bob.smith@gmail.com', transaction_amt: '$89.50', zip_code: '10001' },
+            { usr_id: 'USR-10294', signup_dt: '2024-01-20', home_lat: '37.7898', home_lon: '-122.3942', email_addr: 'carol_dev@tech.org', transaction_amt: '$1,200.00', zip_code: '94105' }
+        ]
+    }
+];
+
+/* =====================================================================
+ * 3. UI
+ * ===================================================================== */
+
+const el = (id) => document.getElementById(id);
+const ui = {
+    model: el('model'),
+    premise: el('premise'),
+    hypothesis: el('hypothesis'),
+    labels: el('labels'),
+    multiLabel: el('multi-label'),
+    resetPrompt: el('reset-prompt'),
+    tabs: el('tabs'),
+    note: el('dataset-note'),
+    status: el('status'),
+    run: el('run'),
+    progress: el('progress'),
+    progressBar: el('progress-bar'),
+    progressLabel: el('progress-label'),
+    progressPercent: el('progress-percent'),
+    thead: el('thead'),
+    tbody: el('tbody'),
+    premisePreview: el('premise-preview'),
+    results: el('results')
+};
+
+let active = DATASETS[0];
+
+const escapeHtml = (value) => String(value).replace(/[&<>"]/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]
+));
+
+/** Read the current settings out of the form. */
+function readConfig() {
+    return {
+        model: ui.model.value,
+        premise: ui.premise.value,
+        hypothesis: ui.hypothesis.value,
+        labels: parseLabels(ui.labels.value),
+        multiLabel: ui.multiLabel.checked
+    };
+}
+
+function applyDefaults() {
+    ui.premise.value = DEFAULTS.premise;
+    ui.hypothesis.value = DEFAULTS.hypothesis;
+    ui.labels.value = DEFAULTS.labels;
+    ui.multiLabel.checked = false;
+    renderPremisePreview();
+}
+
+function setStatus(text, state) {
+    ui.status.textContent = text;
+    ui.status.dataset.state = state;
+}
+
+function renderModels() {
+    ui.model.innerHTML = MODELS
+        .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
+        .join('');
+    ui.model.value = DEFAULTS.model;
+}
+
+function renderTabs() {
+    ui.tabs.innerHTML = DATASETS.map((set) => `
+        <button class="tab" role="tab" data-id="${set.id}" aria-selected="${set.id === active.id}">
+            ${escapeHtml(set.name)}
+        </button>
+    `).join('');
+}
+
+function renderTable() {
+    const columns = describeColumns(active.rows);
+    ui.note.textContent = active.note;
+    ui.thead.innerHTML = columns.map((c) => `<th>${escapeHtml(c.name)}</th>`).join('');
+    ui.tbody.innerHTML = active.rows.map((row) => `
+        <tr>${columns.map((c) => `<td>${escapeHtml(row[c.name])}</td>`).join('')}</tr>
+    `).join('');
+}
+
+/** Show the exact premise the first column will produce. */
+function renderPremisePreview() {
+    const [first] = describeColumns(active.rows);
+    ui.premisePreview.textContent = buildPremise(ui.premise.value, first.facts);
+}
+
+function clearResults() {
+    ui.results.innerHTML = '<p class="empty">Run the classifier to score each column.</p>';
+}
+
+/** Render one column card with the full label ranking, not just the winner. */
+function renderResult({ name, ranked }) {
+    const top = ranked[0];
+    const rows = ranked.map((entry, i) => `
+        <div class="score${i === 0 ? ' is-top' : ''}">
+            <span>${escapeHtml(entry.label)}</span>
+            <span>${(entry.score * 100).toFixed(1)}%</span>
+            <span class="track"><i style="width:${(entry.score * 100).toFixed(1)}%"></i></span>
+        </div>
+    `).join('');
+
+    ui.results.insertAdjacentHTML('beforeend', `
+        <article class="panel card">
+            <header>
+                <span class="col">${escapeHtml(name)}</span>
+                <span class="top">${(top.score * 100).toFixed(0)}%</span>
+            </header>
+            ${rows}
+        </article>
+    `);
+}
+
+function onProgress(data) {
+    if (data.status !== 'progress') return;
+    const percent = Math.round(data.progress || 0);
+    ui.progressBar.style.width = `${percent}%`;
+    ui.progressPercent.textContent = `${percent}%`;
+    ui.progressLabel.textContent = `Downloading ${data.file || 'weights'}…`;
+}
+
+async function run() {
+    const config = readConfig();
+
+    if (config.labels.length < 2) {
+        setStatus('Add at least two candidate labels.', 'error');
+        return;
+    }
+
+    ui.run.disabled = true;
+
+    try {
+        ui.progress.dataset.visible = 'true';
+        setStatus('Loading model…', 'busy');
+
+        const classifier = await loadClassifier(config.model, onProgress);
+
+        ui.progress.dataset.visible = 'false';
+        ui.results.innerHTML = '';
+
+        await classifyTable(classifier, active.rows, config, (result) => {
+            setStatus(`Scoring "${result.name}"…`, 'busy');
+            renderResult(result);
+        });
+
+        setStatus('Done', 'ready');
+    } catch (error) {
+        console.error(error);
+        setStatus(`Error: ${error.message}`, 'error');
+        ui.progress.dataset.visible = 'false';
+    } finally {
+        ui.run.disabled = false;
+    }
+}
+
+/* --- wiring --- */
+
+ui.tabs.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-id]');
+    if (!button) return;
+    active = DATASETS.find((set) => set.id === button.dataset.id);
+    renderTabs();
+    renderTable();
+    renderPremisePreview();
+    clearResults();
+});
+
+ui.premise.addEventListener('input', renderPremisePreview);
+ui.resetPrompt.addEventListener('click', applyDefaults);
+ui.run.addEventListener('click', run);
+
+renderModels();
+renderTabs();
+renderTable();
+applyDefaults();
+</script>
+</body>
+</html>

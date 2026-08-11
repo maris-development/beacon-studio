@@ -3,13 +3,13 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
 	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { Column } from '@/util-types';
 	import { resolve } from '$app/paths';
-	import Button from '@/components/ui/button/button.svelte';
+	import Button from '@/components/buttons/Button.svelte';
 	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
 
 	type Dataset = {
@@ -123,46 +123,48 @@
 	]}
 />
 
-<div class="page-container">
-	<h1>Datasets</h1>
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Datasets</h2>
 
-	<p>Explore and manage the datasets that are available in your Beacon instance.</p>
+		<p>Explore and manage the datasets that are available in your Beacon instance.</p>
 
-	<div class="mb-4 flex items-center justify-between">
-		<input
-			type="search"
-			id="search"
-			placeholder="Search..."
-			class="search-input"
-			onchange={onSearchBoxChange}
+		<div class="mb-4 flex items-center justify-between">
+			<input
+				type="search"
+				id="search"
+				placeholder="Search..."
+				class="search-input"
+				onchange={onSearchBoxChange}
+			/>
+			<Button
+				onclick={() => {
+					upload_files_modal_open = true;
+				}}
+				variant="outline">Upload Datasets</Button
+			>
+		</div>
+
+		<DataTable
+			rowClass="arrow-row"
+			{onChangeSort}
+			{onPageChange}
+			{onCellClick}
+			{columns}
+			{rows}
+			{totalRows}
+			{pageSize}
+			{pageIndex}
+			{isLoading}
 		/>
-		<Button
-			onclick={() => {
-				upload_files_modal_open = true;
-			}}
-			variant="outline">Upload Datasets</Button
-		>
+
+		{#if upload_files_modal_open}
+			<UploadDatasetsModal
+				onCancel={() => (upload_files_modal_open = false)}
+				instance={currentBeaconInstanceValue}
+			/>
+		{/if}
 	</div>
-
-	<DataTable
-		rowClass="arrow-row"
-		{onChangeSort}
-		{onPageChange}
-		{onCellClick}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
-
-	{#if upload_files_modal_open}
-		<UploadDatasetsModal
-			onCancel={() => (upload_files_modal_open = false)}
-			instance={currentBeaconInstanceValue}
-		/>
-	{/if}
 </div>
 
 <style lang="scss">

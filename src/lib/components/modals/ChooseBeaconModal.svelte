@@ -4,7 +4,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '$lib/stores/config';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import AddBeaconModal from './AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
@@ -12,8 +12,10 @@
 	import SquareIcon from '@lucide/svelte/icons/square';
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
 	import { addToast } from '@/stores/toasts';
-	import ExternalLink from '../external-link.svelte';
-	import Card from '../card/card.svelte';
+	import ExternalLink from '../ExternalLink.svelte';
+	import Card from '../card/Card.svelte';
+
+	import { BeaconClient } from '@/beacon-api/client';
 
 	export let onClose: () => void;
 
@@ -33,6 +35,19 @@
 			//destructor
 		};
 	});
+
+	// immediatly cache all schemas for all tables on beacon instance selection
+	// how to do this on application start when beacon instance is already selected?
+	async function handleClose(){
+		const client = BeaconClient.new(currentBeaconInstanceValue);
+		const tables = await client.getCachedTables();
+		
+		for (const table of tables){
+			await client.getCachedSchema(table);
+		}
+
+		onClose();
+	}
 
 	function pickInstance(instance: BeaconInstance, e: Event | null = null) {
 		if (e) e.stopPropagation(); // Prevent event bubbling if necessary
@@ -115,7 +130,7 @@
 	}
 </script>
 
-<Modal title="Choose Beacon instance" {onClose}>
+<Modal title="Choose Beacon instance" onClose={handleClose}>
 	<p>Here are the currently configured Beacon instances:</p>
 
 	<div class="beacon-instances-wrapper">
@@ -125,9 +140,9 @@
 				<p>No Beacon instances configured. Please add one.</p>
             </Card>
 		{/if}
-		{#each beaconInstanceArray as instance}
+		{#each beaconInstanceArray as instance (instance.id)}
 
-			<Card onClick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
+			<Card onclick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<h3>{instance.name}</h3>
 				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}
@@ -160,7 +175,7 @@
 			<PlusIcon />
 		</Button>
 
-		<Button variant="outline" onclick={onClose}>
+		<Button variant="outline" onclick={handleClose}>
 			Done
 			<CheckIcon />
 		</Button>

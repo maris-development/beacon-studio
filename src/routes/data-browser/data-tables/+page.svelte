@@ -3,13 +3,13 @@
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { onMount } from 'svelte';
-	import DataTable from '$lib/components/data-table.svelte';
+	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { AffixString } from '@/utils';
 	import type { Column } from '@/util-types';
 	import { resolve } from '$app/paths';
-	import Button from '@/components/ui/button/button.svelte';
+	import Button from '@/components/buttons/Button.svelte';
 	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
 
 	let columns: Column[] = $state([
@@ -88,8 +88,8 @@
 		}
 	}
 
-	function onCellClick(row: Record<string, AffixString>, column: Column) {
-		const filename = row[column.key];
+	function onCellClick(row: Record<string, string|AffixString>, column: Column) {
+		const filename = row[column.key] as AffixString;
 
 		const url = new URL(resolve('/data-browser/table-detail'), window.location.origin);
 
@@ -109,34 +109,37 @@
 		{ label: 'Data tables', href: resolve('/data-browser/data-tables') }
 	]}
 />
+<div class="page-wrapper">
+	<div class="page-container">
+		<h2>Data Tables</h2>
+		<div class="mb-4 flex items-center justify-between">
+			<p>Explore and manage the tables that are available in your Beacon instance.</p>
 
-<div class="page-container">
-	<h1>Data Tables</h1>
-	<div class="mb-4 flex items-center justify-between">
-		<p>Explore and manage the tables that are available in your Beacon instance.</p>
+			<Button variant="outline" onclick={() => (create_table_modal_open = true)}
+				>Create Table</Button
+			>
+		</div>
 
-		<Button variant="outline" onclick={() => (create_table_modal_open = true)}>Create Table</Button>
-	</div>
-
-	<DataTable
-		rowClass="arrow-row"
-		{onChangeSort}
-		{onPageChange}
-		{onCellClick}
-		{columns}
-		{rows}
-		{totalRows}
-		{pageSize}
-		{pageIndex}
-		{isLoading}
-	/>
-
-	{#if create_table_modal_open}
-		<CreateTableModal
-			onCancel={() => (create_table_modal_open = false)}
-			instance={currentBeaconInstanceValue}
+		<DataTable
+			rowClass="arrow-row"
+			{onChangeSort}
+			{onPageChange}
+			{onCellClick}
+			{columns}
+			{rows}
+			{totalRows}
+			{pageSize}
+			{pageIndex}
+			{isLoading}
 		/>
-	{/if}
+
+		{#if create_table_modal_open}
+			<CreateTableModal
+				onCancel={() => (create_table_modal_open = false)}
+				instance={currentBeaconInstanceValue}
+			/>
+		{/if}
+	</div>
 </div>
 
 <style lang="scss">

@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '$lib/stores/config';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import Button from '$lib/components/buttons/Button.svelte';
 	import { Utils } from '@/utils';
 	import SaveIcon from '@lucide/svelte/icons/save';
 	import LinkIcon from '@lucide/svelte/icons/link';
@@ -14,7 +14,6 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
-	import { DatasetController } from 'chart.js';
 
 	/** Parent passes these in to handle save/close; optionally an instance for editing */
 	export let onSave: (instance: BeaconInstance, isDeleted: boolean) => void;
@@ -42,14 +41,14 @@
 		return () => document.removeEventListener('keydown', handleKeydown);
 	});
 
-	function closeModal(){
-		// Reset form fields		
-		if(input) {
+	function closeModal() {
+		// Reset form fields
+		if (input) {
 			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
 			if (!confirmation) {
 				return;
 			}
-		} 
+		}
 
 		onClose();
 	}
@@ -59,7 +58,7 @@
 		if (event.key === 'Escape') {
 			closeModal();
 			return;
-		} 
+		}
 
 		input = true;
 	}
@@ -69,7 +68,7 @@
 
 		// console.log('Connection test result:', validConnection);
 
-		if(!validConnection) return;
+		if (!validConnection) return;
 
 		const now = new Date();
 
@@ -86,25 +85,26 @@
 		onSave(newInstance, false);
 	}
 
-	async function removeInstance(){
-		if(!instance) return;
+	async function removeInstance() {
+		if (!instance) return;
 
-		let confirmation = confirm(`Are you sure you want to remove the instance "${instance.name}"? This action cannot be undone.`);
+		let confirmation = confirm(
+			`Are you sure you want to remove the instance "${instance.name}"? This action cannot be undone.`
+		);
 
-		if(!confirmation) return;
+		if (!confirmation) return;
 
 		onSave(instance, true);
 	}
 
+	type CheckConnectionState = 'untested' | 'testing' | 'valid' | 'invalid';
 
-	type CheckConnectionState = "untested" | "testing" | "valid" | "invalid";
+	let connectionCheckState: CheckConnectionState = 'untested';
 
-	let connectionCheckState: CheckConnectionState = "untested";
+	async function testConnection() {
+		if (connectionCheckState === 'testing') return; // prevent multiple tests at once
 
-	async function testConnection(){
-		if(connectionCheckState === "testing") return; // prevent multiple tests at once
-
-		connectionCheckState = "testing";
+		connectionCheckState = 'testing';
 
 		const testingInstance: BeaconInstance = {
 			id: 'testing-instance',
@@ -120,24 +120,22 @@
 
 		await Utils.sleep(330);
 
-		let couldConnect = await testingClient.testConnection()
+		let couldConnect = await testingClient.testConnection();
 
 		if (couldConnect) {
-			connectionCheckState = "valid";
-
+			connectionCheckState = 'valid';
 		} else {
-			connectionCheckState = "invalid";
-			
+			connectionCheckState = 'invalid';
+
 			return false;
 		}
-			
+
 		return true;
 	}
 </script>
 
 <Modal title={instance ? 'Edit Beacon instance' : 'Add Beacon instance'} onClose={closeModal}>
 	<form on:submit|preventDefault={submitForm}>
-
 		<div class="form-row">
 			<label for="name" class="required">Name</label>
 			<input type="text" id="name" bind:value={name} required />
@@ -161,7 +159,7 @@
 
 	<div slot="footer" class="footer">
 		<div class="buttons-left">
-			<Button type="button" variant="outline" onclick={closeModal} >
+			<Button type="button" variant="outline" onclick={closeModal}>
 				Cancel
 				<CircleXIcon />
 			</Button>
@@ -172,23 +170,18 @@
 			</Button>
 		</div>
 
-
-
 		<div class="buttons-right">
 			<Button variant="outline" onclick={testConnection}>
-				{#if connectionCheckState === "untested"}
+				{#if connectionCheckState === 'untested'}
 					Test connection
 					<span class="connection-{connectionCheckState}"><LinkIcon /></span>
-
-				{:else if connectionCheckState === "valid"}
+				{:else if connectionCheckState === 'valid'}
 					Connection valid
 					<span class="connection-{connectionCheckState}"><CheckIcon /></span>
-
-				{:else if connectionCheckState === "invalid"}
+				{:else if connectionCheckState === 'invalid'}
 					Connection invalid
 					<span class="connection-{connectionCheckState}"><TriangleAlertIcon /></span>
-
-				{:else if connectionCheckState === "testing"}
+				{:else if connectionCheckState === 'testing'}
 					Testing...
 					<span class="connection-{connectionCheckState}"><LoaderCircle /></span>
 				{/if}
@@ -199,9 +192,7 @@
 			</Button>
 		</div>
 	</div>
-		
 </Modal>
-
 
 <style lang="scss">
 	form {
@@ -210,7 +201,6 @@
 		gap: 1rem;
 
 		label.required {
-
 			&:after {
 				content: '*';
 				color: red;
@@ -243,7 +233,11 @@
 	}
 
 	@keyframes spin {
-		from { transform: rotate(0deg); }
-		to { transform: rotate(360deg); }
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
 	}
 </style>

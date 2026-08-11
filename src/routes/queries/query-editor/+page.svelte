@@ -1,14 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import QueryEditor from '@/components/query-editor/QueryEditor.svelte';
-	import QueryActionBar from '$lib/components/query-buttons/QueryActionBar.svelte';
+	import { page } from '$app/state';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import QueryEditor from '@/components/query-editor/QueryTextEditor.svelte';
+	import QueryActionBar from '$lib/components/query-builder/QueryActionBar.svelte';
 	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { addToast } from '@/stores/toasts';
+	import { resolveUrlQuery } from '@/stores/query-library';
 	import { resolve } from '$app/paths';
 
 	type RawQueryParameter = {
@@ -61,11 +63,9 @@
 		currentBeaconInstanceValue = $currentBeaconInstance;
 		client = BeaconClient.new(currentBeaconInstanceValue);
 
-		// Deep-link support: preload a query passed via `?query=` (e.g. "Edit" from
-		// the query history page), so the editor opens on that query.
-		const suppliedQuery = Utils.getUrlSuppliedQuery();
-
-		// console.log('Supplied query from URL:', suppliedQuery);
+		// Load a query from a deep-link. `?q=<record id>` comes from a page such as
+		// the query history. `?query=<gzip>` comes from a share link.
+		const { query: suppliedQuery } = resolveUrlQuery(page.url);
 
 		if (suppliedQuery) {
 			sourceCode = JSON.stringify(suppliedQuery, null, 2);
@@ -100,7 +100,12 @@
 		alert('Analyze action triggered (not implemented yet)');
 	}
 
-	async function handleMapVisualise() {
+	/**
+	 * Send the query to a visualiser. This page is the only source of a query with
+	 * no library record, because the user types it here. Therefore the link uses
+	 * the gzip form `?query=`, and not `?q=<id>`. A target page accepts both forms.
+	 */
+	function handOff(resolvedPath: string) {
 		const query = parseSourceCodeToCompiledQuery();
 		if (!query) {
 			return;
@@ -108,32 +113,20 @@
 
 		const gzippedQuery = Utils.objectToGzipString(query);
 		if (gzippedQuery) {
-			goto(resolve('/visualisations/map-viewer') + `?query=${encodeURIComponent(gzippedQuery)}`);
+			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
 		}
+	}
+
+	async function handleMapVisualise() {
+		handOff(resolve('/visualisations/map-viewer'));
 	}
 
 	async function handleChartVisualise() {
-		const query = parseSourceCodeToCompiledQuery();
-		if (!query) {
-			return;
-		}
-
-		const gzippedQuery = Utils.objectToGzipString(query);
-		if (gzippedQuery) {
-			goto(resolve('/visualisations/chart-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
-		}
+		handOff(resolve('/visualisations/chart-explorer'));
 	}
 
 	async function handleTableVisualise() {
-		const query = parseSourceCodeToCompiledQuery();
-		if (!query) {
-			return;
-		}
-
-		const gzippedQuery = Utils.objectToGzipString(query);
-		if (gzippedQuery) {
-			goto(resolve('/visualisations/table-explorer') + `?query=${encodeURIComponent(gzippedQuery)}`);
-		}
+		handOff(resolve('/visualisations/table-explorer'));
 	}
 
 	function parseSourceCodeToCompiledQuery(): CompiledQuery | undefined {

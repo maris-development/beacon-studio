@@ -18,13 +18,15 @@
 
 import * as ApacheArrow from 'apache-arrow';
 import { get } from 'svelte/store';
-import type { QueryInput } from '@beacon/client';
-import { getArrowDecoder } from '@/beacon-api/arrow-zstd';
-import { makeBeaconClient } from '@/beacon-api/sdk-client';
+import { getArrowDecoder, type QueryInput } from '@beacon/client';
+import { makeBeaconClient } from '@/beacon-api/client';
 import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { currentBeaconInstance } from '@/stores/config';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
+import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
+import { getSettings } from '@/stores/settings';
+import { snapshotInstance } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
@@ -34,14 +36,25 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser
  * stable. Mirrors the legacy client's `QUERY_LIMIT`; the per-query `limit` is this
- * divided by the number of selected columns.
+ * divided by the number of selected columns. The user sets the value on the
+ * settings page (`queryCellLimit`).
+ *
+ * Call this at the point of use. A read at module load would keep the value of
+ * the first page load for ever.
  */
-export const QUERY_CELL_LIMIT = 50_000_000;
+export function queryCellLimit(): number {
+	return getSettings().queryCellLimit;
+}
 
-/** Max number of cached datasets kept in memory at once. */
-const MAX_ENTRIES = 4;
+/** Max number of cached datasets kept in memory at once (`memoryCacheMaxEntries`). */
+function maxEntries(): number {
+	return getSettings().memoryCacheMaxEntries;
+}
+
 /** Max total cells across all cached datasets before oldest entries are evicted. */
-const MAX_TOTAL_CELLS = QUERY_CELL_LIMIT * 2;
+function maxTotalCells(): number {
+	return queryCellLimit() * 2;
+}
 
 /** Per-entry snapshot of the in-memory cache, for the cache-info UI. */
 export interface MemoryCacheEntryInfo {
@@ -104,6 +117,29 @@ class QueryStore {
 	private mapTableCache = new Map<string, Promise<ApacheArrow.Table>>();
 
 	/**
+	 * When `false`, caching is bypassed end-to-end: `ensure()` never reads from or
+	 * writes to the in-memory or OPFS tiers, so every call re-executes the query.
+	 * Concurrent identical calls are still de-duped via {@link inFlight} while the
+	 * request is in flight. Toggled through the client facade.
+	 */
+	private cacheEnabled = true;
+
+	/** Whether the result cache (memory + OPFS) is currently active. */
+	isCacheEnabled(): boolean {
+		return this.cacheEnabled;
+	}
+
+	/**
+	 * Enables or disables the result cache. Disabling also drops everything already
+	 * cached (memory + OPFS), so a disabled cache can never serve a stale result.
+	 */
+	setCacheEnabled(enabled: boolean): void {
+		if (this.cacheEnabled === enabled) return;
+		this.cacheEnabled = enabled;
+		if (!enabled) this.invalidate();
+	}
+
+	/**
 	 * Computes a stable cache key for a query (object key order doesn't matter).
 	 * The current Beacon instance's URL is part of the key: results persist across
 	 * sessions (OPFS tier), so the same query against a different instance must
@@ -120,22 +156,54 @@ class QueryStore {
 	}
 
 	/**
+	 * Return a cached entry for a cache key. Use it if you hold the `datasetKey`
+	 * of a {@link StoredQuery} and not the query. A deep-linked page can show a
+	 * cached result at once, and call `ensure()` after that.
+	 *
+	 * This method reads the memory tier only. A miss here can still be a hit in
+	 * the OPFS tier.
+	 */
+	peekByKey(key: string | null | undefined): DatasetEntry | undefined {
+		return key ? this.cache.get(key) : undefined;
+	}
+
+	/**
 	 * Returns the cached result for `query`: from memory, else rehydrated from the
 	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`). Concurrent
 	 * calls for the same query share a single request. On success the entry becomes
 	 * {@link current}.
 	 *
 	 * Does not throw on empty results — callers should check `entry.rowCount === 0`.
+	 *
+	 * `storedQueryId` is the id of the {@link StoredQuery} record that started this
+	 * run. It is the workbench block of the "Visualise" button, or the saved query
+	 * from a `?q=` link. Omit it if the query has no record. A share link and the
+	 * JSON editor have no record.
+	 *
+	 * The id is only bookkeeping. It does not change the cache, the request or the
+	 * result. It makes a link in two directions:
+	 *
+	 *   forward   The record gets the `datasetKey` of its result. Therefore a
+	 *             later visit shows the cached dataset with no new run.
+	 *   backward  The history entry gets the name and the builder state of the
+	 *             record. Therefore "open in workbench" restores the true draft.
+	 *             It does not build an approximate draft from the compiled query.
+	 *
+	 * Without the id, the app still runs the query, caches the result and adds a
+	 * history row. That row has no name and no draft. No record points to its
+	 * result.
 	 */
-	async ensure(query: CompiledQuery): Promise<DatasetEntry> {
+	async ensure(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
 		const key = this.keyFor(query);
 
-		const cached = this.cache.get(key);
-		if (cached) {
-			this.touch(key, cached);
-			this.current = cached;
-			this.recordHistory(cached);
-			return cached;
+		if (this.cacheEnabled) {
+			const cached = this.cache.get(key);
+			if (cached) {
+				this.touch(key, cached);
+				this.current = cached;
+				this.recordHistory(cached, storedQueryId);
+				return cached;
+			}
 		}
 
 		const existing = this.inFlight.get(key);
@@ -147,9 +215,9 @@ class QueryStore {
 		const promise = this.load(query, key)
 			.then((entry) => {
 				// console.log('QueryStore.ensure: loaded', entry.key, entry.rowCount, 'rows in', entry.duration.toFixed(1), 'ms');
-				this.insert(entry);
+				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry);
+				this.recordHistory(entry, storedQueryId);
 				return entry;
 			})
 			.finally(() => {
@@ -179,25 +247,58 @@ class QueryStore {
 	}
 
 	/**
-	 * Records a resolved dataset in the persisted query history. Best-effort: a
-	 * history failure must never break query execution. Snapshots the current Beacon
-	 * instance so the entry stays meaningful if that instance is later changed.
+	 * Add a dataset to the persisted query history. Also write the run stats to
+	 * the {@link StoredQuery} record that started the run. See
+	 * {@link QueryStore.ensure}.
+	 *
+	 * A failure here must never stop the execution of a query.
 	 */
-	private recordHistory(entry: DatasetEntry): void {
+	private recordHistory(entry: DatasetEntry, storedQueryId?: string): void {
 		const instance = get(currentBeaconInstance);
 		if (!instance) return;
 		try {
+			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
-				key: entry.key,
-				query: entry.query,
-				instanceId: instance.id,
-				instanceName: instance.name,
-				instanceUrl: instance.url,
+				datasetKey: entry.key,
+				compiled: entry.query,
+				draft: origin?.draft ?? null,
+				name: origin?.name,
+				instance: snapshotInstance(instance),
+				rowCount: entry.rowCount,
+				duration: entry.duration
+			});
+			recordRunResult(storedQueryId, {
+				datasetKey: entry.key,
 				rowCount: entry.rowCount,
 				duration: entry.duration
 			});
 		} catch (error) {
 			console.warn('Failed to record query history entry.', error);
+		}
+	}
+
+	/**
+	 * Records a client-side download in the persisted query history. Downloads are
+	 * server-materialized — they bypass {@link ensure} and the result cache — so no
+	 * row count is available here; {@link recordExecution} preserves any existing
+	 * entry's count. Best-effort, mirroring {@link recordHistory}: never throws into
+	 * the caller.
+	 */
+	recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
+		const instance = get(currentBeaconInstance);
+		if (!instance) return;
+		try {
+			const origin = resolveStoredQuery(storedQueryId);
+			recordExecution({
+				datasetKey: this.keyFor(query),
+				compiled: query,
+				draft: origin?.draft ?? null,
+				name: origin?.name,
+				instance: snapshotInstance(instance),
+				duration
+			});
+		} catch (error) {
+			console.warn('Failed to record download in query history.', error);
 		}
 	}
 
@@ -220,9 +321,9 @@ class QueryStore {
 		entries.reverse(); // cache is insertion-ordered (oldest first); show newest first.
 		return {
 			entryCount: this.cache.size,
-			maxEntries: MAX_ENTRIES,
+			maxEntries: maxEntries(),
 			totalCells: this.totalCells(),
-			maxTotalCells: MAX_TOTAL_CELLS,
+			maxTotalCells: maxTotalCells(),
 			totalBytes,
 			derivedTableCount: this.mapTableCache.size,
 			entries
@@ -239,6 +340,22 @@ class QueryStore {
 	/** Computes a column's numeric min/max for a cached dataset. */
 	minMax(entry: DatasetEntry, column: string): Promise<{ min: number; max: number }> {
 		return getArrowWorker().getColumnMinMax(entry.key, entry.table, column);
+	}
+
+	/** Counts the rows of a cached dataset inside a ring of [lon, lat] pairs. */
+	countInRing(
+		entry: DatasetEntry,
+		ring: [number, number][],
+		latitudeColumnName: string,
+		longitudeColumnName: string
+	): Promise<number> {
+		return getArrowWorker().countPointsInRing(
+			entry.key,
+			entry.table,
+			ring,
+			latitudeColumnName,
+			longitudeColumnName
+		);
 	}
 
 	/** Deduplicates a cached dataset by lat/lon, returning a new Arrow table. */
@@ -307,15 +424,17 @@ class QueryStore {
 
 	/** Loads a dataset: rehydrate from the OPFS tier if present, else fetch. */
 	private async load(query: CompiledQuery, key: string): Promise<DatasetEntry> {
-		const restored = await this.restore(query, key);
-		if (restored) return restored;
+		if (this.cacheEnabled) {
+			const restored = await this.restore(query, key);
+			if (restored) return restored;
+		}
 		return this.fetch(query, key);
 	}
 
 	/**
-	 * Rehydrates a dataset from the OPFS tier: decodes the persisted (uncompressed)
-	 * Arrow IPC bytes and rebuilds the entry from the sidecar metadata. Returns
-	 * `undefined` on any miss or decode failure (which falls through to a fetch).
+	 * Rehydrates a dataset from the OPFS tier: decodes the persisted (zstd) Arrow IPC
+	 * bytes and rebuilds the entry from the sidecar metadata. Returns `undefined` on
+	 * any miss or decode failure (which falls through to a fetch).
 	 */
 	private async restore(query: CompiledQuery, key: string): Promise<DatasetEntry | undefined> {
 		const hit = await opfsArrowCache.get(key);
@@ -347,7 +466,8 @@ class QueryStore {
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;
 		const columnCount = Math.max(1, query.query_parameters?.length ?? 1);
-		const limit = Math.round(QUERY_CELL_LIMIT / columnCount);
+		const cellLimit = queryCellLimit();
+		const limit = Math.round(cellLimit / columnCount);
 		payload.limit = limit;
 
 		// Request the server's default (zstd) Arrow IPC stream by omitting `output`
@@ -357,11 +477,11 @@ class QueryStore {
 		delete payload.output;
 
 		const start = performance.now();
-		// Decode via the SDK's `queryBatches`: it reads the zstd Arrow IPC stream with
-		// the SDK's own (correct) streaming decoder, so we don't re-implement zstd/IPC
-		// decoding here. It also surfaces the query id. Runtime batches are real
-
-		// apache-arrow RecordBatches (arrow is deduped to one copy).
+		// `queryRaw` hands back the untouched Response, so we keep both the query-id
+		// header and the raw bytes for the OPFS tier. Decoding then goes through the
+		// SDK's own `getArrowDecoder`, which registers the zstd codec and the buffer
+		// alignment patch, so we never re-implement zstd/IPC decoding here. The Table
+		// is a real apache-arrow Table (arrow is deduped to one copy).
 		const response = await client.queryRaw(payload as unknown as QueryInput);
 
 		// console.log('headers', [...response.headers.entries()]);
@@ -383,7 +503,7 @@ class QueryStore {
 			warnings.push('limit_reached');
 			addToast({
 				type: 'warning',
-				message: `The query result reached the ${QUERY_CELL_LIMIT.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete — refine your query to reduce the result size.`
+				message: `The query result reached the ${cellLimit.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete. Refine your query to reduce the result size.`
 			});
 		}
 
@@ -393,7 +513,9 @@ class QueryStore {
 		// the table re-serialized as an uncompressed Arrow IPC stream, so the rehydrate
 		// path is a plain `tableFromIPC` with no zstd dependency.
 		// const ipcBytes = ApacheArrow.tableToIPC(table, 'stream');
-		void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+		if (this.cacheEnabled) {
+			void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+		}
 
 		return {
 			key,
@@ -421,10 +543,10 @@ class QueryStore {
 
 	/** Evicts least-recently-used entries until within the count and cell caps. */
 	private evict(): void {
-		while (this.cache.size > MAX_ENTRIES) {
+		while (this.cache.size > maxEntries()) {
 			if (!this.deleteOldest()) break;
 		}
-		while (this.cache.size > 1 && this.totalCells() > MAX_TOTAL_CELLS) {
+		while (this.cache.size > 1 && this.totalCells() > maxTotalCells()) {
 			if (!this.deleteOldest()) break;
 		}
 	}
