@@ -11,6 +11,7 @@ export default defineConfig({
 	],
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
+		dedupe: ['apache-arrow']
 	},
 	optimizeDeps: {
 		esbuildOptions: {
