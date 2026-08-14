@@ -304,7 +304,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 	.query-block-wrapper {
 		display: flex;
-		min-width: 15rem;
+		flex: 0 0 15rem;
 		cursor: pointer;
 
 		:global(.query-block.card) {

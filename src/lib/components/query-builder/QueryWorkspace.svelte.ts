@@ -365,8 +365,12 @@ export class QueryWorkspace {
 	resetActive(): void {
 		const block = this.activeBlock;
 		if (!block) return;
+
+		const draft = makeEmptyDraft();
+		draft.tableName = block.draft?.tableName ?? '';
+
 		queryBlocks.update(block.id, {
-			draft: makeEmptyDraft(),
+			draft,
 			compiled: null,
 			datasetKey: null,
 			rowCount: null
