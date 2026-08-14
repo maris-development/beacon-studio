@@ -58,6 +58,7 @@
 
 	/** The plot as the user is editing it. Null while no plot is selected. */
 	let draft = $state<PlotConfig | null>(null);
+	let isBindingOpen = $state(false);
 
 	/** The plot that {@link draft} was taken from. */
 	let draftPlotId: string | null = null;
@@ -169,6 +170,7 @@
 	 * it, because the first column is a better start than an empty selector.
 	 */
 	function setPlotType(type: PlotType) {
+		isBindingOpen = true;
 		if (!draft || draft.type === type) return;
 		userEdited = true;
 
@@ -295,7 +297,7 @@
 			</label>
 		</PlotSection>
 
-		<PlotSection step={2} title="Bind data" summary={bindingSummary}>
+		<PlotSection step={2} title="Bind data" summary={bindingSummary} bind:open={isBindingOpen}>
 			<div class="field">
 				<Label for="plotXColumn">{xFieldLabel}</Label>
 
