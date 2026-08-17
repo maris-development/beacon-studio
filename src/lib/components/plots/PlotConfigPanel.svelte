@@ -285,16 +285,6 @@
 				crossSectionAvailable={controller.hasCrossSection}
 				onSelect={(type) => setPlotType(type)}
 			/>
-
-			<label class="field">
-				<span>Plot name</span>
-				<Input
-					type="text"
-					value={draft.name}
-					placeholder="Plot 1"
-					oninput={(event) => patchDraft({ name: event.currentTarget.value })}
-				/>
-			</label>
 		</PlotSection>
 
 		<PlotSection step={2} title="Bind data" summary={bindingSummary} bind:open={isBindingOpen}>
@@ -325,6 +315,32 @@
 			</div>
 
 			<div class="field">
+				<span id="xRangeLabel">X range</span>
+				<div class="pair" role="group" aria-labelledby="xRangeLabel">
+					<Input
+						type="number"
+						value={draft.x.min ?? ''}
+						placeholder="auto"
+						oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
+					/>
+					<Input
+						type="number"
+						value={draft.x.max ?? ''}
+						placeholder="auto"
+						oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
+					/>
+				</div>
+			</div>
+
+			<label class="checkbox-field">
+				<Checkbox
+					checked={draft.x.reverse}
+					onCheckedChange={(checked) => patchAxis('x', { reverse: !!checked })}
+				/>
+				<span>Invert the X axis</span>
+			</label>
+
+			<div class="field">
 				<Label for="plotYColumn">Y axis</Label>
 
 				{#if !usesYColumn(draft.type)}
@@ -349,6 +365,32 @@
 					</Select.Root>
 				{/if}
 			</div>
+
+			<div class="field">
+				<span id="yRangeLabel">Y range</span>
+				<div class="pair" role="group" aria-labelledby="yRangeLabel">
+					<Input
+						type="number"
+						value={draft.y.min ?? ''}
+						placeholder="auto"
+						oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
+					/>
+					<Input
+						type="number"
+						value={draft.y.max ?? ''}
+						placeholder="auto"
+						oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
+					/>
+				</div>
+			</div>
+
+			<label class="checkbox-field">
+				<Checkbox
+					checked={draft.y.reverse}
+					onCheckedChange={(checked) => patchAxis('y', { reverse: !!checked })}
+				/>
+				<span>Invert the Y axis (depth grows downward)</span>
+			</label>
 
 			{#if draft.type === 'line'}
 				<div class="field">
@@ -597,60 +639,6 @@
 				value={draft.style.pointOpacity}
 				onCommit={(value) => patchStyle({ pointOpacity: value })}
 			/>
-
-			<h4>Axes</h4>
-
-			<div class="field">
-				<span id="xRangeLabel">X range</span>
-				<div class="pair" role="group" aria-labelledby="xRangeLabel">
-					<Input
-						type="number"
-						value={draft.x.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.x.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
-					/>
-				</div>
-			</div>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.x.reverse}
-					onCheckedChange={(checked) => patchAxis('x', { reverse: !!checked })}
-				/>
-				<span>Reverse the X axis</span>
-			</label>
-
-			<div class="field">
-				<span id="yRangeLabel">Y range</span>
-				<div class="pair" role="group" aria-labelledby="yRangeLabel">
-					<Input
-						type="number"
-						value={draft.y.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.y.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
-					/>
-				</div>
-			</div>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.y.reverse}
-					onCheckedChange={(checked) => patchAxis('y', { reverse: !!checked })}
-				/>
-				<span>Reverse the Y axis (depth grows downward)</span>
-			</label>
 
 			<h4>Grid and text</h4>
 

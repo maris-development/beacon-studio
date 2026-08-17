@@ -2,6 +2,7 @@ import type { CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Selec
 import { currentBeaconInstance} from "$lib/stores/config";
 import { get } from "svelte/store";
 import { Utils } from "@/utils";
+// import type { ObjectEncodingOptions } from "node:fs";
 
 export class QueryBuilder {
     selects: Select[] = []
@@ -314,5 +315,123 @@ export class PythonQueryBuilder  {
         }
 
         return code;
+    }
+}
+
+export class FileDownloader {
+
+    public static download(
+        content: string,
+        fileName: string,
+        mimeType: string = "text/plain"
+    ): void {
+        if (!content) return;
+
+        const blob = new Blob([content], {
+            type: mimeType,
+        });
+
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fileName;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        URL.revokeObjectURL(url);
+    }
+}
+
+/**
+ * Create a Jupyter Notebook file from the provided Python code and download it to the user's machine.
+ */
+export class PythonQueryExporter {
+
+    /**
+     * Converts Python code to a Jupyter Notebook format.
+     * @param pythonCode The Python code (as string) to be converted to notebook.
+    */
+
+    private static pythonToNotebook(pythonCode: string): string {
+        const notebook = {
+            cells: [
+                {
+                    cell_type: "code",
+                    execution_count: null,
+                    metadata: {},
+                    outputs: [],
+                    source: pythonCode.split("\n").map((line, index, lines) =>
+                        index < lines.length - 1 ? `${line}\n` : line
+                    ),
+                },
+            ],
+            metadata: {
+                kernelspec: {
+                    display_name: "Python 3",
+                    language: "python",
+                    name: "python3",
+                },
+                language_info: {
+                    name: "python",
+                },
+            },
+            nbformat: 4,
+            nbformat_minor: 5,
+        };
+
+        return JSON.stringify(notebook, null, 2);
+    }
+
+    /**
+     * Attempts to export the provided python code to a Jupyter Notebook file and download it to the user's machine.
+     * @param pythonCode python code (as string) to be exported to notebook.
+     * @param notebookName name of the notebook file to be downloaded.
+     */
+    public static downloadAsNotebook(pythonCode: string, notebookName: string = "beacon-studio-query.ipynb"): void {
+       
+        let ipynbCode: string;
+        try{
+            ipynbCode = this.pythonToNotebook(pythonCode);
+        }
+        catch (error) {
+            throw new Error(`Failed to convert Python code to Jupyter Notebook format: ${error.message}`);
+        }
+        
+        try{
+            if(!ipynbCode) return;
+
+            FileDownloader.download(ipynbCode, "beacon-studio-query.ipynb", "application/x-ipynb+json");
+        }
+        catch(error){
+            throw new Error(`Failed to write Jupyter Notebook file: ${error.message}`);
+        }
+    }
+}
+
+/**
+ * Attemps to export the provided JSON to a JSON file.
+ */
+export class JSONQueryExporter {
+    /**
+ * Attempts to export the provided JSON to a file and download it to the user's machine.
+ * @param jsonCode JSON content as a string.
+ * @param fileName Name of the JSON file to be downloaded.
+ */
+    public static downloadAsJson(jsonCode: string,fileName: string = "beacon-studio-query.json"): void {
+
+        try {
+            if (!jsonCode) return;
+
+            FileDownloader.download(jsonCode, "beacon-studio-query.json", "application/json");
+        }
+        catch (error) {
+            throw new Error(
+                `Failed to write JSON file: ${error instanceof Error ? error.message : String(error)
+                }`
+            );
+        }
     }
 }
