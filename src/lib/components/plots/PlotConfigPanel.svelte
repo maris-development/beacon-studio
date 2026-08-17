@@ -463,41 +463,6 @@
 		</PlotSection>
 
 		<PlotSection step={3} title="Properties" summary={styleSummary} open={false}>
-			<h4>Titles</h4>
-
-			<label class="field">
-				<span>Plot title</span>
-				<Input
-					type="text"
-					value={draft.title}
-					placeholder="No title"
-					oninput={(event) => patchDraft({ title: event.currentTarget.value })}
-				/>
-			</label>
-
-			<label class="field">
-				<span>X axis title</span>
-				<Input
-					type="text"
-					value={draft.x.label ?? ''}
-					placeholder={draft.type === 'cross-section'
-						? CROSS_SECTION_AXIS_LABEL
-						: (draft.x.column ?? 'Column name')}
-					oninput={(event) => patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
-
-			<label class="field">
-				<span>Y axis title</span>
-				<Input
-					type="text"
-					value={draft.y.label ?? ''}
-					placeholder={draft.type === 'histogram'
-						? HISTOGRAM_AXIS_LABEL
-						: (draft.y.column ?? 'Column name')}
-					oninput={(event) => patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
 
 			<h4>Colour</h4>
 
@@ -565,6 +530,9 @@
 						/>
 					</div>
 				</div>
+
+				<!-- COLOR SCALE -->
+
 			{:else}
 				<p class="hint">Bind a column to the colour axis in step 2 to pick a palette.</p>
 			{/if}
@@ -614,13 +582,13 @@
 					<span>Mark every row with a dot</span>
 				</label>
 			{:else}
-				<h4>Points</h4>
+				<h4>Markers</h4>
 			{/if}
 
 			{#if draft.type !== 'histogram' && (draft.type !== 'line' || draft.line.showPoints)}
 				<PlotSlider
 					id="plotPointRadius"
-					label="Point size"
+					label="Marker size"
 					suffix="px"
 					min={0.5}
 					max={12}
@@ -632,7 +600,7 @@
 
 			<PlotSlider
 				id="plotPointOpacity"
-				label="Opacity"
+				label="Marker Opacity"
 				min={0.05}
 				max={1}
 				step={0.05}
@@ -640,8 +608,12 @@
 				onCommit={(value) => patchStyle({ pointOpacity: value })}
 			/>
 
-			<h4>Grid and text</h4>
+			<h4>Canvas</h4>
 
+			<!-- color gridlines (Add if easy),
+			 opacity (add if easy), background color, text color -->
+
+			<!-- Show gridlines  -->
 			<label class="checkbox-field">
 				<Checkbox
 					checked={draft.style.gridlines}
@@ -650,6 +622,9 @@
 				<span>Show gridlines</span>
 			</label>
 
+			<!-- Add gridline color and opacity -->
+
+			<!-- Separate these into background color and text color -->
 			<div class="field">
 				<span id="plotColoursLabel">Colours</span>
 				<div class="pair colors" role="group" aria-labelledby="plotColoursLabel">
@@ -673,6 +648,23 @@
 				</div>
 			</div>
 
+			<h4>Text</h4>
+
+			<!--
+			 x axis title, x axis size (to separate from axis title size),
+			 y axis title, y axis size (to separate from axis title size),
+			 legend title (to add), legend title size (to add) tick label size -->
+
+			<label class="field">
+				<span>Plot title</span>
+				<Input
+					type="text"
+					value={draft.title}
+					placeholder="No title"
+					oninput={(event) => patchDraft({ title: event.currentTarget.value })}
+				/>
+			</label>
+
 			<PlotSlider
 				id="plotTitleSize"
 				label="Title size"
@@ -684,6 +676,35 @@
 				onCommit={(value) => patchStyle({ titleFontSize: value })}
 			/>
 
+			<label class="field">
+				<span>X axis title</span>
+				<Input
+					type="text"
+					value={draft.x.label ?? ''}
+					placeholder={draft.type === 'cross-section'
+						? CROSS_SECTION_AXIS_LABEL
+						: (draft.x.column ?? 'Column name')}
+					oninput={(event) => patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
+				/>
+			</label>
+
+			<!-- X Axis title size -->
+
+			<label class="field">
+				<span>Y axis title</span>
+				<Input
+					type="text"
+					value={draft.y.label ?? ''}
+					placeholder={draft.type === 'histogram'
+						? HISTOGRAM_AXIS_LABEL
+						: (draft.y.column ?? 'Column name')}
+					oninput={(event) => patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
+				/>
+			</label>
+
+			<!-- Y Axis title size -->
+
+			<!-- Split into x and y axis title size -->
 			<PlotSlider
 				id="plotAxisTitleSize"
 				label="Axis title size"
@@ -694,6 +715,10 @@
 				value={draft.style.axisTitleFontSize}
 				onCommit={(value) => patchStyle({ axisTitleFontSize: value })}
 			/>
+
+			<!-- Legend title -->
+
+			<!-- Legent title size -->
 
 			<PlotSlider
 				id="plotTickSize"

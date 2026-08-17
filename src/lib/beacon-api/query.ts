@@ -109,8 +109,12 @@ export class PythonQueryBuilder  {
             tokenArg = `, jwt_token="${beaconInstance.token}"`;
         }
 
+        code += `\n# TODO: Add user agent to the client constructor if the Beacon API requires it.`;
+        code += `\n# user_agent = [instert email adress]`;
+        code += `\n`;
+
         code += `\nclient = Client("${beaconInstance.url}"${tokenArg})`;
-        code += `\n`
+        code += `\n`        
 
         code += `\ntables = client.list_tables()`;
         code += `\ntable = tables["${compiledQuery.from}"]`;
