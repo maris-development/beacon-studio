@@ -325,9 +325,12 @@
 		if (axis === 'y') options.side = 3;
 
 		if (title) {
+			let titleFontSize = style.xAxisTitleFontSize;
+			if (axis === 'y') titleFontSize = style.yAxisTitleFontSize;
+
 			options.label = title;
-			options.labelFont = `${style.axisTitleFontSize}px sans-serif`;
-			options.labelSize = style.axisTitleFontSize + 8;
+			options.labelFont = `${titleFontSize}px sans-serif`;
+			options.labelSize = titleFontSize + 8;
 		}
 
 		return options;

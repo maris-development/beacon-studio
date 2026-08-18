@@ -561,8 +561,6 @@
 					</div>
 				</div>
 
-				<!-- COLOR SCALE -->
-
 				<div class="field">
 					<Label for="plotColorScale">Color scale</Label>
 					<Select.Root
@@ -737,7 +735,16 @@
 				/>
 			</label>
 
-			<!-- X Axis title size -->
+			<PlotSlider
+				id="plotXAxisTitleSize"
+				label="X axis title size"
+				suffix="px"
+				min={6}
+				max={32}
+				step={1}
+				value={draft.style.xAxisTitleFontSize}
+				onCommit={(value) => patchStyle({ xAxisTitleFontSize: value })}
+			/>
 
 			<label class="field">
 				<span>Y axis title</span>
@@ -751,18 +758,15 @@
 				/>
 			</label>
 
-			<!-- Y Axis title size -->
-
-			<!-- Split into x and y axis title size -->
 			<PlotSlider
-				id="plotAxisTitleSize"
-				label="Axis title size"
+				id="plotYAxisTitleSize"
+				label="Y axis title size"
 				suffix="px"
 				min={6}
 				max={32}
 				step={1}
-				value={draft.style.axisTitleFontSize}
-				onCommit={(value) => patchStyle({ axisTitleFontSize: value })}
+				value={draft.style.yAxisTitleFontSize}
+				onCommit={(value) => patchStyle({ yAxisTitleFontSize: value })}
 			/>
 
 			<!-- Legend title -->

@@ -134,7 +134,8 @@ export interface PlotStyleConfig {
 	/** 0 to 1. A dense scatter needs a low value to show its structure. */
 	pointOpacity: number;
 	gridlines: boolean;
-	axisTitleFontSize: number;
+	xAxisTitleFontSize: number;
+	yAxisTitleFontSize: number;
 	tickFontSize: number;
 	titleFontSize: number;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
@@ -197,7 +198,8 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	pointRadius: 3,
 	pointOpacity: 0.85,
 	gridlines: true,
-	axisTitleFontSize: 13,
+	xAxisTitleFontSize: 13,
+	yAxisTitleFontSize: 13,
 	tickFontSize: 11,
 	titleFontSize: 16,
 	backgroundColor: '#ffffff',
@@ -457,8 +459,19 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 		pointRadius: clamp(asNumber(record.pointRadius, DEFAULT_STYLE.pointRadius), 0.5, 30),
 		pointOpacity: clamp(asNumber(record.pointOpacity, DEFAULT_STYLE.pointOpacity), 0.05, 1),
 		gridlines: asBoolean(record.gridlines, DEFAULT_STYLE.gridlines),
-		axisTitleFontSize: clamp(
-			asNumber(record.axisTitleFontSize, DEFAULT_STYLE.axisTitleFontSize),
+		xAxisTitleFontSize: clamp(
+			asNumber(
+				record.xAxisTitleFontSize,
+				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.xAxisTitleFontSize)
+			),
+			6,
+			48
+		),
+		yAxisTitleFontSize: clamp(
+			asNumber(
+				record.yAxisTitleFontSize,
+				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.yAxisTitleFontSize)
+			),
 			6,
 			48
 		),
