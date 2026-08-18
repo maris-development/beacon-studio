@@ -268,6 +268,13 @@
 		return axisTitle(plot.y);
 	}
 
+	/** Use a custom legend title when set, otherwise retain the chart-specific label. */
+	function legendTitle(fallback: string): string {
+		const customTitle = plot.style.legendTitle.trim();
+		if (customTitle) return customTitle;
+		return fallback;
+	}
+
 	/**
 	 * Build the scale of one axis.
 	 *
@@ -343,7 +350,7 @@
 		const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
 
 		let rightPad = 8;
-		if (showColorBar) rightPad = colorBarPadding(style.tickFontSize);
+		if (showColorBar) rightPad = colorBarPadding(style.tickFontSize, style.legendTitleFontSize);
 
 		let topPad = 6;
 		if (plot.title) topPad = style.titleFontSize + 10;
@@ -389,6 +396,8 @@
 									),
 									textColor: style.textColor,
 									backgroundColor: style.backgroundColor,
+									title: legendTitle(plot.line.groupColumn ?? ''),
+									titleFontSize: style.legendTitleFontSize,
 									fontSize: style.tickFontSize,
 									droppedGroups: current.droppedGroups
 								});
@@ -413,14 +422,15 @@
 
 						if (showColorBar) {
 							drawColorBar(u, {
-								title: axisTitle(plot.z),
+								title: legendTitle(axisTitle(plot.z)),
 								min: colorBarRange.min,
 								max: colorBarRange.max,
 								palette: style.palette,
 								reverse: plot.z?.reverse ?? false,
 								scale: plot.z?.scale ?? 'linear',
 								textColor: style.textColor,
-								fontSize: style.tickFontSize
+								fontSize: style.tickFontSize,
+								titleFontSize: style.legendTitleFontSize
 							});
 						}
 

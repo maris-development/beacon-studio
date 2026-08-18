@@ -364,6 +364,8 @@ export interface GroupLegendOptions {
 	colors: ReadonlyArray<string>;
 	textColor: string;
 	backgroundColor: string;
+	title: string;
+	titleFontSize: number;
 	fontSize: number;
 	/** Groups that the plot does not draw. Named in a last row. */
 	droppedGroups: number;
@@ -387,9 +389,12 @@ export function drawGroupLegend(u: uPlot, options: GroupLegendOptions): void {
 	const dpr = dprOf(u);
 
 	const fontSize = options.fontSize * dpr;
+	const titleFontSize = options.titleFontSize * dpr;
 	const margin = LEGEND_MARGIN * dpr;
 	const swatch = LEGEND_SWATCH * dpr;
 	const rowHeight = Math.max(fontSize, swatch) + LEGEND_ROW_GAP * dpr;
+	let titleHeight = 0;
+	if (options.title) titleHeight = titleFontSize + LEGEND_ROW_GAP * dpr;
 
 	ctx.save();
 	clipToPlot(u);
@@ -397,7 +402,7 @@ export function drawGroupLegend(u: uPlot, options: GroupLegendOptions): void {
 
 	// How many rows fit in half the plot height. A legend that filled the plot
 	// would hide the lines it explains.
-	const room = Math.max(Math.floor((height / 2 - margin * 2) / rowHeight), 1);
+	const room = Math.max(Math.floor((height / 2 - margin * 2 - titleHeight) / rowHeight), 1);
 
 	let shown = options.groups.length;
 	let overflow = options.droppedGroups;
@@ -420,9 +425,15 @@ export function drawGroupLegend(u: uPlot, options: GroupLegendOptions): void {
 		textWidth = Math.max(textWidth, ctx.measureText(row.label).width);
 	}
 
+	if (options.title) {
+		ctx.font = `bold ${titleFontSize}px sans-serif`;
+		textWidth = Math.max(textWidth, ctx.measureText(options.title).width);
+		ctx.font = `${fontSize}px sans-serif`;
+	}
+
 	const padding = 6 * dpr;
 	const boxWidth = padding * 2 + swatch + padding + textWidth;
-	const boxHeight = padding * 2 + rows.length * rowHeight - LEGEND_ROW_GAP * dpr;
+	const boxHeight = padding * 2 + titleHeight + rows.length * rowHeight - LEGEND_ROW_GAP * dpr;
 
 	const boxX = left + width - margin - boxWidth;
 	const boxY = top + margin;
@@ -441,8 +452,16 @@ export function drawGroupLegend(u: uPlot, options: GroupLegendOptions): void {
 	ctx.textAlign = 'left';
 	ctx.textBaseline = 'middle';
 
+	if (options.title) {
+		ctx.fillStyle = options.textColor;
+		ctx.font = `bold ${titleFontSize}px sans-serif`;
+		ctx.fillText(options.title, boxX + padding, boxY + padding + titleFontSize / 2);
+		ctx.font = `${fontSize}px sans-serif`;
+	}
+
 	for (let i = 0; i < rows.length; i++) {
-		const centre = boxY + padding + rowHeight * i + rowHeight / 2 - (LEGEND_ROW_GAP * dpr) / 2;
+		const centre =
+			boxY + padding + titleHeight + rowHeight * i + rowHeight / 2 - (LEGEND_ROW_GAP * dpr) / 2;
 
 		if (rows[i].color) {
 			ctx.fillStyle = rows[i].color as string;
@@ -628,10 +647,10 @@ const GRADIENT_STOPS = 32;
 const BAR_TICKS = 5;
 
 /** How much right padding, in CSS pixels, a chart with a colour bar needs. */
-export function colorBarPadding(fontSize: number): number {
+export function colorBarPadding(fontSize: number, titleFontSize: number): number {
 	// bar + labels + the rotated title. The label width is an estimate for six
 	// digits at this font size, which is enough for the values this app shows.
-	return BAR_GAP + BAR_WIDTH + LABEL_GAP + fontSize * 3.5 + fontSize * 1.6;
+	return BAR_GAP + BAR_WIDTH + LABEL_GAP + fontSize * 3.5 + titleFontSize * 1.6;
 }
 
 export interface ColorBarDrawOptions {
@@ -643,6 +662,7 @@ export interface ColorBarDrawOptions {
 	scale: ColorScale;
 	textColor: string;
 	fontSize: number;
+	titleFontSize: number;
 }
 
 function formatValue(value: number): string {
@@ -672,6 +692,7 @@ export function drawColorBar(u: uPlot, options: ColorBarDrawOptions): void {
 	const barGap = BAR_GAP * dpr;
 	const labelGap = LABEL_GAP * dpr;
 	const fontSize = options.fontSize * dpr;
+	const titleFontSize = options.titleFontSize * dpr;
 
 	const bottom = top + height;
 	const x = left + width + barGap;
@@ -719,10 +740,11 @@ export function drawColorBar(u: uPlot, options: ColorBarDrawOptions): void {
 
 	if (options.title) {
 		// The title reads bottom to top beside the labels, like a Y axis title.
-		const titleX = x + barWidth + labelGap + maxLabelWidth + labelGap + fontSize;
+		const titleX = x + barWidth + labelGap + maxLabelWidth + labelGap + titleFontSize;
 
 		ctx.translate(titleX, (top + bottom) / 2);
 		ctx.rotate(-Math.PI / 2);
+		ctx.font = `bold ${titleFontSize}px sans-serif`;
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.fillText(options.title, 0, 0);

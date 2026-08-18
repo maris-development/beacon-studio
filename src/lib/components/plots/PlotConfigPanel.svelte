@@ -769,9 +769,26 @@
 				onCommit={(value) => patchStyle({ yAxisTitleFontSize: value })}
 			/>
 
-			<!-- Legend title -->
+			<label class="field">
+				<span>Legend title</span>
+				<Input
+					type="text"
+					value={draft.style.legendTitle}
+					placeholder="Use the default legend title"
+					oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
+				/>
+			</label>
 
-			<!-- Legent title size -->
+			<PlotSlider
+				id="plotLegendTitleSize"
+				label="Legend title size"
+				suffix="px"
+				min={6}
+				max={32}
+				step={1}
+				value={draft.style.legendTitleFontSize}
+				onCommit={(value) => patchStyle({ legendTitleFontSize: value })}
+			/>
 
 			<PlotSlider
 				id="plotTickSize"

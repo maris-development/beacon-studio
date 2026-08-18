@@ -136,6 +136,9 @@ export interface PlotStyleConfig {
 	gridlines: boolean;
 	xAxisTitleFontSize: number;
 	yAxisTitleFontSize: number;
+	/** Optional title shared by the group legend and the colour scale. */
+	legendTitle: string;
+	legendTitleFontSize: number;
 	tickFontSize: number;
 	titleFontSize: number;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
@@ -200,6 +203,8 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	gridlines: true,
 	xAxisTitleFontSize: 13,
 	yAxisTitleFontSize: 13,
+	legendTitle: '',
+	legendTitleFontSize: 13,
 	tickFontSize: 11,
 	titleFontSize: 16,
 	backgroundColor: '#ffffff',
@@ -472,6 +477,12 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 				record.yAxisTitleFontSize,
 				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.yAxisTitleFontSize)
 			),
+			6,
+			48
+		),
+		legendTitle: asString(record.legendTitle, DEFAULT_STYLE.legendTitle),
+		legendTitleFontSize: clamp(
+			asNumber(record.legendTitleFontSize, DEFAULT_STYLE.legendTitleFontSize),
 			6,
 			48
 		),
