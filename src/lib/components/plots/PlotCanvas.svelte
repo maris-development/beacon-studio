@@ -100,7 +100,7 @@
 	// Rebuild the chart when the plot, the data, the contours or the palette
 	// change. The reads below are the dependencies of this effect.
 	$effect(() => {
-		void [plot, series, contours, palettesLoaded];
+		void [plot, plot.z?.scale, series, contours, palettesLoaded];
 		scheduleRebuild();
 	});
 
@@ -363,10 +363,7 @@
 				x: scaleFor('x', current.xKind === 'timestamp'),
 				y: scaleFor('y', current.yKind === 'timestamp')
 			},
-			axes: [
-				axisOptions('x', xTitle(), style, grid),
-				axisOptions('y', yTitle(), style, grid)
-			],
+			axes: [axisOptions('x', xTitle(), style, grid), axisOptions('y', yTitle(), style, grid)],
 			series: [{}, { scale: 'y', paths: () => null, points: { show: false } }],
 			hooks: {
 				drawClear: [(u) => drawBackground(u, style.backgroundColor)],
@@ -402,6 +399,7 @@
 								result: contours,
 								palette: style.palette,
 								reverse: plot.z?.reverse ?? false,
+								scale: plot.z?.scale ?? 'linear',
 								lineWidth: plot.contour.lineWidth,
 								showLabels: plot.contour.showLabels,
 								labelFontSize: plot.contour.labelFontSize,
@@ -417,6 +415,7 @@
 								max: colorBarRange.max,
 								palette: style.palette,
 								reverse: plot.z?.reverse ?? false,
+								scale: plot.z?.scale ?? 'linear',
 								textColor: style.textColor,
 								fontSize: style.tickFontSize
 							});

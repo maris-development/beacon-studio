@@ -30,6 +30,7 @@
 	import PlotSlider from './PlotSlider.svelte';
 	import PlotTypeCards from './PlotTypeCards.svelte';
 	import PalettePicker from '@/components/palette/PalettePicker.svelte';
+	import { addToast } from '@/stores/toasts';
 	import type { ChartExplorerController } from './ChartExplorerController.svelte';
 	import {
 		axisTitle,
@@ -44,7 +45,8 @@
 		type PlotHistogramConfig,
 		type PlotLineConfig,
 		type PlotStyleConfig,
-		type PlotType
+		type PlotType,
+		type ColorScale
 	} from '@/plots/plot-config';
 	import { CROSS_SECTION_AXIS_LABEL, HISTOGRAM_AXIS_LABEL } from '@/plots/plot-data';
 	import { Utils } from '@/utils';
@@ -221,6 +223,24 @@
 		patchLine({ groupColumn: value });
 	}
 
+	function setColorScale(scale: ColorScale) {
+		if (!draft?.z) return;
+
+		const min = draft.z.min ?? controller.series?.zRange?.min;
+		const max = draft.z.max ?? controller.series?.zRange?.max;
+		if (
+			scale === 'logarithmic' &&
+			(min === undefined || max === undefined || min <= 0 || max <= 0 || max <= min)
+		) {
+			addToast({
+				message: 'Logarithmic scale needs a positive minimum and maximum.',
+				type: 'error'
+			});
+		}
+
+		patchAxis('z', { scale });
+	}
+
 	// -- value helpers -------------------------------------------------------
 
 	/** An empty field means "auto", which the model stores as null. */
@@ -274,6 +294,17 @@
 		if (!draft?.z?.column) return 'Needs a colour column';
 		if (!draft.contour.enabled) return 'Off';
 		return `${draft.contour.levelCount} levels`;
+	});
+
+	const colorScaleError = $derived.by(() => {
+		if (!draft?.z || draft.z.scale !== 'logarithmic') return '';
+		const min = draft.z.min ?? controller.series?.zRange?.min;
+		const max = draft.z.max ?? controller.series?.zRange?.max;
+		if (min === undefined || max === undefined) return 'Logarithmic scale needs positive data.';
+		if (!(min > 0) || !(max > 0) || !(max > min)) {
+			return 'Logarithmic scale needs a positive minimum and maximum.';
+		}
+		return '';
 	});
 </script>
 
@@ -463,7 +494,6 @@
 		</PlotSection>
 
 		<PlotSection step={3} title="Properties" summary={styleSummary} open={false}>
-
 			<h4>Colour</h4>
 
 			{#if draft.type === 'line'}
@@ -533,6 +563,33 @@
 
 				<!-- COLOR SCALE -->
 
+				<div class="field">
+					<Label for="plotColorScale">Color scale</Label>
+					<Select.Root
+						type="single"
+						value={draft.z.scale}
+						onValueChange={(value) => setColorScale(value as ColorScale)}
+					>
+						<Select.Trigger id="plotColorScale">
+							{draft.z.scale === 'logarithmic'
+								? 'Logarithmic'
+								: draft.z.scale === 'exponential'
+									? 'Exponential'
+									: 'Linear'}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Group>
+								<Select.Item value="linear" label="Linear">Linear</Select.Item>
+								<Select.Item value="logarithmic" label="Logarithmic">Logarithmic</Select.Item>
+								<Select.Item value="exponential" label="Exponential">Exponential</Select.Item>
+							</Select.Group>
+						</Select.Content>
+					</Select.Root>
+				</div>
+
+				{#if colorScaleError}
+					<p class="scale-error" role="alert">{colorScaleError}</p>
+				{/if}
 			{:else}
 				<p class="hint">Bind a column to the colour axis in step 2 to pick a palette.</p>
 			{/if}
@@ -610,10 +667,6 @@
 
 			<h4>Canvas</h4>
 
-			<!-- color gridlines (Add if easy),
-			 opacity (add if easy), background color, text color -->
-
-			<!-- Show gridlines  -->
 			<label class="checkbox-field">
 				<Checkbox
 					checked={draft.style.gridlines}
@@ -624,28 +677,24 @@
 
 			<!-- Add gridline color and opacity -->
 
-			<!-- Separate these into background color and text color -->
 			<div class="field">
-				<span id="plotColoursLabel">Colours</span>
-				<div class="pair colors" role="group" aria-labelledby="plotColoursLabel">
-					<label>
-						<input
-							type="color"
-							value={draft.style.backgroundColor}
-							onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
-						/>
-						<span>Background</span>
-					</label>
+				<span id="plotBackgroundColourLabel">Background color</span>
+				<input
+					id="plotBackgroundColour"
+					type="color"
+					value={draft.style.backgroundColor}
+					onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
+				/>
+			</div>
 
-					<label>
-						<input
-							type="color"
-							value={draft.style.textColor}
-							onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
-						/>
-						<span>Text</span>
-					</label>
-				</div>
+			<div class="field">
+				<span id="plotTextColourLabel">Text color</span>
+				<input
+					id="plotTextColour"
+					type="color"
+					value={draft.style.textColor}
+					onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
+				/>
 			</div>
 
 			<h4>Text</h4>
@@ -817,7 +866,7 @@
 			through the steps.
 		-->
 		<footer class="apply-bar" class:dirty={isDirty}>
-			<button type="button" class="apply" disabled={!isDirty} onclick={apply}>
+			<button type="button" class="apply" disabled={!isDirty || !!colorScaleError} onclick={apply}>
 				<CheckIcon size={15} />
 				<span>Apply changes</span>
 			</button>

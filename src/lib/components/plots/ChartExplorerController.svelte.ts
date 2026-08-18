@@ -166,7 +166,8 @@ export class ChartExplorerController {
 			plot.y.min,
 			plot.y.max,
 			plot.z?.min,
-			plot.z?.max
+			plot.z?.max,
+			plot.z?.scale
 		].join('|');
 	});
 

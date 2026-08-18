@@ -17,6 +17,8 @@
  */
 import type uPlot from 'uplot';
 import { getColorTable, makePaletteScale, paletteIndex, samplePalette } from '@/colors/palettes';
+import { colorScalePosition, colorScaleValue } from '@/colors/color-scale';
+import type { ColorScale } from './plot-config';
 import { resolveRange, type PlotSeries } from './plot-data';
 import { DEFAULT_POINT_COLOR, type PlotConfig } from './plot-config';
 import type { ContourResult } from './contour';
@@ -186,6 +188,7 @@ export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void
 
 	const range = resolveRange(series.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
 	const reverse = plot.z?.reverse ?? false;
+	const scale = plot.z?.scale ?? 'linear';
 	const table = getColorTable(plot.style.palette);
 
 	// One bucket of point indices per palette step. A step with no point stays
@@ -194,7 +197,7 @@ export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void
 	const z = series.z;
 
 	for (let i = 0; i < count; i++) {
-		const step = paletteIndex(z[i], range.min, range.max, reverse);
+		const step = paletteIndex(z[i], range.min, range.max, reverse, scale);
 		const bucket = buckets[step];
 		if (bucket) bucket.push(i);
 		else buckets[step] = [i];
@@ -483,6 +486,7 @@ export interface ContourDrawOptions {
 	result: ContourResult;
 	palette: string;
 	reverse: boolean;
+	scale: ColorScale;
 	lineWidth: number;
 	showLabels: boolean;
 	labelFontSize: number;
@@ -507,7 +511,13 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
 	const dpr = dprOf(u);
 
 	const { levels, hull, range } = options.result;
-	const colorOf = makePaletteScale(options.palette, range.min, range.max, options.reverse);
+	const colorOf = makePaletteScale(
+		options.palette,
+		range.min,
+		range.max,
+		options.reverse,
+		options.scale
+	);
 
 	const toPixelX = (x: number): number => u.valToPos(x, 'x', true);
 	const toPixelY = (y: number): number => u.valToPos(y, 'y', true);
@@ -630,6 +640,7 @@ export interface ColorBarDrawOptions {
 	max: number;
 	palette: string;
 	reverse: boolean;
+	scale: ColorScale;
 	textColor: string;
 	fontSize: number;
 }
@@ -673,7 +684,10 @@ export function drawColorBar(u: uPlot, options: ColorBarDrawOptions): void {
 	const colors = samplePalette(options.palette, GRADIENT_STOPS, options.reverse);
 
 	for (let i = 0; i < colors.length; i++) {
-		gradient.addColorStop(i / (colors.length - 1), colors[i]);
+		const valuePosition = i / (colors.length - 1);
+		const value = colorScaleValue(valuePosition, options.min, options.max, options.scale);
+		const colorPosition = colorScalePosition(value, options.min, options.max, options.scale);
+		gradient.addColorStop(colorPosition, colors[i]);
 	}
 
 	ctx.fillStyle = gradient;
@@ -693,10 +707,11 @@ export function drawColorBar(u: uPlot, options: ColorBarDrawOptions): void {
 	let maxLabelWidth = 0;
 
 	for (let i = 0; i < BAR_TICKS; i++) {
-		const t = i / (BAR_TICKS - 1);
-		const value = options.min + (options.max - options.min) * t;
+		const valuePosition = i / (BAR_TICKS - 1);
+		const value = options.min + (options.max - options.min) * valuePosition;
+		const barPosition = colorScalePosition(value, options.min, options.max, options.scale);
 		const label = formatValue(value);
-		const y = bottom - t * height;
+		const y = bottom - barPosition * height;
 
 		ctx.fillText(label, x + barWidth + labelGap, y);
 		maxLabelWidth = Math.max(maxLabelWidth, ctx.measureText(label).width);

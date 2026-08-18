@@ -322,6 +322,12 @@ export class PythonQueryBuilder  {
     }
 }
 
+export class SQLQueryBuilder{
+    /**
+     * not yet implemented
+     */
+}
+
 export class FileDownloader {
 
     public static download(

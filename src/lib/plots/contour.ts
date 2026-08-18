@@ -26,6 +26,7 @@ import { polygonHull } from 'd3-polygon';
 import type { PlotRange, PlotSeries } from './plot-data';
 import { resolveRange } from './plot-data';
 import type { PlotConfig } from './plot-config';
+import { colorScaleValue } from '@/colors/color-scale';
 
 /** A closed ring of `[x, y]` points, in data coordinates. */
 export type ContourRing = Array<[number, number]>;
@@ -83,11 +84,12 @@ export function buildContours(
 
 	// The thresholds sit between the ends, and not on them: a contour exactly at
 	// the minimum or the maximum encloses nothing or everything.
-	const step = (range.max - range.min) / (levelCount + 1);
 	const thresholds: number[] = [];
 
 	for (let i = 1; i <= levelCount; i++) {
-		thresholds.push(range.min + i * step);
+		thresholds.push(
+			colorScaleValue(i / (levelCount + 1), range.min, range.max, plot.z?.scale ?? 'linear')
+		);
 	}
 
 	const generator = d3Contours().size([resolution, resolution]).thresholds(thresholds);

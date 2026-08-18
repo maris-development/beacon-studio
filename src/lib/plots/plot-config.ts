@@ -26,6 +26,7 @@ import { createId } from '@/stores/stored-query';
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palettes';
 
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
+export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
 
 export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; description: string }> = [
 	{
@@ -87,6 +88,8 @@ export interface PlotAxisConfig {
 	min: number | null;
 	max: number | null;
 	reverse: boolean;
+	/** The value transform used when this axis drives the colour palette. */
+	scale: ColorScale;
 }
 
 export interface PlotContourConfig {
@@ -211,6 +214,7 @@ export function makeAxisConfig(overrides: Partial<PlotAxisConfig> = {}): PlotAxi
 		min: null,
 		max: null,
 		reverse: false,
+		scale: 'linear',
 		...overrides
 	};
 }
@@ -364,6 +368,11 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
 	return fallback;
 }
 
+function asColorScale(value: unknown): ColorScale {
+	if (value === 'logarithmic' || value === 'exponential') return value;
+	return 'linear';
+}
+
 function asString(value: unknown, fallback: string): string {
 	if (typeof value === 'string') return value;
 	return fallback;
@@ -389,7 +398,8 @@ function normaliseAxis(raw: unknown): PlotAxisConfig {
 		label: asNullableString(record.label),
 		min: asNullableNumber(record.min),
 		max: asNullableNumber(record.max),
-		reverse: asBoolean(record.reverse, false)
+		reverse: asBoolean(record.reverse, false),
+		scale: asColorScale(record.scale)
 	};
 }
 
