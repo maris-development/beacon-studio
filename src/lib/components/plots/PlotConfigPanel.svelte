@@ -579,7 +579,7 @@
 							<Select.Group>
 								<Select.Item value="linear" label="Linear">Linear</Select.Item>
 								<Select.Item value="logarithmic" label="Logarithmic">Logarithmic</Select.Item>
-								<Select.Item value="exponential" label="Exponential">Exponential</Select.Item>
+								<!-- <Select.Item value="exponential" label="Exponential">Exponential</Select.Item> -->
 							</Select.Group>
 						</Select.Content>
 					</Select.Root>
