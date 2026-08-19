@@ -143,6 +143,10 @@ export interface PlotStyleConfig {
 	titleFontSize: number;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
 	backgroundColor: string;
+	/** CSS colour of the gridlines and axis ticks. */
+	gridlineColor: string;
+	/** 0 to 1. Controls the opacity of the gridlines and axis ticks. */
+	gridlineOpacity: number;
 	/** CSS colour of the title, the axis titles and the tick labels. */
 	textColor: string;
 }
@@ -208,6 +212,8 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	tickFontSize: 11,
 	titleFontSize: 16,
 	backgroundColor: '#ffffff',
+	gridlineColor: '#1f2937',
+	gridlineOpacity: 0.15,
 	textColor: '#1f2937'
 };
 
@@ -489,6 +495,8 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 		tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
 		titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
 		backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
+		gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
+		gridlineOpacity: clamp(asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity), 0, 1),
 		textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
 	};
 }

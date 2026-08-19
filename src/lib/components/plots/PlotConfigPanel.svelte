@@ -673,7 +673,25 @@
 				<span>Show gridlines</span>
 			</label>
 
-			<!-- Add gridline color and opacity -->
+					<div class="field">
+						<span id="plotGridlineColourLabel">Gridline color</span>
+						<input
+							id="plotGridlineColour"
+							type="color"
+							value={draft.style.gridlineColor}
+							onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
+						/>
+					</div>
+
+					<PlotSlider
+						id="plotGridlineOpacity"
+						label="Gridline opacity"
+						min={0}
+						max={1}
+						step={0.05}
+						value={draft.style.gridlineOpacity}
+						onCommit={(value) => patchStyle({ gridlineOpacity: value })}
+					/>
 
 			<div class="field">
 				<span id="plotBackgroundColourLabel">Background color</span>

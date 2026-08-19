@@ -31,11 +31,11 @@ function dprOf(u: uPlot): number {
 	return u.ctx.canvas.width / u.width;
 }
 
-/** Fade a CSS colour to an rgba string. Used for the gridlines. */
-export function gridColor(textColor: string): string {
-	const parsed = parseCssColor(textColor);
-	if (!parsed) return 'rgba(0, 0, 0, 0.1)';
-	return `rgba(${parsed[0]}, ${parsed[1]}, ${parsed[2]}, 0.15)`;
+/** Convert a CSS colour and opacity to an rgba string for gridlines. */
+export function gridColor(color: string, opacity: number): string {
+	const parsed = parseCssColor(color);
+	if (!parsed) return `rgba(0, 0, 0, ${opacity})`;
+	return `rgba(${parsed[0]}, ${parsed[1]}, ${parsed[2]}, ${opacity})`;
 }
 
 /** Parse `#rrggbb`, `#rgb` or `rgb()`/`rgba()` to an `[r, g, b]` triple. */

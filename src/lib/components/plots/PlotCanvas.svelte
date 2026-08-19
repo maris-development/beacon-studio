@@ -345,7 +345,7 @@
 
 	function buildOptions(current: PlotSeries, width: number, height: number): uPlot.Options {
 		const style = plot.style;
-		const grid = gridColor(style.textColor);
+		const grid = gridColor(style.gridlineColor, style.gridlineOpacity);
 
 		const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
 
