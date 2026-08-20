@@ -598,7 +598,7 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
 	const { ctx } = u;
 	const { left, top, width, height } = u.bbox;
 	const { result } = options;
-	const { values, resolution, xRange, yRange, range, bandCount } = result;
+	const { values, xResolution, yResolution, xRange, yRange, range, bandCount } = result;
 	const colorOf = makePaletteScale(
 		options.palette,
 		range.min,
@@ -613,7 +613,8 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
 	const imageWidth = Math.max(Math.round(width), 1);
 	const imageHeight = Math.max(Math.round(height), 1);
 	const image = ctx.createImageData(imageWidth, imageHeight);
-	const colours = interpolationColours(colorOf, range, options.scale, bandCount);
+	const colourCount = result.renderMode === 'continuous' ? 256 : bandCount;
+	const colours = interpolationColours(colorOf, range, options.scale, colourCount);
 	const xSpan = sx.max - sx.min || 1;
 	const ySpan = sy.max - sy.min || 1;
 	const xReverse = sx.dir === -1;
@@ -629,12 +630,12 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
 			if (xReverse) xPosition = 1 - xPosition;
 			const xValue = sx.min + xPosition * xSpan;
 
-			const value = sampleGrid(values, resolution, xRange, yRange, xValue, yValue);
+			const value = sampleGrid(values, xResolution, yResolution, xRange, yRange, xValue, yValue);
 			let position = colorScalePosition(value, range.min, range.max, options.scale);
 			if (!Number.isFinite(position)) continue;
 
 			position = Math.min(Math.max(position, 0), 1);
-			const band = Math.min(Math.floor(position * bandCount), bandCount - 1);
+			const band = Math.min(Math.floor(position * colourCount), colourCount - 1);
 			const colour = colours[band];
 			const offset = (pixelRow * imageWidth + pixelColumn) * 4;
 
@@ -673,34 +674,44 @@ function interpolationColours(
 
 function sampleGrid(
 	values: Float64Array,
-	resolution: number,
+	xResolution: number,
+	yResolution: number,
 	xRange: { min: number; max: number },
 	yRange: { min: number; max: number },
 	xValue: number,
 	yValue: number
 ): number {
 	const gridX = clampNumber(
-		((xValue - xRange.min) / (xRange.max - xRange.min || 1)) * resolution - 0.5,
+		((xValue - xRange.min) / (xRange.max - xRange.min || 1)) * xResolution - 0.5,
 		0,
-		resolution - 1
+		xResolution - 1
 	);
 	const gridY = clampNumber(
-		((yValue - yRange.min) / (yRange.max - yRange.min || 1)) * resolution - 0.5,
+		((yValue - yRange.min) / (yRange.max - yRange.min || 1)) * yResolution - 0.5,
 		0,
-		resolution - 1
+		yResolution - 1
 	);
 
 	const leftColumn = Math.floor(gridX);
-	const rightColumn = Math.min(leftColumn + 1, resolution - 1);
+	const rightColumn = Math.min(leftColumn + 1, xResolution - 1);
 	const topRow = Math.floor(gridY);
-	const bottomRow = Math.min(topRow + 1, resolution - 1);
+	const bottomRow = Math.min(topRow + 1, yResolution - 1);
 	const xWeight = gridX - leftColumn;
 	const yWeight = gridY - topRow;
 
-	const topLeft = values[topRow * resolution + leftColumn];
-	const topRight = values[topRow * resolution + rightColumn];
-	const bottomLeft = values[bottomRow * resolution + leftColumn];
-	const bottomRight = values[bottomRow * resolution + rightColumn];
+	const topLeft = values[topRow * xResolution + leftColumn];
+	const topRight = values[topRow * xResolution + rightColumn];
+	const bottomLeft = values[bottomRow * xResolution + leftColumn];
+	const bottomRight = values[bottomRow * xResolution + rightColumn];
+	if (
+		!Number.isFinite(topLeft) ||
+		!Number.isFinite(topRight) ||
+		!Number.isFinite(bottomLeft) ||
+		!Number.isFinite(bottomRight)
+	) {
+		return Number.NaN;
+	}
+
 	const topValue = topLeft * (1 - xWeight) + topRight * xWeight;
 	const bottomValue = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
 

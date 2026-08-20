@@ -27,6 +27,7 @@ import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palett
 
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
 export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
+export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
 
 export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; description: string }> = [
 	{
@@ -105,8 +106,12 @@ export interface PlotContourConfig {
 
 export interface PlotInterpolationConfig {
 	enabled: boolean;
-	/** Cells per axis of the grid that the interpolation surface reads. */
-	gridResolution: number;
+	/** The algorithm that fills the interpolation grid. */
+	method: PlotInterpolationMethod;
+	/** Cells along the X axis of the interpolation grid. */
+	xGridResolution: number;
+	/** Cells along the Y axis of the interpolation grid. */
+	yGridResolution: number;
 	/** Gaussian blur radius, in grid cells. */
 	gaussianSigma: number;
 	/** Lower percentile for colour clipping. */
@@ -203,7 +208,9 @@ export const DEFAULT_CONTOUR: PlotContourConfig = {
 
 export const DEFAULT_INTERPOLATION: PlotInterpolationConfig = {
 	enabled: false,
-	gridResolution: 120,
+	method: 'gaussian',
+	xGridResolution: 120,
+	yGridResolution: 120,
 	gaussianSigma: 1.2,
 	percentileMin: 1,
 	percentileMax: 99,
@@ -412,6 +419,11 @@ function asColorScale(value: unknown): ColorScale {
 	return 'linear';
 }
 
+function asInterpolationMethod(value: unknown): PlotInterpolationMethod {
+	if (value === 'delaunay-barycentric') return value;
+	return 'gaussian';
+}
+
 function asString(value: unknown, fallback: string): string {
 	if (typeof value === 'string') return value;
 	return fallback;
@@ -482,8 +494,24 @@ function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
 
 	return {
 		enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
-		gridResolution: clamp(
-			Math.round(asNumber(record.gridResolution, DEFAULT_INTERPOLATION.gridResolution)),
+		method: asInterpolationMethod(record.method),
+		xGridResolution: clamp(
+			Math.round(
+				asNumber(
+					record.xGridResolution,
+					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
+				)
+			),
+			10,
+			500
+		),
+		yGridResolution: clamp(
+			Math.round(
+				asNumber(
+					record.yGridResolution,
+					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
+				)
+			),
 			10,
 			500
 		),

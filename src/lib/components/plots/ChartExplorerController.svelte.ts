@@ -178,7 +178,9 @@ export class ChartExplorerController {
 
 		return [
 			plot.id,
-			plot.interpolation.gridResolution,
+			plot.interpolation.method,
+			plot.interpolation.xGridResolution,
+			plot.interpolation.yGridResolution,
 			plot.interpolation.gaussianSigma,
 			plot.interpolation.percentileMin,
 			plot.interpolation.percentileMax,

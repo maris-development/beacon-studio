@@ -417,7 +417,7 @@
 								});
 							}
 
-							drawPoints(u, current, plot);
+							if (style.showPoints) drawPoints(u, current, plot);
 						}
 
 						if (contours && plot.contour.enabled && usesZColumn(plot.type)) {

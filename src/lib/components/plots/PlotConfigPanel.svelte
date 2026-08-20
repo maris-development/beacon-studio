@@ -44,6 +44,7 @@
 		type PlotContourConfig,
 		type PlotHistogramConfig,
 		type PlotInterpolationConfig,
+		type PlotInterpolationMethod,
 		type PlotLineConfig,
 		type PlotStyleConfig,
 		type PlotType,
@@ -248,6 +249,11 @@
 		patchAxis('z', { scale });
 	}
 
+	function interpolationMethodLabel(method: PlotInterpolationMethod): string {
+		if (method === 'delaunay-barycentric') return 'Delaunay triangles';
+		return 'Gaussian smoothing';
+	}
+
 	// -- value helpers -------------------------------------------------------
 
 	/** An empty field means "auto", which the model stores as null. */
@@ -302,7 +308,15 @@
 		if (!draft.interpolation.enabled && !draft.contour.enabled) return 'Off';
 
 		const parts: string[] = [];
-		if (draft.interpolation.enabled) parts.push(`${draft.interpolation.bandCount} bands`);
+		if (draft.interpolation.enabled) {
+			if (draft.interpolation.method === 'gaussian') {
+				parts.push(
+					`${interpolationMethodLabel(draft.interpolation.method)} · ${draft.interpolation.bandCount} bands`
+				);
+			} else {
+				parts.push(interpolationMethodLabel(draft.interpolation.method));
+			}
+		}
 		if (draft.contour.enabled) parts.push(`${draft.contour.levelCount} lines`);
 		return parts.join(' · ');
 	});
@@ -853,25 +867,67 @@
 						The selected X, Y and colour values are interpolated and drawn behind the points.
 					</p>
 
+					{#if draft.interpolation.method === 'delaunay-barycentric'}
+						<p class="hint">
+							Delaunay draws inside the measured data footprint and leaves unsupported areas empty.
+						</p>
+					{/if}
+
+					<div class="field">
+						<Label for="interpolationMethod">Method</Label>
+						<Select.Root
+							type="single"
+							value={draft.interpolation.method}
+							onValueChange={(value) =>
+								patchInterpolation({ method: value as PlotInterpolationMethod })}
+						>
+							<Select.Trigger id="interpolationMethod">
+								{interpolationMethodLabel(draft.interpolation.method)}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Group>
+									<Select.Item value="gaussian" label="Gaussian smoothing">
+										Gaussian smoothing
+									</Select.Item>
+									<Select.Item value="delaunay-barycentric" label="Delaunay triangles">
+										Delaunay triangles
+									</Select.Item>
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					</div>
+
 					<PlotSlider
-						id="interpolationGrid"
-						label="Grid detail"
+						id="interpolationGridX"
+						label="Grid x resolution"
 						min={20}
 						max={300}
 						step={10}
-						value={draft.interpolation.gridResolution}
-						onCommit={(value) => patchInterpolation({ gridResolution: value })}
+						value={draft.interpolation.xGridResolution}
+						onCommit={(value) => patchInterpolation({ xGridResolution: value })}
 					/>
 
 					<PlotSlider
-						id="interpolationSigma"
-						label="Gaussian sigma"
-						min={0}
-						max={8}
-						step={0.1}
-						value={draft.interpolation.gaussianSigma}
-						onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+						id="interpolationGridY"
+						label="Grid y resolution"
+						min={20}
+						max={300}
+						step={10}
+						value={draft.interpolation.yGridResolution}
+						onCommit={(value) => patchInterpolation({ yGridResolution: value })}
 					/>
+
+					{#if draft.interpolation.method === 'gaussian'}
+						<PlotSlider
+							id="interpolationSigma"
+							label="Gaussian sigma"
+							min={0}
+							max={8}
+							step={0.1}
+							value={draft.interpolation.gaussianSigma}
+							onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+						/>
+					{/if}
 
 					<PlotSlider
 						id="interpolationPercentileMin"
@@ -895,15 +951,17 @@
 						onCommit={(value) => patchInterpolation({ percentileMax: value })}
 					/>
 
-					<PlotSlider
-						id="interpolationBands"
-						label="Colour bands"
-						min={2}
-						max={50}
-						step={1}
-						value={draft.interpolation.bandCount}
-						onCommit={(value) => patchInterpolation({ bandCount: value })}
-					/>
+					{#if draft.interpolation.method === 'gaussian'}
+						<PlotSlider
+							id="interpolationBands"
+							label="Colour bands"
+							min={2}
+							max={50}
+							step={1}
+							value={draft.interpolation.bandCount}
+							onCommit={(value) => patchInterpolation({ bandCount: value })}
+						/>
+					{/if}
 				{/if}
 
 				<h4>Contour Lines</h4>

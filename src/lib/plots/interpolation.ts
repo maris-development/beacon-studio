@@ -1,17 +1,20 @@
+import { Delaunay } from 'd3-delaunay';
 import { colorScalePosition } from '@/colors/color-scale';
 import type { PlotConfig } from './plot-config';
 import { resolveRange, type PlotRange, type PlotSeries } from './plot-data';
-import { gridSeries, MAX_GRID_RESOLUTION, type ContourRing } from './grid';
+import { gridSeries, MAX_GRID_RESOLUTION, type ContourRing, type GriddedSeries } from './grid';
 
 export interface InterpolationResult {
 	values: Float64Array;
-	resolution: number;
+	xResolution: number;
+	yResolution: number;
 	xRange: PlotRange;
 	yRange: PlotRange;
 	hull: ContourRing;
 	/** The Z range that maps the interpolated grid to colours. */
 	range: PlotRange;
 	bandCount: number;
+	renderMode: 'banded' | 'continuous';
 }
 
 const KERNEL_TRUNCATE = 4;
@@ -42,19 +45,231 @@ export function buildInterpolationSurface(
 		if (!Number.isFinite(minPosition) || !Number.isFinite(maxPosition)) return null;
 	}
 
-	const resolution = Math.min(
-		Math.max(Math.round(plot.interpolation.gridResolution), 10),
+	const xResolution = Math.min(
+		Math.max(Math.round(plot.interpolation.xGridResolution), 10),
 		MAX_GRID_RESOLUTION
 	);
-	const gridded = gridSeries(series, xRange, yRange, resolution);
+	const yResolution = Math.min(
+		Math.max(Math.round(plot.interpolation.yGridResolution), 10),
+		MAX_GRID_RESOLUTION
+	);
+
+	let gridded: GriddedSeries | null = null;
+	if (plot.interpolation.method === 'delaunay-barycentric') {
+		gridded = delaunayGridSeries(series, xRange, yRange, xResolution, yResolution);
+	} else {
+		gridded = gridSeries(series, xRange, yRange, xResolution, yResolution);
+	}
+
 	if (!gridded) return null;
+
+	let values = gridded.values;
+	if (plot.interpolation.method === 'gaussian') {
+		values = gaussianFilter2d(
+			gridded.values,
+			xResolution,
+			yResolution,
+			plot.interpolation.gaussianSigma
+		);
+	}
 
 	return {
 		...gridded,
-		values: gaussianFilter2d(gridded.values, resolution, plot.interpolation.gaussianSigma),
+		values,
 		range,
-		bandCount: Math.min(Math.max(Math.round(plot.interpolation.bandCount), 2), 100)
+		bandCount: Math.min(Math.max(Math.round(plot.interpolation.bandCount), 2), 100),
+		renderMode: plot.interpolation.method === 'delaunay-barycentric' ? 'continuous' : 'banded'
 	};
+}
+
+interface DelaunayPoint {
+	x: number;
+	y: number;
+	z: number;
+}
+
+function delaunayGridSeries(
+	series: PlotSeries,
+	xRange: PlotRange,
+	yRange: PlotRange,
+	xResolution: number,
+	yResolution: number
+): GriddedSeries | null {
+	const points = uniqueDelaunayPoints(series);
+	if (points.length < 3) return null;
+
+	const xSpan = xRange.max - xRange.min;
+	const ySpan = yRange.max - yRange.min;
+	if (!(xSpan > 0) || !(ySpan > 0)) return null;
+
+	const delaunay = Delaunay.from(
+		points,
+		(point) => point.x,
+		(point) => point.y
+	);
+	if (delaunay.hull.length < 3 || delaunay.triangles.length < 3) return null;
+
+	const values = new Float64Array(xResolution * yResolution);
+	values.fill(Number.NaN);
+	const xStep = xSpan / xResolution;
+	const yStep = ySpan / yResolution;
+	let triangle = 0;
+
+	for (let row = 0; row < yResolution; row++) {
+		const cellY = yRange.min + (row + 0.5) * yStep;
+
+		for (let column = 0; column < xResolution; column++) {
+			const cellX = xRange.min + (column + 0.5) * xStep;
+			const located = locateBarycentricValue(
+				cellX,
+				cellY,
+				points,
+				delaunay.triangles,
+				delaunay.halfedges,
+				triangle
+			);
+
+			if (located) {
+				triangle = located.triangle;
+				values[row * xResolution + column] = located.value;
+			}
+		}
+	}
+
+	return {
+		values,
+		xResolution,
+		yResolution,
+		xRange,
+		yRange,
+		hull: delaunayHull(points, delaunay.hull)
+	};
+}
+
+function uniqueDelaunayPoints(series: PlotSeries): DelaunayPoint[] {
+	const z = series.z;
+	if (!z) return [];
+
+	const byCoordinate = new Map<string, { x: number; y: number; zTotal: number; count: number }>();
+
+	for (let i = 0; i < series.x.length; i++) {
+		const x = series.x[i];
+		const y = series.y[i];
+		const value = z[i];
+		if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(value)) continue;
+
+		const key = `${x}\u0000${y}`;
+		const existing = byCoordinate.get(key);
+		if (existing) {
+			existing.zTotal += value;
+			existing.count += 1;
+		} else {
+			byCoordinate.set(key, { x, y, zTotal: value, count: 1 });
+		}
+	}
+
+	const points: DelaunayPoint[] = [];
+	for (const point of byCoordinate.values()) {
+		points.push({ x: point.x, y: point.y, z: point.zTotal / point.count });
+	}
+
+	return points;
+}
+interface LocatedBarycentricValue {
+	triangle: number;
+	value: number;
+}
+
+function locateBarycentricValue(
+	x: number,
+	y: number,
+	points: DelaunayPoint[],
+	triangles: ArrayLike<number>,
+	halfedges: ArrayLike<number>,
+	startTriangle: number
+): LocatedBarycentricValue | null {
+	if (triangles.length < 3) return null;
+
+	let triangle = startTriangle - (startTriangle % 3);
+	if (triangle < 0 || triangle >= triangles.length) triangle = 0;
+
+	const seen = new Set<number>();
+	while (!seen.has(triangle)) {
+		seen.add(triangle);
+		const result = barycentricWeights(x, y, points, triangles, triangle);
+		if (!result) return null;
+
+		const epsilon = -1e-9;
+		if (result.weightA >= epsilon && result.weightB >= epsilon && result.weightC >= epsilon) {
+			return {
+				triangle,
+				value:
+					result.weightA * result.a.z + result.weightB * result.b.z + result.weightC * result.c.z
+			};
+		}
+
+		const edgeOffset = mostNegativeWeightEdge(result.weightA, result.weightB, result.weightC);
+		const next = halfedges[triangle + edgeOffset];
+		if (next < 0) return null;
+		triangle = next - (next % 3);
+	}
+
+	return null;
+}
+
+interface BarycentricWeights {
+	a: DelaunayPoint;
+	b: DelaunayPoint;
+	c: DelaunayPoint;
+	weightA: number;
+	weightB: number;
+	weightC: number;
+}
+
+function barycentricWeights(
+	x: number,
+	y: number,
+	points: DelaunayPoint[],
+	triangles: ArrayLike<number>,
+	triangle: number
+): BarycentricWeights | null {
+	const a = points[triangles[triangle]];
+	const b = points[triangles[triangle + 1]];
+	const c = points[triangles[triangle + 2]];
+	if (!a || !b || !c) return null;
+
+	const denominator = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
+	if (Math.abs(denominator) < 1e-12) return null;
+
+	const weightA = ((b.y - c.y) * (x - c.x) + (c.x - b.x) * (y - c.y)) / denominator;
+	const weightB = ((c.y - a.y) * (x - c.x) + (a.x - c.x) * (y - c.y)) / denominator;
+	const weightC = 1 - weightA - weightB;
+	return { a, b, c, weightA, weightB, weightC };
+}
+
+function mostNegativeWeightEdge(weightA: number, weightB: number, weightC: number): number {
+	let edgeOffset = 1;
+	let value = weightA;
+
+	if (weightB < value) {
+		edgeOffset = 2;
+		value = weightB;
+	}
+
+	if (weightC < value) edgeOffset = 0;
+	return edgeOffset;
+}
+
+function delaunayHull(points: DelaunayPoint[], hull: ArrayLike<number>): ContourRing {
+	const ring: ContourRing = [];
+
+	for (let i = 0; i < hull.length; i++) {
+		const point = points[hull[i]];
+		if (point) ring.push([point.x, point.y]);
+	}
+
+	if (ring.length > 0) ring.push(ring[0]);
+	return ring;
 }
 
 function percentileRange(
@@ -89,38 +304,43 @@ function percentile(sorted: number[], percentileValue: number): number {
 	return sorted[lower] * (1 - weight) + sorted[upper] * weight;
 }
 
-function gaussianFilter2d(values: Float64Array, size: number, sigma: number): Float64Array {
+function gaussianFilter2d(
+	values: Float64Array,
+	width: number,
+	height: number,
+	sigma: number
+): Float64Array {
 	if (!(sigma > 0)) return new Float64Array(values);
 
 	const kernel = gaussianKernel(sigma);
 	const temp = new Float64Array(values.length);
 	const output = new Float64Array(values.length);
 
-	for (let row = 0; row < size; row++) {
-		for (let column = 0; column < size; column++) {
+	for (let row = 0; row < height; row++) {
+		for (let column = 0; column < width; column++) {
 			let sum = 0;
 
 			for (let k = 0; k < kernel.length; k++) {
 				const offset = k - Math.floor(kernel.length / 2);
-				const sourceColumn = reflectIndex(column + offset, size);
-				sum += values[row * size + sourceColumn] * kernel[k];
+				const sourceColumn = reflectIndex(column + offset, width);
+				sum += values[row * width + sourceColumn] * kernel[k];
 			}
 
-			temp[row * size + column] = sum;
+			temp[row * width + column] = sum;
 		}
 	}
 
-	for (let row = 0; row < size; row++) {
-		for (let column = 0; column < size; column++) {
+	for (let row = 0; row < height; row++) {
+		for (let column = 0; column < width; column++) {
 			let sum = 0;
 
 			for (let k = 0; k < kernel.length; k++) {
 				const offset = k - Math.floor(kernel.length / 2);
-				const sourceRow = reflectIndex(row + offset, size);
-				sum += temp[sourceRow * size + column] * kernel[k];
+				const sourceRow = reflectIndex(row + offset, height);
+				sum += temp[sourceRow * width + column] * kernel[k];
 			}
 
-			output[row * size + column] = sum;
+			output[row * width + column] = sum;
 		}
 	}
 

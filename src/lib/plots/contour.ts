@@ -66,7 +66,7 @@ export function buildContours(
 	);
 	const levelCount = Math.min(Math.max(Math.round(plot.contour.levelCount), 2), 50);
 
-	const grid = gridSeries(series, xRange, yRange, resolution);
+	const grid = gridSeries(series, xRange, yRange, resolution, resolution);
 	if (!grid) return null;
 
 	// The thresholds sit between the ends, and not on them: a contour exactly at

@@ -7,7 +7,8 @@ export type ContourRing = Array<[number, number]>;
 
 export interface GriddedSeries {
 	values: Float64Array;
-	resolution: number;
+	xResolution: number;
+	yResolution: number;
 	xRange: PlotRange;
 	yRange: PlotRange;
 	hull: ContourRing;
@@ -31,7 +32,8 @@ export function gridSeries(
 	series: PlotSeries,
 	xRange: PlotRange,
 	yRange: PlotRange,
-	resolution: number
+	xResolution: number,
+	yResolution: number
 ): GriddedSeries | null {
 	const z = series.z;
 	if (!z) return null;
@@ -41,16 +43,16 @@ export function gridSeries(
 	if (!(xSpan > 0) || !(ySpan > 0)) return null;
 
 	const bins = new Map<number, number[]>();
-	const binOf = (column: number, row: number): number => row * resolution + column;
+	const binOf = (column: number, row: number): number => row * xResolution + column;
 
 	const columnOf = (x: number): number => {
-		const column = Math.floor(((x - xRange.min) / xSpan) * resolution);
-		return Math.min(Math.max(column, 0), resolution - 1);
+		const column = Math.floor(((x - xRange.min) / xSpan) * xResolution);
+		return Math.min(Math.max(column, 0), xResolution - 1);
 	};
 
 	const rowOf = (y: number): number => {
-		const row = Math.floor(((y - yRange.min) / ySpan) * resolution);
-		return Math.min(Math.max(row, 0), resolution - 1);
+		const row = Math.floor(((y - yRange.min) / ySpan) * yResolution);
+		return Math.min(Math.max(row, 0), yResolution - 1);
 	};
 
 	for (let i = 0; i < series.x.length; i++) {
@@ -64,28 +66,28 @@ export function gridSeries(
 		}
 	}
 
-	const values = new Float64Array(resolution * resolution);
-	const xStep = xSpan / resolution;
-	const yStep = ySpan / resolution;
+	const values = new Float64Array(xResolution * yResolution);
+	const xStep = xSpan / xResolution;
+	const yStep = ySpan / yResolution;
 
-	for (let row = 0; row < resolution; row++) {
+	for (let row = 0; row < yResolution; row++) {
 		const cellY = yRange.min + (row + 0.5) * yStep;
 
-		for (let column = 0; column < resolution; column++) {
+		for (let column = 0; column < xResolution; column++) {
 			const cellX = xRange.min + (column + 0.5) * xStep;
 
 			let radius = SEARCH_CELLS;
 			let weighted = 0;
 			let weight = 0;
 
-			while (weight === 0 && radius <= resolution) {
+			while (weight === 0 && radius <= Math.max(xResolution, yResolution)) {
 				weighted = 0;
 				weight = 0;
 
 				const minRow = Math.max(row - radius, 0);
-				const maxRow = Math.min(row + radius, resolution - 1);
+				const maxRow = Math.min(row + radius, yResolution - 1);
 				const minColumn = Math.max(column - radius, 0);
-				const maxColumn = Math.min(column + radius, resolution - 1);
+				const maxColumn = Math.min(column + radius, xResolution - 1);
 
 				for (let r = minRow; r <= maxRow; r++) {
 					for (let c = minColumn; c <= maxColumn; c++) {
@@ -115,11 +117,11 @@ export function gridSeries(
 				radius *= 2;
 			}
 
-			if (weight > 0) values[row * resolution + column] = weighted / weight;
+			if (weight > 0) values[row * xResolution + column] = weighted / weight;
 		}
 	}
 
-	return { values, resolution, xRange, yRange, hull: hullOf(series) };
+	return { values, xResolution, yResolution, xRange, yRange, hull: hullOf(series) };
 }
 
 /** The convex hull of the points, as a closed ring. Empty when there is none. */
