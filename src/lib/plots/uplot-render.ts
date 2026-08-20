@@ -22,6 +22,7 @@ import type { ColorScale } from './plot-config';
 import { resolveRange, type PlotSeries } from './plot-data';
 import { DEFAULT_POINT_COLOR, type PlotConfig } from './plot-config';
 import type { ContourResult } from './contour';
+import type { InterpolationResult } from './interpolation';
 
 const TAU = Math.PI * 2;
 
@@ -581,6 +582,77 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
 
 	if (options.showLabels) {
 		drawContourLabels(ctx, dpr, levels, options, toPixelX, toPixelY);
+	}
+
+	ctx.restore();
+}
+
+export interface InterpolationDrawOptions {
+	result: InterpolationResult;
+	palette: string;
+	reverse: boolean;
+	scale: ColorScale;
+}
+
+export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOptions): void {
+	const { ctx } = u;
+	const { left, top, width, height } = u.bbox;
+	const { result } = options;
+	const { values, resolution, xRange, yRange, hull, range, bandCount } = result;
+	const colorOf = makePaletteScale(
+		options.palette,
+		range.min,
+		range.max,
+		options.reverse,
+		options.scale
+	);
+
+	const toPixelX = (x: number): number => u.valToPos(x, 'x', true);
+	const toPixelY = (y: number): number => u.valToPos(y, 'y', true);
+	const xStep = (xRange.max - xRange.min) / resolution;
+	const yStep = (yRange.max - yRange.min) / resolution;
+
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(left, top, width, height);
+	ctx.clip();
+
+	if (hull.length >= 3) {
+		ctx.beginPath();
+		ctx.moveTo(toPixelX(hull[0][0]), toPixelY(hull[0][1]));
+
+		for (let i = 1; i < hull.length; i++) {
+			ctx.lineTo(toPixelX(hull[i][0]), toPixelY(hull[i][1]));
+		}
+
+		ctx.closePath();
+		ctx.clip();
+	}
+
+	ctx.globalAlpha = 0.8;
+
+	for (let row = 0; row < resolution; row++) {
+		const y0 = toPixelY(yRange.min + row * yStep);
+		const y1 = toPixelY(yRange.min + (row + 1) * yStep);
+
+		for (let column = 0; column < resolution; column++) {
+			const value = values[row * resolution + column];
+			if (!Number.isFinite(value)) continue;
+
+			let position = colorScalePosition(value, range.min, range.max, options.scale);
+			if (!Number.isFinite(position)) continue;
+			position = Math.min(Math.max(position, 0), 1);
+
+			const band = Math.min(Math.floor(position * bandCount), bandCount - 1);
+			const bandPosition = (band + 0.5) / bandCount;
+			const colorValue = colorScaleValue(bandPosition, range.min, range.max, options.scale);
+
+			const x0 = toPixelX(xRange.min + column * xStep);
+			const x1 = toPixelX(xRange.min + (column + 1) * xStep);
+
+			ctx.fillStyle = colorOf(colorValue);
+			ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
+		}
 	}
 
 	ctx.restore();

@@ -41,16 +41,19 @@
 		drawGroupLegend,
 		drawLines,
 		drawPoints,
+		drawInterpolationSurface,
 		drawTitle,
 		gridColor,
 		groupColors
 	} from '@/plots/uplot-render';
 	import type { ContourResult } from '@/plots/contour';
+	import type { InterpolationResult } from '@/plots/interpolation';
 
 	let {
 		plot,
 		series,
 		contours = null,
+		interpolation = null,
 		message = null,
 		onBusyChange = undefined
 	}: {
@@ -59,6 +62,8 @@
 		series: PlotSeries | null;
 		/** The contour lines, in data coordinates. Null while the plot draws none. */
 		contours?: ContourResult | null;
+		/** The interpolated field, in data coordinates. Null while the plot draws none. */
+		interpolation?: InterpolationResult | null;
 		/** Why the plot cannot draw. Shown in place of the canvas. */
 		message?: string | null;
 		/**
@@ -100,7 +105,7 @@
 	// Rebuild the chart when the plot, the data, the contours or the palette
 	// change. The reads below are the dependencies of this effect.
 	$effect(() => {
-		void [plot, plot.z?.scale, series, contours, palettesLoaded];
+		void [plot, plot.z?.scale, series, contours, interpolation, palettesLoaded];
 		scheduleRebuild();
 	});
 
@@ -403,6 +408,15 @@
 								});
 							}
 						} else {
+							if (interpolation && plot.interpolation.enabled && usesZColumn(plot.type)) {
+								drawInterpolationSurface(u, {
+									result: interpolation,
+									palette: style.palette,
+									reverse: plot.z?.reverse ?? false,
+									scale: plot.z?.scale ?? 'linear'
+								});
+							}
+
 							drawPoints(u, current, plot);
 						}
 

@@ -103,6 +103,20 @@ export interface PlotContourConfig {
 	labelFontSize: number;
 }
 
+export interface PlotInterpolationConfig {
+	enabled: boolean;
+	/** Cells per axis of the grid that the interpolation surface reads. */
+	gridResolution: number;
+	/** Gaussian blur radius, in grid cells. */
+	gaussianSigma: number;
+	/** Lower percentile for colour clipping. */
+	percentileMin: number;
+	/** Upper percentile for colour clipping. */
+	percentileMax: number;
+	/** Filled colour bands that approximate the interpolated surface. */
+	bandCount: number;
+}
+
 /**
  * The settings of a line plot.
  *
@@ -164,6 +178,7 @@ export interface PlotConfig {
 	/** The colour axis. Null means that every point takes one colour. */
 	z: PlotAxisConfig | null;
 	contour: PlotContourConfig;
+	interpolation: PlotInterpolationConfig;
 	line: PlotLineConfig;
 	histogram: PlotHistogramConfig;
 	style: PlotStyleConfig;
@@ -184,6 +199,15 @@ export const DEFAULT_CONTOUR: PlotContourConfig = {
 	lineWidth: 1,
 	showLabels: true,
 	labelFontSize: 10
+};
+
+export const DEFAULT_INTERPOLATION: PlotInterpolationConfig = {
+	enabled: false,
+	gridResolution: 120,
+	gaussianSigma: 1.2,
+	percentileMin: 1,
+	percentileMax: 99,
+	bandCount: 25
 };
 
 export const DEFAULT_LINE: PlotLineConfig = {
@@ -242,6 +266,7 @@ export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig 
 		y: makeAxisConfig(),
 		z: null,
 		contour: { ...DEFAULT_CONTOUR },
+		interpolation: { ...DEFAULT_INTERPOLATION },
 		line: { ...DEFAULT_LINE },
 		histogram: { ...DEFAULT_HISTOGRAM },
 		style: { ...DEFAULT_STYLE },
@@ -271,6 +296,7 @@ export function clonePlotConfig(
 		y: { ...source.y },
 		z,
 		contour: { ...source.contour },
+		interpolation: { ...source.interpolation },
 		line: { ...source.line },
 		histogram: { ...source.histogram },
 		style: { ...source.style },
@@ -434,6 +460,48 @@ function normaliseContour(raw: unknown): PlotContourConfig {
 	};
 }
 
+function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
+	const record = asRecord(raw);
+	if (!record) return { ...DEFAULT_INTERPOLATION };
+
+	let percentileMin = clamp(
+		asNumber(record.percentileMin, DEFAULT_INTERPOLATION.percentileMin),
+		0,
+		100
+	);
+	let percentileMax = clamp(
+		asNumber(record.percentileMax, DEFAULT_INTERPOLATION.percentileMax),
+		0,
+		100
+	);
+
+	if (percentileMax <= percentileMin) {
+		percentileMin = DEFAULT_INTERPOLATION.percentileMin;
+		percentileMax = DEFAULT_INTERPOLATION.percentileMax;
+	}
+
+	return {
+		enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
+		gridResolution: clamp(
+			Math.round(asNumber(record.gridResolution, DEFAULT_INTERPOLATION.gridResolution)),
+			10,
+			500
+		),
+		gaussianSigma: clamp(
+			asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),
+			0,
+			20
+		),
+		percentileMin,
+		percentileMax,
+		bandCount: clamp(
+			Math.round(asNumber(record.bandCount, DEFAULT_INTERPOLATION.bandCount)),
+			2,
+			100
+		)
+	};
+}
+
 function normaliseLine(raw: unknown): PlotLineConfig {
 	const record = asRecord(raw);
 	if (!record) return { ...DEFAULT_LINE };
@@ -523,6 +591,7 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
 		y: normaliseAxis(record.y),
 		z,
 		contour: normaliseContour(record.contour),
+		interpolation: normaliseInterpolation(record.interpolation),
 		line: normaliseLine(record.line),
 		histogram: normaliseHistogram(record.histogram),
 		style: normaliseStyle(record.style)

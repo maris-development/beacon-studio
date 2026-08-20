@@ -43,6 +43,7 @@
 		type PlotConfig,
 		type PlotContourConfig,
 		type PlotHistogramConfig,
+		type PlotInterpolationConfig,
 		type PlotLineConfig,
 		type PlotStyleConfig,
 		type PlotType,
@@ -138,6 +139,12 @@
 		if (!draft) return;
 		userEdited = true;
 		draft = { ...draft, contour: { ...draft.contour, ...patch } };
+	}
+
+	function patchInterpolation(patch: Partial<PlotInterpolationConfig>) {
+		if (!draft) return;
+		userEdited = true;
+		draft = { ...draft, interpolation: { ...draft.interpolation, ...patch } };
 	}
 
 	function patchLine(patch: Partial<PlotLineConfig>) {
@@ -289,11 +296,15 @@
 		`${draft?.style.palette ?? ''} · ${draft?.style.pointRadius ?? 0}px`
 	);
 
-	const contourSummary = $derived.by(() => {
+	const advancedAnalysisSummary = $derived.by(() => {
 		if (draft && !usesZColumn(draft.type)) return 'Not for this plot type';
 		if (!draft?.z?.column) return 'Needs a colour column';
-		if (!draft.contour.enabled) return 'Off';
-		return `${draft.contour.levelCount} levels`;
+		if (!draft.interpolation.enabled && !draft.contour.enabled) return 'Off';
+
+		const parts: string[] = [];
+		if (draft.interpolation.enabled) parts.push(`${draft.interpolation.bandCount} bands`);
+		if (draft.contour.enabled) parts.push(`${draft.contour.levelCount} lines`);
+		return parts.join(' · ');
 	});
 
 	const colorScaleError = $derived.by(() => {
@@ -673,25 +684,25 @@
 				<span>Show gridlines</span>
 			</label>
 
-					<div class="field">
-						<span id="plotGridlineColourLabel">Gridline color</span>
-						<input
-							id="plotGridlineColour"
-							type="color"
-							value={draft.style.gridlineColor}
-							onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
-						/>
-					</div>
+			<div class="field">
+				<span id="plotGridlineColourLabel">Gridline color</span>
+				<input
+					id="plotGridlineColour"
+					type="color"
+					value={draft.style.gridlineColor}
+					onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
+				/>
+			</div>
 
-					<PlotSlider
-						id="plotGridlineOpacity"
-						label="Gridline opacity"
-						min={0}
-						max={1}
-						step={0.05}
-						value={draft.style.gridlineOpacity}
-						onCommit={(value) => patchStyle({ gridlineOpacity: value })}
-					/>
+			<PlotSlider
+				id="plotGridlineOpacity"
+				label="Gridline opacity"
+				min={0}
+				max={1}
+				step={0.05}
+				value={draft.style.gridlineOpacity}
+				onCommit={(value) => patchStyle({ gridlineOpacity: value })}
+			/>
 
 			<div class="field">
 				<span id="plotBackgroundColourLabel">Background color</span>
@@ -714,11 +725,6 @@
 			</div>
 
 			<h4>Text</h4>
-
-			<!--
-			 x axis title, x axis size (to separate from axis title size),
-			 y axis title, y axis size (to separate from axis title size),
-			 legend title (to add), legend title size (to add) tick label size -->
 
 			<label class="field">
 				<span>Plot title</span>
@@ -820,7 +826,8 @@
 			/>
 		</PlotSection>
 
-		<PlotSection step={4} title="Contours" summary={contourSummary} open={false}>
+		<!-- Contours rename to Advanced analysis -->
+		<PlotSection step={4} title="Advanced Analysis" summary={advancedAnalysisSummary} open={false}>
 			{#if !usesZColumn(draft.type)}
 				<p class="hint">
 					Contours need a value per point. A {draft.type === 'line' ? 'line' : 'histogram'} has none,
@@ -831,6 +838,76 @@
 					Contours read the colour axis. Bind a column to it in step 2 to switch them on.
 				</p>
 			{:else}
+				<h4>Gridding & Interpolation</h4>
+
+				<label class="checkbox-field">
+					<Checkbox
+						checked={draft.interpolation.enabled}
+						onCheckedChange={(checked) => patchInterpolation({ enabled: !!checked })}
+					/>
+					<span>Interpolate</span>
+				</label>
+
+				{#if draft.interpolation.enabled}
+					<p class="hint">
+						The selected X, Y and colour values are interpolated and drawn behind the points.
+					</p>
+
+					<PlotSlider
+						id="interpolationGrid"
+						label="Grid detail"
+						min={20}
+						max={300}
+						step={10}
+						value={draft.interpolation.gridResolution}
+						onCommit={(value) => patchInterpolation({ gridResolution: value })}
+					/>
+
+					<PlotSlider
+						id="interpolationSigma"
+						label="Gaussian sigma"
+						min={0}
+						max={8}
+						step={0.1}
+						value={draft.interpolation.gaussianSigma}
+						onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+					/>
+
+					<PlotSlider
+						id="interpolationPercentileMin"
+						label="Clip minimum"
+						suffix="%"
+						min={0}
+						max={50}
+						step={0.5}
+						value={draft.interpolation.percentileMin}
+						onCommit={(value) => patchInterpolation({ percentileMin: value })}
+					/>
+
+					<PlotSlider
+						id="interpolationPercentileMax"
+						label="Clip maximum"
+						suffix="%"
+						min={50}
+						max={100}
+						step={0.5}
+						value={draft.interpolation.percentileMax}
+						onCommit={(value) => patchInterpolation({ percentileMax: value })}
+					/>
+
+					<PlotSlider
+						id="interpolationBands"
+						label="Colour bands"
+						min={2}
+						max={50}
+						step={1}
+						value={draft.interpolation.bandCount}
+						onCommit={(value) => patchInterpolation({ bandCount: value })}
+					/>
+				{/if}
+
+				<h4>Contour Lines</h4>
+
 				<label class="checkbox-field">
 					<Checkbox
 						checked={draft.contour.enabled}
@@ -847,7 +924,7 @@
 
 					<PlotSlider
 						id="contourLevels"
-						label="Levels"
+						label="Levels (number of contours)"
 						min={2}
 						max={30}
 						step={1}
@@ -897,6 +974,11 @@
 						/>
 					{/if}
 				{/if}
+
+				<!-- Here? -->
+				<h4>Density Overlays</h4>
+
+				<!-- Isopycnals -->
 			{/if}
 		</PlotSection>
 
