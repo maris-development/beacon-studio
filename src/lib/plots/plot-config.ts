@@ -149,6 +149,8 @@ export interface PlotHistogramConfig {
 
 export interface PlotStyleConfig {
 	palette: PaletteId;
+	/** Draw the raw datapoints for scatter and cross-section plots. */
+	showPoints: boolean;
 	pointRadius: number;
 	/** 0 to 1. A dense scatter needs a low value to show its structure. */
 	pointOpacity: number;
@@ -233,6 +235,7 @@ export const MAX_LINE_GROUPS = 40;
 
 export const DEFAULT_STYLE: PlotStyleConfig = {
 	palette: DEFAULT_PALETTE_ID,
+	showPoints: true,
 	pointRadius: 3,
 	pointOpacity: 0.85,
 	gridlines: true,
@@ -563,6 +566,7 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 
 	return {
 		palette,
+		showPoints: asBoolean(record.showPoints, DEFAULT_STYLE.showPoints),
 		pointRadius: clamp(asNumber(record.pointRadius, DEFAULT_STYLE.pointRadius), 0.5, 30),
 		pointOpacity: clamp(asNumber(record.pointOpacity, DEFAULT_STYLE.pointOpacity), 0.05, 1),
 		gridlines: asBoolean(record.gridlines, DEFAULT_STYLE.gridlines),

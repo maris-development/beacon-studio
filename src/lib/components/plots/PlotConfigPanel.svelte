@@ -663,9 +663,19 @@
 				</label>
 			{:else}
 				<h4>Markers</h4>
+
+				{#if draft.type !== 'histogram'}
+					<label class="checkbox-field">
+						<Checkbox
+							checked={draft.style.showPoints}
+							onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
+						/>
+						<span>Draw data points</span>
+					</label>
+				{/if}
 			{/if}
 
-			{#if draft.type !== 'histogram' && (draft.type !== 'line' || draft.line.showPoints)}
+			{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
 				<PlotSlider
 					id="plotPointRadius"
 					label="Marker size"
