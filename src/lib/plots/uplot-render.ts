@@ -598,7 +598,7 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
 	const { ctx } = u;
 	const { left, top, width, height } = u.bbox;
 	const { result } = options;
-	const { values, resolution, xRange, yRange, hull, range, bandCount } = result;
+	const { values, resolution, xRange, yRange, range, bandCount } = result;
 	const colorOf = makePaletteScale(
 		options.palette,
 		range.min,
@@ -606,56 +606,111 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
 		options.reverse,
 		options.scale
 	);
+	const sx = u.scales.x;
+	const sy = u.scales.y;
+	if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return;
 
-	const toPixelX = (x: number): number => u.valToPos(x, 'x', true);
-	const toPixelY = (y: number): number => u.valToPos(y, 'y', true);
-	const xStep = (xRange.max - xRange.min) / resolution;
-	const yStep = (yRange.max - yRange.min) / resolution;
+	const imageWidth = Math.max(Math.round(width), 1);
+	const imageHeight = Math.max(Math.round(height), 1);
+	const image = ctx.createImageData(imageWidth, imageHeight);
+	const colours = interpolationColours(colorOf, range, options.scale, bandCount);
+	const xSpan = sx.max - sx.min || 1;
+	const ySpan = sy.max - sy.min || 1;
+	const xReverse = sx.dir === -1;
+	const yReverse = sy.dir === -1;
+
+	for (let pixelRow = 0; pixelRow < imageHeight; pixelRow++) {
+		let yPosition = 1 - (pixelRow + 0.5) / imageHeight;
+		if (yReverse) yPosition = 1 - yPosition;
+		const yValue = sy.min + yPosition * ySpan;
+
+		for (let pixelColumn = 0; pixelColumn < imageWidth; pixelColumn++) {
+			let xPosition = (pixelColumn + 0.5) / imageWidth;
+			if (xReverse) xPosition = 1 - xPosition;
+			const xValue = sx.min + xPosition * xSpan;
+
+			const value = sampleGrid(values, resolution, xRange, yRange, xValue, yValue);
+			let position = colorScalePosition(value, range.min, range.max, options.scale);
+			if (!Number.isFinite(position)) continue;
+
+			position = Math.min(Math.max(position, 0), 1);
+			const band = Math.min(Math.floor(position * bandCount), bandCount - 1);
+			const colour = colours[band];
+			const offset = (pixelRow * imageWidth + pixelColumn) * 4;
+
+			image.data[offset] = colour[0];
+			image.data[offset + 1] = colour[1];
+			image.data[offset + 2] = colour[2];
+			image.data[offset + 3] = colour[3];
+		}
+	}
 
 	ctx.save();
 	ctx.beginPath();
 	ctx.rect(left, top, width, height);
 	ctx.clip();
-
-	if (hull.length >= 3) {
-		ctx.beginPath();
-		ctx.moveTo(toPixelX(hull[0][0]), toPixelY(hull[0][1]));
-
-		for (let i = 1; i < hull.length; i++) {
-			ctx.lineTo(toPixelX(hull[i][0]), toPixelY(hull[i][1]));
-		}
-
-		ctx.closePath();
-		ctx.clip();
-	}
-
-	ctx.globalAlpha = 0.8;
-
-	for (let row = 0; row < resolution; row++) {
-		const y0 = toPixelY(yRange.min + row * yStep);
-		const y1 = toPixelY(yRange.min + (row + 1) * yStep);
-
-		for (let column = 0; column < resolution; column++) {
-			const value = values[row * resolution + column];
-			if (!Number.isFinite(value)) continue;
-
-			let position = colorScalePosition(value, range.min, range.max, options.scale);
-			if (!Number.isFinite(position)) continue;
-			position = Math.min(Math.max(position, 0), 1);
-
-			const band = Math.min(Math.floor(position * bandCount), bandCount - 1);
-			const bandPosition = (band + 0.5) / bandCount;
-			const colorValue = colorScaleValue(bandPosition, range.min, range.max, options.scale);
-
-			const x0 = toPixelX(xRange.min + column * xStep);
-			const x1 = toPixelX(xRange.min + (column + 1) * xStep);
-
-			ctx.fillStyle = colorOf(colorValue);
-			ctx.fillRect(Math.min(x0, x1), Math.min(y0, y1), Math.abs(x1 - x0), Math.abs(y1 - y0));
-		}
-	}
-
+	ctx.putImageData(image, Math.round(left), Math.round(top));
 	ctx.restore();
+}
+
+function interpolationColours(
+	colorOf: (value: number) => string,
+	range: { min: number; max: number },
+	scale: ColorScale,
+	bandCount: number
+): Array<[number, number, number, number]> {
+	const colours: Array<[number, number, number, number]> = [];
+
+	for (let band = 0; band < bandCount; band++) {
+		const bandPosition = (band + 0.5) / bandCount;
+		const colorValue = colorScaleValue(bandPosition, range.min, range.max, scale);
+		const parsed = parseCssColor(colorOf(colorValue)) ?? [0, 0, 0];
+		colours.push([parsed[0], parsed[1], parsed[2], 204]);
+	}
+
+	return colours;
+}
+
+function sampleGrid(
+	values: Float64Array,
+	resolution: number,
+	xRange: { min: number; max: number },
+	yRange: { min: number; max: number },
+	xValue: number,
+	yValue: number
+): number {
+	const gridX = clampNumber(
+		((xValue - xRange.min) / (xRange.max - xRange.min || 1)) * resolution - 0.5,
+		0,
+		resolution - 1
+	);
+	const gridY = clampNumber(
+		((yValue - yRange.min) / (yRange.max - yRange.min || 1)) * resolution - 0.5,
+		0,
+		resolution - 1
+	);
+
+	const leftColumn = Math.floor(gridX);
+	const rightColumn = Math.min(leftColumn + 1, resolution - 1);
+	const topRow = Math.floor(gridY);
+	const bottomRow = Math.min(topRow + 1, resolution - 1);
+	const xWeight = gridX - leftColumn;
+	const yWeight = gridY - topRow;
+
+	const topLeft = values[topRow * resolution + leftColumn];
+	const topRight = values[topRow * resolution + rightColumn];
+	const bottomLeft = values[bottomRow * resolution + leftColumn];
+	const bottomRight = values[bottomRow * resolution + rightColumn];
+	const topValue = topLeft * (1 - xWeight) + topRight * xWeight;
+	const bottomValue = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
+
+	return topValue * (1 - yWeight) + bottomValue * yWeight;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+	if (value < min) return min;
+	if (value > max) return max;
+	return value;
 }
 
 function drawContourLabels(
