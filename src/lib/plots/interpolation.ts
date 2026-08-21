@@ -71,6 +71,19 @@ export function buildInterpolationSurface(
 			yResolution,
 			plot.interpolation.gaussianSigma
 		);
+	} else {
+		const outsideFill = gridSeries(series, xRange, yRange, xResolution, yResolution);
+		if (outsideFill) {
+			values = fillMissingValues(
+				gridded.values,
+				gaussianFilter2d(
+					outsideFill.values,
+					xResolution,
+					yResolution,
+					plot.interpolation.gaussianSigma
+				)
+			);
+		}
 	}
 
 	return {
@@ -80,6 +93,20 @@ export function buildInterpolationSurface(
 		bandCount: Math.min(Math.max(Math.round(plot.interpolation.bandCount), 2), 100),
 		renderMode: plot.interpolation.method === 'delaunay-barycentric' ? 'continuous' : 'banded'
 	};
+}
+
+function fillMissingValues(values: Float64Array, fallback: Float64Array): Float64Array {
+	const output = new Float64Array(values.length);
+
+	for (let i = 0; i < values.length; i++) {
+		if (Number.isFinite(values[i])) {
+			output[i] = values[i];
+		} else {
+			output[i] = fallback[i];
+		}
+	}
+
+	return output;
 }
 
 interface DelaunayPoint {

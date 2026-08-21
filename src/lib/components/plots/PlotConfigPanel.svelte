@@ -254,6 +254,11 @@
 		return 'Gaussian smoothing';
 	}
 
+	function interpolationSmoothingLabel(method: PlotInterpolationMethod): string {
+		if (method === 'delaunay-barycentric') return 'Outside smoothing';
+		return 'Gaussian sigma';
+	}
+
 	// -- value helpers -------------------------------------------------------
 
 	/** An empty field means "auto", which the model stores as null. */
@@ -879,7 +884,8 @@
 
 					{#if draft.interpolation.method === 'delaunay-barycentric'}
 						<p class="hint">
-							Delaunay draws inside the measured data footprint and leaves unsupported areas empty.
+							Delaunay draws inside the measured data footprint. Smoothed gridding fills the
+							outside.
 						</p>
 					{/if}
 
@@ -927,17 +933,15 @@
 						onCommit={(value) => patchInterpolation({ yGridResolution: value })}
 					/>
 
-					{#if draft.interpolation.method === 'gaussian'}
-						<PlotSlider
-							id="interpolationSigma"
-							label="Gaussian sigma"
-							min={0}
-							max={8}
-							step={0.1}
-							value={draft.interpolation.gaussianSigma}
-							onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
-						/>
-					{/if}
+					<PlotSlider
+						id="interpolationSigma"
+						label={interpolationSmoothingLabel(draft.interpolation.method)}
+						min={0}
+						max={8}
+						step={0.1}
+						value={draft.interpolation.gaussianSigma}
+						onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+					/>
 
 					<PlotSlider
 						id="interpolationPercentileMin"
