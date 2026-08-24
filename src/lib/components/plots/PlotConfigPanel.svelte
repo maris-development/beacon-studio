@@ -250,7 +250,7 @@
 	}
 
 	function interpolationMethodLabel(method: PlotInterpolationMethod): string {
-		if (method === 'delaunay-barycentric') return 'Delaunay triangles';
+		if (method === 'delaunay-barycentric') return 'Delaunay triangulation';
 		return 'Gaussian smoothing';
 	}
 
@@ -905,8 +905,8 @@
 									<Select.Item value="gaussian" label="Gaussian smoothing">
 										Gaussian smoothing
 									</Select.Item>
-									<Select.Item value="delaunay-barycentric" label="Delaunay triangles">
-										Delaunay triangles
+									<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
+										Delaunay triangulation
 									</Select.Item>
 								</Select.Group>
 							</Select.Content>
@@ -979,6 +979,8 @@
 				{/if}
 
 				<h4>Contour Lines</h4>
+				<!-- place lines below subsections -->
+				<!-- make subsections collapsable -->
 
 				<label class="checkbox-field">
 					<Checkbox
