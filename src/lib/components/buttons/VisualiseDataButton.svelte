@@ -46,6 +46,10 @@
         </Button>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content class="w-48">
+        <DropdownMenu.Item onclick={() => handleVisualise(visualiseMap)}>
+            <MapIcon class="text-muted-foreground" />
+            <span>Map</span>
+        </DropdownMenu.Item>
         <DropdownMenu.Item onclick={() => handleVisualise(visualiseTable)}>
             <TableIcon class="text-muted-foreground" />
             <span>Table</span>
@@ -53,11 +57,6 @@
         <DropdownMenu.Item onclick={() => handleVisualise(visualiseChart)}>
             <ChartPieIcon class="text-muted-foreground" />
             <span>Chart</span>
-        </DropdownMenu.Item>
-        <!-- <DropdownMenu.Separator /> -->
-        <DropdownMenu.Item onclick={() => handleVisualise(visualiseMap)}>
-            <MapIcon class="text-muted-foreground" />
-            <span>Map</span>
-        </DropdownMenu.Item>
+        </DropdownMenu.Item>        
     </DropdownMenu.Content>
 </DropdownMenu.Root>
