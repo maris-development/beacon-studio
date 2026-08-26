@@ -172,8 +172,15 @@
 		draft = { ...draft, [axis]: { ...draft[axis], ...patch } };
 	}
 
-	function openConfigSection(section: number) {
-		openSection = section;
+	function openConfigSection(section: number, isOpen: boolean) {
+		if (isOpen) {
+			openSection = section;
+			return;
+		}
+
+		if (openSection === section) {
+			openSection = 0;
+		}
 	}
 
 	/**
@@ -184,7 +191,7 @@
 	 * it, because the first column is a better start than an empty selector.
 	 */
 	function setPlotType(type: PlotType) {
-		openConfigSection(2);
+		openConfigSection(2, true);
 		if (!draft || draft.type === type) return;
 		userEdited = true;
 
@@ -349,7 +356,7 @@
 			title="Plot type"
 			summary={typeSummary}
 			open={openSection === 1}
-			onOpenChange={() => openConfigSection(1)}
+			onOpenChange={(isOpen) => openConfigSection(1, isOpen)}
 		>
 			<PlotTypeCards
 				value={draft.type}
@@ -363,7 +370,7 @@
 			title="Bind data"
 			summary={bindingSummary}
 			open={openSection === 2}
-			onOpenChange={() => openConfigSection(2)}
+			onOpenChange={(isOpen) => openConfigSection(2, isOpen)}
 		>
 			<div class="axis-group">
 				<div class="axis-header">
@@ -569,7 +576,7 @@
 			title="Properties"
 			summary={styleSummary}
 			open={openSection === 3}
-			onOpenChange={() => openConfigSection(3)}
+			onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
 		>
 			<h4>Colour</h4>
 
@@ -908,7 +915,7 @@
 			title="Advanced Analysis"
 			summary={advancedAnalysisSummary}
 			open={openSection === 4}
-			onOpenChange={() => openConfigSection(4)}
+			onOpenChange={(isOpen) => openConfigSection(4, isOpen)}
 		>
 			{#if !usesZColumn(draft.type)}
 				<p class="hint">

@@ -34,7 +34,7 @@
 
 	function toggleOpen() {
 		if (onOpenChange) {
-			onOpenChange(true);
+			onOpenChange(!open);
 			return;
 		}
 
