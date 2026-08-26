@@ -28,8 +28,9 @@ import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palett
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
 export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
 export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
+export type PlotTypeConfig = { id: PlotType; label: string; description: string };
 
-export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; description: string }> = [
+export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
 	{
 		id: 'scatter',
 		label: 'Scatter plot',
@@ -51,6 +52,12 @@ export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; descriptio
 		description: 'One column, split into bins. The height of a bar is the row count.'
 	}
 ];
+
+/** True when the plot type requires sampling above a certain amount of rows. */
+export function needsSampling(type: PlotType): boolean {
+	return type === 'scatter' || type === 'cross-section';
+}
+
 
 /** True when the type puts a column on both X and Y. */
 export function usesXColumn(type: PlotType): boolean {

@@ -30,6 +30,7 @@ import {
 	clonePlotConfig,
 	makeChartViewState,
 	makePlotConfig,
+	needsSampling,
 	nextPlotName,
 	normaliseChartView,
 	pruneMissingColumns,
@@ -49,6 +50,8 @@ import {
 } from '@/plots/plot-data';
 import { buildContours, type ContourResult } from '@/plots/contour';
 import { buildInterpolationSurface, type InterpolationResult } from '@/plots/interpolation';
+import { samplePlotSeries } from '@/plots/sampling';
+import { getSettings } from '@/stores/settings';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -145,6 +148,16 @@ export class ChartExplorerController {
 		if (result?.ok) return result.series;
 		return null;
 	});
+
+	/**
+	 * The numbers that the canvas draws: {@link series}, or a sample of it.
+	 *
+	 * A scatter draws one mark per row, so a result of millions of rows must not
+	 * reach the canvas whole. The contours and the interpolation surface still
+	 * read the full series: they grid the data, so a sample there would cost
+	 * accuracy and save nothing.
+	 */
+	displaySeries = $state.raw<PlotSeries | null>(null);
 
 	/**
 	 * The settings that decide the contour lines, as one string. Null while the
@@ -269,6 +282,7 @@ export class ChartExplorerController {
 
 		if (!table || !plot) {
 			this.data = null;
+			this.displaySeries = null;
 			this.contours = null;
 			this.interpolation = null;
 			this.isPreparing = false;
@@ -300,6 +314,14 @@ export class ChartExplorerController {
 			);
 		} else {
 			this.contours = null;
+		}
+
+		// Last, so the two steps above still read every row. The setting is read
+		// here and not at module load, so a change to it reaches the next rebuild.
+		if (series && needsSampling(plot.type)) {
+			this.displaySeries = samplePlotSeries(series, getSettings().sampleAfterRows);
+		} else {
+			this.displaySeries = series;
 		}
 
 		this.isPreparing = false;

@@ -68,6 +68,11 @@ export interface PlotSeries {
 	droppedGroups: number;
 	/** The width of one bar of a histogram, in X units. Null for every other type. */
 	binWidth: number | null;
+	/**
+	 * The row count before sampling. Null when the plot draws every row.
+	 * See `sampling.ts`.
+	 */
+	sampledFrom: number | null;
 }
 
 export type PlotDataResult =
@@ -399,7 +404,8 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
 			skippedRows: rows - counted,
 			groups: null,
 			droppedGroups: 0,
-			binWidth
+			binWidth,
+			sampledFrom: null
 		}
 	};
 }
@@ -651,7 +657,8 @@ export function buildPlotSeries(
 		skippedRows: rows - kept,
 		groups: null,
 		droppedGroups: 0,
-		binWidth: null
+		binWidth: null,
+		sampledFrom: null
 	};
 
 	if (plot.type !== 'line') return { ok: true, series };

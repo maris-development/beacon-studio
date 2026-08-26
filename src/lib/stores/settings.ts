@@ -55,6 +55,13 @@ export interface BeaconStudioSettings {
 	/** The width of a new cross section, in kilometres. */
 	crossSectionWidthKm: number;
 
+	// -- plot -----------------------------------------------------------------
+
+	/**
+	 * The number of rows after which a plot samples the data. A lower value keeps the browser stable.
+	 */
+	sampleAfterRows: number;
+
 	// -- system ---------------------------------------------------------------
 	/** The refresh period of the system info page, in milliseconds. */
 	systemInfoUpdateIntervalMs: number;
@@ -75,13 +82,15 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	mapGroupByDecimals: 3,
 	crossSectionWidthKm: 5,
 
+	sampleAfterRows: 500_000,
+
 	systemInfoUpdateIntervalMs: 1000
 };
 
 /** The keys of one settings object. */
 export type SettingKey = keyof BeaconStudioSettings;
 
-export type SettingGroup = 'Queries' | 'Result cache' | 'Map' | 'System';
+export type SettingGroup = 'Queries' | 'Result cache' | 'Map' | 'System' | 'Plot';
 
 interface BaseDefinition {
 	key: SettingKey;
@@ -246,6 +255,17 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 		max: 500,
 		step: 0.1,
 		unit: 'km'
+	},
+	{
+		key: 'sampleAfterRows',
+		group: 'Plot',
+		type: 'number',
+		label: 'Plot sample threshold',
+		description: 'The number of rows after which a plot samples the data. A lower value keeps the browser stable.',
+		min: 10_000,
+		max: 10_000_000,
+		step: 10_000,
+		unit: 'rows'
 	},
 	{
 		key: 'systemInfoUpdateIntervalMs',

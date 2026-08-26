@@ -211,7 +211,7 @@
 							<PlotCanvas
 								bind:this={plotCanvas}
 								plot={charts.activePlot}
-								series={charts.series}
+								series={charts.displaySeries}
 								contours={charts.contours}
 								interpolation={charts.interpolation}
 								message={charts.message}
