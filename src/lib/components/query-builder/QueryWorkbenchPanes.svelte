@@ -51,7 +51,7 @@
 
 <div class="builder-pane">
 	<!-- Left: builder -->
-	<section class="pane" class:pane--collapsed={!leftOpen}>
+	<section class="pane left" class:pane--collapsed={!leftOpen}>
 		<header class="pane-header">
 			<h2 class="pane-title">Query builder</h2>
 			<Button
@@ -126,7 +126,6 @@
 	.builder-pane {
 		display: flex;
 		gap: 1rem;
-		min-height: calc(100vh - 16.5rem);
 		align-items: stretch;
 
 		@media (max-width: 1024px) {
@@ -140,7 +139,10 @@
 	}
 
 	.pane {
-		flex: 1 1 0;
+		flex-grow: 1;
+		flex-shrink: 1;
+		flex-basis: auto;
+		width: 50%;
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
@@ -155,6 +157,7 @@
 		// A collapsed pane shrinks to just its header so the other pane expands.
 		&.pane--collapsed {
 			flex: 0 0 auto;
+			width: auto;
 
 			.pane-header {
 				border-bottom: none;

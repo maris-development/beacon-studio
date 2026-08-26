@@ -50,8 +50,12 @@
 				<div class="filter-wrapper">
 			
 					<ParameterFilter class="advanced-filter" bind:filter={filter.filter_value} />
-			
-					<Button variant="ghost" size="icon" onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
+					
+
+					<Button variant="ghost" size="xs"
+						 class="remove-filter" 
+						 title="Remove filter" aria-label="Remove filter"
+						 onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
 						<CircleXIcon class="circle-x" />
 					</Button>
 
@@ -118,13 +122,17 @@
 			// padding: 1rem;
 
 			.filter-wrapper {
-				display: flex;
-				flex-direction: row;
-				// align-items: center;
+				position: relative;
 				gap: 0.5rem;
 				padding: 0.5rem;
 				border-radius: 0.5rem;
 				background-color: white;
+
+				:global(.remove-filter) {
+					position: absolute;
+					top: 0.25rem;
+					right: 0.25rem;
+				}
 			}
 		}
 	}
