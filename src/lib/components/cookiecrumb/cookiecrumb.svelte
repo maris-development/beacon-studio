@@ -36,4 +36,9 @@
 	.primary-color {
 		color: var(--primary);
 	}
+	.cookiecrumb{
+		//hidden
+		visibility: hidden;
+		height: 0;
+	}
 </style>

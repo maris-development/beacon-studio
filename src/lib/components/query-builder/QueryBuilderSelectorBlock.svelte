@@ -402,10 +402,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		// }
 
 		.query-block-columns {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.25rem;
-			min-height: 1.5rem;
+			// display: flex;
+			// flex-wrap: wrap;
+			// gap: 0.25rem;
+			// min-height: 1.5rem;
+			visibility: hidden;
+			height: 0;
 		}
 
 		.query-block-muted {

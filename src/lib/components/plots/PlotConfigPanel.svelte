@@ -62,7 +62,7 @@
 
 	/** The plot as the user is editing it. Null while no plot is selected. */
 	let draft = $state<PlotConfig | null>(null);
-	let isBindingOpen = $state(false);
+	let openSection = $state(1);
 
 	/** The plot that {@link draft} was taken from. */
 	let draftPlotId: string | null = null;
@@ -172,6 +172,10 @@
 		draft = { ...draft, [axis]: { ...draft[axis], ...patch } };
 	}
 
+	function openConfigSection(section: number) {
+		openSection = section;
+	}
+
 	/**
 	 * Switch the type, and fit the axis columns to what the new type reads.
 	 *
@@ -180,7 +184,7 @@
 	 * it, because the first column is a better start than an empty selector.
 	 */
 	function setPlotType(type: PlotType) {
-		isBindingOpen = true;
+		openConfigSection(2);
 		if (!draft || draft.type === type) return;
 		userEdited = true;
 
@@ -340,7 +344,13 @@
 
 {#if draft}
 	<aside class="plot-config-panel">
-		<PlotSection step={1} title="Plot type" summary={typeSummary}>
+		<PlotSection
+			step={1}
+			title="Plot type"
+			summary={typeSummary}
+			open={openSection === 1}
+			onOpenChange={() => openConfigSection(1)}
+		>
 			<PlotTypeCards
 				value={draft.type}
 				crossSectionAvailable={controller.hasCrossSection}
@@ -348,7 +358,13 @@
 			/>
 		</PlotSection>
 
-		<PlotSection step={2} title="Bind data" summary={bindingSummary} bind:open={isBindingOpen}>
+		<PlotSection
+			step={2}
+			title="Bind data"
+			summary={bindingSummary}
+			open={openSection === 2}
+			onOpenChange={() => openConfigSection(2)}
+		>
 			<div class="field">
 				<Label for="plotXColumn">{xFieldLabel}</Label>
 
@@ -523,7 +539,13 @@
 			{/if}
 		</PlotSection>
 
-		<PlotSection step={3} title="Properties" summary={styleSummary} open={false}>
+		<PlotSection
+			step={3}
+			title="Properties"
+			summary={styleSummary}
+			open={openSection === 3}
+			onOpenChange={() => openConfigSection(3)}
+		>
 			<h4>Colour</h4>
 
 			{#if draft.type === 'line'}
@@ -856,7 +878,13 @@
 		</PlotSection>
 
 		<!-- Contours rename to Advanced analysis -->
-		<PlotSection step={4} title="Advanced Analysis" summary={advancedAnalysisSummary} open={false}>
+		<PlotSection
+			step={4}
+			title="Advanced Analysis"
+			summary={advancedAnalysisSummary}
+			open={openSection === 4}
+			onOpenChange={() => openConfigSection(4)}
+		>
 			{#if !usesZColumn(draft.type)}
 				<p class="hint">
 					Contours need a value per point. A {draft.type === 'line' ? 'line' : 'histogram'} has none,
