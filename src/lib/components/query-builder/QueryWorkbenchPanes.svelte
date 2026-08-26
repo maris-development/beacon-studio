@@ -32,6 +32,24 @@
 	let leftOpen = $state(true);
 	let rightOpen = $state(true);
 
+	// Below this width the panes stack. Collapsing is off and both panes stay open.
+	const NARROW_QUERY = '(max-width: 1024px)';
+	let isNarrow = $state(false);
+
+	$effect(() => {
+		const narrowQuery = window.matchMedia(NARROW_QUERY);
+		const onChange = (event: MediaQueryListEvent) => (isNarrow = event.matches);
+
+		isNarrow = narrowQuery.matches;
+		narrowQuery.addEventListener('change', onChange);
+
+		return () => narrowQuery.removeEventListener('change', onChange);
+	});
+
+	// A pane is only collapsible on wide viewports.
+	const showLeft = $derived(isNarrow || leftOpen);
+	const showRight = $derived(isNarrow || rightOpen);
+
 	// Live JSON of the active block's compiled query (read-only reflection).
 	const activeQueryJson = $derived.by(() => {
 		const query = QueryWorkspace.getQuery(workspace.activeBlock);
@@ -51,24 +69,26 @@
 
 <div class="builder-pane">
 	<!-- Left: builder -->
-	<section class="pane left" class:pane--collapsed={!leftOpen}>
+	<section class="pane left" class:pane--collapsed={!showLeft}>
 		<header class="pane-header">
 			<h2 class="pane-title">Query builder</h2>
-			<Button
-				variant="ghost"
-				size="icon"
-				title={leftOpen ? 'Collapse builder' : 'Expand builder'}
-				onclick={() => (leftOpen = !leftOpen)}
-			>
-				{#if leftOpen}
-					<ChevronLeft />
-				{:else}
-					<ChevronRight />
-				{/if}
-			</Button>
+			{#if !isNarrow}
+				<Button
+					variant="ghost"
+					size="icon"
+					title={leftOpen ? 'Collapse builder' : 'Expand builder'}
+					onclick={() => (leftOpen = !leftOpen)}
+				>
+					{#if leftOpen}
+						<ChevronLeft />
+					{:else}
+						<ChevronRight />
+					{/if}
+				</Button>
+			{/if}
 		</header>
 
-		{#if leftOpen}
+		{#if showLeft}
 			<div class="pane-body">
 				<!-- Re-mount per active block so the builder re-hydrates from its query. -->
 				{#key workspace.activeBlockId}
@@ -84,7 +104,7 @@
 	</section>
 
 	<!-- Right: JSON editor -->
-	<section class="pane right" class:pane--collapsed={!rightOpen}>
+	<section class="pane right" class:pane--collapsed={!showRight}>
 		
 		<header class="pane-header">
 			<h2 class="pane-title ">
@@ -100,21 +120,23 @@
 				</Button>
 			</h2>
 
-			<Button
-				variant="ghost"
-				size="icon"
-				title={rightOpen ? 'Collapse JSON' : 'Expand JSON'}
-				onclick={() => (rightOpen = !rightOpen)}
-			>
-				{#if rightOpen}
-					<ChevronRight />
-				{:else}
-					<ChevronLeft />
-				{/if}
-			</Button>
+			{#if !isNarrow}
+				<Button
+					variant="ghost"
+					size="icon"
+					title={rightOpen ? 'Collapse JSON' : 'Expand JSON'}
+					onclick={() => (rightOpen = !rightOpen)}
+				>
+					{#if rightOpen}
+						<ChevronRight />
+					{:else}
+						<ChevronLeft />
+					{/if}
+				</Button>
+			{/if}
 		</header>
 
-		{#if rightOpen}
+		{#if showRight}
 			<div class="pane-body">
 				<QueryTextEditor sourceCode={activeQueryJson} height="100%" readOnly />
 			</div>
@@ -132,7 +154,7 @@
 			flex-direction: column;
 			align-items: flex-start;
 
-			> .pane:not(.pane--collapsed) {
+			> .pane {
 				width: 100%;
 			}
 		}
