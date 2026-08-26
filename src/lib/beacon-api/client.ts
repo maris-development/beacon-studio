@@ -406,9 +406,7 @@ export class BeaconClient {
         if (!init) init = {};
 
         //merge headers with auth headers:
-        init.headers = {
-            ...new Headers(this.getAuthHeaders(init.headers)),
-        };
+        init.headers = this.getAuthHeaders(init.headers);
 
         if (responseType === 'text') {
             return fetch(input, init).then(BeaconClient.responseToTextOrError);
@@ -423,7 +421,7 @@ export class BeaconClient {
         const headers = new Headers(existing_headers);
 
         if (this.token) {
-            headers['Authorization'] = `Bearer ${this.token}`;
+            headers.set('Authorization', `Bearer ${this.token}`);
         }
 
         return headers;
