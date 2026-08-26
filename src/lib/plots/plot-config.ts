@@ -28,8 +28,9 @@ import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palett
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
 export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
 export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
+export type PlotTypeConfig = { id: PlotType; label: string; description: string };
 
-export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; description: string }> = [
+export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
 	{
 		id: 'scatter',
 		label: 'Scatter plot',
@@ -51,6 +52,12 @@ export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; descriptio
 		description: 'One column, split into bins. The height of a bar is the row count.'
 	}
 ];
+
+/** True when the plot type requires sampling above a certain amount of rows. */
+export function needsSampling(type: PlotType): boolean {
+	return type === 'scatter' || type === 'cross-section';
+}
+
 
 /** True when the type puts a column on both X and Y. */
 export function usesXColumn(type: PlotType): boolean {
@@ -162,6 +169,8 @@ export interface PlotStyleConfig {
 	legendTitleFontSize: number;
 	tickFontSize: number;
 	titleFontSize: number;
+	/** Draw the counts of the data at the foot of the plot. */
+	showCaption: boolean;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
 	backgroundColor: string;
 	/** CSS colour of the gridlines and axis ticks. */
@@ -245,6 +254,7 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	legendTitleFontSize: 13,
 	tickFontSize: 11,
 	titleFontSize: 16,
+	showCaption: true,
 	backgroundColor: '#ffffff',
 	gridlineColor: '#1f2937',
 	gridlineOpacity: 0.15,
@@ -594,6 +604,9 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 		),
 		tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
 		titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
+		// A plot stored before the caption existed has no key here, and takes the
+		// default. Therefore an old plot draws its caption too.
+		showCaption: asBoolean(record.showCaption, DEFAULT_STYLE.showCaption),
 		backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
 		gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
 		gridlineOpacity: clamp(asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity), 0, 1),

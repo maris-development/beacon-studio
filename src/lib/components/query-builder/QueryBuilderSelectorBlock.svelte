@@ -16,9 +16,17 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	import { addToast } from '@/stores/toasts';
 	// import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
+	import type { StoredQuery } from '@/stores/stored-query';
 
 	// All state lives in the workspace; this component only reads/acts on it.
-	let { workspace }: { workspace: QueryWorkspace } = $props();
+	let { 
+		workspace,
+		handleDoubleClick = null
+		
+	}: {
+		workspace: QueryWorkspace 
+		handleDoubleClick?: ((block: StoredQuery) => void) | null
+	} = $props();
 
 	const COLUMN_PREVIEW_LIMIT = 3;
 	let editingBlockId: string | null = $state(null);
@@ -88,6 +96,16 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		commitRenameBlock(id);
 	}
 
+	function handleClick(block: StoredQuery){
+		workspace.selectBlock(block.id);
+	}
+
+	function _handleDoubleClick(block: StoredQuery){
+		if(handleDoubleClick){
+			handleDoubleClick(block);
+		}	
+	}
+
 
 </script>
 
@@ -99,12 +117,14 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			{@const columns = QueryWorkspace.getSelectedColumns(block)}
 			{@const run = workspace.getRunState(block)}
 			<div
+				
 				class="query-block-wrapper"
 				class:query-block-wrapper--active={block.id === workspace.activeBlockId}
 				role="button"
 				tabindex="0"
 				aria-pressed={block.id === workspace.activeBlockId}
-				onclick={() => workspace.selectBlock(block.id)}
+				onclick={() => handleClick(block)}
+				ondblclick={() => _handleDoubleClick(block)}
 				onkeydown={(event) => handleBlockKeydown(block.id, event)}
 			>
 				<Card class="query-block">

@@ -500,6 +500,46 @@ export function drawTitle(u: uPlot, text: string, color: string, fontSize: numbe
 	ctx.restore();
 }
 
+// -- caption -----------------------------------------------------------------
+
+export interface CaptionOptions {
+	text: string;
+	fontSize: number;
+	textColor: string;
+	/**
+	 * The distance from the bottom of the canvas to the middle of the line, in
+	 * CSS pixels. The caller decides it: it owns the padding and the size of the
+	 * X axis title, and the caption shares that band.
+	 */
+	bottomInset: number;
+}
+
+/**
+ * Draw the caption, under the plot and against the left edge of the plot area.
+ *
+ * It names the numbers behind the picture, for example the point counts. It
+ * shares its line with the X axis title, which draws centred, so the two sit
+ * beside each other on the same band of empty canvas.
+ *
+ * Nothing is drawn behind the text. The band holds no data, and no clip applies
+ * here: the caption is outside the plotting area on purpose.
+ */
+export function drawCaption(u: uPlot, options: CaptionOptions): void {
+	if (!options.text) return;
+
+	const { ctx } = u;
+	const { left } = u.bbox;
+	const dpr = dprOf(u);
+
+	ctx.save();
+	ctx.fillStyle = options.textColor;
+	ctx.font = `${options.fontSize * dpr}px sans-serif`;
+	ctx.textAlign = 'left';
+	ctx.textBaseline = 'middle';
+	ctx.fillText(options.text, left, ctx.canvas.height - options.bottomInset * dpr);
+	ctx.restore();
+}
+
 // -- contours ----------------------------------------------------------------
 
 export interface ContourDrawOptions {

@@ -635,14 +635,26 @@
 								<Select.Trigger id="plotTitleSize">{draft.style.titleFontSize}px</Select.Trigger>
 								<Select.Content>
 									<Select.Group>
-										{#each sizeOptions(8, 40) as size}
+										{#each sizeOptions(8, 40) as size (size)}
 											<Select.Item value={String(size)} label={`${size}px`}>{size}px</Select.Item>
 										{/each}
 									</Select.Group>
 								</Select.Content>
 							</Select.Root>
 						</div>
+
+						<div class="field">
+							<label class="checkbox-field">
+								<Checkbox
+									checked={draft.style.showCaption}
+									onCheckedChange={(checked) => patchStyle({ showCaption: !!checked })}
+								/>
+								<span>Show caption</span>
+							</label>
+						</div>
 					</div>
+
+
 					<div class="property-row">
 						<label class="field"
 							><span>X-axis label</span><Input

@@ -41,6 +41,7 @@
 		drawGroupLegend,
 		drawLines,
 		drawPoints,
+		drawCaption,
 		drawInterpolationSurface,
 		drawTitle,
 		gridColor,
@@ -52,6 +53,7 @@
 	let {
 		plot,
 		series,
+		caption = null,
 		contours = null,
 		interpolation = null,
 		message = null,
@@ -60,6 +62,11 @@
 		plot: PlotConfig;
 		/** The numbers to draw. Null while the plot cannot draw. */
 		series: PlotSeries | null;
+		/**
+		 * One line under the plot, at the left, for example the point counts. Null
+		 * draws none, and so does `style.showCaption` when the user cleared it.
+		 */
+		caption?: string | null;
 		/** The contour lines, in data coordinates. Null while the plot draws none. */
 		contours?: ContourResult | null;
 		/** The interpolated field, in data coordinates. Null while the plot draws none. */
@@ -105,7 +112,7 @@
 	// Rebuild the chart when the plot, the data, the contours or the palette
 	// change. The reads below are the dependencies of this effect.
 	$effect(() => {
-		void [plot, plot.z?.scale, series, contours, interpolation, palettesLoaded];
+		void [plot, plot.z?.scale, series, caption, contours, interpolation, palettesLoaded];
 		scheduleRebuild();
 	});
 
@@ -360,6 +367,25 @@
 		let topPad = 6;
 		if (plot.title) topPad = style.titleFontSize + 10;
 
+		// The caption goes under the plot, on the line of the X axis title. That
+		// title draws centred in the band that `labelSize` reserves at the foot of
+		// the axis, so the caption shares the band and costs no extra room. A plot
+		// with no X axis title has no such band, so the caption reserves its own in
+		// the bottom padding.
+		const showCaption = !!caption && style.showCaption;
+		const captionFontSize = style.tickFontSize;
+
+		let captionBand = 0;
+		if (xTitle()) captionBand = style.xAxisTitleFontSize + 8;
+
+		let bottomPad = 6;
+		if (showCaption && !captionBand) {
+			captionBand = captionFontSize + 6;
+			bottomPad += captionBand;
+		}
+
+		const captionInset = 6 + captionBand / 2;
+
 		let colorBarRange = { min: 0, max: 1 };
 		if (current.zRange) {
 			colorBarRange = resolveRange(current.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
@@ -369,7 +395,7 @@
 			width,
 			height,
 			ms: 1,
-			padding: [topPad, rightPad, 6, 6],
+			padding: [topPad, rightPad, bottomPad, 6],
 			legend: { show: false },
 			// Default uPlot interaction: drag a box to zoom, click to reset. The
 			// crosshair helps read a position off the axes. There is no tooltip.
@@ -445,6 +471,15 @@
 								textColor: style.textColor,
 								fontSize: style.tickFontSize,
 								titleFontSize: style.legendTitleFontSize
+							});
+						}
+
+						if (showCaption && caption) {
+							drawCaption(u, {
+								text: caption,
+								fontSize: captionFontSize,
+								textColor: style.textColor,
+								bottomInset: captionInset
 							});
 						}
 

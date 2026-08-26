@@ -41,11 +41,11 @@
     }
 </script>
 
-<div class="flex items-center justify-between">
+<div class="table-selector-header">
     <h3>Select Data Table</h3>
 
-    <div class="flex gap-2">
-        <p>{!loaded ? 'Loading' : table_names.length} tables</p>
+    <div class="view-controls">
+        <p class="table-count">{!loaded ? 'Loading' : table_names.length} tables</p>
         <Button
             variant={viewMode === 'cards' ? 'default' : 'outline'}
             onclick={() => (viewMode = 'cards')}
@@ -64,7 +64,7 @@
     </div>
 </div>
 
-<div class="mt-4">
+<div class="table-views">
     {#if viewMode === 'cards'}
         <div class="cards-view">
             {#each table_names as table_name (table_name)}
@@ -87,7 +87,7 @@
         
     {:else if viewMode === 'list'}
         <Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
-            <Select.Trigger class="w-[180px]">
+            <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
             </Select.Trigger>
             <Select.Content>
@@ -106,43 +106,71 @@
 </div>
 
 <style lang="scss">
-    .cards-view {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
-        gap: 0.5rem;
+    .table-selector-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
 
-        :global(.card){
-            padding: 0.6rem;
-            
+        h3 {
+            margin: 0;
         }
 
-        :global(.card.selected) {
-            border-color: var(--primary);
-            background-color: var(--selected-background);
-            
-            :global(.check) {
-                color: var(--primary);
-                align-self: flex-start; /* Options: flex-start, flex-end, center, baseline, stretch */
-            }
-        }
-
-        div.table-header {
+        .view-controls {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-        }
+            gap: 0.5rem;
 
-        p.table-description {
-            font-size: 0.875rem;
-            color: hsl(0, 0%, 50%);
-            margin: 0;
-            // Onlys how one lien and elippse the rest of the text:
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-
+            p.table-count {
+                margin: 0;
+            }
         }
     }
 
-    
+    .table-views {
+        margin-top: 1rem;
+
+        .cards-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+            gap: 0.5rem;
+
+            :global(.card) {
+                padding: 0.6rem;
+            }
+
+            :global(.card.selected) {
+                border-color: var(--primary);
+                background-color: var(--selected-background);
+
+                :global(.check) {
+                    color: var(--primary);
+                    align-self: flex-start;
+                }
+            }
+
+            div.table-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+
+                h4 {
+                    margin: 0;
+                }
+            }
+
+            p.table-description {
+                margin: 0;
+                font-size: 0.875rem;
+                color: hsl(0, 0%, 50%);
+                // Show one line only and ellipsize the rest of the text.
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+
+        :global(.table-select-trigger) {
+            width: 180px;
+        }
+    }
 </style>

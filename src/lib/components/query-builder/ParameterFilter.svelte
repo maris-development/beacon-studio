@@ -173,7 +173,7 @@
 <style lang="scss">
 	.advanced-parameter-filter {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 		gap: 0.5rem;
 		flex-grow: 1;
 	}

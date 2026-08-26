@@ -68,12 +68,54 @@ export interface PlotSeries {
 	droppedGroups: number;
 	/** The width of one bar of a histogram, in X units. Null for every other type. */
 	binWidth: number | null;
+	/**
+	 * The row count before sampling. Null when the plot draws every row.
+	 * See `sampling.ts`.
+	 */
+	sampledFrom: number | null;
 }
 
 export type PlotDataResult =
 	| { ok: true; series: PlotSeries }
 	/** The plot cannot draw. `message` is the reason for the user. */
 	| { ok: false; message: string };
+
+/**
+ * The counts that the plot puts in its caption.
+ *
+ * Two states:
+ *
+ *     N = 10,000,000
+ *     N = 10,000,000 · 500,000 shown (5% sample)
+ *
+ * `N` counts the rows that the plot draws, not the rows that the query returned:
+ * a row without a value on every used axis draws nothing. A histogram needs the
+ * row count of `rowCount` and `skippedRows`, because its own arrays hold one
+ * entry per bin, not one per row.
+ *
+ * `series` is the full data and `display` is what the canvas gets. The two are
+ * the same object while the plot draws every point.
+ */
+export function formatSeriesCaption(
+	rowCount: number,
+	series: PlotSeries,
+	display: PlotSeries
+): string {
+	const total = Math.max(0, rowCount - series.skippedRows);
+	const drawn = `N = ${total.toLocaleString()}`;
+
+	if (display.sampledFrom === null) return drawn;
+
+	const shown = display.x.length;
+	const percent = (shown / display.sampledFrom) * 100;
+
+	// A whole number reads better, but a hard sample of a huge result lands below
+	// one percent, where rounding would show `0%`.
+	let percentText = `${Math.round(percent)}`;
+	if (percent < 1) percentText = `${Number(percent.toFixed(1))}`;
+
+	return `${drawn} · ${shown.toLocaleString()} shown (${percentText}% sample)`;
+}
 
 /** What a cross section plot needs beyond the table: the line that the user drew. */
 export interface PlotDataContext {
@@ -399,7 +441,8 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
 			skippedRows: rows - counted,
 			groups: null,
 			droppedGroups: 0,
-			binWidth
+			binWidth,
+			sampledFrom: null
 		}
 	};
 }
@@ -651,7 +694,8 @@ export function buildPlotSeries(
 		skippedRows: rows - kept,
 		groups: null,
 		droppedGroups: 0,
-		binWidth: null
+		binWidth: null,
+		sampledFrom: null
 	};
 
 	if (plot.type !== 'line') return { ok: true, series };
