@@ -922,192 +922,256 @@
 					Contours read the colour axis. Bind a column to it in step 2 to switch them on.
 				</p>
 			{:else}
-				<h4>Gridding & Interpolation</h4>
+				<details class="analysis-subsection">
+					<summary class="analysis-header">
+						<span>Gridding &amp; Interpolation</span>
+					</summary>
 
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.interpolation.enabled}
-						onCheckedChange={(checked) => patchInterpolation({ enabled: !!checked })}
-					/>
-					<span>Interpolate</span>
-				</label>
-
-				{#if draft.interpolation.enabled}
-					<p class="hint">
-						The selected X, Y and colour values are interpolated and drawn behind the points.
-					</p>
-
-					{#if draft.interpolation.method === 'delaunay-barycentric'}
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Interpolate</span>
+							<input
+								type="checkbox"
+								class="switch-input"
+								checked={draft.interpolation.enabled}
+								onchange={(event) => patchInterpolation({ enabled: event.currentTarget.checked })}
+								aria-label="Interpolate"
+							/>
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
 						<p class="hint">
-							Delaunay draws inside the measured data footprint. Smoothed gridding fills the
-							outside.
+							The selected X, Y and colour values are interpolated and drawn behind the points.
 						</p>
-					{/if}
 
-					<div class="field">
-						<Label for="interpolationMethod">Method</Label>
-						<Select.Root
-							type="single"
-							value={draft.interpolation.method}
-							onValueChange={(value) =>
-								patchInterpolation({ method: value as PlotInterpolationMethod })}
-						>
-							<Select.Trigger id="interpolationMethod">
-								{interpolationMethodLabel(draft.interpolation.method)}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									<Select.Item value="gaussian" label="Gaussian smoothing">
-										Gaussian smoothing
-									</Select.Item>
-									<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
-										Delaunay triangulation
-									</Select.Item>
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
+						{#if draft.interpolation.method === 'delaunay-barycentric'}
+							<p class="hint">
+								Delaunay draws inside the measured data footprint. Smoothed gridding fills the
+								outside.
+							</p>
+						{/if}
+
+						<div class="field">
+							<Label for="interpolationMethod">Method</Label>
+							<Select.Root
+								type="single"
+								value={draft.interpolation.method}
+								onValueChange={(value) =>
+									patchInterpolation({ method: value as PlotInterpolationMethod })}
+							>
+								<Select.Trigger id="interpolationMethod">
+									{interpolationMethodLabel(draft.interpolation.method)}
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Group>
+										<Select.Item value="gaussian" label="Gaussian smoothing">
+											Gaussian smoothing
+										</Select.Item>
+										<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
+											Delaunay triangulation
+										</Select.Item>
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+						</div>
+
+						<PlotSlider
+							id="interpolationGridX"
+							label="Grid x resolution"
+							min={20}
+							max={300}
+							step={10}
+							value={draft.interpolation.xGridResolution}
+							onCommit={(value) => patchInterpolation({ xGridResolution: value })}
+						/>
+
+						<PlotSlider
+							id="interpolationGridY"
+							label="Grid y resolution"
+							min={20}
+							max={300}
+							step={10}
+							value={draft.interpolation.yGridResolution}
+							onCommit={(value) => patchInterpolation({ yGridResolution: value })}
+						/>
+
+						<PlotSlider
+							id="interpolationSigma"
+							label={interpolationSmoothingLabel(draft.interpolation.method)}
+							min={0}
+							max={8}
+							step={0.1}
+							value={draft.interpolation.gaussianSigma}
+							onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+						/>
+
+						<div class="clip-range field">
+							<div class="clip-range-header">
+								<span>Clip limits</span><span
+									>{draft.interpolation.percentileMin}% - {draft.interpolation.percentileMax}%</span
+								>
+							</div>
+							<div
+								class="clip-range-track"
+								style={`--clip-min: ${draft.interpolation.percentileMin}%; --clip-max: ${draft.interpolation.percentileMax}%;`}
+							>
+								<input
+									id="interpolationPercentileMin"
+									type="range"
+									min={0}
+									max={100}
+									step={0.5}
+									value={draft.interpolation.percentileMin}
+									oninput={(event) =>
+										patchInterpolation({
+											percentileMin: Math.min(
+												Number(event.currentTarget.value),
+												draft.interpolation.percentileMax
+											)
+										})}
+									aria-label="Clip minimum"
+								/>
+								<input
+									id="interpolationPercentileMax"
+									type="range"
+									min={0}
+									max={100}
+									step={0.5}
+									value={draft.interpolation.percentileMax}
+									oninput={(event) =>
+										patchInterpolation({
+											percentileMax: Math.max(
+												Number(event.currentTarget.value),
+												draft.interpolation.percentileMin
+											)
+										})}
+									aria-label="Clip maximum"
+								/>
+							</div>
+							<div class="clip-range-labels">
+								<span>{draft.interpolation.percentileMin}%</span><span
+									>{draft.interpolation.percentileMax}%</span
+								>
+							</div>
+						</div>
+
+						{#if draft.interpolation.method === 'gaussian'}
+							<PlotSlider
+								id="interpolationBands"
+								label="Colour bands"
+								min={2}
+								max={50}
+								step={1}
+								value={draft.interpolation.bandCount}
+								onCommit={(value) => patchInterpolation({ bandCount: value })}
+							/>
+						{/if}
 					</div>
+				</details>
 
-					<PlotSlider
-						id="interpolationGridX"
-						label="Grid x resolution"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.interpolation.xGridResolution}
-						onCommit={(value) => patchInterpolation({ xGridResolution: value })}
-					/>
+				<details class="analysis-subsection">
+					<summary class="analysis-header">
+						<span>Contour Lines</span>
+					</summary>
 
-					<PlotSlider
-						id="interpolationGridY"
-						label="Grid y resolution"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.interpolation.yGridResolution}
-						onCommit={(value) => patchInterpolation({ yGridResolution: value })}
-					/>
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Draw contours</span>
+							<input
+								type="checkbox"
+								class="switch-input"
+								checked={draft.contour.enabled}
+								onchange={(event) => patchContour({ enabled: event.currentTarget.checked })}
+								aria-label="Draw contour lines"
+							/>
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
+						<p class="hint">
+							The values are interpolated onto a grid, and the lines are clipped to the area the
+							rows cover.
+						</p>
 
-					<PlotSlider
-						id="interpolationSigma"
-						label={interpolationSmoothingLabel(draft.interpolation.method)}
-						min={0}
-						max={8}
-						step={0.1}
-						value={draft.interpolation.gaussianSigma}
-						onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
-					/>
-
-					<PlotSlider
-						id="interpolationPercentileMin"
-						label="Clip minimum"
-						suffix="%"
-						min={0}
-						max={50}
-						step={0.5}
-						value={draft.interpolation.percentileMin}
-						onCommit={(value) => patchInterpolation({ percentileMin: value })}
-					/>
-
-					<PlotSlider
-						id="interpolationPercentileMax"
-						label="Clip maximum"
-						suffix="%"
-						min={50}
-						max={100}
-						step={0.5}
-						value={draft.interpolation.percentileMax}
-						onCommit={(value) => patchInterpolation({ percentileMax: value })}
-					/>
-
-					{#if draft.interpolation.method === 'gaussian'}
 						<PlotSlider
-							id="interpolationBands"
-							label="Colour bands"
+							id="contourLevels"
+							label="Levels (number of contours)"
 							min={2}
-							max={50}
+							max={30}
 							step={1}
-							value={draft.interpolation.bandCount}
-							onCommit={(value) => patchInterpolation({ bandCount: value })}
+							value={draft.contour.levelCount}
+							onCommit={(value) => patchContour({ levelCount: value })}
 						/>
-					{/if}
-				{/if}
 
-				<h4>Contour Lines</h4>
-				<!-- place lines below subsections -->
-				<!-- make subsections collapsable -->
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.contour.enabled}
-						onCheckedChange={(checked) => patchContour({ enabled: !!checked })}
-					/>
-					<span>Draw contour lines</span>
-				</label>
-
-				{#if draft.contour.enabled}
-					<p class="hint">
-						The values are interpolated onto a grid, and the lines are clipped to the area the rows
-						cover.
-					</p>
-
-					<PlotSlider
-						id="contourLevels"
-						label="Levels (number of contours)"
-						min={2}
-						max={30}
-						step={1}
-						value={draft.contour.levelCount}
-						onCommit={(value) => patchContour({ levelCount: value })}
-					/>
-
-					<PlotSlider
-						id="contourGrid"
-						label="Grid detail"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.contour.gridResolution}
-						onCommit={(value) => patchContour({ gridResolution: value })}
-					/>
-
-					<PlotSlider
-						id="contourLineWidth"
-						label="Line width"
-						suffix="px"
-						min={0.25}
-						max={5}
-						step={0.25}
-						value={draft.contour.lineWidth}
-						onCommit={(value) => patchContour({ lineWidth: value })}
-					/>
-
-					<label class="checkbox-field">
-						<Checkbox
-							checked={draft.contour.showLabels}
-							onCheckedChange={(checked) => patchContour({ showLabels: !!checked })}
-						/>
-						<span>Label the levels</span>
-					</label>
-
-					{#if draft.contour.showLabels}
 						<PlotSlider
-							id="contourLabelSize"
-							label="Label size"
-							suffix="px"
-							min={6}
-							max={24}
-							step={1}
-							value={draft.contour.labelFontSize}
-							onCommit={(value) => patchContour({ labelFontSize: value })}
+							id="contourGrid"
+							label="Grid detail"
+							min={20}
+							max={300}
+							step={10}
+							value={draft.contour.gridResolution}
+							onCommit={(value) => patchContour({ gridResolution: value })}
 						/>
-					{/if}
-				{/if}
 
-				<!-- Here? -->
-				<h4>Density Overlays</h4>
+						<div class="field">
+							<span>Line width</span><Select.Root
+								type="single"
+								value={String(draft.contour.lineWidth)}
+								onValueChange={(value) => patchContour({ lineWidth: Number(value) })}
+								><Select.Trigger id="contourLineWidth">{draft.contour.lineWidth}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(0.25, 5, 0.25) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
 
-				<!-- Isopycnals -->
+						<label class="checkbox-field">
+							<Checkbox
+								checked={draft.contour.showLabels}
+								onCheckedChange={(checked) => patchContour({ showLabels: !!checked })}
+							/>
+							<span>Add label</span>
+						</label>
+
+						{#if draft.contour.showLabels}
+							<div class="field">
+								<span>Label size</span><Select.Root
+									type="single"
+									value={String(draft.contour.labelFontSize)}
+									onValueChange={(value) => patchContour({ labelFontSize: Number(value) })}
+									><Select.Trigger id="contourLabelSize"
+										>{draft.contour.labelFontSize}px</Select.Trigger
+									><Select.Content
+										><Select.Group
+											>{#each sizeOptions(6, 24) as size}<Select.Item
+													value={String(size)}
+													label={`${size}px`}>{size}px</Select.Item
+												>{/each}</Select.Group
+										></Select.Content
+									></Select.Root
+								>
+							</div>
+						{/if}
+					</div>
+				</details>
+
+				<details class="analysis-subsection density-subsection">
+					<summary class="analysis-header">
+						<span>Density Overlays</span>
+					</summary>
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Show overlays</span>
+							<input type="checkbox" class="switch-input" aria-label="Show density overlays" />
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
+					</div>
+				</details>
 			{/if}
 		</PlotSection>
 
@@ -1286,6 +1350,145 @@
 			gap: 0.5rem;
 		}
 
+		.analysis-subsection {
+			border-bottom: 1px solid var(--border, #e5e7eb);
+			padding-bottom: 0.125rem;
+
+			&:last-child {
+				border-bottom: 0;
+			}
+
+			.analysis-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5rem;
+				padding: 0.625rem 0;
+				color: var(--foreground, #111827);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				cursor: pointer;
+				list-style: none;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+
+				&::after {
+					content: '\2304';
+					font-size: 1rem;
+					line-height: 0.75;
+					transform: rotate(0deg);
+					transition: transform 0.15s ease;
+				}
+			}
+
+			&[open] .analysis-header::after {
+				transform: rotate(180deg);
+			}
+		}
+
+		.analysis-body {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.125rem 0 0.875rem;
+		}
+
+		.clip-range-header,
+		.clip-range-labels {
+			display: flex;
+			justify-content: space-between;
+			gap: 0.5rem;
+			font-size: 0.8125rem;
+		}
+
+		.clip-range-header span:last-child {
+			color: var(--muted-foreground, #6b7280);
+		}
+
+		.clip-range-track {
+			position: relative;
+			height: 1.25rem;
+			accent-color: var(--primary, #2563eb);
+
+			&::before {
+				content: '';
+				position: absolute;
+				top: 50%;
+				left: 0;
+				right: 0;
+				height: 0.25rem;
+				transform: translateY(-50%);
+				border-radius: 999px;
+				background: linear-gradient(
+					to right,
+					var(--muted, #e5e7eb) 0%,
+					var(--muted, #e5e7eb) var(--clip-min),
+					var(--primary, #2563eb) var(--clip-min),
+					var(--primary, #2563eb) var(--clip-max),
+					var(--muted, #e5e7eb) var(--clip-max),
+					var(--muted, #e5e7eb) 100%
+				);
+			}
+
+			input[type='range'] {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 1.25rem;
+				margin: 0;
+				appearance: none;
+				background: transparent;
+				pointer-events: none;
+
+				&::-webkit-slider-runnable-track {
+					height: 0.25rem;
+					background: transparent;
+				}
+
+				&::-moz-range-track {
+					height: 0.25rem;
+					background: transparent;
+				}
+
+				&::-webkit-slider-thumb {
+					width: 1rem;
+					height: 1rem;
+					margin-top: -0.375rem;
+					appearance: none;
+					border: 0;
+					border-radius: 50%;
+					background: var(--primary, #2563eb);
+					box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+					pointer-events: auto;
+					cursor: pointer;
+				}
+
+				&::-moz-range-thumb {
+					width: 1rem;
+					height: 1rem;
+					border: 0;
+					border-radius: 50%;
+					background: var(--primary, #2563eb);
+					box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+					pointer-events: auto;
+					cursor: pointer;
+				}
+			}
+
+			input:first-child {
+				z-index: 2;
+			}
+
+			input:last-child {
+				z-index: 3;
+			}
+		}
+
 		.color-field {
 			align-items: flex-start;
 
@@ -1382,6 +1585,11 @@
 			gap: 0.5rem;
 			font-size: 0.8125rem;
 			cursor: pointer;
+
+			:global([data-slot='checkbox'][data-state='checked']) {
+				border-color: #312c85;
+				background-color: #312c85;
+			}
 		}
 
 		.pair {
