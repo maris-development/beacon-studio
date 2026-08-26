@@ -6,6 +6,9 @@
     import Button from '../buttons/Button.svelte';
 	import { goto } from '$app/navigation';
 	import { SvelteURLSearchParams } from 'svelte/reactivity';
+	import type { QueryWorkspace } from './QueryWorkspace.svelte';
+	import type { QueryActions } from './QueryActions';
+	import type { StoredQuery } from '@/stores/stored-query';
 
     type QuerySelectorMode = 'view' | 'edit';
 
@@ -13,23 +16,35 @@
         workspace, 
         queryActions,
         mode = 'edit' as QuerySelectorMode
+     }: {
+        workspace: QueryWorkspace;
+        queryActions: QueryActions;
+        mode?: QuerySelectorMode;
      } = $props();
 
     let showQuerySelectionBlock = $state(true);
 
     let queryActionsForBar = $derived({
         ...queryActions,
-        editQuery: mode === 'view' ? gotoQueryEditor : undefined
+        editQuery: mode === 'view' ? editActiveQuery : undefined
     });
 
-    function gotoQueryEditor(){
-        const currentQueryId = workspace.activeBlockId;
-        if(currentQueryId){
+    function editActiveQuery(){
+        gotoQueryEditor(workspace.activeBlockId);
+    }
+    
+    function handleDoubleClick(block: StoredQuery): void {
+        gotoQueryEditor(block.id);
+    }
+
+    function gotoQueryEditor(queryId: string): void {
+        if(queryId){
             const params = new SvelteURLSearchParams();
-            params.set('q', currentQueryId);
+            params.set('q', queryId);
             goto(`/queries/workbench?${params.toString()}`);
         }
     }
+
 </script>
 
 <div class="page-container">
@@ -51,7 +66,7 @@
 
     {#if showQuerySelectionBlock}
         <div class="selection-block-wrapper">
-            <QueryBuilderSelectorBlock {workspace} />
+            <QueryBuilderSelectorBlock {workspace} {handleDoubleClick} />
         </div>
     {/if}
 
