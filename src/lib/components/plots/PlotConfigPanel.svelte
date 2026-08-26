@@ -270,6 +270,9 @@
 		return 'Gaussian sigma';
 	}
 
+	const MIN_GRID_RESOLUTION = 20;
+	const MAX_GRID_RESOLUTION = 300;
+
 	// -- value helpers -------------------------------------------------------
 
 	/** An empty field means "auto", which the model stores as null. */
@@ -279,6 +282,29 @@
 		const parsed = Number(value);
 		if (!Number.isFinite(parsed)) return null;
 		return parsed;
+	}
+
+	function gridResolutionValue(value: string, current: number): number {
+		const parsed = Number(value);
+		if (!Number.isFinite(parsed)) return current;
+
+		if (parsed < MIN_GRID_RESOLUTION) {
+			addToast({
+				message: `Input cannot be less than ${MIN_GRID_RESOLUTION}.`,
+				type: 'error'
+			});
+			return MIN_GRID_RESOLUTION;
+		}
+
+		if (parsed > MAX_GRID_RESOLUTION) {
+			addToast({
+				message: `Input cannot be greater than ${MAX_GRID_RESOLUTION}.`,
+				type: 'error'
+			});
+			return MAX_GRID_RESOLUTION;
+		}
+
+		return Math.round(parsed);
 	}
 
 	/** An empty field means "use the column name", which the model stores as null. */
@@ -975,25 +1001,47 @@
 							</Select.Root>
 						</div>
 
-						<PlotSlider
-							id="interpolationGridX"
-							label="Grid x resolution"
-							min={20}
-							max={300}
-							step={10}
-							value={draft.interpolation.xGridResolution}
-							onCommit={(value) => patchInterpolation({ xGridResolution: value })}
-						/>
-
-						<PlotSlider
-							id="interpolationGridY"
-							label="Grid y resolution"
-							min={20}
-							max={300}
-							step={10}
-							value={draft.interpolation.yGridResolution}
-							onCommit={(value) => patchInterpolation({ yGridResolution: value })}
-						/>
+						<div class="field">
+							<span>Grid resolution</span>
+							<div class="pair" role="group" aria-label="Grid resolution">
+								<label class="range-field" for="interpolationGridX">
+									<span>x:</span>
+									<Input
+										id="interpolationGridX"
+										type="number"
+										min={MIN_GRID_RESOLUTION}
+										max={MAX_GRID_RESOLUTION}
+										step={1}
+										value={draft.interpolation.xGridResolution}
+										onchange={(event) =>
+											patchInterpolation({
+												xGridResolution: gridResolutionValue(
+													event.currentTarget.value,
+													draft.interpolation.xGridResolution
+												)
+											})}
+									/>
+								</label>
+								<label class="range-field" for="interpolationGridY">
+									<span>y:</span>
+									<Input
+										id="interpolationGridY"
+										type="number"
+										min={MIN_GRID_RESOLUTION}
+										max={MAX_GRID_RESOLUTION}
+										step={1}
+										value={draft.interpolation.yGridResolution}
+										onchange={(event) =>
+											patchInterpolation({
+												yGridResolution: gridResolutionValue(
+													event.currentTarget.value,
+													draft.interpolation.yGridResolution
+												)
+											})}
+									/>
+								</label>
+							</div>
+						</div>
 
 						<PlotSlider
 							id="interpolationSigma"
