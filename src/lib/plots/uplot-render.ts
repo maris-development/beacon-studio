@@ -500,6 +500,41 @@ export function drawTitle(u: uPlot, text: string, color: string, fontSize: numbe
 	ctx.restore();
 }
 
+/**
+ * Draw the subtitle, on the line under the title.
+ *
+ * `titleFontSize` is the height of the line above. Pass 0 when the plot has no
+ * title: the subtitle then takes the top slot itself.
+ *
+ * The text is secondary to the title, so it draws lighter and without the bold
+ * weight. The caller reserves the room in the top padding.
+ */
+export function drawSubtitle(
+	u: uPlot,
+	text: string,
+	color: string,
+	fontSize: number,
+	titleFontSize: number
+): void {
+	if (!text) return;
+
+	const { ctx } = u;
+	const { left, width } = u.bbox;
+	const dpr = dprOf(u);
+
+	let top = 4;
+	if (titleFontSize) top += titleFontSize + 2;
+
+	ctx.save();
+	ctx.fillStyle = color;
+	ctx.globalAlpha = 0.75;
+	ctx.font = `${fontSize * dpr}px sans-serif`;
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'top';
+	ctx.fillText(text, left + width / 2, Math.round(top * dpr));
+	ctx.restore();
+}
+
 // -- contours ----------------------------------------------------------------
 
 export interface ContourDrawOptions {

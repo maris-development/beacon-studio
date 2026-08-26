@@ -42,6 +42,7 @@ import {
 } from '@/plots/plot-config';
 import {
 	buildPlotSeries,
+	formatSeriesSubtitle,
 	groupableColumns,
 	plottableColumns,
 	resolveRange,
@@ -158,6 +159,19 @@ export class ChartExplorerController {
 	 * accuracy and save nothing.
 	 */
 	displaySeries = $state.raw<PlotSeries | null>(null);
+
+	/**
+	 * The counts under the plot title. Empty while the plot has no numbers.
+	 *
+	 * The canvas draws this, so the PNG export carries it as well.
+	 */
+	readonly subtitle = $derived.by(() => {
+		const series = this.series;
+		const display = this.displaySeries;
+		if (!series || !display) return '';
+
+		return formatSeriesSubtitle(this.rowCount, series, display);
+	});
 
 	/**
 	 * The settings that decide the contour lines, as one string. Null while the

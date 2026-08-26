@@ -80,6 +80,43 @@ export type PlotDataResult =
 	/** The plot cannot draw. `message` is the reason for the user. */
 	| { ok: false; message: string };
 
+/**
+ * The counts under the plot title.
+ *
+ * Two states:
+ *
+ *     N = 10,000,000
+ *     N = 10,000,000 · 500,000 shown (5% sample)
+ *
+ * `N` counts the rows that the plot draws, not the rows that the query returned:
+ * a row without a value on every used axis draws nothing. A histogram needs the
+ * row count of `rowCount` and `skippedRows`, because its own arrays hold one
+ * entry per bin, not one per row.
+ *
+ * `series` is the full data and `display` is what the canvas gets. The two are
+ * the same object while the plot draws every point.
+ */
+export function formatSeriesSubtitle(
+	rowCount: number,
+	series: PlotSeries,
+	display: PlotSeries
+): string {
+	const total = Math.max(0, rowCount - series.skippedRows);
+	const drawn = `N = ${total.toLocaleString()}`;
+
+	if (display.sampledFrom === null) return drawn;
+
+	const shown = display.x.length;
+	const percent = (shown / display.sampledFrom) * 100;
+
+	// A whole number reads better, but a hard sample of a huge result lands below
+	// one percent, where rounding would show `0%`.
+	let percentText = `${Math.round(percent)}`;
+	if (percent < 1) percentText = `${Number(percent.toFixed(1))}`;
+
+	return `${drawn} · ${shown.toLocaleString()} shown (${percentText}% sample)`;
+}
+
 /** What a cross section plot needs beyond the table: the line that the user drew. */
 export interface PlotDataContext {
 	/** The spatial filter of the query. A cross section plot reads its line. */
