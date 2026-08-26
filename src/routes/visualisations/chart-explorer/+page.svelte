@@ -213,7 +213,7 @@
 								bind:this={plotCanvas}
 								plot={charts.activePlot}
 								series={charts.displaySeries}
-								subtitle={charts.subtitle}
+								caption={charts.caption}
 								contours={charts.contours}
 								interpolation={charts.interpolation}
 								message={charts.message}

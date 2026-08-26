@@ -169,6 +169,8 @@ export interface PlotStyleConfig {
 	legendTitleFontSize: number;
 	tickFontSize: number;
 	titleFontSize: number;
+	/** Draw the counts of the data at the foot of the plot. */
+	showCaption: boolean;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
 	backgroundColor: string;
 	/** CSS colour of the gridlines and axis ticks. */
@@ -252,6 +254,7 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	legendTitleFontSize: 13,
 	tickFontSize: 11,
 	titleFontSize: 16,
+	showCaption: true,
 	backgroundColor: '#ffffff',
 	gridlineColor: '#1f2937',
 	gridlineOpacity: 0.15,
@@ -601,6 +604,9 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 		),
 		tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
 		titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
+		// A plot stored before the caption existed has no key here, and takes the
+		// default. Therefore an old plot draws its caption too.
+		showCaption: asBoolean(record.showCaption, DEFAULT_STYLE.showCaption),
 		backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
 		gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
 		gridlineOpacity: clamp(asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity), 0, 1),

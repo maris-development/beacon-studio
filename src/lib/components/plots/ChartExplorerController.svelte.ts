@@ -42,7 +42,7 @@ import {
 } from '@/plots/plot-config';
 import {
 	buildPlotSeries,
-	formatSeriesSubtitle,
+	formatSeriesCaption,
 	groupableColumns,
 	plottableColumns,
 	resolveRange,
@@ -161,16 +161,16 @@ export class ChartExplorerController {
 	displaySeries = $state.raw<PlotSeries | null>(null);
 
 	/**
-	 * The counts under the plot title. Empty while the plot has no numbers.
+	 * The counts in the caption of the plot. Empty while the plot has no numbers.
 	 *
 	 * The canvas draws this, so the PNG export carries it as well.
 	 */
-	readonly subtitle = $derived.by(() => {
+	readonly caption = $derived.by(() => {
 		const series = this.series;
 		const display = this.displaySeries;
 		if (!series || !display) return '';
 
-		return formatSeriesSubtitle(this.rowCount, series, display);
+		return formatSeriesCaption(this.rowCount, series, display);
 	});
 
 	/**

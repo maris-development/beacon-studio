@@ -765,6 +765,14 @@
 				/>
 			</label>
 
+			<label class="checkbox-field">
+				<Checkbox
+					checked={draft.style.showCaption}
+					onCheckedChange={(checked) => patchStyle({ showCaption: !!checked })}
+				/>
+				<span>Show caption</span>
+			</label>
+
 			<PlotSlider
 				id="plotTitleSize"
 				label="Title size"

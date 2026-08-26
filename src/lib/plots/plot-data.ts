@@ -81,7 +81,7 @@ export type PlotDataResult =
 	| { ok: false; message: string };
 
 /**
- * The counts under the plot title.
+ * The counts that the plot puts in its caption.
  *
  * Two states:
  *
@@ -96,7 +96,7 @@ export type PlotDataResult =
  * `series` is the full data and `display` is what the canvas gets. The two are
  * the same object while the plot draws every point.
  */
-export function formatSeriesSubtitle(
+export function formatSeriesCaption(
 	rowCount: number,
 	series: PlotSeries,
 	display: PlotSeries
