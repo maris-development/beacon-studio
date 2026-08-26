@@ -24,6 +24,8 @@
  * lookup per point instead of an interpolation.
  */
 import { interpolateLab } from 'd3-interpolate';
+import { colorScalePosition } from './color-scale';
+import type { ColorScale } from '@/plots/plot-config';
 
 export type ColormapInterpolation = 'lab' | 'nearest';
 
@@ -294,19 +296,18 @@ function clampByte(value: number): number {
  * A value outside the range clamps to the end. A range of zero width has no
  * direction, so every value takes the middle.
  */
-export function paletteIndex(value: number, min: number, max: number, reverse: boolean): number {
-	const span = max - min;
-	let t = 0.5;
+export function paletteIndex(
+	value: number,
+	min: number,
+	max: number,
+	reverse: boolean,
+	scale: ColorScale = 'linear'
+): number {
+	const t = colorScalePosition(value, min, max, scale);
+	let position = t;
 
-	if (span !== 0) {
-		t = (value - min) / span;
-		if (!Number.isFinite(t)) t = 0;
-		if (t < 0) t = 0;
-		if (t > 1) t = 1;
-	}
-
-	if (reverse) t = 1 - t;
-	return Math.round(t * (TABLE_SIZE - 1));
+	if (reverse) position = 1 - position;
+	return Math.round(position * (TABLE_SIZE - 1));
 }
 
 /**
@@ -322,10 +323,11 @@ export function makePaletteScale(
 	id: string | null | undefined,
 	min: number,
 	max: number,
-	reverse = false
+	reverse = false,
+	scale: ColorScale = 'linear'
 ): (value: number) => string {
 	const table = getColorTable(id);
-	return (value: number) => table[paletteIndex(value, min, max, reverse)];
+	return (value: number) => table[paletteIndex(value, min, max, reverse, scale)];
 }
 
 /** Evenly spaced sample colours. The colour bar and the palette picker use these. */

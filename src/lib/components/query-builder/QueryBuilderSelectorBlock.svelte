@@ -7,7 +7,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 <script lang="ts">
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import Card from '@/components/card/Card.svelte';
+	import Card from '../card/card.svelte';
 	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
@@ -23,6 +23,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	const COLUMN_PREVIEW_LIMIT = 3;
 	let editingBlockId: string | null = $state(null);
 	let editingName = $state('');
+	let isCommittingFromKeyboard: boolean = $state(false);
 
 	function handleBlockKeydown(id: string, event: KeyboardEvent) {
 		if (event.key === 'Enter' || event.key === ' ') {
@@ -43,6 +44,9 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 	function commitRenameBlock(id: string): void {
 		const trimmedName = editingName.trim();
+
+		console.log('commitRenameBlock', editingName, trimmedName);
+
 		if (!trimmedName) {
 			addToast({ message: 'Query name cannot be empty.', type: 'warning' });
 			return;
@@ -62,15 +66,29 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 		if (event.key === 'Enter') {
 			event.preventDefault();
+			isCommittingFromKeyboard = true;
 			commitRenameBlock(id);
 			return;
 		}
 
 		if (event.key === 'Escape') {
 			event.preventDefault();
+			isCommittingFromKeyboard = true;
 			cancelRenameBlock();
 		}
 	}
+
+	// I think we could also just remove {editingName = '';} from the cancelRenameBlock()
+	function handleRenameBlur(id: string) : void{
+		if (isCommittingFromKeyboard) {
+			isCommittingFromKeyboard = false;
+			return;
+		}
+
+		commitRenameBlock(id);
+	}
+
+
 </script>
 
 <div class="query-blocks">
@@ -101,7 +119,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 									aria-label="Edit query name"
 									oninput={(event) => (editingName = event.currentTarget.value)}
 									onkeydown={(event) => handleRenameInputKeydown(block.id, event)}
-									onblur={() => commitRenameBlock(block.id)}
+									onblur={() => handleRenameBlur(block.id)}
 									onclick={(event) => event.stopPropagation()}
 								/>
 							{:else}
@@ -286,7 +304,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 	.query-block-wrapper {
 		display: flex;
-		min-width: 15rem;
+		flex: 0 0 15rem;
 		cursor: pointer;
 
 		:global(.query-block.card) {
@@ -384,10 +402,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		// }
 
 		.query-block-columns {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.25rem;
-			min-height: 1.5rem;
+			// display: flex;
+			// flex-wrap: wrap;
+			// gap: 0.25rem;
+			// min-height: 1.5rem;
+			visibility: hidden;
+			height: 0;
 		}
 
 		.query-block-muted {

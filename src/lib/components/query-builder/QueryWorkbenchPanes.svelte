@@ -126,6 +126,8 @@
 	.builder-pane {
 		display: flex;
 		gap: 1rem;
+		min-height: calc(100vh - 16.5rem);
+		align-items: stretch;
 
 		@media (max-width: 1024px) {
 			flex-direction: column;
@@ -147,6 +149,7 @@
 		border-radius: 0.75rem;
 		border: 1px solid rgb(231, 231, 236);
 		max-width: 100%;
+		min-height: 100%;
 
 	
 		// A collapsed pane shrinks to just its header so the other pane expands.
@@ -203,7 +206,8 @@
 		}
 		.pane-body {
 			min-width: 0;
-			height: 100%;
+			// height: 100%;
+			flex: 1 1 auto;
 			padding: 0.75rem;
 		}
 	}

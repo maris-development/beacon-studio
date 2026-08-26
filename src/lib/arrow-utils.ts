@@ -483,6 +483,8 @@ export class ApacheArrowUtils {
         const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
         const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
 
+        console.log('table schema addPointGeometryColumn', table.schema, latitudeColumnName, longitudeColumnName);
+
         if (latIndex === -1 || lonIndex === -1) {
             throw new Error(
                 `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`

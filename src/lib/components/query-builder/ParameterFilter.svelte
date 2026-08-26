@@ -50,37 +50,37 @@
 
 	{:else if filter.type === 'greater_than_numeric'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-numeric`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-numeric`} class="input-label">Greater than</label>
 			<Input id={`${uid}-greater-than-numeric`} type="text" bind:value={filter.value} />
 		</div>
 		
 	{:else if filter.type === 'greater_than_string'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-string`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-string`} class="input-label">Greater than</label>
 			<Input id={`${uid}-greater-than-string`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'greater_than_timestamp'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-timestamp`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-timestamp`} class="input-label">Greater than</label>
 			<DateTimeInput id={`${uid}-greater-than-timestamp`} bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'greater_than_or_equals_numeric'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-or-equals-numeric`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-or-equals-numeric`} class="input-label">Greater or Equal than</label>
 			<Input id={`${uid}-greater-than-or-equals-numeric`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'greater_than_or_equals_string'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-or-equals-string`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-or-equals-string`} class="input-label">Greater or Equal than</label>
 			<Input id={`${uid}-greater-than-or-equals-string`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'greater_than_or_equals_timestamp'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-greater-than-or-equals-timestamp`} class="input-label">From (min)</label>
+			<label for={`${uid}-greater-than-or-equals-timestamp`} class="input-label">Greater or Equal than</label>
 			<DateTimeInput id={`${uid}-greater-than-or-equals-timestamp`} bind:value={filter.value} />
 		</div>
 
@@ -104,58 +104,69 @@
 
 	{:else if filter.type === 'not_equals_numeric'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-not-equals-numeric`} class="input-label">Equals</label>
+			<label for={`${uid}-not-equals-numeric`} class="input-label">Does NOT Equal</label>
 			<Input id={`${uid}-not-equals-numeric`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'not_equals_string'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-not-equals-string`} class="input-label">Equals</label>
+			<label for={`${uid}-not-equals-string`} class="input-label">Does NOT Equal</label>
 			<Input id={`${uid}-not-equals-string`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'not_equals_timestamp'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-not-equals-timestamp`} class="input-label">Equals</label>
+			<label for={`${uid}-not-equals-timestamp`} class="input-label">Does NOT Equal</label>
 			<DateTimeInput id={`${uid}-not-equals-timestamp`} bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_numeric'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-less-than-numeric`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-numeric`} class="input-label">Less than</label>
 			<Input id={`${uid}-less-than-numeric`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_string'}
 		<div class="advanced-parameter-row">
 			
-			<label for={`${uid}-less-than-string`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-string`} class="input-label">Less than</label>
 			<Input id={`${uid}-less-than-string`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_timestamp'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-less-than-timestamp`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-timestamp`} class="input-label">Less than</label>
 			<DateTimeInput id={`${uid}-less-than-timestamp`} bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_or_equals_numeric'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-less-than-or-equals-numeric`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-or-equals-numeric`} class="input-label">Less or Equal than</label>
 			<Input id={`${uid}-less-than-or-equals-numeric`} type="text" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_or_equals_string'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-less-than-or-equals-string`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-or-equals-string`} class="input-label">Less or Equal than</label>
 			<Input id={`${uid}-less-than-or-equals-string`} type="text" bind:value={filter.value} />
 		</div>
 		
 	{:else if filter.type === 'less_than_or_equals_timestamp'}
 		<div class="advanced-parameter-row">
-			<label for={`${uid}-less-than-or-equals-timestamp`} class="input-label">To (max)</label>
+			<label for={`${uid}-less-than-or-equals-timestamp`} class="input-label">Less or Equal than</label>
 			<DateTimeInput id={`${uid}-less-than-or-equals-timestamp`} bind:value={filter.value} />
 		</div>
+
+	{:else if filter.type === 'is_null'}
+		<div class="advanced-parameter-row">
+			<label for={`${uid}-is_null`} class="input-label">Is NULL</label>
+		</div>
+
+	{:else if filter.type === 'is_not_null'}
+		<div class="advanced-parameter-row">
+			<label for={`${uid}-is_not_null`} class="input-label">Is NOT NULL</label>
+		</div>
+
 	{/if}
 </div>
 

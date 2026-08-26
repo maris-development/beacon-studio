@@ -26,6 +26,8 @@ import { createId } from '@/stores/stored-query';
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palettes';
 
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
+export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
+export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
 
 export const PLOT_TYPES: ReadonlyArray<{ id: PlotType; label: string; description: string }> = [
 	{
@@ -87,6 +89,8 @@ export interface PlotAxisConfig {
 	min: number | null;
 	max: number | null;
 	reverse: boolean;
+	/** The value transform used when this axis drives the colour palette. */
+	scale: ColorScale;
 }
 
 export interface PlotContourConfig {
@@ -98,6 +102,24 @@ export interface PlotContourConfig {
 	lineWidth: number;
 	showLabels: boolean;
 	labelFontSize: number;
+}
+
+export interface PlotInterpolationConfig {
+	enabled: boolean;
+	/** The algorithm that fills the interpolation grid. */
+	method: PlotInterpolationMethod;
+	/** Cells along the X axis of the interpolation grid. */
+	xGridResolution: number;
+	/** Cells along the Y axis of the interpolation grid. */
+	yGridResolution: number;
+	/** Gaussian blur radius, in grid cells. */
+	gaussianSigma: number;
+	/** Lower percentile for colour clipping. */
+	percentileMin: number;
+	/** Upper percentile for colour clipping. */
+	percentileMax: number;
+	/** Filled colour bands that approximate the interpolated surface. */
+	bandCount: number;
 }
 
 /**
@@ -127,15 +149,25 @@ export interface PlotHistogramConfig {
 
 export interface PlotStyleConfig {
 	palette: PaletteId;
+	/** Draw the raw datapoints for scatter and cross-section plots. */
+	showPoints: boolean;
 	pointRadius: number;
 	/** 0 to 1. A dense scatter needs a low value to show its structure. */
 	pointOpacity: number;
 	gridlines: boolean;
-	axisTitleFontSize: number;
+	xAxisTitleFontSize: number;
+	yAxisTitleFontSize: number;
+	/** Optional title shared by the group legend and the colour scale. */
+	legendTitle: string;
+	legendTitleFontSize: number;
 	tickFontSize: number;
 	titleFontSize: number;
 	/** CSS colour. The renderer paints it behind the plot, and into the export. */
 	backgroundColor: string;
+	/** CSS colour of the gridlines and axis ticks. */
+	gridlineColor: string;
+	/** 0 to 1. Controls the opacity of the gridlines and axis ticks. */
+	gridlineOpacity: number;
 	/** CSS colour of the title, the axis titles and the tick labels. */
 	textColor: string;
 }
@@ -153,6 +185,7 @@ export interface PlotConfig {
 	/** The colour axis. Null means that every point takes one colour. */
 	z: PlotAxisConfig | null;
 	contour: PlotContourConfig;
+	interpolation: PlotInterpolationConfig;
 	line: PlotLineConfig;
 	histogram: PlotHistogramConfig;
 	style: PlotStyleConfig;
@@ -175,6 +208,17 @@ export const DEFAULT_CONTOUR: PlotContourConfig = {
 	labelFontSize: 10
 };
 
+export const DEFAULT_INTERPOLATION: PlotInterpolationConfig = {
+	enabled: false,
+	method: 'gaussian',
+	xGridResolution: 120,
+	yGridResolution: 120,
+	gaussianSigma: 1.2,
+	percentileMin: 1,
+	percentileMax: 99,
+	bandCount: 25
+};
+
 export const DEFAULT_LINE: PlotLineConfig = {
 	groupColumn: null,
 	sortBy: 'x',
@@ -191,13 +235,19 @@ export const MAX_LINE_GROUPS = 40;
 
 export const DEFAULT_STYLE: PlotStyleConfig = {
 	palette: DEFAULT_PALETTE_ID,
+	showPoints: true,
 	pointRadius: 3,
 	pointOpacity: 0.85,
 	gridlines: true,
-	axisTitleFontSize: 13,
+	xAxisTitleFontSize: 13,
+	yAxisTitleFontSize: 13,
+	legendTitle: '',
+	legendTitleFontSize: 13,
 	tickFontSize: 11,
 	titleFontSize: 16,
 	backgroundColor: '#ffffff',
+	gridlineColor: '#1f2937',
+	gridlineOpacity: 0.15,
 	textColor: '#1f2937'
 };
 
@@ -211,6 +261,7 @@ export function makeAxisConfig(overrides: Partial<PlotAxisConfig> = {}): PlotAxi
 		min: null,
 		max: null,
 		reverse: false,
+		scale: 'linear',
 		...overrides
 	};
 }
@@ -225,6 +276,7 @@ export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig 
 		y: makeAxisConfig(),
 		z: null,
 		contour: { ...DEFAULT_CONTOUR },
+		interpolation: { ...DEFAULT_INTERPOLATION },
 		line: { ...DEFAULT_LINE },
 		histogram: { ...DEFAULT_HISTOGRAM },
 		style: { ...DEFAULT_STYLE },
@@ -254,6 +306,7 @@ export function clonePlotConfig(
 		y: { ...source.y },
 		z,
 		contour: { ...source.contour },
+		interpolation: { ...source.interpolation },
 		line: { ...source.line },
 		histogram: { ...source.histogram },
 		style: { ...source.style },
@@ -364,6 +417,16 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
 	return fallback;
 }
 
+function asColorScale(value: unknown): ColorScale {
+	if (value === 'logarithmic' || value === 'exponential') return value;
+	return 'linear';
+}
+
+function asInterpolationMethod(value: unknown): PlotInterpolationMethod {
+	if (value === 'delaunay-barycentric') return value;
+	return 'gaussian';
+}
+
 function asString(value: unknown, fallback: string): string {
 	if (typeof value === 'string') return value;
 	return fallback;
@@ -389,7 +452,8 @@ function normaliseAxis(raw: unknown): PlotAxisConfig {
 		label: asNullableString(record.label),
 		min: asNullableNumber(record.min),
 		max: asNullableNumber(record.max),
-		reverse: asBoolean(record.reverse, false)
+		reverse: asBoolean(record.reverse, false),
+		scale: asColorScale(record.scale)
 	};
 }
 
@@ -408,6 +472,64 @@ function normaliseContour(raw: unknown): PlotContourConfig {
 		lineWidth: clamp(asNumber(record.lineWidth, DEFAULT_CONTOUR.lineWidth), 0.25, 10),
 		showLabels: asBoolean(record.showLabels, DEFAULT_CONTOUR.showLabels),
 		labelFontSize: clamp(asNumber(record.labelFontSize, DEFAULT_CONTOUR.labelFontSize), 6, 48)
+	};
+}
+
+function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
+	const record = asRecord(raw);
+	if (!record) return { ...DEFAULT_INTERPOLATION };
+
+	let percentileMin = clamp(
+		asNumber(record.percentileMin, DEFAULT_INTERPOLATION.percentileMin),
+		0,
+		100
+	);
+	let percentileMax = clamp(
+		asNumber(record.percentileMax, DEFAULT_INTERPOLATION.percentileMax),
+		0,
+		100
+	);
+
+	if (percentileMax <= percentileMin) {
+		percentileMin = DEFAULT_INTERPOLATION.percentileMin;
+		percentileMax = DEFAULT_INTERPOLATION.percentileMax;
+	}
+
+	return {
+		enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
+		method: asInterpolationMethod(record.method),
+		xGridResolution: clamp(
+			Math.round(
+				asNumber(
+					record.xGridResolution,
+					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
+				)
+			),
+			20,
+			300
+		),
+		yGridResolution: clamp(
+			Math.round(
+				asNumber(
+					record.yGridResolution,
+					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
+				)
+			),
+			20,
+			300
+		),
+		gaussianSigma: clamp(
+			asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),
+			0,
+			20
+		),
+		percentileMin,
+		percentileMax,
+		bandCount: clamp(
+			Math.round(asNumber(record.bandCount, DEFAULT_INTERPOLATION.bandCount)),
+			2,
+			100
+		)
 	};
 }
 
@@ -444,17 +566,37 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
 
 	return {
 		palette,
+		showPoints: asBoolean(record.showPoints, DEFAULT_STYLE.showPoints),
 		pointRadius: clamp(asNumber(record.pointRadius, DEFAULT_STYLE.pointRadius), 0.5, 30),
 		pointOpacity: clamp(asNumber(record.pointOpacity, DEFAULT_STYLE.pointOpacity), 0.05, 1),
 		gridlines: asBoolean(record.gridlines, DEFAULT_STYLE.gridlines),
-		axisTitleFontSize: clamp(
-			asNumber(record.axisTitleFontSize, DEFAULT_STYLE.axisTitleFontSize),
+		xAxisTitleFontSize: clamp(
+			asNumber(
+				record.xAxisTitleFontSize,
+				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.xAxisTitleFontSize)
+			),
+			6,
+			48
+		),
+		yAxisTitleFontSize: clamp(
+			asNumber(
+				record.yAxisTitleFontSize,
+				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.yAxisTitleFontSize)
+			),
+			6,
+			48
+		),
+		legendTitle: asString(record.legendTitle, DEFAULT_STYLE.legendTitle),
+		legendTitleFontSize: clamp(
+			asNumber(record.legendTitleFontSize, DEFAULT_STYLE.legendTitleFontSize),
 			6,
 			48
 		),
 		tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
 		titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
 		backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
+		gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
+		gridlineOpacity: clamp(asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity), 0, 1),
 		textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
 	};
 }
@@ -481,6 +623,7 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
 		y: normaliseAxis(record.y),
 		z,
 		contour: normaliseContour(record.contour),
+		interpolation: normaliseInterpolation(record.interpolation),
 		line: normaliseLine(record.line),
 		histogram: normaliseHistogram(record.histogram),
 		style: normaliseStyle(record.style)

@@ -65,50 +65,50 @@
 <style lang="scss">
 	.parameter-card {
 		display: grid;
-		align-items: center;
+		align-items: start;
 		gap: 0.75rem;
 		border-radius: 0.5rem;
 		border: 1px solid #2563eb;
 		background-color: var(--selected-background);
 		padding: 0.6rem;
-		align-items: start;
-
+		
 		.parameter-card-header {
 			display: flex;
 			flex-direction: row;
-			align-items: center;
-			gap: .5rem;
-			
+			align-items: flex-start;
+			gap: 0.5rem;
+			min-width: 0;
+		
 			.parameter-title {
 				display: flex;
-				width: 100%;
+				flex: 1 1 auto;
+				min-width: 0;
 				flex-direction: column;
-				justify-content: space-between;
 				gap: 0.25rem;
-
+			
 				h4 {
 					margin: 0;
-					display: inline;
+					overflow-wrap: anywhere;
+					word-break: break-word;
 				}
-
+			
 				span {
 					color: var(--muted-foreground);
 					font-size: 0.75rem;
 					line-height: 1rem;
-
+				
 					overflow: hidden;
 					text-overflow: ellipsis;
-					width: 100%;
+					white-space: nowrap;
 				}
 			}
-
+		
 			.parameter-buttons {
 				display: flex;
 				flex-direction: row;
 				gap: 0.25rem;
-
+				flex-shrink: 0;
 			}
-
 		}
 
 		.parameter-filters {

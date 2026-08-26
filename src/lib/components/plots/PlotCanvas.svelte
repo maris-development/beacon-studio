@@ -41,16 +41,19 @@
 		drawGroupLegend,
 		drawLines,
 		drawPoints,
+		drawInterpolationSurface,
 		drawTitle,
 		gridColor,
 		groupColors
 	} from '@/plots/uplot-render';
 	import type { ContourResult } from '@/plots/contour';
+	import type { InterpolationResult } from '@/plots/interpolation';
 
 	let {
 		plot,
 		series,
 		contours = null,
+		interpolation = null,
 		message = null,
 		onBusyChange = undefined
 	}: {
@@ -59,6 +62,8 @@
 		series: PlotSeries | null;
 		/** The contour lines, in data coordinates. Null while the plot draws none. */
 		contours?: ContourResult | null;
+		/** The interpolated field, in data coordinates. Null while the plot draws none. */
+		interpolation?: InterpolationResult | null;
 		/** Why the plot cannot draw. Shown in place of the canvas. */
 		message?: string | null;
 		/**
@@ -100,7 +105,7 @@
 	// Rebuild the chart when the plot, the data, the contours or the palette
 	// change. The reads below are the dependencies of this effect.
 	$effect(() => {
-		void [plot, series, contours, palettesLoaded];
+		void [plot, plot.z?.scale, series, contours, interpolation, palettesLoaded];
 		scheduleRebuild();
 	});
 
@@ -268,6 +273,13 @@
 		return axisTitle(plot.y);
 	}
 
+	/** Use a custom legend title when set, otherwise retain the chart-specific label. */
+	function legendTitle(fallback: string): string {
+		const customTitle = plot.style.legendTitle.trim();
+		if (customTitle) return customTitle;
+		return fallback;
+	}
+
 	/**
 	 * Build the scale of one axis.
 	 *
@@ -325,9 +337,12 @@
 		if (axis === 'y') options.side = 3;
 
 		if (title) {
+			let titleFontSize = style.xAxisTitleFontSize;
+			if (axis === 'y') titleFontSize = style.yAxisTitleFontSize;
+
 			options.label = title;
-			options.labelFont = `${style.axisTitleFontSize}px sans-serif`;
-			options.labelSize = style.axisTitleFontSize + 8;
+			options.labelFont = `${titleFontSize}px sans-serif`;
+			options.labelSize = titleFontSize + 8;
 		}
 
 		return options;
@@ -335,12 +350,12 @@
 
 	function buildOptions(current: PlotSeries, width: number, height: number): uPlot.Options {
 		const style = plot.style;
-		const grid = gridColor(style.textColor);
+		const grid = gridColor(style.gridlineColor, style.gridlineOpacity);
 
 		const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
 
 		let rightPad = 8;
-		if (showColorBar) rightPad = colorBarPadding(style.tickFontSize);
+		if (showColorBar) rightPad = colorBarPadding(style.tickFontSize, style.legendTitleFontSize);
 
 		let topPad = 6;
 		if (plot.title) topPad = style.titleFontSize + 10;
@@ -363,10 +378,7 @@
 				x: scaleFor('x', current.xKind === 'timestamp'),
 				y: scaleFor('y', current.yKind === 'timestamp')
 			},
-			axes: [
-				axisOptions('x', xTitle(), style, grid),
-				axisOptions('y', yTitle(), style, grid)
-			],
+			axes: [axisOptions('x', xTitle(), style, grid), axisOptions('y', yTitle(), style, grid)],
 			series: [{}, { scale: 'y', paths: () => null, points: { show: false } }],
 			hooks: {
 				drawClear: [(u) => drawBackground(u, style.backgroundColor)],
@@ -389,12 +401,23 @@
 									),
 									textColor: style.textColor,
 									backgroundColor: style.backgroundColor,
+									title: legendTitle(plot.line.groupColumn ?? ''),
+									titleFontSize: style.legendTitleFontSize,
 									fontSize: style.tickFontSize,
 									droppedGroups: current.droppedGroups
 								});
 							}
 						} else {
-							drawPoints(u, current, plot);
+							if (interpolation && plot.interpolation.enabled && usesZColumn(plot.type)) {
+								drawInterpolationSurface(u, {
+									result: interpolation,
+									palette: style.palette,
+									reverse: plot.z?.reverse ?? false,
+									scale: plot.z?.scale ?? 'linear'
+								});
+							}
+
+							if (style.showPoints) drawPoints(u, current, plot);
 						}
 
 						if (contours && plot.contour.enabled && usesZColumn(plot.type)) {
@@ -402,6 +425,7 @@
 								result: contours,
 								palette: style.palette,
 								reverse: plot.z?.reverse ?? false,
+								scale: plot.z?.scale ?? 'linear',
 								lineWidth: plot.contour.lineWidth,
 								showLabels: plot.contour.showLabels,
 								labelFontSize: plot.contour.labelFontSize,
@@ -412,13 +436,15 @@
 
 						if (showColorBar) {
 							drawColorBar(u, {
-								title: axisTitle(plot.z),
+								title: legendTitle(axisTitle(plot.z)),
 								min: colorBarRange.min,
 								max: colorBarRange.max,
 								palette: style.palette,
 								reverse: plot.z?.reverse ?? false,
+								scale: plot.z?.scale ?? 'linear',
 								textColor: style.textColor,
-								fontSize: style.tickFontSize
+								fontSize: style.tickFontSize,
+								titleFontSize: style.legendTitleFontSize
 							});
 						}
 

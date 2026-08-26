@@ -12,6 +12,9 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import XIcon from '@lucide/svelte/icons/x';
 	import DownloadIcon from '@lucide/svelte/icons/download';
+	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
+	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
+	import { addToast } from '@/stores/toasts';
 	import type { ChartExplorerController } from './ChartExplorerController.svelte';
 
 	let {
@@ -24,20 +27,109 @@
 	} = $props();
 
 	const canClose = $derived(controller.plots.length > 1);
+	let editingPlotId = $state<string | null>(null);
+	let editingName = $state('');
+	let isCommittingFromKeyboard = $state(false);
+
+	function startRename(plotId: string, name: string): void {
+		editingPlotId = plotId;
+		editingName = name;
+	}
+
+	function cancelRename(): void {
+		editingPlotId = null;
+		editingName = '';
+	}
+
+	function commitRename(plotId: string): void {
+		const name = editingName.trim();
+		if (!name) {
+			addToast({ message: 'Plot name cannot be empty.', type: 'warning' });
+			return;
+		}
+
+		const plot = controller.plots.find((candidate) => candidate.id === plotId);
+		if (!plot) return;
+
+		controller.updatePlot({ ...plot, name });
+		cancelRename();
+	}
+
+	function handleRenameKeydown(plotId: string, event: KeyboardEvent): void {
+		event.stopPropagation();
+
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			isCommittingFromKeyboard = true;
+			commitRename(plotId);
+			return;
+		}
+
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			isCommittingFromKeyboard = true;
+			cancelRename();
+		}
+	}
+
+	function handleRenameBlur(plotId: string): void {
+		if (isCommittingFromKeyboard) {
+			isCommittingFromKeyboard = false;
+			return;
+		}
+
+		commitRename(plotId);
+	}
 </script>
 
 <div class="plot-tabs">
 	<div class="tabs" role="tablist">
 		{#each controller.plots as plot (plot.id)}
 			<div class="tab" class:selected={plot.id === controller.activePlot?.id}>
+				{#if editingPlotId === plot.id}
+					<input
+						class="name-input"
+						value={editingName}
+						autofocus
+						title="Edit plot name"
+						aria-label="Edit plot name"
+						oninput={(event) => (editingName = event.currentTarget.value)}
+						onkeydown={(event) => handleRenameKeydown(plot.id, event)}
+						onblur={() => handleRenameBlur(plot.id)}
+						onclick={(event) => event.stopPropagation()}
+					/>
+				{:else}
+					<button
+						type="button"
+						role="tab"
+						aria-selected={plot.id === controller.activePlot?.id}
+						class="name"
+						onclick={() => controller.selectPlot(plot.id)}
+					>
+						{plot.name}
+					</button>
+				{/if}
+
 				<button
 					type="button"
-					role="tab"
-					aria-selected={plot.id === controller.activePlot?.id}
-					class="name"
-					onclick={() => controller.selectPlot(plot.id)}
+					class="edit"
+					title={editingPlotId === plot.id ? 'Finish editing name' : 'Edit name'}
+					aria-label={editingPlotId === plot.id ? 'Finish editing name' : 'Edit name'}
+					onclick={(event) => {
+						event.stopPropagation();
+						if (editingPlotId === plot.id) {
+							commitRename(plot.id);
+							return;
+						}
+
+						startRename(plot.id, plot.name);
+					}}
 				>
-					{plot.name}
+					{#if editingPlotId === plot.id}
+						<CircleCheckIcon size={13} />
+					{:else}
+						<PencilLineIcon size={13} />
+					{/if}
 				</button>
 
 				{#if canClose}
@@ -126,6 +218,17 @@
 				cursor: pointer;
 			}
 
+			.name-input {
+				width: 12rem;
+				min-width: 0;
+				padding: 0.3125rem 0.5rem;
+				border: 1px solid var(--ring, #9ca3af);
+				border-radius: 0.25rem;
+				background: var(--background, #ffffff);
+				font-size: 0.8125rem;
+				outline: none;
+			}
+
 			&.selected .name {
 				font-weight: 600;
 			}
@@ -144,6 +247,20 @@
 				&:hover {
 					background-color: var(--destructive, #fee2e2);
 					color: #991b1b;
+				}
+			}
+
+			.edit {
+				display: flex;
+				align-items: center;
+				padding: 0.25rem;
+				border: 0;
+				background: none;
+				color: var(--muted-foreground, #6b7280);
+				cursor: pointer;
+
+				&:hover {
+					color: var(--foreground, #111827);
 				}
 			}
 		}

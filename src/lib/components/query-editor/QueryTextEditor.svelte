@@ -49,7 +49,7 @@
 			overviewRulerLanes: 0,
 			overviewRulerBorder: false,
 			theme: 'vs-light',
-			scrollBeyondLastLine: true,
+			scrollBeyondLastLine: false,
 			readOnly
 		});
 

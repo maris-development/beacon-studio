@@ -151,7 +151,7 @@
 	// here would hold the navigation and leave the user on the previous page,
 	// with a frozen window, until the whole chart was ready.
 	$effect(() => {
-		void [charts.seriesKey, charts.contourKey, charts.table];
+		void [charts.seriesKey, charts.contourKey, charts.interpolationKey, charts.table];
 		untrack(() => charts.schedulePrepare());
 	});
 
@@ -213,6 +213,7 @@
 								plot={charts.activePlot}
 								series={charts.series}
 								contours={charts.contours}
+								interpolation={charts.interpolation}
 								message={charts.message}
 								onBusyChange={(busy) => charts.setCanvasBusy(busy)}
 							/>

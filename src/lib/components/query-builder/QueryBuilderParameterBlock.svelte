@@ -81,6 +81,7 @@
 
 	let hasHydratedSeed = $state(!pendingSeed);
 	let lastEmittedDraftKey = $state('');
+	let lastReceivedDraftKey = $state(initialDraft ? JSON.stringify(initialDraft) : '');
 
 	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
 
@@ -99,6 +100,31 @@
 	// $effect(() => {
 	// 	status.outputFormat = selected_output_format;
 	// });
+
+	// Reload local controls when the workspace replaces this block's draft.
+	// Ignore drafts emitted by this component to prevent a write loop.
+	$effect(() => {
+		if (!initialDraft) {
+			return;
+		}
+
+		const draftKey = JSON.stringify(initialDraft);
+		if (draftKey === lastReceivedDraftKey) {
+			return;
+		}
+		lastReceivedDraftKey = draftKey;
+
+		if (draftKey === lastEmittedDraftKey) {
+			return;
+		}
+
+		selectedFields = Utils.cloneObject(initialDraft.selectedFields);
+		selected_output_format = initialDraft.outputFormat;
+		spatialFilter = initialDraft.spatialFilter
+			? Utils.cloneObject(initialDraft.spatialFilter)
+			: null;
+		selectionTable = initialDraft.tableName;
+	});
 
 
 	// Load the schema for the selected table (cached per instance). Needed for the

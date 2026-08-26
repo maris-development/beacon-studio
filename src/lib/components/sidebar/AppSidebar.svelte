@@ -59,7 +59,7 @@
 			items: [
 				{
 					title: 'Visualisations',
-					url: resolve('/visualisations'),
+					url: resolve('/visualisations/map-viewer'),
 					icon: EyeIcon,
 					children: [
 						{ title: 'Map Viewer', url: resolve('/visualisations/map-viewer') },

@@ -48,6 +48,7 @@ import {
 	type PlotSeries
 } from '@/plots/plot-data';
 import { buildContours, type ContourResult } from '@/plots/contour';
+import { buildInterpolationSurface, type InterpolationResult } from '@/plots/interpolation';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -166,7 +167,31 @@ export class ChartExplorerController {
 			plot.y.min,
 			plot.y.max,
 			plot.z?.min,
-			plot.z?.max
+			plot.z?.max,
+			plot.z?.scale
+		].join('|');
+	});
+
+	readonly interpolationKey = $derived.by(() => {
+		const plot = this.activePlot;
+		if (!plot?.interpolation.enabled || !usesZColumn(plot.type)) return null;
+
+		return [
+			plot.id,
+			plot.interpolation.method,
+			plot.interpolation.xGridResolution,
+			plot.interpolation.yGridResolution,
+			plot.interpolation.gaussianSigma,
+			plot.interpolation.percentileMin,
+			plot.interpolation.percentileMax,
+			plot.interpolation.bandCount,
+			plot.x.min,
+			plot.x.max,
+			plot.y.min,
+			plot.y.max,
+			plot.z?.min,
+			plot.z?.max,
+			plot.z?.scale
 		].join('|');
 	});
 
@@ -175,6 +200,9 @@ export class ChartExplorerController {
 	 * series, and for the same reason not derived: the gridding walks every row.
 	 */
 	contours = $state.raw<ContourResult | null>(null);
+
+	/** The interpolated value field of the active plot, in data coordinates. */
+	interpolation = $state.raw<InterpolationResult | null>(null);
 
 	/** Why the plot cannot draw, or null. */
 	readonly message = $derived.by(() => {
@@ -242,6 +270,7 @@ export class ChartExplorerController {
 		if (!table || !plot) {
 			this.data = null;
 			this.contours = null;
+			this.interpolation = null;
 			this.isPreparing = false;
 			return;
 		}
@@ -250,6 +279,17 @@ export class ChartExplorerController {
 
 		let series: PlotSeries | null = null;
 		if (this.data.ok) series = this.data.series;
+
+		if (series && plot.interpolation.enabled && usesZColumn(plot.type)) {
+			this.interpolation = buildInterpolationSurface(
+				series,
+				plot,
+				resolveRange(series.xRange, plot.x.min, plot.x.max),
+				resolveRange(series.yRange, plot.y.min, plot.y.max)
+			);
+		} else {
+			this.interpolation = null;
+		}
 
 		if (series && plot.contour.enabled && usesZColumn(plot.type)) {
 			this.contours = buildContours(

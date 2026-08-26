@@ -1,7 +1,7 @@
 import type { CompiledQuery } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
-import { PythonQueryBuilder } from "@/beacon-api/query";
+import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter } from "@/beacon-api/query";
 
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
@@ -39,7 +39,7 @@ export function copyJSON(compileQuery: () => CompiledQuery): void {
 
     const queryJson = JSON.stringify(compiledQuery, null, 2);
 
-    Utils.copyToClipboard(queryJson);
+    
 
     addToast({
         message: 'Query JSON copied to clipboard',
@@ -49,9 +49,27 @@ export function copyJSON(compileQuery: () => CompiledQuery): void {
 export function downloadJSON(compileQuery: () => CompiledQuery): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
+
     if (!compiledQuery) return;
 
-    notImplementedYetToast('Download JSON');
+    const queryJson = JSON.stringify(compiledQuery, null, 2);
+
+    try {
+        JSONQueryExporter.downloadAsJson(queryJson);
+
+        addToast({
+            message: 'Query JSON downloaded as beacon-studio-query.json',
+            type: 'success'
+        });
+    }
+    catch (error) {
+        console.error('Error downloading JSON:', error);
+
+        addToast({
+            message: `Error downloading JSON: ${error.message}`,
+            type: 'error'
+        });
+    }
 }
 
 export function copyPython(compileQuery: () => CompiledQuery): void {
@@ -102,7 +120,43 @@ export function downloadPython(compileQuery: () => CompiledQuery): void {
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for downloading query as Python code for compiled query:", compiledQuery);
+    let pythonCode: string;
+
+    try {
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery);
+
+    } catch (error) {
+        console.error('Error generating Python code:', error);
+        
+        addToast({
+            message: `Error generating Python code: ${error.message}`,
+            type: 'error'
+        });
+        
+        return;
+    }
+
+    try {
+        if(!pythonCode){
+            return;
+        }
+
+        PythonQueryExporter.downloadAsNotebook(pythonCode);
+
+        addToast({
+            message: 'Python code downloaded as beacon-studio-query.ipynb',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error downlaoding Python code as notebook:', error);
+
+        addToast({
+            message: `Error downloading Python code as notebook: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
 
 
