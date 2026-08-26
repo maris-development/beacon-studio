@@ -287,6 +287,14 @@
 		return value;
 	}
 
+	function sizeOptions(min: number, max: number, step = 1): number[] {
+		const values: number[] = [];
+		for (let value = min; value <= max; value += step) {
+			values.push(Number(value.toFixed(2)));
+		}
+		return values;
+	}
+
 	// -- summaries -----------------------------------------------------------
 
 	const typeSummary = $derived(
@@ -578,335 +586,322 @@
 			open={openSection === 3}
 			onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
 		>
-			<h4>Colour</h4>
-
-			{#if draft.type === 'line'}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
-
-				<p class="hint">
-					{#if draft.line.groupColumn}
-						Every stroke takes one colour from the palette.
-					{:else}
-						Group the plot in step 2 to give each stroke its own colour.
-					{/if}
-				</p>
-			{:else if draft.type === 'histogram'}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
-
-				<p class="hint">The bars take the first colour of the palette.</p>
-			{:else if draft.z?.column}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						reverse={draft.z.reverse}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.z.reverse}
-						onCheckedChange={(checked) => patchAxis('z', { reverse: !!checked })}
-					/>
-					<span>Reverse the palette</span>
-				</label>
-
-				<div class="field">
-					<span id="zRangeLabel">Colour range ({axisTitle(draft.z)})</span>
-					<div class="pair" role="group" aria-labelledby="zRangeLabel">
-						<Input
-							type="number"
-							value={draft.z.min ?? ''}
-							placeholder="auto"
-							oninput={(event) => patchAxis('z', { min: numberOrNull(event.currentTarget.value) })}
-						/>
-						<Input
-							type="number"
-							value={draft.z.max ?? ''}
-							placeholder="auto"
-							oninput={(event) => patchAxis('z', { max: numberOrNull(event.currentTarget.value) })}
-						/>
+			<details class="property-subsection" open>
+				<summary>Titles &amp; Labels</summary>
+				<div class="subsection-body">
+					<div class="property-row">
+						<label class="field">
+							<span>Plot title</span>
+							<Input
+								type="text"
+								value={draft.title}
+								placeholder="No title"
+								oninput={(event) => patchDraft({ title: event.currentTarget.value })}
+							/>
+						</label>
+						<div class="field">
+							<span>Title size</span>
+							<Select.Root
+								type="single"
+								value={String(draft.style.titleFontSize)}
+								onValueChange={(value) => patchStyle({ titleFontSize: Number(value) })}
+							>
+								<Select.Trigger id="plotTitleSize">{draft.style.titleFontSize}px</Select.Trigger>
+								<Select.Content>
+									<Select.Group>
+										{#each sizeOptions(8, 40) as size}
+											<Select.Item value={String(size)} label={`${size}px`}>{size}px</Select.Item>
+										{/each}
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+						</div>
+					</div>
+					<div class="property-row">
+						<label class="field"
+							><span>X-axis label</span><Input
+								type="text"
+								value={draft.x.label ?? ''}
+								placeholder={draft.type === 'cross-section'
+									? CROSS_SECTION_AXIS_LABEL
+									: (draft.x.column ?? 'Column name')}
+								oninput={(event) =>
+									patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.xAxisTitleFontSize)}
+								onValueChange={(value) => patchStyle({ xAxisTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotXAxisTitleSize"
+									>{draft.style.xAxisTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="property-row">
+						<label class="field"
+							><span>Y-axis label</span><Input
+								type="text"
+								value={draft.y.label ?? ''}
+								placeholder={draft.type === 'histogram'
+									? HISTOGRAM_AXIS_LABEL
+									: (draft.y.column ?? 'Column name')}
+								oninput={(event) =>
+									patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.yAxisTitleFontSize)}
+								onValueChange={(value) => patchStyle({ yAxisTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotYAxisTitleSize"
+									>{draft.style.yAxisTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="property-row">
+						<label class="field"
+							><span>Legend</span><Input
+								type="text"
+								value={draft.style.legendTitle}
+								placeholder="Use the default legend title"
+								oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.legendTitleFontSize)}
+								onValueChange={(value) => patchStyle({ legendTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotLegendTitleSize"
+									>{draft.style.legendTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="field">
+						<span>Tick label size</span><Select.Root
+							type="single"
+							value={String(draft.style.tickFontSize)}
+							onValueChange={(value) => patchStyle({ tickFontSize: Number(value) })}
+							><Select.Trigger id="plotTickSize">{draft.style.tickFontSize}px</Select.Trigger
+							><Select.Content
+								><Select.Group
+									>{#each sizeOptions(6, 32) as size}<Select.Item
+											value={String(size)}
+											label={`${size}px`}>{size}px</Select.Item
+										>{/each}</Select.Group
+								></Select.Content
+							></Select.Root
+						>
 					</div>
 				</div>
+			</details>
 
-				<div class="field">
-					<Label for="plotColorScale">Color scale</Label>
-					<Select.Root
-						type="single"
-						value={draft.z.scale}
-						onValueChange={(value) => setColorScale(value as ColorScale)}
-					>
-						<Select.Trigger id="plotColorScale">
-							{draft.z.scale === 'logarithmic'
-								? 'Logarithmic'
-								: draft.z.scale === 'exponential'
-									? 'Exponential'
-									: 'Linear'}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value="linear" label="Linear">Linear</Select.Item>
-								<Select.Item value="logarithmic" label="Logarithmic">Logarithmic</Select.Item>
-								<!-- <Select.Item value="exponential" label="Exponential">Exponential</Select.Item> -->
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
+			<details class="property-subsection" open>
+				<summary>Data &amp; Color</summary>
+				<div class="subsection-body">
+					{#if draft.type === 'line' || draft.type === 'histogram' || draft.z?.column}
+						<div class="field">
+							<Label for="plotPalette">Palette</Label><PalettePicker
+								id="plotPalette"
+								value={draft.style.palette}
+								reverse={draft.z?.column ? draft.z.reverse : false}
+								onSelect={(id) => patchStyle({ palette: id })}
+							/>
+						</div>
+						{#if draft.type === 'line'}<p class="hint">
+								{draft.line.groupColumn
+									? 'Every stroke takes one colour from the palette.'
+									: 'Group the plot in step 2 to give each stroke its own colour.'}
+							</p>{:else if draft.type === 'histogram'}<p class="hint">
+								The bars take the first colour of the palette.
+							</p>{/if}
+					{:else}<p class="hint">
+							Bind a column to the colour axis in step 2 to pick a palette.
+						</p>{/if}
+					{#if draft.z?.column}
+						<label class="checkbox-field"
+							><Checkbox
+								checked={draft.z.reverse}
+								onCheckedChange={(checked) => patchAxis('z', { reverse: !!checked })}
+							/><span>Reverse the palette</span></label
+						>
+						<div class="field">
+							<span id="zRangeLabel">Colour range ({axisTitle(draft.z)})</span>
+							<div class="pair" role="group" aria-labelledby="zRangeLabel">
+								<Input
+									type="number"
+									value={draft.z.min ?? ''}
+									placeholder="auto"
+									oninput={(event) =>
+										patchAxis('z', { min: numberOrNull(event.currentTarget.value) })}
+								/><Input
+									type="number"
+									value={draft.z.max ?? ''}
+									placeholder="auto"
+									oninput={(event) =>
+										patchAxis('z', { max: numberOrNull(event.currentTarget.value) })}
+								/>
+							</div>
+						</div>
+						<div class="field">
+							<Label for="plotColorScale">Color scale</Label><Select.Root
+								type="single"
+								value={draft.z.scale}
+								onValueChange={(value) => setColorScale(value as ColorScale)}
+								><Select.Trigger id="plotColorScale"
+									>{draft.z.scale === 'logarithmic' ? 'Logarithmic' : 'Linear'}</Select.Trigger
+								><Select.Content
+									><Select.Group
+										><Select.Item value="linear" label="Linear">Linear</Select.Item><Select.Item
+											value="logarithmic"
+											label="Logarithmic">Logarithmic</Select.Item
+										></Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+						{#if colorScaleError}<p class="scale-error" role="alert">{colorScaleError}</p>{/if}
+					{/if}
 				</div>
+			</details>
 
-				{#if colorScaleError}
-					<p class="scale-error" role="alert">{colorScaleError}</p>
-				{/if}
-			{:else}
-				<p class="hint">Bind a column to the colour axis in step 2 to pick a palette.</p>
-			{/if}
-
-			{#if draft.type === 'line'}
-				<h4>Strokes</h4>
-
-				<PlotSlider
-					id="plotLineWidth"
-					label="Line width"
-					suffix="px"
-					min={0.25}
-					max={6}
-					step={0.25}
-					value={draft.line.width}
-					onCommit={(value) => patchLine({ width: value })}
-				/>
-
-				<div class="field">
-					<Label for="plotLineSort">Draw along</Label>
-					<Select.Root
-						type="single"
-						value={draft.line.sortBy}
-						onValueChange={(value) => patchLine({ sortBy: value === 'y' ? 'y' : 'x' })}
-					>
-						<Select.Trigger id="plotLineSort">
-							{draft.line.sortBy === 'y' ? 'The Y axis' : 'The X axis'}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value="x" label="The X axis">The X axis</Select.Item>
-								<Select.Item value="y" label="The Y axis">The Y axis</Select.Item>
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				</div>
-
-				<p class="hint">
-					A time series runs along X. A vertical profile runs along Y, because the depth is there.
-				</p>
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.line.showPoints}
-						onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
+			<details class="property-subsection" open>
+				<summary>Markers</summary>
+				<div class="subsection-body">
+					{#if draft.type === 'line'}
+						<div class="field">
+							<Label for="plotLineSort">Draw along</Label><Select.Root
+								type="single"
+								value={draft.line.sortBy}
+								onValueChange={(value) => patchLine({ sortBy: value === 'y' ? 'y' : 'x' })}
+								><Select.Trigger id="plotLineSort"
+									>{draft.line.sortBy === 'y' ? 'The Y axis' : 'The X axis'}</Select.Trigger
+								><Select.Content
+									><Select.Group
+										><Select.Item value="x" label="The X axis">The X axis</Select.Item><Select.Item
+											value="y"
+											label="The Y axis">The Y axis</Select.Item
+										></Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+						<label class="checkbox-field"
+							><Checkbox
+								checked={draft.line.showPoints}
+								onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
+							/><span>Mark every row with a dot</span></label
+						>
+					{:else if draft.type !== 'histogram'}<label class="checkbox-field"
+							><Checkbox
+								checked={draft.style.showPoints}
+								onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
+							/><span>Draw data points</span></label
+						>{/if}
+					{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
+						<div class="field">
+							<span>Marker size</span><Select.Root
+								type="single"
+								value={String(draft.style.pointRadius)}
+								onValueChange={(value) => patchStyle({ pointRadius: Number(value) })}
+								><Select.Trigger id="plotPointRadius">{draft.style.pointRadius}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(0.5, 12, 0.5) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					{/if}
+					<PlotSlider
+						id="plotPointOpacity"
+						label="Marker opacity"
+						min={0.05}
+						max={1}
+						step={0.05}
+						value={draft.style.pointOpacity}
+						onCommit={(value) => patchStyle({ pointOpacity: value })}
 					/>
-					<span>Mark every row with a dot</span>
-				</label>
-			{:else}
-				<h4>Markers</h4>
+				</div>
+			</details>
 
-				{#if draft.type !== 'histogram'}
-					<label class="checkbox-field">
-						<Checkbox
-							checked={draft.style.showPoints}
-							onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
+			<details class="property-subsection" open>
+				<summary>Canvas</summary>
+				<div class="subsection-body">
+					<label class="checkbox-field"
+						><Checkbox
+							checked={draft.style.gridlines}
+							onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
+						/><span>Show gridlines</span></label
+					>
+					<div class="field color-field">
+						<span>Background color</span><input
+							id="plotBackgroundColour"
+							type="color"
+							value={draft.style.backgroundColor}
+							aria-label="Background color"
+							onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
 						/>
-						<span>Draw data points</span>
-					</label>
-				{/if}
-			{/if}
-
-			{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
-				<PlotSlider
-					id="plotPointRadius"
-					label="Marker size"
-					suffix="px"
-					min={0.5}
-					max={12}
-					step={0.5}
-					value={draft.style.pointRadius}
-					onCommit={(value) => patchStyle({ pointRadius: value })}
-				/>
-			{/if}
-
-			<PlotSlider
-				id="plotPointOpacity"
-				label="Marker Opacity"
-				min={0.05}
-				max={1}
-				step={0.05}
-				value={draft.style.pointOpacity}
-				onCommit={(value) => patchStyle({ pointOpacity: value })}
-			/>
-
-			<h4>Canvas</h4>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.style.gridlines}
-					onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
-				/>
-				<span>Show gridlines</span>
-			</label>
-
-			<div class="field">
-				<span id="plotGridlineColourLabel">Gridline color</span>
-				<input
-					id="plotGridlineColour"
-					type="color"
-					value={draft.style.gridlineColor}
-					onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<PlotSlider
-				id="plotGridlineOpacity"
-				label="Gridline opacity"
-				min={0}
-				max={1}
-				step={0.05}
-				value={draft.style.gridlineOpacity}
-				onCommit={(value) => patchStyle({ gridlineOpacity: value })}
-			/>
-
-			<div class="field">
-				<span id="plotBackgroundColourLabel">Background color</span>
-				<input
-					id="plotBackgroundColour"
-					type="color"
-					value={draft.style.backgroundColor}
-					onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<div class="field">
-				<span id="plotTextColourLabel">Text color</span>
-				<input
-					id="plotTextColour"
-					type="color"
-					value={draft.style.textColor}
-					onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<h4>Text</h4>
-
-			<label class="field">
-				<span>Plot title</span>
-				<Input
-					type="text"
-					value={draft.title}
-					placeholder="No title"
-					oninput={(event) => patchDraft({ title: event.currentTarget.value })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotTitleSize"
-				label="Title size"
-				suffix="px"
-				min={8}
-				max={40}
-				step={1}
-				value={draft.style.titleFontSize}
-				onCommit={(value) => patchStyle({ titleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>X axis title</span>
-				<Input
-					type="text"
-					value={draft.x.label ?? ''}
-					placeholder={draft.type === 'cross-section'
-						? CROSS_SECTION_AXIS_LABEL
-						: (draft.x.column ?? 'Column name')}
-					oninput={(event) => patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotXAxisTitleSize"
-				label="X axis title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.xAxisTitleFontSize}
-				onCommit={(value) => patchStyle({ xAxisTitleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>Y axis title</span>
-				<Input
-					type="text"
-					value={draft.y.label ?? ''}
-					placeholder={draft.type === 'histogram'
-						? HISTOGRAM_AXIS_LABEL
-						: (draft.y.column ?? 'Column name')}
-					oninput={(event) => patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotYAxisTitleSize"
-				label="Y axis title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.yAxisTitleFontSize}
-				onCommit={(value) => patchStyle({ yAxisTitleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>Legend title</span>
-				<Input
-					type="text"
-					value={draft.style.legendTitle}
-					placeholder="Use the default legend title"
-					oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotLegendTitleSize"
-				label="Legend title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.legendTitleFontSize}
-				onCommit={(value) => patchStyle({ legendTitleFontSize: value })}
-			/>
-
-			<PlotSlider
-				id="plotTickSize"
-				label="Tick label size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.tickFontSize}
-				onCommit={(value) => patchStyle({ tickFontSize: value })}
-			/>
+					</div>
+					<div class="field color-field">
+						<span>Text color</span><input
+							id="plotTextColour"
+							type="color"
+							value={draft.style.textColor}
+							aria-label="Text color"
+							onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
+						/>
+					</div>
+					<div class="field color-field">
+						<span>Gridline color</span><input
+							id="plotGridlineColour"
+							type="color"
+							value={draft.style.gridlineColor}
+							aria-label="Gridline color"
+							onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
+						/>
+					</div>
+					<PlotSlider
+						id="plotGridlineOpacity"
+						label="Gridline opacity"
+						min={0}
+						max={1}
+						step={0.05}
+						value={draft.style.gridlineOpacity}
+						onCommit={(value) => patchStyle({ gridlineOpacity: value })}
+					/>
+				</div>
+			</details>
 		</PlotSection>
 
 		<!-- Contours rename to Advanced analysis -->
@@ -1239,6 +1234,72 @@
 			}
 		}
 
+		.property-subsection {
+			border-bottom: 1px solid var(--border, #e5e7eb);
+
+			&:last-child {
+				border-bottom: 0;
+			}
+
+			summary {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0.625rem 0;
+				color: var(--foreground, #111827);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				cursor: pointer;
+				list-style: none;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+
+				&::after {
+					content: '\2304';
+					font-size: 1rem;
+					line-height: 0.75;
+					transform: rotate(180deg);
+					transition: transform 0.15s ease;
+				}
+			}
+
+			&:not([open]) summary::after {
+				transform: rotate(0deg);
+			}
+		}
+
+		.subsection-body {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.125rem 0 0.875rem;
+		}
+
+		.property-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 6.25rem;
+			align-items: end;
+			gap: 0.5rem;
+		}
+
+		.color-field {
+			align-items: flex-start;
+
+			input[type='color'] {
+				width: 3rem;
+				height: 2.25rem;
+				padding: 0.125rem;
+				border: 1px solid var(--border, #d1d5db);
+				border-radius: 0.25rem;
+				background: var(--card, #ffffff);
+				cursor: pointer;
+			}
+		}
+
 		.axis-header {
 			display: flex;
 			align-items: center;
@@ -1327,24 +1388,6 @@
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			gap: 0.5rem;
-
-			&.colors label {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
-				font-size: 0.75rem;
-				cursor: pointer;
-			}
-
-			input[type='color'] {
-				width: 2rem;
-				height: 1.75rem;
-				padding: 0;
-				border: 1px solid var(--border, #e5e7eb);
-				border-radius: 0.25rem;
-				background: none;
-				cursor: pointer;
-			}
 		}
 
 		.hint {
