@@ -7,7 +7,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 <script lang="ts">
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import Card from '@/components/card/Card.svelte';
+	import Card from '../card/card.svelte';
 	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
@@ -422,10 +422,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		// }
 
 		.query-block-columns {
-			display: flex;
-			flex-wrap: wrap;
-			gap: 0.25rem;
-			min-height: 1.5rem;
+			// display: flex;
+			// flex-wrap: wrap;
+			// gap: 0.25rem;
+			// min-height: 1.5rem;
+			visibility: hidden;
+			height: 0;
 		}
 
 		.query-block-muted {

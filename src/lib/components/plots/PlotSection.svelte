@@ -19,6 +19,7 @@
 		title,
 		summary = null,
 		open = $bindable(true),
+		onOpenChange,
 		children
 	}: {
 		/** The number in front of the title. */
@@ -27,13 +28,23 @@
 		/** A short line with the current answer, shown while the step is closed. */
 		summary?: string | null;
 		open?: boolean;
+		onOpenChange?: (open: boolean) => void;
 		children: Snippet;
 	} = $props();
+
+	function toggleOpen() {
+		if (onOpenChange) {
+			onOpenChange(!open);
+			return;
+		}
+
+		open = !open;
+	}
 </script>
 
-<Collapsible.Root bind:open>
+<Collapsible.Root {open}>
 	<section class="plot-section" class:open>
-		<Collapsible.Trigger class="section-header">
+		<button type="button" class="section-header" onclick={toggleOpen}>
 			<span class="step">{step}</span>
 
 			<span class="titles">
@@ -44,7 +55,7 @@
 			</span>
 
 			<ChevronDownIcon class="chevron" size={16} />
-		</Collapsible.Trigger>
+		</button>
 
 		<Collapsible.Content>
 			<div class="section-body">

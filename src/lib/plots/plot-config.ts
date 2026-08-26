@@ -515,8 +515,8 @@ function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
 					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
 				)
 			),
-			10,
-			500
+			20,
+			300
 		),
 		yGridResolution: clamp(
 			Math.round(
@@ -525,8 +525,8 @@ function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
 					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
 				)
 			),
-			10,
-			500
+			20,
+			300
 		),
 		gaussianSigma: clamp(
 			asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),

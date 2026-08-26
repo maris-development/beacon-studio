@@ -62,7 +62,7 @@
 
 	/** The plot as the user is editing it. Null while no plot is selected. */
 	let draft = $state<PlotConfig | null>(null);
-	let isBindingOpen = $state(false);
+	let openSection = $state(1);
 
 	/** The plot that {@link draft} was taken from. */
 	let draftPlotId: string | null = null;
@@ -172,6 +172,17 @@
 		draft = { ...draft, [axis]: { ...draft[axis], ...patch } };
 	}
 
+	function openConfigSection(section: number, isOpen: boolean) {
+		if (isOpen) {
+			openSection = section;
+			return;
+		}
+
+		if (openSection === section) {
+			openSection = 0;
+		}
+	}
+
 	/**
 	 * Switch the type, and fit the axis columns to what the new type reads.
 	 *
@@ -180,7 +191,7 @@
 	 * it, because the first column is a better start than an empty selector.
 	 */
 	function setPlotType(type: PlotType) {
-		isBindingOpen = true;
+		openConfigSection(2, true);
 		if (!draft || draft.type === type) return;
 		userEdited = true;
 
@@ -259,6 +270,9 @@
 		return 'Gaussian sigma';
 	}
 
+	const MIN_GRID_RESOLUTION = 20;
+	const MAX_GRID_RESOLUTION = 300;
+
 	// -- value helpers -------------------------------------------------------
 
 	/** An empty field means "auto", which the model stores as null. */
@@ -270,10 +284,41 @@
 		return parsed;
 	}
 
+	function gridResolutionValue(value: string, current: number): number {
+		const parsed = Number(value);
+		if (!Number.isFinite(parsed)) return current;
+
+		if (parsed < MIN_GRID_RESOLUTION) {
+			addToast({
+				message: `Input cannot be less than ${MIN_GRID_RESOLUTION}.`,
+				type: 'error'
+			});
+			return MIN_GRID_RESOLUTION;
+		}
+
+		if (parsed > MAX_GRID_RESOLUTION) {
+			addToast({
+				message: `Input cannot be greater than ${MAX_GRID_RESOLUTION}.`,
+				type: 'error'
+			});
+			return MAX_GRID_RESOLUTION;
+		}
+
+		return Math.round(parsed);
+	}
+
 	/** An empty field means "use the column name", which the model stores as null. */
 	function textOrNull(value: string): string | null {
 		if (value.trim() === '') return null;
 		return value;
+	}
+
+	function sizeOptions(min: number, max: number, step = 1): number[] {
+		const values: number[] = [];
+		for (let value = min; value <= max; value += step) {
+			values.push(Number(value.toFixed(2)));
+		}
+		return values;
 	}
 
 	// -- summaries -----------------------------------------------------------
@@ -340,7 +385,13 @@
 
 {#if draft}
 	<aside class="plot-config-panel">
-		<PlotSection step={1} title="Plot type" summary={typeSummary}>
+		<PlotSection
+			step={1}
+			title="Plot type"
+			summary={typeSummary}
+			open={openSection === 1}
+			onOpenChange={(isOpen) => openConfigSection(1, isOpen)}
+		>
 			<PlotTypeCards
 				value={draft.type}
 				crossSectionAvailable={controller.hasCrossSection}
@@ -348,110 +399,138 @@
 			/>
 		</PlotSection>
 
-		<PlotSection step={2} title="Bind data" summary={bindingSummary} bind:open={isBindingOpen}>
-			<div class="field">
-				<Label for="plotXColumn">{xFieldLabel}</Label>
+		<PlotSection
+			step={2}
+			title="Bind data"
+			summary={bindingSummary}
+			open={openSection === 2}
+			onOpenChange={(isOpen) => openConfigSection(2, isOpen)}
+		>
+			<div class="axis-group">
+				<div class="axis-header">
+					<span class="axis-title">{xFieldLabel}</span>
+					<label class="switch-field">
+						<span>Invert</span>
+						<input
+							type="checkbox"
+							class="switch-input"
+							checked={draft.x.reverse}
+							onchange={(event) => patchAxis('x', { reverse: event.currentTarget.checked })}
+							aria-label="Invert X axis"
+						/>
+						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+					</label>
+				</div>
 
-				{#if draft.type === 'cross-section'}
-					<p class="fixed-value">{CROSS_SECTION_AXIS_LABEL}</p>
-				{:else}
-					<Select.Root
-						type="single"
-						value={draft.x.column ?? ''}
-						onValueChange={(value) => setAxisColumn('x', value)}
-					>
-						<Select.Trigger id="plotXColumn">{draft.x.column || 'Select a column'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Label>Available columns</Select.Label>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
+				<div class="field">
+					{#if draft.type === 'cross-section'}
+						<p class="fixed-value">{CROSS_SECTION_AXIS_LABEL}</p>
+					{:else}
+						<Select.Root
+							type="single"
+							value={draft.x.column ?? ''}
+							onValueChange={(value) => setAxisColumn('x', value)}
+						>
+							<Select.Trigger id="plotXColumn">{draft.x.column || 'Select a column'}</Select.Trigger
+							>
+							<Select.Content>
+								<Select.Group>
+									<Select.Label>Available columns</Select.Label>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					{/if}
+				</div>
 
-			<div class="field">
-				<span id="xRangeLabel">X range</span>
 				<div class="pair" role="group" aria-labelledby="xRangeLabel">
-					<Input
-						type="number"
-						value={draft.x.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.x.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
-					/>
+					<label class="range-field" id="xRangeLabel">
+						<span>Min</span>
+						<Input
+							type="number"
+							value={draft.x.min ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
+					<label class="range-field">
+						<span>Max</span>
+						<Input
+							type="number"
+							value={draft.x.max ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
 				</div>
 			</div>
 
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.x.reverse}
-					onCheckedChange={(checked) => patchAxis('x', { reverse: !!checked })}
-				/>
-				<span>Invert the X axis</span>
-			</label>
+			<div class="axis-group">
+				<div class="axis-header">
+					<span class="axis-title">Y axis</span>
+					<label class="switch-field">
+						<span>Invert</span>
+						<input
+							type="checkbox"
+							class="switch-input"
+							checked={draft.y.reverse}
+							onchange={(event) => patchAxis('y', { reverse: event.currentTarget.checked })}
+							aria-label="Invert Y axis"
+						/>
+						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+					</label>
+				</div>
 
-			<div class="field">
-				<Label for="plotYColumn">Y axis</Label>
+				<div class="field">
+					{#if !usesYColumn(draft.type)}
+						<p class="fixed-value">{HISTOGRAM_AXIS_LABEL} of the rows in each bin</p>
+					{:else}
+						<Select.Root
+							type="single"
+							value={draft.y.column ?? ''}
+							onValueChange={(value) => setAxisColumn('y', value)}
+						>
+							<Select.Trigger id="plotYColumn">{draft.y.column || 'Select a column'}</Select.Trigger
+							>
+							<Select.Content>
+								<Select.Group>
+									<Select.Label>Available columns</Select.Label>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					{/if}
+				</div>
 
-				{#if !usesYColumn(draft.type)}
-					<p class="fixed-value">{HISTOGRAM_AXIS_LABEL} of the rows in each bin</p>
-				{:else}
-					<Select.Root
-						type="single"
-						value={draft.y.column ?? ''}
-						onValueChange={(value) => setAxisColumn('y', value)}
-					>
-						<Select.Trigger id="plotYColumn">{draft.y.column || 'Select a column'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Label>Available columns</Select.Label>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
-
-			<div class="field">
-				<span id="yRangeLabel">Y range</span>
 				<div class="pair" role="group" aria-labelledby="yRangeLabel">
-					<Input
-						type="number"
-						value={draft.y.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.y.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
-					/>
+					<label class="range-field" id="yRangeLabel">
+						<span>Min</span>
+						<Input
+							type="number"
+							value={draft.y.min ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
+					<label class="range-field">
+						<span>Max</span>
+						<Input
+							type="number"
+							value={draft.y.max ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
 				</div>
 			</div>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.y.reverse}
-					onCheckedChange={(checked) => patchAxis('y', { reverse: !!checked })}
-				/>
-				<span>Invert the Y axis (depth grows downward)</span>
-			</label>
 
 			{#if draft.type === 'line'}
 				<div class="field">
@@ -484,25 +563,28 @@
 			{/if}
 
 			{#if usesZColumn(draft.type)}
-				<div class="field">
-					<Label for="plotZColumn">Colour (Z axis)</Label>
-					<Select.Root
-						type="single"
-						value={draft.z?.column ?? NO_COLUMN}
-						onValueChange={(value) => setAxisColumn('z', value)}
-					>
-						<Select.Trigger id="plotZColumn">{draft.z?.column || 'None'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value={NO_COLUMN} label="None">None</Select.Item>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
+				<div class="axis-group z-group">
+					<h4 class="axis-heading">Z axis / Color</h4>
+					<div class="field">
+						<Label for="plotZColumn">Colour column</Label>
+						<Select.Root
+							type="single"
+							value={draft.z?.column ?? NO_COLUMN}
+							onValueChange={(value) => setAxisColumn('z', value)}
+						>
+							<Select.Trigger id="plotZColumn">{draft.z?.column || 'None'}</Select.Trigger>
+							<Select.Content>
+								<Select.Group>
+									<Select.Item value={NO_COLUMN} label="None">None</Select.Item>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					</div>
 				</div>
 			{/if}
 
@@ -523,348 +605,351 @@
 			{/if}
 		</PlotSection>
 
-		<PlotSection step={3} title="Properties" summary={styleSummary} open={false}>
-			<h4>Colour</h4>
+		<PlotSection
+			step={3}
+			title="Properties"
+			summary={styleSummary}
+			open={openSection === 3}
+			onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
+		>
+			<details class="property-subsection" open>
+				<summary>Titles &amp; Labels</summary>
+				<div class="subsection-body">
+					<div class="property-row">
+						<label class="field">
+							<span>Plot title</span>
+							<Input
+								type="text"
+								value={draft.title}
+								placeholder="No title"
+								oninput={(event) => patchDraft({ title: event.currentTarget.value })}
+							/>
+						</label>
+						<div class="field">
+							<span>Title size</span>
+							<Select.Root
+								type="single"
+								value={String(draft.style.titleFontSize)}
+								onValueChange={(value) => patchStyle({ titleFontSize: Number(value) })}
+							>
+								<Select.Trigger id="plotTitleSize">{draft.style.titleFontSize}px</Select.Trigger>
+								<Select.Content>
+									<Select.Group>
+										{#each sizeOptions(8, 40) as size (size)}
+											<Select.Item value={String(size)} label={`${size}px`}>{size}px</Select.Item>
+										{/each}
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+						</div>
 
-			{#if draft.type === 'line'}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
+						<div class="field">
+							<label class="checkbox-field">
+								<Checkbox
+									checked={draft.style.showCaption}
+									onCheckedChange={(checked) => patchStyle({ showCaption: !!checked })}
+								/>
+								<span>Show caption</span>
+							</label>
+						</div>
+					</div>
 
-				<p class="hint">
-					{#if draft.line.groupColumn}
-						Every stroke takes one colour from the palette.
-					{:else}
-						Group the plot in step 2 to give each stroke its own colour.
-					{/if}
-				</p>
-			{:else if draft.type === 'histogram'}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
 
-				<p class="hint">The bars take the first colour of the palette.</p>
-			{:else if draft.z?.column}
-				<div class="field">
-					<Label for="plotPalette">Palette</Label>
-					<PalettePicker
-						id="plotPalette"
-						value={draft.style.palette}
-						reverse={draft.z.reverse}
-						onSelect={(id) => patchStyle({ palette: id })}
-					/>
-				</div>
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.z.reverse}
-						onCheckedChange={(checked) => patchAxis('z', { reverse: !!checked })}
-					/>
-					<span>Reverse the palette</span>
-				</label>
-
-				<div class="field">
-					<span id="zRangeLabel">Colour range ({axisTitle(draft.z)})</span>
-					<div class="pair" role="group" aria-labelledby="zRangeLabel">
-						<Input
-							type="number"
-							value={draft.z.min ?? ''}
-							placeholder="auto"
-							oninput={(event) => patchAxis('z', { min: numberOrNull(event.currentTarget.value) })}
-						/>
-						<Input
-							type="number"
-							value={draft.z.max ?? ''}
-							placeholder="auto"
-							oninput={(event) => patchAxis('z', { max: numberOrNull(event.currentTarget.value) })}
-						/>
+					<div class="property-row">
+						<label class="field"
+							><span>X-axis label</span><Input
+								type="text"
+								value={draft.x.label ?? ''}
+								placeholder={draft.type === 'cross-section'
+									? CROSS_SECTION_AXIS_LABEL
+									: (draft.x.column ?? 'Column name')}
+								oninput={(event) =>
+									patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.xAxisTitleFontSize)}
+								onValueChange={(value) => patchStyle({ xAxisTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotXAxisTitleSize"
+									>{draft.style.xAxisTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="property-row">
+						<label class="field"
+							><span>Y-axis label</span><Input
+								type="text"
+								value={draft.y.label ?? ''}
+								placeholder={draft.type === 'histogram'
+									? HISTOGRAM_AXIS_LABEL
+									: (draft.y.column ?? 'Column name')}
+								oninput={(event) =>
+									patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.yAxisTitleFontSize)}
+								onValueChange={(value) => patchStyle({ yAxisTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotYAxisTitleSize"
+									>{draft.style.yAxisTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="property-row">
+						<label class="field"
+							><span>Legend</span><Input
+								type="text"
+								value={draft.style.legendTitle}
+								placeholder="Use the default legend title"
+								oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
+							/></label
+						>
+						<div class="field">
+							<span>Size</span><Select.Root
+								type="single"
+								value={String(draft.style.legendTitleFontSize)}
+								onValueChange={(value) => patchStyle({ legendTitleFontSize: Number(value) })}
+								><Select.Trigger id="plotLegendTitleSize"
+									>{draft.style.legendTitleFontSize}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(6, 32) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					</div>
+					<div class="field">
+						<span>Tick label size</span><Select.Root
+							type="single"
+							value={String(draft.style.tickFontSize)}
+							onValueChange={(value) => patchStyle({ tickFontSize: Number(value) })}
+							><Select.Trigger id="plotTickSize">{draft.style.tickFontSize}px</Select.Trigger
+							><Select.Content
+								><Select.Group
+									>{#each sizeOptions(6, 32) as size}<Select.Item
+											value={String(size)}
+											label={`${size}px`}>{size}px</Select.Item
+										>{/each}</Select.Group
+								></Select.Content
+							></Select.Root
+						>
 					</div>
 				</div>
+			</details>
 
-				<div class="field">
-					<Label for="plotColorScale">Color scale</Label>
-					<Select.Root
-						type="single"
-						value={draft.z.scale}
-						onValueChange={(value) => setColorScale(value as ColorScale)}
-					>
-						<Select.Trigger id="plotColorScale">
-							{draft.z.scale === 'logarithmic'
-								? 'Logarithmic'
-								: draft.z.scale === 'exponential'
-									? 'Exponential'
-									: 'Linear'}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value="linear" label="Linear">Linear</Select.Item>
-								<Select.Item value="logarithmic" label="Logarithmic">Logarithmic</Select.Item>
-								<!-- <Select.Item value="exponential" label="Exponential">Exponential</Select.Item> -->
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
+			<details class="property-subsection" open>
+				<summary>Data &amp; Color</summary>
+				<div class="subsection-body">
+					{#if draft.type === 'line' || draft.type === 'histogram' || draft.z?.column}
+						<div class="field">
+							<Label for="plotPalette">Palette</Label><PalettePicker
+								id="plotPalette"
+								value={draft.style.palette}
+								reverse={draft.z?.column ? draft.z.reverse : false}
+								onSelect={(id) => patchStyle({ palette: id })}
+							/>
+						</div>
+						{#if draft.type === 'line'}<p class="hint">
+								{draft.line.groupColumn
+									? 'Every stroke takes one colour from the palette.'
+									: 'Group the plot in step 2 to give each stroke its own colour.'}
+							</p>{:else if draft.type === 'histogram'}<p class="hint">
+								The bars take the first colour of the palette.
+							</p>{/if}
+					{:else}<p class="hint">
+							Bind a column to the colour axis in step 2 to pick a palette.
+						</p>{/if}
+					{#if draft.z?.column}
+						<label class="checkbox-field"
+							><Checkbox
+								checked={draft.z.reverse}
+								onCheckedChange={(checked) => patchAxis('z', { reverse: !!checked })}
+							/><span>Reverse the palette</span></label
+						>
+						<div class="field">
+							<span id="zRangeLabel">Colour range ({axisTitle(draft.z)})</span>
+							<div class="pair" role="group" aria-labelledby="zRangeLabel">
+								<Input
+									type="number"
+									value={draft.z.min ?? ''}
+									placeholder="auto"
+									oninput={(event) =>
+										patchAxis('z', { min: numberOrNull(event.currentTarget.value) })}
+								/><Input
+									type="number"
+									value={draft.z.max ?? ''}
+									placeholder="auto"
+									oninput={(event) =>
+										patchAxis('z', { max: numberOrNull(event.currentTarget.value) })}
+								/>
+							</div>
+						</div>
+						<div class="field">
+							<Label for="plotColorScale">Color scale</Label><Select.Root
+								type="single"
+								value={draft.z.scale}
+								onValueChange={(value) => setColorScale(value as ColorScale)}
+								><Select.Trigger id="plotColorScale"
+									>{draft.z.scale === 'logarithmic' ? 'Logarithmic' : 'Linear'}</Select.Trigger
+								><Select.Content
+									><Select.Group
+										><Select.Item value="linear" label="Linear">Linear</Select.Item><Select.Item
+											value="logarithmic"
+											label="Logarithmic">Logarithmic</Select.Item
+										></Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+						{#if colorScaleError}<p class="scale-error" role="alert">{colorScaleError}</p>{/if}
+					{/if}
 				</div>
+			</details>
 
-				{#if colorScaleError}
-					<p class="scale-error" role="alert">{colorScaleError}</p>
-				{/if}
-			{:else}
-				<p class="hint">Bind a column to the colour axis in step 2 to pick a palette.</p>
-			{/if}
-
-			{#if draft.type === 'line'}
-				<h4>Strokes</h4>
-
-				<PlotSlider
-					id="plotLineWidth"
-					label="Line width"
-					suffix="px"
-					min={0.25}
-					max={6}
-					step={0.25}
-					value={draft.line.width}
-					onCommit={(value) => patchLine({ width: value })}
-				/>
-
-				<div class="field">
-					<Label for="plotLineSort">Draw along</Label>
-					<Select.Root
-						type="single"
-						value={draft.line.sortBy}
-						onValueChange={(value) => patchLine({ sortBy: value === 'y' ? 'y' : 'x' })}
-					>
-						<Select.Trigger id="plotLineSort">
-							{draft.line.sortBy === 'y' ? 'The Y axis' : 'The X axis'}
-						</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value="x" label="The X axis">The X axis</Select.Item>
-								<Select.Item value="y" label="The Y axis">The Y axis</Select.Item>
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				</div>
-
-				<p class="hint">
-					A time series runs along X. A vertical profile runs along Y, because the depth is there.
-				</p>
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.line.showPoints}
-						onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
+			<details class="property-subsection" open>
+				<summary>Markers</summary>
+				<div class="subsection-body">
+					{#if draft.type === 'line'}
+						<div class="field">
+							<Label for="plotLineSort">Draw along</Label><Select.Root
+								type="single"
+								value={draft.line.sortBy}
+								onValueChange={(value) => patchLine({ sortBy: value === 'y' ? 'y' : 'x' })}
+								><Select.Trigger id="plotLineSort"
+									>{draft.line.sortBy === 'y' ? 'The Y axis' : 'The X axis'}</Select.Trigger
+								><Select.Content
+									><Select.Group
+										><Select.Item value="x" label="The X axis">The X axis</Select.Item><Select.Item
+											value="y"
+											label="The Y axis">The Y axis</Select.Item
+										></Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+						<label class="checkbox-field"
+							><Checkbox
+								checked={draft.line.showPoints}
+								onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
+							/><span>Mark every row with a dot</span></label
+						>
+					{:else if draft.type !== 'histogram'}<label class="checkbox-field"
+							><Checkbox
+								checked={draft.style.showPoints}
+								onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
+							/><span>Draw data points</span></label
+						>{/if}
+					{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
+						<div class="field">
+							<span>Marker size</span><Select.Root
+								type="single"
+								value={String(draft.style.pointRadius)}
+								onValueChange={(value) => patchStyle({ pointRadius: Number(value) })}
+								><Select.Trigger id="plotPointRadius">{draft.style.pointRadius}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(0.5, 12, 0.5) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
+					{/if}
+					<PlotSlider
+						id="plotPointOpacity"
+						label="Marker opacity"
+						min={0.05}
+						max={1}
+						step={0.05}
+						value={draft.style.pointOpacity}
+						onCommit={(value) => patchStyle({ pointOpacity: value })}
 					/>
-					<span>Mark every row with a dot</span>
-				</label>
-			{:else}
-				<h4>Markers</h4>
+				</div>
+			</details>
 
-				{#if draft.type !== 'histogram'}
-					<label class="checkbox-field">
-						<Checkbox
-							checked={draft.style.showPoints}
-							onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
+			<details class="property-subsection" open>
+				<summary>Canvas</summary>
+				<div class="subsection-body">
+					<label class="checkbox-field"
+						><Checkbox
+							checked={draft.style.gridlines}
+							onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
+						/><span>Show gridlines</span></label
+					>
+					<div class="field color-field">
+						<span>Background color</span><input
+							id="plotBackgroundColour"
+							type="color"
+							value={draft.style.backgroundColor}
+							aria-label="Background color"
+							onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
 						/>
-						<span>Draw data points</span>
-					</label>
-				{/if}
-			{/if}
-
-			{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
-				<PlotSlider
-					id="plotPointRadius"
-					label="Marker size"
-					suffix="px"
-					min={0.5}
-					max={12}
-					step={0.5}
-					value={draft.style.pointRadius}
-					onCommit={(value) => patchStyle({ pointRadius: value })}
-				/>
-			{/if}
-
-			<PlotSlider
-				id="plotPointOpacity"
-				label="Marker Opacity"
-				min={0.05}
-				max={1}
-				step={0.05}
-				value={draft.style.pointOpacity}
-				onCommit={(value) => patchStyle({ pointOpacity: value })}
-			/>
-
-			<h4>Canvas</h4>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.style.gridlines}
-					onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
-				/>
-				<span>Show gridlines</span>
-			</label>
-
-			<div class="field">
-				<span id="plotGridlineColourLabel">Gridline color</span>
-				<input
-					id="plotGridlineColour"
-					type="color"
-					value={draft.style.gridlineColor}
-					onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<PlotSlider
-				id="plotGridlineOpacity"
-				label="Gridline opacity"
-				min={0}
-				max={1}
-				step={0.05}
-				value={draft.style.gridlineOpacity}
-				onCommit={(value) => patchStyle({ gridlineOpacity: value })}
-			/>
-
-			<div class="field">
-				<span id="plotBackgroundColourLabel">Background color</span>
-				<input
-					id="plotBackgroundColour"
-					type="color"
-					value={draft.style.backgroundColor}
-					onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<div class="field">
-				<span id="plotTextColourLabel">Text color</span>
-				<input
-					id="plotTextColour"
-					type="color"
-					value={draft.style.textColor}
-					onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
-				/>
-			</div>
-
-			<h4>Text</h4>
-
-			<label class="field">
-				<span>Plot title</span>
-				<Input
-					type="text"
-					value={draft.title}
-					placeholder="No title"
-					oninput={(event) => patchDraft({ title: event.currentTarget.value })}
-				/>
-			</label>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.style.showCaption}
-					onCheckedChange={(checked) => patchStyle({ showCaption: !!checked })}
-				/>
-				<span>Show caption</span>
-			</label>
-
-			<PlotSlider
-				id="plotTitleSize"
-				label="Title size"
-				suffix="px"
-				min={8}
-				max={40}
-				step={1}
-				value={draft.style.titleFontSize}
-				onCommit={(value) => patchStyle({ titleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>X axis title</span>
-				<Input
-					type="text"
-					value={draft.x.label ?? ''}
-					placeholder={draft.type === 'cross-section'
-						? CROSS_SECTION_AXIS_LABEL
-						: (draft.x.column ?? 'Column name')}
-					oninput={(event) => patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotXAxisTitleSize"
-				label="X axis title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.xAxisTitleFontSize}
-				onCommit={(value) => patchStyle({ xAxisTitleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>Y axis title</span>
-				<Input
-					type="text"
-					value={draft.y.label ?? ''}
-					placeholder={draft.type === 'histogram'
-						? HISTOGRAM_AXIS_LABEL
-						: (draft.y.column ?? 'Column name')}
-					oninput={(event) => patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotYAxisTitleSize"
-				label="Y axis title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.yAxisTitleFontSize}
-				onCommit={(value) => patchStyle({ yAxisTitleFontSize: value })}
-			/>
-
-			<label class="field">
-				<span>Legend title</span>
-				<Input
-					type="text"
-					value={draft.style.legendTitle}
-					placeholder="Use the default legend title"
-					oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
-				/>
-			</label>
-
-			<PlotSlider
-				id="plotLegendTitleSize"
-				label="Legend title size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.legendTitleFontSize}
-				onCommit={(value) => patchStyle({ legendTitleFontSize: value })}
-			/>
-
-			<PlotSlider
-				id="plotTickSize"
-				label="Tick label size"
-				suffix="px"
-				min={6}
-				max={32}
-				step={1}
-				value={draft.style.tickFontSize}
-				onCommit={(value) => patchStyle({ tickFontSize: value })}
-			/>
+					</div>
+					<div class="field color-field">
+						<span>Text color</span><input
+							id="plotTextColour"
+							type="color"
+							value={draft.style.textColor}
+							aria-label="Text color"
+							onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
+						/>
+					</div>
+					<div class="field color-field">
+						<span>Gridline color</span><input
+							id="plotGridlineColour"
+							type="color"
+							value={draft.style.gridlineColor}
+							aria-label="Gridline color"
+							onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
+						/>
+					</div>
+					<PlotSlider
+						id="plotGridlineOpacity"
+						label="Gridline opacity"
+						min={0}
+						max={1}
+						step={0.05}
+						value={draft.style.gridlineOpacity}
+						onCommit={(value) => patchStyle({ gridlineOpacity: value })}
+					/>
+				</div>
+			</details>
 		</PlotSection>
 
 		<!-- Contours rename to Advanced analysis -->
-		<PlotSection step={4} title="Advanced Analysis" summary={advancedAnalysisSummary} open={false}>
+		<PlotSection
+			step={4}
+			title="Advanced Analysis"
+			summary={advancedAnalysisSummary}
+			open={openSection === 4}
+			onOpenChange={(isOpen) => openConfigSection(4, isOpen)}
+		>
 			{#if !usesZColumn(draft.type)}
 				<p class="hint">
 					Contours need a value per point. A {draft.type === 'line' ? 'line' : 'histogram'} has none,
@@ -875,192 +960,278 @@
 					Contours read the colour axis. Bind a column to it in step 2 to switch them on.
 				</p>
 			{:else}
-				<h4>Gridding & Interpolation</h4>
+				<details class="analysis-subsection">
+					<summary class="analysis-header">
+						<span>Gridding &amp; Interpolation</span>
+					</summary>
 
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.interpolation.enabled}
-						onCheckedChange={(checked) => patchInterpolation({ enabled: !!checked })}
-					/>
-					<span>Interpolate</span>
-				</label>
-
-				{#if draft.interpolation.enabled}
-					<p class="hint">
-						The selected X, Y and colour values are interpolated and drawn behind the points.
-					</p>
-
-					{#if draft.interpolation.method === 'delaunay-barycentric'}
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Interpolate</span>
+							<input
+								type="checkbox"
+								class="switch-input"
+								checked={draft.interpolation.enabled}
+								onchange={(event) => patchInterpolation({ enabled: event.currentTarget.checked })}
+								aria-label="Interpolate"
+							/>
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
 						<p class="hint">
-							Delaunay draws inside the measured data footprint. Smoothed gridding fills the
-							outside.
+							The selected X, Y and colour values are interpolated and drawn behind the points.
 						</p>
-					{/if}
 
-					<div class="field">
-						<Label for="interpolationMethod">Method</Label>
-						<Select.Root
-							type="single"
-							value={draft.interpolation.method}
-							onValueChange={(value) =>
-								patchInterpolation({ method: value as PlotInterpolationMethod })}
-						>
-							<Select.Trigger id="interpolationMethod">
-								{interpolationMethodLabel(draft.interpolation.method)}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									<Select.Item value="gaussian" label="Gaussian smoothing">
-										Gaussian smoothing
-									</Select.Item>
-									<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
-										Delaunay triangulation
-									</Select.Item>
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
+						{#if draft.interpolation.method === 'delaunay-barycentric'}
+							<p class="hint">
+								Delaunay draws inside the measured data footprint. Smoothed gridding fills the
+								outside.
+							</p>
+						{/if}
+
+						<div class="field">
+							<Label for="interpolationMethod">Method</Label>
+							<Select.Root
+								type="single"
+								value={draft.interpolation.method}
+								onValueChange={(value) =>
+									patchInterpolation({ method: value as PlotInterpolationMethod })}
+							>
+								<Select.Trigger id="interpolationMethod">
+									{interpolationMethodLabel(draft.interpolation.method)}
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Group>
+										<Select.Item value="gaussian" label="Gaussian smoothing">
+											Gaussian smoothing
+										</Select.Item>
+										<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
+											Delaunay triangulation
+										</Select.Item>
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+						</div>
+
+						<div class="field">
+							<span>Grid resolution</span>
+							<div class="pair" role="group" aria-label="Grid resolution">
+								<label class="range-field" for="interpolationGridX">
+									<span>x:</span>
+									<Input
+										id="interpolationGridX"
+										type="number"
+										min={MIN_GRID_RESOLUTION}
+										max={MAX_GRID_RESOLUTION}
+										step={1}
+										value={draft.interpolation.xGridResolution}
+										onchange={(event) =>
+											patchInterpolation({
+												xGridResolution: gridResolutionValue(
+													event.currentTarget.value,
+													draft.interpolation.xGridResolution
+												)
+											})}
+									/>
+								</label>
+								<label class="range-field" for="interpolationGridY">
+									<span>y:</span>
+									<Input
+										id="interpolationGridY"
+										type="number"
+										min={MIN_GRID_RESOLUTION}
+										max={MAX_GRID_RESOLUTION}
+										step={1}
+										value={draft.interpolation.yGridResolution}
+										onchange={(event) =>
+											patchInterpolation({
+												yGridResolution: gridResolutionValue(
+													event.currentTarget.value,
+													draft.interpolation.yGridResolution
+												)
+											})}
+									/>
+								</label>
+							</div>
+						</div>
+
+						<PlotSlider
+							id="interpolationSigma"
+							label={interpolationSmoothingLabel(draft.interpolation.method)}
+							min={0}
+							max={8}
+							step={0.1}
+							value={draft.interpolation.gaussianSigma}
+							onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
+						/>
+
+						<div class="clip-range field">
+							<div class="clip-range-header">
+								<span>Clip limits</span><span
+									>{draft.interpolation.percentileMin}% - {draft.interpolation.percentileMax}%</span
+								>
+							</div>
+							<div
+								class="clip-range-track"
+								style={`--clip-min: ${draft.interpolation.percentileMin}%; --clip-max: ${draft.interpolation.percentileMax}%;`}
+							>
+								<input
+									id="interpolationPercentileMin"
+									type="range"
+									min={0}
+									max={100}
+									step={0.5}
+									value={draft.interpolation.percentileMin}
+									oninput={(event) =>
+										patchInterpolation({
+											percentileMin: Math.min(
+												Number(event.currentTarget.value),
+												draft.interpolation.percentileMax
+											)
+										})}
+									aria-label="Clip minimum"
+								/>
+								<input
+									id="interpolationPercentileMax"
+									type="range"
+									min={0}
+									max={100}
+									step={0.5}
+									value={draft.interpolation.percentileMax}
+									oninput={(event) =>
+										patchInterpolation({
+											percentileMax: Math.max(
+												Number(event.currentTarget.value),
+												draft.interpolation.percentileMin
+											)
+										})}
+									aria-label="Clip maximum"
+								/>
+							</div>
+							<div class="clip-range-labels">
+								<span>{draft.interpolation.percentileMin}%</span><span
+									>{draft.interpolation.percentileMax}%</span
+								>
+							</div>
+						</div>
+
+						{#if draft.interpolation.method === 'gaussian'}
+							<PlotSlider
+								id="interpolationBands"
+								label="Colour bands"
+								min={2}
+								max={50}
+								step={1}
+								value={draft.interpolation.bandCount}
+								onCommit={(value) => patchInterpolation({ bandCount: value })}
+							/>
+						{/if}
 					</div>
+				</details>
 
-					<PlotSlider
-						id="interpolationGridX"
-						label="Grid x resolution"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.interpolation.xGridResolution}
-						onCommit={(value) => patchInterpolation({ xGridResolution: value })}
-					/>
+				<details class="analysis-subsection">
+					<summary class="analysis-header">
+						<span>Contour Lines</span>
+					</summary>
 
-					<PlotSlider
-						id="interpolationGridY"
-						label="Grid y resolution"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.interpolation.yGridResolution}
-						onCommit={(value) => patchInterpolation({ yGridResolution: value })}
-					/>
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Draw contours</span>
+							<input
+								type="checkbox"
+								class="switch-input"
+								checked={draft.contour.enabled}
+								onchange={(event) => patchContour({ enabled: event.currentTarget.checked })}
+								aria-label="Draw contour lines"
+							/>
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
+						<p class="hint">
+							The values are interpolated onto a grid, and the lines are clipped to the area the
+							rows cover.
+						</p>
 
-					<PlotSlider
-						id="interpolationSigma"
-						label={interpolationSmoothingLabel(draft.interpolation.method)}
-						min={0}
-						max={8}
-						step={0.1}
-						value={draft.interpolation.gaussianSigma}
-						onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
-					/>
-
-					<PlotSlider
-						id="interpolationPercentileMin"
-						label="Clip minimum"
-						suffix="%"
-						min={0}
-						max={50}
-						step={0.5}
-						value={draft.interpolation.percentileMin}
-						onCommit={(value) => patchInterpolation({ percentileMin: value })}
-					/>
-
-					<PlotSlider
-						id="interpolationPercentileMax"
-						label="Clip maximum"
-						suffix="%"
-						min={50}
-						max={100}
-						step={0.5}
-						value={draft.interpolation.percentileMax}
-						onCommit={(value) => patchInterpolation({ percentileMax: value })}
-					/>
-
-					{#if draft.interpolation.method === 'gaussian'}
 						<PlotSlider
-							id="interpolationBands"
-							label="Colour bands"
+							id="contourLevels"
+							label="Levels (number of contours)"
 							min={2}
-							max={50}
+							max={30}
 							step={1}
-							value={draft.interpolation.bandCount}
-							onCommit={(value) => patchInterpolation({ bandCount: value })}
+							value={draft.contour.levelCount}
+							onCommit={(value) => patchContour({ levelCount: value })}
 						/>
-					{/if}
-				{/if}
 
-				<h4>Contour Lines</h4>
-				<!-- place lines below subsections -->
-				<!-- make subsections collapsable -->
-
-				<label class="checkbox-field">
-					<Checkbox
-						checked={draft.contour.enabled}
-						onCheckedChange={(checked) => patchContour({ enabled: !!checked })}
-					/>
-					<span>Draw contour lines</span>
-				</label>
-
-				{#if draft.contour.enabled}
-					<p class="hint">
-						The values are interpolated onto a grid, and the lines are clipped to the area the rows
-						cover.
-					</p>
-
-					<PlotSlider
-						id="contourLevels"
-						label="Levels (number of contours)"
-						min={2}
-						max={30}
-						step={1}
-						value={draft.contour.levelCount}
-						onCommit={(value) => patchContour({ levelCount: value })}
-					/>
-
-					<PlotSlider
-						id="contourGrid"
-						label="Grid detail"
-						min={20}
-						max={300}
-						step={10}
-						value={draft.contour.gridResolution}
-						onCommit={(value) => patchContour({ gridResolution: value })}
-					/>
-
-					<PlotSlider
-						id="contourLineWidth"
-						label="Line width"
-						suffix="px"
-						min={0.25}
-						max={5}
-						step={0.25}
-						value={draft.contour.lineWidth}
-						onCommit={(value) => patchContour({ lineWidth: value })}
-					/>
-
-					<label class="checkbox-field">
-						<Checkbox
-							checked={draft.contour.showLabels}
-							onCheckedChange={(checked) => patchContour({ showLabels: !!checked })}
-						/>
-						<span>Label the levels</span>
-					</label>
-
-					{#if draft.contour.showLabels}
 						<PlotSlider
-							id="contourLabelSize"
-							label="Label size"
-							suffix="px"
-							min={6}
-							max={24}
-							step={1}
-							value={draft.contour.labelFontSize}
-							onCommit={(value) => patchContour({ labelFontSize: value })}
+							id="contourGrid"
+							label="Grid detail"
+							min={20}
+							max={300}
+							step={10}
+							value={draft.contour.gridResolution}
+							onCommit={(value) => patchContour({ gridResolution: value })}
 						/>
-					{/if}
-				{/if}
 
-				<!-- Here? -->
-				<h4>Density Overlays</h4>
+						<div class="field">
+							<span>Line width</span><Select.Root
+								type="single"
+								value={String(draft.contour.lineWidth)}
+								onValueChange={(value) => patchContour({ lineWidth: Number(value) })}
+								><Select.Trigger id="contourLineWidth">{draft.contour.lineWidth}px</Select.Trigger
+								><Select.Content
+									><Select.Group
+										>{#each sizeOptions(0.25, 5, 0.25) as size}<Select.Item
+												value={String(size)}
+												label={`${size}px`}>{size}px</Select.Item
+											>{/each}</Select.Group
+									></Select.Content
+								></Select.Root
+							>
+						</div>
 
-				<!-- Isopycnals -->
+						<label class="checkbox-field">
+							<Checkbox
+								checked={draft.contour.showLabels}
+								onCheckedChange={(checked) => patchContour({ showLabels: !!checked })}
+							/>
+							<span>Add label</span>
+						</label>
+
+						{#if draft.contour.showLabels}
+							<div class="field">
+								<span>Label size</span><Select.Root
+									type="single"
+									value={String(draft.contour.labelFontSize)}
+									onValueChange={(value) => patchContour({ labelFontSize: Number(value) })}
+									><Select.Trigger id="contourLabelSize"
+										>{draft.contour.labelFontSize}px</Select.Trigger
+									><Select.Content
+										><Select.Group
+											>{#each sizeOptions(6, 24) as size}<Select.Item
+													value={String(size)}
+													label={`${size}px`}>{size}px</Select.Item
+												>{/each}</Select.Group
+										></Select.Content
+									></Select.Root
+								>
+							</div>
+						{/if}
+					</div>
+				</details>
+
+				<details class="analysis-subsection density-subsection">
+					<summary class="analysis-header">
+						<span>Density Overlays</span>
+					</summary>
+					<div class="analysis-body">
+						<label class="switch-field">
+							<span>Show overlays</span>
+							<input type="checkbox" class="switch-input" aria-label="Show density overlays" />
+							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
+							>
+						</label>
+					</div>
+				</details>
 			{/if}
 		</PlotSection>
 
@@ -1174,36 +1345,317 @@
 			}
 		}
 
-		.checkbox-field {
+		.axis-group {
 			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.25rem 0 1rem;
+			border-bottom: 1px solid var(--border, #e5e7eb);
+
+			&:last-of-type {
+				border-bottom: 0;
+				padding-bottom: 0.25rem;
+			}
+		}
+
+		.property-subsection {
+			border-bottom: 1px solid var(--border, #e5e7eb);
+
+			&:last-child {
+				border-bottom: 0;
+			}
+
+			summary {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 0.625rem 0;
+				color: var(--foreground, #111827);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				cursor: pointer;
+				list-style: none;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+
+				&::after {
+					content: '\2304';
+					font-size: 1rem;
+					line-height: 0.75;
+					transform: rotate(180deg);
+					transition: transform 0.15s ease;
+				}
+			}
+
+			&:not([open]) summary::after {
+				transform: rotate(0deg);
+			}
+		}
+
+		.subsection-body {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.125rem 0 0.875rem;
+		}
+
+		.property-row {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 6.25rem;
+			align-items: end;
+			gap: 0.5rem;
+		}
+
+		.analysis-subsection {
+			border-bottom: 1px solid var(--border, #e5e7eb);
+			padding-bottom: 0.125rem;
+
+			&:last-child {
+				border-bottom: 0;
+			}
+
+			.analysis-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5rem;
+				padding: 0.625rem 0;
+				color: var(--foreground, #111827);
+				font-size: 0.75rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				cursor: pointer;
+				list-style: none;
+
+				&::-webkit-details-marker {
+					display: none;
+				}
+
+				&::after {
+					content: '\2304';
+					font-size: 1rem;
+					line-height: 0.75;
+					transform: rotate(0deg);
+					transition: transform 0.15s ease;
+				}
+			}
+
+			&[open] .analysis-header::after {
+				transform: rotate(180deg);
+			}
+		}
+
+		.analysis-body {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.125rem 0 0.875rem;
+		}
+
+		.clip-range-header,
+		.clip-range-labels {
+			display: flex;
+			justify-content: space-between;
+			gap: 0.5rem;
+			font-size: 0.8125rem;
+		}
+
+		.clip-range-header span:last-child {
+			color: var(--muted-foreground, #6b7280);
+		}
+
+		.clip-range-track {
+			position: relative;
+			height: 1.25rem;
+			accent-color: var(--primary, #2563eb);
+
+			&::before {
+				content: '';
+				position: absolute;
+				top: 50%;
+				left: 0;
+				right: 0;
+				height: 0.25rem;
+				transform: translateY(-50%);
+				border-radius: 999px;
+				background: linear-gradient(
+					to right,
+					var(--muted, #e5e7eb) 0%,
+					var(--muted, #e5e7eb) var(--clip-min),
+					var(--primary, #2563eb) var(--clip-min),
+					var(--primary, #2563eb) var(--clip-max),
+					var(--muted, #e5e7eb) var(--clip-max),
+					var(--muted, #e5e7eb) 100%
+				);
+			}
+
+			input[type='range'] {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 1.25rem;
+				margin: 0;
+				appearance: none;
+				background: transparent;
+				pointer-events: none;
+
+				&::-webkit-slider-runnable-track {
+					height: 0.25rem;
+					background: transparent;
+				}
+
+				&::-moz-range-track {
+					height: 0.25rem;
+					background: transparent;
+				}
+
+				&::-webkit-slider-thumb {
+					width: 1rem;
+					height: 1rem;
+					margin-top: -0.375rem;
+					appearance: none;
+					border: 0;
+					border-radius: 50%;
+					background: var(--primary, #2563eb);
+					box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+					pointer-events: auto;
+					cursor: pointer;
+				}
+
+				&::-moz-range-thumb {
+					width: 1rem;
+					height: 1rem;
+					border: 0;
+					border-radius: 50%;
+					background: var(--primary, #2563eb);
+					box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+					pointer-events: auto;
+					cursor: pointer;
+				}
+			}
+
+			input:first-child {
+				z-index: 2;
+			}
+
+			input:last-child {
+				z-index: 3;
+			}
+		}
+
+		.color-field {
+			align-items: flex-start;
+
+			input[type='color'] {
+				width: 3rem;
+				height: 2.25rem;
+				padding: 0.125rem;
+				border: 1px solid var(--border, #d1d5db);
+				border-radius: 0.25rem;
+				background: var(--card, #ffffff);
+				cursor: pointer;
+			}
+		}
+
+		.axis-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+
+		.axis-title,
+		.axis-heading {
+			font-size: 0.875rem;
+			font-weight: 500;
+		}
+
+		.axis-heading {
+			margin: 0;
+		}
+
+		.switch-field {
+			position: relative;
+			display: inline-flex;
 			align-items: center;
 			gap: 0.5rem;
 			font-size: 0.8125rem;
 			cursor: pointer;
 		}
 
+		.switch-input {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			top: 50%;
+			left: 0;
+			opacity: 0;
+		}
+
+		.switch-track {
+			display: inline-flex;
+			align-items: center;
+			width: 2.25rem;
+			height: 1.375rem;
+			padding: 0.125rem;
+			border-radius: 999px;
+			background-color: var(--muted, #d1d5db);
+			transition: background-color 0.15s ease;
+		}
+
+		.switch-thumb {
+			width: 1.125rem;
+			height: 1.125rem;
+			border-radius: 50%;
+			background-color: #ffffff;
+			box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+			transition: transform 0.15s ease;
+		}
+
+		.switch-input:checked + .switch-track {
+			background-color: var(--primary, #2563eb);
+		}
+
+		.switch-input:checked + .switch-track .switch-thumb {
+			transform: translateX(0.875rem);
+		}
+
+		.switch-input:focus-visible + .switch-track {
+			outline: 2px solid var(--ring, #2563eb);
+			outline-offset: 2px;
+		}
+
+		.range-field {
+			display: flex;
+			flex-direction: column;
+			gap: 0.3125rem;
+			min-width: 0;
+			font-size: 0.8125rem;
+		}
+
+		.checkbox-field {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.8125rem;
+			cursor: pointer;
+
+			:global([data-slot='checkbox'][data-state='checked']) {
+				border-color: #312c85;
+				background-color: #312c85;
+			}
+		}
+
 		.pair {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			gap: 0.5rem;
-
-			&.colors label {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
-				font-size: 0.75rem;
-				cursor: pointer;
-			}
-
-			input[type='color'] {
-				width: 2rem;
-				height: 1.75rem;
-				padding: 0;
-				border: 1px solid var(--border, #e5e7eb);
-				border-radius: 0.25rem;
-				background: none;
-				cursor: pointer;
-			}
 		}
 
 		.hint {
