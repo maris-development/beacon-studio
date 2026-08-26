@@ -365,109 +365,131 @@
 			open={openSection === 2}
 			onOpenChange={() => openConfigSection(2)}
 		>
-			<div class="field">
-				<Label for="plotXColumn">{xFieldLabel}</Label>
+			<div class="axis-group">
+				<div class="axis-header">
+					<span class="axis-title">{xFieldLabel}</span>
+					<label class="switch-field">
+						<span>Invert</span>
+						<input
+							type="checkbox"
+							class="switch-input"
+							checked={draft.x.reverse}
+							onchange={(event) => patchAxis('x', { reverse: event.currentTarget.checked })}
+							aria-label="Invert X axis"
+						/>
+						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+					</label>
+				</div>
 
-				{#if draft.type === 'cross-section'}
-					<p class="fixed-value">{CROSS_SECTION_AXIS_LABEL}</p>
-				{:else}
-					<Select.Root
-						type="single"
-						value={draft.x.column ?? ''}
-						onValueChange={(value) => setAxisColumn('x', value)}
-					>
-						<Select.Trigger id="plotXColumn">{draft.x.column || 'Select a column'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Label>Available columns</Select.Label>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
+				<div class="field">
+					{#if draft.type === 'cross-section'}
+						<p class="fixed-value">{CROSS_SECTION_AXIS_LABEL}</p>
+					{:else}
+						<Select.Root
+							type="single"
+							value={draft.x.column ?? ''}
+							onValueChange={(value) => setAxisColumn('x', value)}
+						>
+							<Select.Trigger id="plotXColumn">{draft.x.column || 'Select a column'}</Select.Trigger
+							>
+							<Select.Content>
+								<Select.Group>
+									<Select.Label>Available columns</Select.Label>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					{/if}
+				</div>
 
-			<div class="field">
-				<span id="xRangeLabel">X range</span>
 				<div class="pair" role="group" aria-labelledby="xRangeLabel">
-					<Input
-						type="number"
-						value={draft.x.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.x.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
-					/>
+					<label class="range-field" id="xRangeLabel">
+						<span>Min</span>
+						<Input
+							type="number"
+							value={draft.x.min ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
+					<label class="range-field">
+						<span>Max</span>
+						<Input
+							type="number"
+							value={draft.x.max ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
 				</div>
 			</div>
 
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.x.reverse}
-					onCheckedChange={(checked) => patchAxis('x', { reverse: !!checked })}
-				/>
-				<span>Invert the X axis</span>
-			</label>
+			<div class="axis-group">
+				<div class="axis-header">
+					<span class="axis-title">Y axis</span>
+					<label class="switch-field">
+						<span>Invert</span>
+						<input
+							type="checkbox"
+							class="switch-input"
+							checked={draft.y.reverse}
+							onchange={(event) => patchAxis('y', { reverse: event.currentTarget.checked })}
+							aria-label="Invert Y axis"
+						/>
+						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+					</label>
+				</div>
 
-			<div class="field">
-				<Label for="plotYColumn">Y axis</Label>
+				<div class="field">
+					{#if !usesYColumn(draft.type)}
+						<p class="fixed-value">{HISTOGRAM_AXIS_LABEL} of the rows in each bin</p>
+					{:else}
+						<Select.Root
+							type="single"
+							value={draft.y.column ?? ''}
+							onValueChange={(value) => setAxisColumn('y', value)}
+						>
+							<Select.Trigger id="plotYColumn">{draft.y.column || 'Select a column'}</Select.Trigger
+							>
+							<Select.Content>
+								<Select.Group>
+									<Select.Label>Available columns</Select.Label>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					{/if}
+				</div>
 
-				{#if !usesYColumn(draft.type)}
-					<p class="fixed-value">{HISTOGRAM_AXIS_LABEL} of the rows in each bin</p>
-				{:else}
-					<Select.Root
-						type="single"
-						value={draft.y.column ?? ''}
-						onValueChange={(value) => setAxisColumn('y', value)}
-					>
-						<Select.Trigger id="plotYColumn">{draft.y.column || 'Select a column'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Label>Available columns</Select.Label>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
-
-			<div class="field">
-				<span id="yRangeLabel">Y range</span>
 				<div class="pair" role="group" aria-labelledby="yRangeLabel">
-					<Input
-						type="number"
-						value={draft.y.min ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
-					/>
-					<Input
-						type="number"
-						value={draft.y.max ?? ''}
-						placeholder="auto"
-						oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
-					/>
+					<label class="range-field" id="yRangeLabel">
+						<span>Min</span>
+						<Input
+							type="number"
+							value={draft.y.min ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
+					<label class="range-field">
+						<span>Max</span>
+						<Input
+							type="number"
+							value={draft.y.max ?? ''}
+							placeholder="auto"
+							oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
+						/>
+					</label>
 				</div>
 			</div>
-
-			<label class="checkbox-field">
-				<Checkbox
-					checked={draft.y.reverse}
-					onCheckedChange={(checked) => patchAxis('y', { reverse: !!checked })}
-				/>
-				<span>Invert the Y axis (depth grows downward)</span>
-			</label>
 
 			{#if draft.type === 'line'}
 				<div class="field">
@@ -500,25 +522,28 @@
 			{/if}
 
 			{#if usesZColumn(draft.type)}
-				<div class="field">
-					<Label for="plotZColumn">Colour (Z axis)</Label>
-					<Select.Root
-						type="single"
-						value={draft.z?.column ?? NO_COLUMN}
-						onValueChange={(value) => setAxisColumn('z', value)}
-					>
-						<Select.Trigger id="plotZColumn">{draft.z?.column || 'None'}</Select.Trigger>
-						<Select.Content>
-							<Select.Group>
-								<Select.Item value={NO_COLUMN} label="None">None</Select.Item>
-								{#each controller.columns as column (column.name)}
-									<Select.Item value={column.name} label={column.name}>
-										{column.name}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						</Select.Content>
-					</Select.Root>
+				<div class="axis-group z-group">
+					<h4 class="axis-heading">Z axis / Color</h4>
+					<div class="field">
+						<Label for="plotZColumn">Colour column</Label>
+						<Select.Root
+							type="single"
+							value={draft.z?.column ?? NO_COLUMN}
+							onValueChange={(value) => setAxisColumn('z', value)}
+						>
+							<Select.Trigger id="plotZColumn">{draft.z?.column || 'None'}</Select.Trigger>
+							<Select.Content>
+								<Select.Group>
+									<Select.Item value={NO_COLUMN} label="None">None</Select.Item>
+									{#each controller.columns as column (column.name)}
+										<Select.Item value={column.name} label={column.name}>
+											{column.name}
+										</Select.Item>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
+					</div>
 				</div>
 			{/if}
 
@@ -1192,6 +1217,95 @@
 				color: var(--muted-foreground, #6b7280);
 				padding: 0.375rem 0;
 			}
+		}
+
+		.axis-group {
+			display: flex;
+			flex-direction: column;
+			gap: 0.75rem;
+			padding: 0.25rem 0 1rem;
+			border-bottom: 1px solid var(--border, #e5e7eb);
+
+			&:last-of-type {
+				border-bottom: 0;
+				padding-bottom: 0.25rem;
+			}
+		}
+
+		.axis-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 0.75rem;
+		}
+
+		.axis-title,
+		.axis-heading {
+			font-size: 0.875rem;
+			font-weight: 500;
+		}
+
+		.axis-heading {
+			margin: 0;
+		}
+
+		.switch-field {
+			position: relative;
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			font-size: 0.8125rem;
+			cursor: pointer;
+		}
+
+		.switch-input {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			top: 50%;
+			left: 0;
+			opacity: 0;
+		}
+
+		.switch-track {
+			display: inline-flex;
+			align-items: center;
+			width: 2.25rem;
+			height: 1.375rem;
+			padding: 0.125rem;
+			border-radius: 999px;
+			background-color: var(--muted, #d1d5db);
+			transition: background-color 0.15s ease;
+		}
+
+		.switch-thumb {
+			width: 1.125rem;
+			height: 1.125rem;
+			border-radius: 50%;
+			background-color: #ffffff;
+			box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+			transition: transform 0.15s ease;
+		}
+
+		.switch-input:checked + .switch-track {
+			background-color: var(--primary, #2563eb);
+		}
+
+		.switch-input:checked + .switch-track .switch-thumb {
+			transform: translateX(0.875rem);
+		}
+
+		.switch-input:focus-visible + .switch-track {
+			outline: 2px solid var(--ring, #2563eb);
+			outline-offset: 2px;
+		}
+
+		.range-field {
+			display: flex;
+			flex-direction: column;
+			gap: 0.3125rem;
+			min-width: 0;
+			font-size: 0.8125rem;
 		}
 
 		.checkbox-field {
