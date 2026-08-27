@@ -203,14 +203,49 @@ export function copySQL(compileQuery: () => CompiledQuery): void {
         return;
     }
 }
+//todo 
 export function downloadSQL(compileQuery: () => CompiledQuery): void {
     
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for downloading query as SQL for compiled query:", compiledQuery);
+    let sqlQuery: string;
 
-    notImplementedYetToast('Download SQL');
+    try {
+        sqlQuery = SQLQueryBuilder.toSQL(compiledQuery);
+
+    } catch (error) {
+        console.error('Error generating SQL code:', error);
+        
+        addToast({
+            message: `Error generating SQL code: ${error.message}`,
+            type: 'error'
+        });
+        
+        return;
+    }
+
+    try {
+        if(!sqlQuery){
+            return;
+        }
+
+        SQLQueryExporter.downloadAsSql(sqlQuery);
+
+        addToast({
+            message: 'SQL code downloaded as beacon-studio-query.sql',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error downlaoding SQL code as SQL file:', error);
+
+        addToast({
+            message: `Error downloading SQL code as SQL file: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
 
 

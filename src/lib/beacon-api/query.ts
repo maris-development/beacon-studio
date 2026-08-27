@@ -354,9 +354,11 @@ export class SQLQueryBuilder {
     private static filterToSQL(filter: Filter): string {
 
         if ("geometry" in filter) {
-            throw new Error(
-                "Geometry filters cannot currently be converted to SQL."
-            );
+            const geometry = JSON.stringify(filter.geometry);
+
+            return `ST_Within(
+            ST_Point("${filter.longitude_query_parameter}", "${filter.latitude_query_parameter}"),
+            ST_GeomFromGeoJSON('${geometry.replace(/'/g, "''")}'))`;
         }
 
         if ("min" in filter && "max" in filter) {
@@ -520,9 +522,9 @@ export class PythonQueryExporter {
     /**
      * Attempts to export the provided python code to a Jupyter Notebook file and download it to the user's machine.
      * @param pythonCode python code (as string) to be exported to notebook.
-     * @param notebookName name of the notebook file to be downloaded.
+     * @param fileName name of the notebook file to be downloaded.
      */
-    public static downloadAsNotebook(pythonCode: string, notebookName: string = "beacon-studio-query.ipynb"): void {
+    public static downloadAsNotebook(pythonCode: string, fileName: string = "beacon-studio-query.ipynb"): void {
        
         let ipynbCode: string;
         try{
@@ -535,7 +537,7 @@ export class PythonQueryExporter {
         try{
             if(!ipynbCode) return;
 
-            FileDownloader.download(ipynbCode, "beacon-studio-query.ipynb", "application/x-ipynb+json");
+            FileDownloader.download(ipynbCode, fileName, "application/x-ipynb+json");
         }
         catch(error){
             throw new Error(`Failed to write Jupyter Notebook file: ${error.message}`);
@@ -552,12 +554,12 @@ export class JSONQueryExporter {
  * @param jsonCode JSON content as a string.
  * @param fileName Name of the JSON file to be downloaded.
  */
-    public static downloadAsJson(jsonCode: string,fileName: string = "beacon-studio-query.json"): void {
+    public static downloadAsJson(jsonCode: string, fileName: string = "beacon-studio-query.json"): void {
 
         try {
             if (!jsonCode) return;
 
-            FileDownloader.download(jsonCode, "beacon-studio-query.json", "application/json");
+            FileDownloader.download(jsonCode, fileName, "application/json");
         }
         catch (error) {
             throw new Error(
@@ -570,4 +572,25 @@ export class JSONQueryExporter {
 
 export class SQLQueryExporter {
 
+    /**
+     * Attempts to export the provided SQL to a .sql file and download it
+     * to the user's machine.
+     *
+     * @param sqlCode SQL content as a string.
+     * @param fileName Name of the SQL file to be downloaded.
+     */
+    public static downloadAsSql(sqlCode: string, fileName: string = "beacon-studio-query.sql"): void {
+        try {
+            if (!sqlCode) return;
+
+            FileDownloader.download(sqlCode, fileName, "application/sql");
+        }
+        catch (error) {
+            throw new Error(
+                `Failed to write SQL file: ${
+                    error instanceof Error ? error.message : String(error)
+                }`
+            );
+        }
+    }
 }
