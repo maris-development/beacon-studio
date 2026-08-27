@@ -322,10 +322,132 @@ export class PythonQueryBuilder  {
     }
 }
 
-export class SQLQueryBuilder{
-    /**
-     * not yet implemented
-     */
+export class SQLQueryBuilder {
+
+    static toSQL(compiledQuery: CompiledQuery): string {
+        const columns = compiledQuery.query_parameters
+            .map(select => {
+                if (select.alias) {
+                    return `"${select.column}" AS "${select.alias}"`;
+                }
+
+                return `"${select.column}"`;
+            })
+            .join(",\n    ");
+
+        let sql = `SELECT\n    ${columns}`;
+        sql += `\nFROM "${compiledQuery.from}"`;
+
+        if (compiledQuery.filters && compiledQuery.filters.length > 0) {
+            const filters = compiledQuery.filters
+                .map(filter => SQLQueryBuilder.filterToSQL(filter))
+                .join("\n    AND ");
+
+            sql += `\nWHERE ${filters}`;
+        }
+
+        sql += ";";
+
+        return sql;
+    }
+
+    private static filterToSQL(filter: Filter): string {
+
+        if ("geometry" in filter) {
+            throw new Error(
+                "Geometry filters cannot currently be converted to SQL."
+            );
+        }
+
+        if ("min" in filter && "max" in filter) {
+            const conditions: string[] = [];
+
+            if (filter.min !== undefined && filter.min !== null && filter.min !== "") {
+                conditions.push(
+                    `"${filter.for_query_parameter}" >= ${SQLQueryBuilder.valueToSQL(filter.min)}`
+                );
+            }
+
+            if (filter.max !== undefined && filter.max !== null && filter.max !== "") {
+                conditions.push(
+                    `"${filter.for_query_parameter}" <= ${SQLQueryBuilder.valueToSQL(filter.max)}`
+                );
+            }
+
+            return conditions.join(" AND ");
+        }
+
+        if ("eq" in filter) {
+            return `"${filter.for_query_parameter}" = ${SQLQueryBuilder.valueToSQL(filter.eq)}`;
+        }
+
+        if ("neq" in filter) {
+            return `"${filter.for_query_parameter}" <> ${SQLQueryBuilder.valueToSQL(filter.neq)}`;
+        }
+
+        if ("gt" in filter) {
+            return `"${filter.for_query_parameter}" > ${SQLQueryBuilder.valueToSQL(filter.gt)}`;
+        }
+
+        if ("gt_eq" in filter) {
+            return `"${filter.for_query_parameter}" >= ${SQLQueryBuilder.valueToSQL(filter.gt_eq)}`;
+        }
+
+        if ("lt" in filter) {
+            return `"${filter.for_query_parameter}" < ${SQLQueryBuilder.valueToSQL(filter.lt)}`;
+        }
+
+        if ("lt_eq" in filter) {
+            return `"${filter.for_query_parameter}" <= ${SQLQueryBuilder.valueToSQL(filter.lt_eq)}`;
+        }
+
+        if ("is_not_null" in filter) {
+            return `"${filter.is_not_null.for_query_parameter}" IS NOT NULL`;
+        }
+
+        if ("is_null" in filter) {
+            return `"${filter.is_null.for_query_parameter}" IS NULL`;
+        }
+
+        if ("or" in filter) {
+            const filters = filter.or
+                .map(f => SQLQueryBuilder.filterToSQL(f))
+                .join(" OR ");
+
+            return `(${filters})`;
+        }
+
+        if ("and" in filter) {
+            const filters = filter.and
+                .map(f => SQLQueryBuilder.filterToSQL(f))
+                .join(" AND ");
+
+            return `(${filters})`;
+        }
+
+        throw new Error("Unsupported filter type");
+    }
+
+    private static valueToSQL(value: unknown): string {
+        if (value === null || value === undefined) {
+            return "NULL";
+        }
+
+        if (typeof value === "number") {
+            return String(value);
+        }
+
+        if (typeof value === "boolean") {
+            return value ? "TRUE" : "FALSE";
+        }
+
+        if (typeof value === "string") {
+            // Escape single quotes for SQL
+            return `'${value.replace(/'/g, "''")}'`;
+        }
+
+        throw new Error(`Unsupported SQL value type: ${typeof value}`);
+    }
 }
 
 export class FileDownloader {
@@ -444,4 +566,8 @@ export class JSONQueryExporter {
             );
         }
     }
+}
+
+export class SQLQueryExporter {
+
 }
