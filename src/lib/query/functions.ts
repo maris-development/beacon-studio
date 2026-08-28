@@ -1,7 +1,7 @@
 import type { CompiledQuery } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
-import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter } from "@/beacon-api/query";
+import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter, SQLQueryBuilder, SQLQueryExporter } from "@/beacon-api/query";
 
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
@@ -163,19 +163,89 @@ export function downloadPython(compileQuery: () => CompiledQuery): void {
 export function copySQL(compileQuery: () => CompiledQuery): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
-
     if (!compiledQuery) return;
 
-    notImplementedYetToast('Copy SQL');
+    let sqlQuery: string;
+
+    try {
+        sqlQuery = SQLQueryBuilder.toSQL(compiledQuery);
+
+    } catch (error) {
+        console.error('Error generating SQL code:', error);
+        
+        addToast({
+            message: `Error generating SQL code: ${error.message}`,
+            type: 'error'
+        });
+        
+        return;
+    }
+
+    try {
+        if(!sqlQuery){
+            return;
+        }
+
+        Utils.copyToClipboard(sqlQuery);
+
+        addToast({
+            message: 'SQL code copied to clipboard',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error copying SQL code to clipboard:', error);
+
+        addToast({
+            message: `Error copying SQL code to clipboard: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
+//todo 
 export function downloadSQL(compileQuery: () => CompiledQuery): void {
     
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for downloading query as SQL for compiled query:", compiledQuery);
+    let sqlQuery: string;
 
-    notImplementedYetToast('Download SQL');
+    try {
+        sqlQuery = SQLQueryBuilder.toSQL(compiledQuery);
+
+    } catch (error) {
+        console.error('Error generating SQL code:', error);
+        
+        addToast({
+            message: `Error generating SQL code: ${error.message}`,
+            type: 'error'
+        });
+        
+        return;
+    }
+
+    try {
+        if(!sqlQuery){
+            return;
+        }
+
+        SQLQueryExporter.downloadAsSql(sqlQuery);
+
+        addToast({
+            message: 'SQL code downloaded as beacon-studio-query.sql',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error downlaoding SQL code as SQL file:', error);
+
+        addToast({
+            message: `Error downloading SQL code as SQL file: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
 
 
