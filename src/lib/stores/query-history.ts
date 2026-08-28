@@ -15,12 +15,11 @@
  * policy and the limit that make this collection a history.
  */
 
-import { get } from 'svelte/store';
 import { createQueryCollection } from '@/stores/query-collection';
 import { snapshotInstance, type InstanceRef, type StoredQuery } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
-import { currentBeaconInstance } from '@/stores/config';
+import { getCurrentInstance } from '@/services/beacon-instance';
 import { getSettings } from '@/stores/settings';
 
 /**
@@ -74,7 +73,7 @@ export function recordExecution(input: RecordExecutionInput): StoredQuery {
 			name: input.name ?? 'Query',
 			draft: input.draft ?? null,
 			compiled: input.compiled,
-			instance: input.instance ?? snapshotInstance(get(currentBeaconInstance)),
+			instance: input.instance ?? snapshotInstance(getCurrentInstance()),
 			datasetKey: input.datasetKey,
 			rowCount: input.rowCount ?? null,
 			duration: input.duration ?? null

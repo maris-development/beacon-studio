@@ -1,9 +1,8 @@
 <!-- src/lib/components/ChooseBeaconModal.svelte -->
 <script lang="ts">
-	import { beaconInstances, currentBeaconInstance } from '$lib/stores/config';
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import { onMount } from 'svelte';
-	import type { BeaconInstance } from '$lib/stores/config';
+	import type { BeaconInstance } from '@/beacon-api/types';
+	import { instances, currentInstance, selectInstance, selectFirstIfNone } from '@/services/beacon-instance';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import AddBeaconModal from './AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -11,7 +10,6 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import SquareIcon from '@lucide/svelte/icons/square';
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
-	import { addToast } from '@/stores/toasts';
 	import ExternalLink from '../ExternalLink.svelte';
 	import Card from '../card/Card.svelte';
 
@@ -19,42 +17,40 @@
 
 	export let onClose: () => void;
 
-	let beaconInstanceArray = $beaconInstances;
-	let currentBeaconInstanceValue: BeaconInstance | null = $currentBeaconInstance;
 	let editingInstance: BeaconInstance | null = null;
 	let showFormModal = false;
 
-	if (currentBeaconInstanceValue == null && beaconInstanceArray.length > 0) {
-		// If no current instance is set, set the first one
-		pickInstance(beaconInstanceArray[0]);
+	// The picker must always show a selection when the list has one instance.
+	selectFirstIfNone();
+
+	/**
+	 * Warms the schema cache of the selected node, then closes. The prefetch does
+	 * not block the close: `getCachedSchema` stores the promise, so the cache is
+	 * warm as soon as each request lands.
+	 */
+	function handleClose() {
+		prefetchSchemas();
+		onClose();
 	}
 
-	/** Initialize form if editing */
-	onMount(() => {
-		return () => {
-			//destructor
-		};
-	});
+	async function prefetchSchemas() {
+		const instance = $currentInstance;
+		if (!instance) return;
 
-	// immediatly cache all schemas for all tables on beacon instance selection
-	// how to do this on application start when beacon instance is already selected?
-	async function handleClose(){
-		const client = BeaconClient.new(currentBeaconInstanceValue);
-		const tables = await client.getCachedTables();
-		
-		for (const table of tables){
-			await client.getCachedSchema(table);
+		try {
+			const client = BeaconClient.new(instance);
+			const tables = await client.getCachedTables();
+
+			await Promise.all(tables.map((table) => client.getCachedSchema(table)));
+		} catch (error) {
+			console.warn('Could not prefetch the table schemas.', error);
 		}
-
-		onClose();
 	}
 
 	function pickInstance(instance: BeaconInstance, e: Event | null = null) {
 		if (e) e.stopPropagation(); // Prevent event bubbling if necessary
 
-		currentBeaconInstanceValue = instance;
-
-		currentBeaconInstance.set(instance);
+		selectInstance(instance.id);
 	}
 
 	function openBeaconFormModal(instance: BeaconInstance | null = null, e: Event | null = null) {
@@ -64,65 +60,9 @@
 		showFormModal = true;
 	}
 
-	function deleteInstance(instance: BeaconInstance) {
-		if (!instance) return;
-
-		// console.log('Deleting Beacon instance:', instance);
+	/** The form writes to the service. This closes it and shows the new list. */
+	function handleFormSave() {
 		showFormModal = false;
-
-		//update list of instances
-		beaconInstanceArray = $beaconInstances;
-
-		// Remove from array
-		beaconInstanceArray = beaconInstanceArray.filter((i) => i.id !== instance.id);
-		beaconInstances.set(beaconInstanceArray);
-
-		// If the deleted instance was the current one, clear it or set to another
-		if (currentBeaconInstanceValue?.id === instance.id) {
-			if (beaconInstanceArray.length > 0) {
-				pickInstance(beaconInstanceArray[0]);
-			} else {
-				currentBeaconInstanceValue = null;
-				currentBeaconInstance.set(null);
-			}
-		}
-
-		addToast({
-			message: `The Beacon instance "${instance.name}" has been deleted.`,
-			type: 'info'
-		});
-	}
-
-	function handleFormSave(instance: BeaconInstance, isDeleted: boolean) {
-		if (isDeleted) {
-			deleteInstance(instance);
-			return;
-		}
-
-		// console.log('Saving Beacon instance:', instance);
-		showFormModal = false;
-
-		//update list of instances
-		beaconInstanceArray = $beaconInstances;
-
-		//find instance in beaconInstanceArray
-		const existingIndex = beaconInstanceArray.findIndex((i) => i.id === instance.id);
-
-		if (existingIndex !== -1) {
-			// Update existing instance
-			beaconInstanceArray[existingIndex] = instance;
-		} else {
-			// Add new instance
-			beaconInstanceArray.push(instance);
-		}
-
-		beaconInstanceArray = [...beaconInstanceArray]; // trigger reactivity
-
-		beaconInstances.set(beaconInstanceArray);
-
-		if (beaconInstanceArray.length === 1) {
-			pickInstance(instance);
-		}
 	}
 
 	function handleFormClose() {
@@ -135,14 +75,14 @@
 
 	<div class="beacon-instances-wrapper">
 	<div class="beacon-instances">
-		{#if beaconInstanceArray.length === 0}
+		{#if $instances.length === 0}
 			<Card>
 				<p>No Beacon instances configured. Please add one.</p>
             </Card>
 		{/if}
-		{#each beaconInstanceArray as instance (instance.id)}
+		{#each $instances as instance (instance.id)}
 
-			<Card onclick={pickInstance.bind(null, instance)} class={currentBeaconInstanceValue?.id === instance.id ? 'border-2 border-primary' : ''}>
+			<Card onclick={pickInstance.bind(null, instance)} class={$currentInstance?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<h3>{instance.name}</h3>
 				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}
@@ -155,8 +95,8 @@
 				</Button>
 				<Button
 					onclick={(e) => pickInstance(instance, e)}
-					disabled={currentBeaconInstanceValue?.id === instance.id}>
-					{#if currentBeaconInstanceValue?.id === instance.id}
+					disabled={$currentInstance?.id === instance.id}>
+					{#if $currentInstance?.id === instance.id}
 						Selected
 						<SquareCheckBigIcon />
 					{:else}

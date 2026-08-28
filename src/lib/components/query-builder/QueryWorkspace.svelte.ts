@@ -51,8 +51,7 @@ import {
 	type MapViewState,
 	type StoredQuery
 } from '@/stores/stored-query';
-import { currentBeaconInstance } from '@/stores/config';
-import { get } from 'svelte/store';
+import { getCurrentInstance } from '@/services/beacon-instance';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
 import { isPlotRenderable, type ChartViewState } from '@/plots/plot-config';
@@ -134,7 +133,7 @@ export class QueryWorkspace {
 		const block = queryBlocks.append({
 			name: name ?? `Query ${nextBlockNumber()}`,
 			draft: makeEmptyDraft(),
-			instance: snapshotInstance(get(currentBeaconInstance))
+			instance: snapshotInstance(getCurrentInstance())
 		});
 		this.select(block.id);
 		return block;
@@ -161,7 +160,7 @@ export class QueryWorkspace {
 			name: name ?? `Query ${nextBlockNumber()}`,
 			draft: null,
 			compiled: Utils.cloneObject(query),
-			instance: snapshotInstance(get(currentBeaconInstance))
+			instance: snapshotInstance(getCurrentInstance())
 		});
 		this.select(block.id);
 		return block;

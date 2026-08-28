@@ -1,10 +1,10 @@
 <script lang="ts">
-	// Stores and types
-	import { currentBeaconInstance, beaconInstances, type BeaconInstance } from '$lib/stores/config';
+	// Instance service
+	import { currentInstance, instances } from '@/services/beacon-instance';
 	import logo from '$lib/assets/logo-gradient.svg';
 
 	// Svelte lifecycle and navigation
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -110,30 +110,21 @@
 
 	let collapsed = $state(false);
 	let isMobile = $state(false);
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
 	let showChooseBeaconModal: boolean = $state(false);
-	let instancesList: BeaconInstance[] = [];
-
-	function pickInstanceIfNonePicked(): void {
-		if (currentBeaconInstanceValue == null) {
-			openBeaconInstancePicker();
-		}
-	}
 
 	function openBeaconInstancePicker(): void {
 		showChooseBeaconModal = true;
 	}
 
-	function checkAndRedirect(): void {
-		if (currentBeaconInstanceValue == null && instancesList.length === 0) {
+	// The app needs at least one instance. Send the user to the home page, which
+	// opens the picker. The store auto-subscriptions make this react to a change.
+	$effect(() => {
+		if ($currentInstance == null && $instances.length === 0) {
 			goto(resolve('/'));
 		}
-	}
+	});
 
 	onMount(() => {
-		let unsubInstances: () => void;
-		let unsubCurrent: () => void;
-
 		// Track mobile viewport; start collapsed (closed overlay) on mobile
 		const mobileQuery = window.matchMedia('(max-width: 767px)');
 		const applyMobile = (matches: boolean) => {
@@ -144,23 +135,11 @@
 		const onMobileChange = (e: MediaQueryListEvent) => applyMobile(e.matches);
 		mobileQuery.addEventListener('change', onMobileChange);
 
-		unsubInstances = beaconInstances.subscribe((list) => {
-			instancesList = list;
-			checkAndRedirect();
-		});
+		if ($currentInstance == null) {
+			openBeaconInstancePicker();
+		}
 
-		unsubCurrent = currentBeaconInstance.subscribe((value) => {
-			currentBeaconInstanceValue = value;
-			checkAndRedirect();
-		});
-
-		onDestroy(() => {
-			unsubInstances();
-			unsubCurrent();
-			mobileQuery.removeEventListener('change', onMobileChange);
-		});
-
-		pickInstanceIfNonePicked();
+		return () => mobileQuery.removeEventListener('change', onMobileChange);
 	});
 
 	// Close the overlay sidebar after navigating on mobile
@@ -170,12 +149,7 @@
 </script>
 
 {#if showChooseBeaconModal}
-	<ChooseBeaconModal
-		onClose={() => {
-			showChooseBeaconModal = false;
-			currentBeaconInstanceValue = $currentBeaconInstance;
-		}}
-	/>
+	<ChooseBeaconModal onClose={() => (showChooseBeaconModal = false)} />
 {/if}
 
 {#if isMobile && !collapsed}
@@ -212,9 +186,9 @@
 			<LinkIcon class="size-4" />
 			<div class="instance-text grid flex-1 text-left text-sm leading-tight">
 				<span class="truncate font-medium"
-					>{currentBeaconInstanceValue?.name ?? 'No instance picked'}</span
+					>{$currentInstance?.name ?? 'No instance picked'}</span
 				>
-				<span class="truncate text-xs">{currentBeaconInstanceValue?.url ?? ''}</span>
+				<span class="truncate text-xs">{$currentInstance?.url ?? ''}</span>
 			</div>
 		</button>
 	</div>
@@ -282,19 +256,6 @@
 						height: 1.75rem;
 						// padding: 0.5rem;
 						margin: 0.25rem;
-					}
-
-					.header-icon {
-						flex-shrink: 0;
-						background: var(--background);
-						color: var(--foreground);
-						display: flex;
-						aspect-ratio: 1 / 1;
-						width: 2rem;
-						height: 2rem;
-						align-items: center;
-						justify-content: center;
-						border-radius: 0.5rem;
 					}
 
 					h1 {

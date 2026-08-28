@@ -1,7 +1,6 @@
 
-import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconInstance, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
