@@ -5,17 +5,6 @@
 	import TableIcon from '@lucide/svelte/icons/table';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
 
-	// Carry the active query along when switching modes: each page rehydrates
-	// its QueryWorkspace from `q` (block id) or `query` (shared link) on mount.
-	// Dropping the param on tab switch would lose the selected query.
-	const preservedParam = $derived(
-		page.url.searchParams.has('q')
-			? `?q=${page.url.searchParams.get('q')}`
-			: page.url.searchParams.has('query')
-				? `?query=${page.url.searchParams.get('query')}`
-				: ''
-	);
-
 	const tabs = $derived([
 		{ label: 'Map', path: resolve('/visualisations/map-viewer'), icon: MapIcon },
 		{ label: 'Table', path: resolve('/visualisations/table-explorer'), icon: TableIcon },
@@ -27,7 +16,7 @@
 	<div class="vertical-tabs">
 		{#each tabs as tab (tab.path)}
 			<a
-				href={tab.path + preservedParam}
+				href={tab.path}
 				class="tab {page.url.pathname === tab.path ? 'active' : ''}"
 			>
 				<tab.icon size="1rem" />
