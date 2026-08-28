@@ -27,16 +27,16 @@
     onMount(() => {
         const instance = $currentBeaconInstance;
         if (instance) client = BeaconClient.new(instance);
-        
+
         const resolved = resolveUrlQuery(page.url);
         workspace.openFromUrl(resolved);
-        
-        if (resolved.query && !resolved.entry) {
+
+        if (resolved.containsQueryParam) {
             queueMicrotask(() => {
-                replaceState(resolve('/queries/workbench'), page.state);
+                replaceState(resolve(SHARE_LINK_PATH), page.state);
             });
         }
-    
+
         return () => workspace.destroy();
     });
 

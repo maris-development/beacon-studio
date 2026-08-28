@@ -15,6 +15,7 @@ import type { StoredQuery } from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
 import { Utils } from '@/utils';
+import { addToast } from "@/stores/toasts";
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
 const COLLECTIONS: QueryCollection[] = [queryBlocks, savedQueries, queryHistory];
@@ -78,6 +79,8 @@ export interface ResolvedUrlQuery {
 	 * record. See `QueryStore.ensure` for the effects of this link.
 	 */
 	storedQueryId?: string;
+
+	containsQueryParam: boolean;
 }
 
 /**
@@ -99,7 +102,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const entry = resolveStoredQuery(id);
 
 	if (entry?.compiled) {
-		return { entry, query: entry.compiled, storedQueryId: entry.id };
+		return { entry, query: entry.compiled, storedQueryId: entry.id, containsQueryParam: false };
 	}
 
 	const shared = url.searchParams.get('query');
@@ -109,11 +112,23 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			if (typeof query === 'string') {
 				query = JSON.parse(query) as CompiledQuery;
 			}
-			return { entry: null, query };
+
+			addToast({
+				message: 'Successfully added a shared query from the URL.',
+				type: 'success'
+			});
+			
+			return { entry: null, query, containsQueryParam: true };
 		} catch (error) {
 			console.error('Failed to decode a shared query from the URL.', error);
+
+			addToast({
+				message: `Failed to decode a shared query from the URL: ${error?.message ?? error}`,
+				type: 'error'
+			});
+			return { entry: null, query: null, containsQueryParam: true };
 		}
 	}
 
-	return { entry: null, query: null };
+	return { entry: null, query: null, containsQueryParam: false };
 }
