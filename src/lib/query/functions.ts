@@ -334,12 +334,3 @@ export function copyUrl(compileQuery: () => CompiledQuery): void {
         return;
     }
 }
-
-function notImplementedYetToast(feature: string = ''): void {
-    const message = feature ? `The feature "${feature}" is not implemented yet.` : 'This feature is not implemented yet.';
-
-    addToast({
-        message,
-        type: 'info'
-    });
-}
