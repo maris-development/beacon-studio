@@ -291,8 +291,15 @@ export class MapViewController {
 	 * stays where the user left it.
 	 */
 	async runAndShowQuery(query: CompiledQuery, blockId: string, keepCamera: boolean): Promise<void> {
-		this.isLoading = true;
-		this.markRunning(true);
+		// this.isLoading = true;
+		// this.markRunning(true);
+
+		const cacheHit = BeaconClient.peekQuery(query) != null;
+		if (!cacheHit) {
+			this.isLoading = true;
+			this.markRunning(true);
+		}
+
 
 		try {
 			this.deriveColumnNames(query);

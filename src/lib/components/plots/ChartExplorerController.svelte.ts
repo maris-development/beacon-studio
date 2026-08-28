@@ -403,8 +403,14 @@ export class ChartExplorerController {
 
 	/** Run a query and show it. */
 	async runAndShowQuery(query: CompiledQuery, blockId: string): Promise<void> {
-		this.isLoading = true;
-		this.markRunning(true);
+		// this.isLoading = true;
+		// this.markRunning(true);
+
+		const cacheHit = BeaconClient.peekQuery(query) != null;
+		if (!cacheHit) {
+			this.isLoading = true;
+			this.markRunning(true);
+		}
 
 		try {
 			this.entry = await BeaconClient.ensureQuery(query, blockId);

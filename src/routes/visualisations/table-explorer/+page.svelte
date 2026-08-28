@@ -98,8 +98,14 @@
 	});
 
 	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
-		isLoading = true;
-		workspace.markBlockRunning(block.id, true);
+		// isLoading = true;
+		// workspace.markBlockRunning(block.id, true);
+
+		const cacheHit = BeaconClient.peekQuery(query) != null;
+		if (!cacheHit) {
+			isLoading = true;
+			workspace.markBlockRunning(block.id, true);
+		}
 
 		try {
 			entry = await BeaconClient.ensureQuery(query, block.id);
