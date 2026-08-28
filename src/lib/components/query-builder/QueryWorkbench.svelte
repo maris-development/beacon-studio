@@ -17,6 +17,9 @@
     import { currentBeaconInstance } from '@/stores/config';
     import { BeaconClient } from '@/beacon-api/client';
     import { getDefaultQueryActions } from './QueryActions';
+    import { replaceState } from '$app/navigation';
+    import { resolve } from '$app/paths';
+    import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const workspace = $state(new QueryWorkspace());
     let client: BeaconClient | null = $state(null);
@@ -24,11 +27,16 @@
     onMount(() => {
         const instance = $currentBeaconInstance;
         if (instance) client = BeaconClient.new(instance);
-
-        // A deep-link opens one more block. `?q=` comes from "open in workbench"
-        // and brings the saved builder state. `?query=` comes from a share link.
-        workspace.openFromUrl(resolveUrlQuery(page.url));
-
+        
+        const resolved = resolveUrlQuery(page.url);
+        workspace.openFromUrl(resolved);
+        
+        if (resolved.query && !resolved.entry) {
+            queueMicrotask(() => {
+                replaceState(resolve('/queries/workbench'), page.state);
+            });
+        }
+    
         return () => workspace.destroy();
     });
 
