@@ -13,18 +13,23 @@
 
 :root {
   --radius: 0.625rem;
-  --background: #f6f6f8; /* color-mix(in srgb, white 90%, var(--primary)); */
-  /* --app-background: linear-gradient(315deg, var(--primary) 0%, rgba(255, 255, 255, 1) 100%); */
-  --app-background: rgb(246, 246, 248);
+  --background: white;
+  --app-background: #f6f6f8;
   --foreground: rgb(51, 51, 51);
-  --card: oklch(1 0 0);
+  --card: var(--background);
   --card-foreground: oklch(0.141 0.005 285.823);
+  --card-border: rgb(231, 231, 236);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(35.9% 0.144 278.697);
+  
+  --highlight: #087cdf;
+
+  --primary: #3451b2; /*  oklch(35.9% 0.144 278.697); */
   --primary-foreground: oklch(0.985 0 0);
+  
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
+
   --muted: oklch(0.967 0.001 286.375);
   --muted-foreground: oklch(0.552 0.016 285.938);
   --accent: oklch(0.967 0.001 286.375);
@@ -38,6 +43,7 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+
   --sidebar: rgba(255, 255, 255, 1);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.21 0.006 285.885);
@@ -64,6 +70,7 @@
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.21 0.006 285.885);
   --card-foreground: oklch(0.985 0 0);
+  --card-border: oklch(1 0 0 / 10%);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.92 0.004 286.32);
@@ -98,10 +105,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-card-border: var(--card-border);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
@@ -134,9 +141,6 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
   }
 }
 

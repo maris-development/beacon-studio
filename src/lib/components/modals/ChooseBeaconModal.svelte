@@ -94,7 +94,7 @@
 			<Card onclick={pickInstance.bind(null, instance)} class={$currentInstance?.id === instance.id ? 'border-2 border-primary' : ''}>
 				<div class="instance-heading">
 					<h3>{instance.name}</h3>
-					<BeaconInstanceStatus {instance} variant="compact" />
+					<BeaconInstanceStatus health={instance} variant="compact" />
 				</div>
 				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}

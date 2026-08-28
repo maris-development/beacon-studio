@@ -10,13 +10,8 @@
  */
 
 import { BeaconClient } from '@/beacon-api/client';
-import type { BeaconInstance, StoredBeaconInstance } from '@/beacon-api/types';
-import {
-	addInstance,
-	getInstances,
-	normalizeUrl,
-	type BeaconInstanceInput
-} from './beacon-instance';
+import type { BeaconInstance } from '@/beacon-api/types';
+import { addInstance, getInstances, type BeaconInstanceInput } from './beacon-instance';
 import {
 	FRESH_MS,
 	isFresh,
@@ -24,6 +19,8 @@ import {
 	setHealth,
 	SWEEP_INTERVAL_MS
 } from './beacon-instance-health';
+import { normalizeUrl } from './beacon-instance-url';
+import { getOpenInstances } from './open-instances';
 
 /**
  * Tests a candidate instance. The caller does not need a record, so the form of
@@ -37,57 +34,67 @@ export async function testInstance(input: Pick<BeaconInstanceInput, 'url' | 'tok
 
 // -- Health checks ----------------------------------------------------------
 
-/** The checks that run now, keyed by instance id. */
+/**
+ * Anything the app can check. A configured instance fits this, and so does an
+ * entry of the public list. The health store keys by URL, so an id is not
+ * needed here.
+ */
+export type HealthTarget = { url: string; token?: string };
+
+/** The checks that run now, keyed by normalized URL. */
 const inFlight = new Map<string, Promise<void>>();
 
 /**
- * Checks one instance and records the result. The function shows no toast, so
- * it fits a background sweep. A failure or a timeout records `offline`.
+ * Checks one node and records the result. The function shows no toast, so it
+ * fits a background sweep. A failure or a timeout records `offline`.
  */
-export async function checkInstance(instance: StoredBeaconInstance): Promise<void> {
-	const client = new BeaconClient(instance.url, instance.token ?? null);
+export async function checkInstance(target: HealthTarget): Promise<void> {
+	const client = new BeaconClient(target.url, target.token ?? null);
 	const startedAt = performance.now();
 
 	try {
 		const isHealthy = await client.getHealth({ signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
 		const latencyMs = Math.round(performance.now() - startedAt);
 
-		setHealth(instance.id, {
+		setHealth(target.url, {
 			status: isHealthy ? 'online' : 'offline',
 			latencyMs: isHealthy ? latencyMs : null,
 			lastCheckedAt: new Date()
 		});
 	} catch {
-		setHealth(instance.id, { status: 'offline', latencyMs: null, lastCheckedAt: new Date() });
+		setHealth(target.url, { status: 'offline', latencyMs: null, lastCheckedAt: new Date() });
 	}
 }
 
 /**
- * Checks one instance, but only if the last result is stale. Repeated calls
- * share the check that runs. Call it where the app shows or uses an instance.
+ * Checks one node, but only if the last result is stale. Repeated calls share
+ * the check that runs. Call it where the app shows or uses a node.
  */
-export function ensureFresh(
-	instance: StoredBeaconInstance,
-	maxAgeMs: number = FRESH_MS
-): Promise<void> {
-	if (isFresh(instance.id, maxAgeMs)) return Promise.resolve();
+export function ensureFresh(target: HealthTarget, maxAgeMs: number = FRESH_MS): Promise<void> {
+	if (isFresh(target.url, maxAgeMs)) return Promise.resolve();
 
-	const running = inFlight.get(instance.id);
+	const key = normalizeUrl(target.url);
+
+	const running = inFlight.get(key);
 	if (running) return running;
 
-	const check = checkInstance(instance).finally(() => inFlight.delete(instance.id));
+	const check = checkInstance(target).finally(() => inFlight.delete(key));
 
-	inFlight.set(instance.id, check);
+	inFlight.set(key, check);
 
 	return check;
 }
 
 /**
- * Checks every configured instance. One failure does not stop the others. The
- * default checks all of them. Pass `maxAgeMs` to skip the fresh ones.
+ * Checks every configured instance, and every node of the public list. One
+ * failure does not stop the others. A node in both lists gets one check, because
+ * `ensureFresh` keys by URL. The default checks all of them. Pass `maxAgeMs` to
+ * skip the fresh ones.
  */
 export async function checkAllInstances(maxAgeMs: number = 0): Promise<void> {
-	await Promise.allSettled(getInstances().map((instance) => ensureFresh(instance, maxAgeMs)));
+	const targets: HealthTarget[] = [...getInstances(), ...getOpenInstances()];
+
+	await Promise.allSettled(targets.map((target) => ensureFresh(target, maxAgeMs)));
 }
 
 /** The stop function of the monitor that runs, or `null`. */

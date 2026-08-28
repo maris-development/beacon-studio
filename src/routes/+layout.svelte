@@ -2,12 +2,18 @@
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
 	import Toasts from '@/components/toasts/toasts.svelte';
 	import { startHealthMonitor } from '@/services/beacon-instance-connect';
+	import { loadOpenInstances } from '@/services/open-instances';
 	import { onMount } from 'svelte';
 	import '../app.scss';
 	import '../tailwind.css';
 
-	// One monitor for the whole app. It checks every instance each hour.
-	onMount(() => startHealthMonitor());
+	// One monitor for the whole app. It checks every node each hour.
+	onMount(() => {
+		// The public list is an offer. A failure leaves the list empty.
+		void loadOpenInstances();
+
+		return startHealthMonitor();
+	});
 </script>
 
 <Toasts />
@@ -25,7 +31,6 @@
 		flex-direction: row;
 		width: 100%;
 		height: 100%;
-		background-color: var(--color-background);
 	}
 
 

@@ -200,7 +200,7 @@
 				<span class="truncate text-xs">{$currentInstance?.url ?? ''}</span>
 			</div>
 			{#if $currentInstance}
-				<BeaconInstanceStatus instance={$currentInstance} variant="dot" />
+				<BeaconInstanceStatus health={$currentInstance} variant="dot" />
 			{/if}
 		</button>
 	</div>

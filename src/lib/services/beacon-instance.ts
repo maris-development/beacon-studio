@@ -28,8 +28,10 @@ import type {
 } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-instance-health';
+import { normalizeUrl } from './beacon-instance-url';
 
 export type { BeaconInstance, StoredBeaconInstance };
+export { normalizeUrl };
 
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
 export type BeaconInstanceInput = {
@@ -74,14 +76,6 @@ function migrateLegacySelection(): void {
 
 migrateLegacySelection();
 
-/**
- * Puts a URL in a comparable form. The compare is case insensitive and ignores
- * a trailing slash. Two instances with the same node must not be duplicates.
- */
-export function normalizeUrl(url: string): string {
-	return url.trim().toLowerCase().replace(/\/+$/, '');
-}
-
 // -- Reads ------------------------------------------------------------------
 
 /** Puts the live health on a stored record. */
@@ -89,7 +83,7 @@ function withHealth(
 	stored: StoredBeaconInstance,
 	map: Record<string, BeaconInstanceHealth>
 ): BeaconInstance {
-	return { ...stored, ...(map[stored.id] ?? UNKNOWN_HEALTH) };
+	return { ...stored, ...(map[normalizeUrl(stored.url)] ?? UNKNOWN_HEALTH) };
 }
 
 /** Every configured instance, with its health. Use `$instances` in a component. */
@@ -188,8 +182,8 @@ export function addInstance(input: BeaconInstanceInput): BeaconInstance {
  * is unknown. An edit of the selected instance takes effect at once, because
  * the selection holds an id only.
  *
- * A new URL or token points at another node, so the function drops the health.
- * The next check fills it again.
+ * A new token can change the answer of the node, so the function drops the
+ * health. A new URL needs no drop, because the health store keys by URL.
  */
 export function updateInstance(
 	id: string,
@@ -209,14 +203,12 @@ export function updateInstance(
 		})
 	);
 
-	const targetChanged = updated.url !== previous.url || updated.token !== previous.token;
-
-	if (targetChanged) {
-		dropHealth(id);
+	if (updated.token !== previous.token) {
+		dropHealth(updated.url);
 		return { ...updated, ...UNKNOWN_HEALTH };
 	}
 
-	return { ...updated, ...getHealthOf(id) };
+	return { ...updated, ...getHealthOf(updated.url) };
 }
 
 /**
@@ -231,7 +223,11 @@ export function removeInstance(id: string): BeaconInstance | null {
 	const wasSelected = get(selectedIdStore) === id;
 
 	listStore.update((list) => list.filter((instance) => instance.id !== id));
-	dropHealth(id);
+
+	// Another instance can point at the same node. Keep the health for it.
+	if (findByUrl(removed.url) === null) {
+		dropHealth(removed.url);
+	}
 
 	if (wasSelected) {
 		selectedIdStore.set(null);
