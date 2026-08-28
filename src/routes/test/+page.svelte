@@ -132,7 +132,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2 class="">Test page</h2>
+		<h1 class="">Test page</h1>
 
 		<p>
 			Visit <a href="https://maris-development.github.io/beacon/">

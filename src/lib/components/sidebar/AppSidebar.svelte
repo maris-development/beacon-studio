@@ -163,7 +163,7 @@
 			<a class="header-link" href={resolve('/')}>
 				<!-- <DatabaseZapIcon class="size-4" /> -->
 				<img src={logo} alt="Beacon Logo" class="beacon-logo"/>
-				<h1 class="truncate">Beacon Studio</h1>
+				<span class="app-name truncate">Beacon Studio</span>
 			</a>
 			<button
 				class="collapse-toggle"
@@ -258,7 +258,7 @@
 						margin: 0.25rem;
 					}
 
-					h1 {
+					.app-name {
 						flex-grow: 1;
 						font-size: 1rem;
 						font-weight: 600;
