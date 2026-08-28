@@ -12,10 +12,19 @@
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
 	import ExternalLink from '../ExternalLink.svelte';
 	import Card from '../card/Card.svelte';
+	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
 
 	import { BeaconClient } from '@/beacon-api/client';
+	import { checkAllInstances } from '@/services/beacon-instance-connect';
+	import { FRESH_MS } from '@/services/beacon-instance-health';
+	import { onMount } from 'svelte';
 
 	export let onClose: () => void;
+
+	// The picker shows the health of every instance. Refresh the stale results.
+	onMount(() => {
+		void checkAllInstances(FRESH_MS);
+	});
 
 	let editingInstance: BeaconInstance | null = null;
 	let showFormModal = false;
@@ -83,7 +92,10 @@
 		{#each $instances as instance (instance.id)}
 
 			<Card onclick={pickInstance.bind(null, instance)} class={$currentInstance?.id === instance.id ? 'border-2 border-primary' : ''}>
-				<h3>{instance.name}</h3>
+				<div class="instance-heading">
+					<h3>{instance.name}</h3>
+					<BeaconInstanceStatus {instance} variant="compact" />
+				</div>
 				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
 				{#if instance.description && instance.description.length > 0}
 					<p>{instance.description}</p>
@@ -146,7 +158,19 @@
 			gap: 1rem;
 			overflow-y: auto;
 			padding: 0.5rem;
-		
+
+		}
+
+		.instance-heading {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1rem;
+
+			h3 {
+				margin: 0;
+			}
 		}
 
 		&::before {

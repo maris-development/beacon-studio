@@ -4,16 +4,26 @@
  * These live apart from `beacon-instance.ts` so that the state service imports
  * no client code. `BeaconClient` imports the query store, and the query store
  * imports the state service. A single file would close that import cycle.
+ *
+ * The health checks here write to `beacon-instance-health.ts`. That file holds
+ * state only, so the state service can read it without a cycle.
  */
 
 import { BeaconClient } from '@/beacon-api/client';
-import type { BeaconInstance } from '@/beacon-api/types';
+import type { BeaconInstance, StoredBeaconInstance } from '@/beacon-api/types';
 import {
 	addInstance,
 	getInstances,
 	normalizeUrl,
 	type BeaconInstanceInput
 } from './beacon-instance';
+import {
+	FRESH_MS,
+	isFresh,
+	PROBE_TIMEOUT_MS,
+	setHealth,
+	SWEEP_INTERVAL_MS
+} from './beacon-instance-health';
 
 /**
  * Tests a candidate instance. The caller does not need a record, so the form of
@@ -23,6 +33,99 @@ export async function testInstance(input: Pick<BeaconInstanceInput, 'url' | 'tok
 	const client = new BeaconClient(input.url.trim(), input.token?.trim() || null);
 
 	return client.testConnection();
+}
+
+// -- Health checks ----------------------------------------------------------
+
+/** The checks that run now, keyed by instance id. */
+const inFlight = new Map<string, Promise<void>>();
+
+/**
+ * Checks one instance and records the result. The function shows no toast, so
+ * it fits a background sweep. A failure or a timeout records `offline`.
+ */
+export async function checkInstance(instance: StoredBeaconInstance): Promise<void> {
+	const client = new BeaconClient(instance.url, instance.token ?? null);
+	const startedAt = performance.now();
+
+	try {
+		const isHealthy = await client.getHealth({ signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
+		const latencyMs = Math.round(performance.now() - startedAt);
+
+		setHealth(instance.id, {
+			status: isHealthy ? 'online' : 'offline',
+			latencyMs: isHealthy ? latencyMs : null,
+			lastCheckedAt: new Date()
+		});
+	} catch {
+		setHealth(instance.id, { status: 'offline', latencyMs: null, lastCheckedAt: new Date() });
+	}
+}
+
+/**
+ * Checks one instance, but only if the last result is stale. Repeated calls
+ * share the check that runs. Call it where the app shows or uses an instance.
+ */
+export function ensureFresh(
+	instance: StoredBeaconInstance,
+	maxAgeMs: number = FRESH_MS
+): Promise<void> {
+	if (isFresh(instance.id, maxAgeMs)) return Promise.resolve();
+
+	const running = inFlight.get(instance.id);
+	if (running) return running;
+
+	const check = checkInstance(instance).finally(() => inFlight.delete(instance.id));
+
+	inFlight.set(instance.id, check);
+
+	return check;
+}
+
+/**
+ * Checks every configured instance. One failure does not stop the others. The
+ * default checks all of them. Pass `maxAgeMs` to skip the fresh ones.
+ */
+export async function checkAllInstances(maxAgeMs: number = 0): Promise<void> {
+	await Promise.allSettled(getInstances().map((instance) => ensureFresh(instance, maxAgeMs)));
+}
+
+/** The stop function of the monitor that runs, or `null`. */
+let stopMonitor: (() => void) | null = null;
+
+/**
+ * Starts the hourly sweep of every instance. The monitor also checks again when
+ * the browser comes back online, and when the user returns to the tab.
+ *
+ * A second call starts no second monitor. The function returns the stop
+ * function of the monitor that runs.
+ */
+export function startHealthMonitor(): () => void {
+	if (stopMonitor) return stopMonitor;
+
+	const sweep = () => void checkAllInstances();
+
+	// The timer stops in a hidden tab in some browsers. A return to the tab
+	// therefore checks again, but only the results that the sweep would refresh.
+	const onVisible = () => {
+		if (document.visibilityState === 'visible') void checkAllInstances(SWEEP_INTERVAL_MS);
+	};
+
+	sweep();
+
+	const timer = setInterval(sweep, SWEEP_INTERVAL_MS);
+
+	window.addEventListener('online', sweep);
+	document.addEventListener('visibilitychange', onVisible);
+
+	stopMonitor = () => {
+		clearInterval(timer);
+		window.removeEventListener('online', sweep);
+		document.removeEventListener('visibilitychange', onVisible);
+		stopMonitor = null;
+	};
+
+	return stopMonitor;
 }
 
 /** True if a configured instance points at this origin. */

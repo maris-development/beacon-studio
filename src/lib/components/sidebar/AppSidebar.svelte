@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Instance service
 	import { currentInstance, instances } from '@/services/beacon-instance';
+	import { ensureFresh } from '@/services/beacon-instance-connect';
 	import logo from '$lib/assets/logo-gradient.svg';
 
 	// Svelte lifecycle and navigation
@@ -24,6 +25,7 @@
 
 	// Components
 	import ChooseBeaconModal from '../modals/ChooseBeaconModal.svelte';
+	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 
@@ -116,6 +118,13 @@
 		showChooseBeaconModal = true;
 	}
 
+	// The sidebar shows the status of the selection on every page. Refresh a
+	// stale result. `ensureFresh` skips a check that is not due.
+	$effect(() => {
+		const instance = $currentInstance;
+		if (instance) void ensureFresh(instance);
+	});
+
 	// The app needs at least one instance. Send the user to the home page, which
 	// opens the picker. The store auto-subscriptions make this react to a change.
 	$effect(() => {
@@ -190,6 +199,9 @@
 				>
 				<span class="truncate text-xs">{$currentInstance?.url ?? ''}</span>
 			</div>
+			{#if $currentInstance}
+				<BeaconInstanceStatus instance={$currentInstance} variant="dot" />
+			{/if}
 		</button>
 	</div>
 

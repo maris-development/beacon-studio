@@ -12,15 +12,24 @@
  *
  * This file holds no network code. See `beacon-instance-connect.ts` for the
  * helpers that talk to a node.
+ *
+ * The reads merge the live health of `beacon-instance-health.ts` onto each
+ * record. The list store holds the persisted fields only, so no status or
+ * latency reaches local storage.
  */
 
 import { browser } from '$app/environment';
-import { derived, get, readonly, type Readable } from 'svelte/store';
+import { derived, get, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
-import type { BeaconInstance } from '@/beacon-api/types';
+import type {
+	BeaconInstance,
+	BeaconInstanceHealth,
+	StoredBeaconInstance
+} from '@/beacon-api/types';
 import { Utils } from '@/utils';
+import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-instance-health';
 
-export type { BeaconInstance };
+export type { BeaconInstance, StoredBeaconInstance };
 
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
 export type BeaconInstanceInput = {
@@ -36,7 +45,7 @@ const SELECTED_KEY = 'current-beacon-instance-id';
 /** The key of the app version that persisted the full selected object. */
 const LEGACY_SELECTED_KEY = 'current-beacon-instance';
 
-const listStore = persisted<BeaconInstance[]>(LIST_KEY, []);
+const listStore = persisted<StoredBeaconInstance[]>(LIST_KEY, []);
 const selectedIdStore = persisted<string | null>(SELECTED_KEY, null);
 
 /**
@@ -75,21 +84,32 @@ export function normalizeUrl(url: string): string {
 
 // -- Reads ------------------------------------------------------------------
 
-/** Every configured instance. Use `$instances` in a component. */
-export const instances: Readable<BeaconInstance[]> = readonly(listStore);
+/** Puts the live health on a stored record. */
+function withHealth(
+	stored: StoredBeaconInstance,
+	map: Record<string, BeaconInstanceHealth>
+): BeaconInstance {
+	return { ...stored, ...(map[stored.id] ?? UNKNOWN_HEALTH) };
+}
+
+/** Every configured instance, with its health. Use `$instances` in a component. */
+export const instances: Readable<BeaconInstance[]> = derived(
+	[listStore, healthMap],
+	([list, map]) => list.map((stored) => withHealth(stored, map))
+);
 
 /**
  * The selected instance, or `null`. Use `$currentInstance` in a component.
- * The value follows an edit of the selected instance.
+ * The value follows an edit of the selected instance, and a health check.
  */
 export const currentInstance: Readable<BeaconInstance | null> = derived(
-	[listStore, selectedIdStore],
+	[instances, selectedIdStore],
 	([list, id]) => list.find((instance) => instance.id === id) ?? null
 );
 
 /** A snapshot of the list, for plain modules. Call it at the point of use. */
 export function getInstances(): BeaconInstance[] {
-	return get(listStore);
+	return get(instances);
 }
 
 /** A snapshot of the selection, for plain modules. Call it at the point of use. */
@@ -123,8 +143,11 @@ export function findByUrl(url: string): BeaconInstance | null {
 // -- Writes -----------------------------------------------------------------
 
 /** Applies the given fields only. An absent field keeps its value. */
-function applyInput(instance: BeaconInstance, input: Partial<BeaconInstanceInput>): BeaconInstance {
-	const next: BeaconInstance = { ...instance, updatedAt: new Date() };
+function applyInput(
+	instance: StoredBeaconInstance,
+	input: Partial<BeaconInstanceInput>
+): StoredBeaconInstance {
+	const next: StoredBeaconInstance = { ...instance, updatedAt: new Date() };
 
 	if (input.name !== undefined) next.name = input.name.trim();
 	if (input.url !== undefined) next.url = input.url.trim();
@@ -141,7 +164,7 @@ function applyInput(instance: BeaconInstance, input: Partial<BeaconInstanceInput
 export function addInstance(input: BeaconInstanceInput): BeaconInstance {
 	const now = new Date();
 
-	const instance: BeaconInstance = {
+	const stored: StoredBeaconInstance = {
 		id: Utils.uuidv4(),
 		name: input.name.trim(),
 		url: input.url.trim(),
@@ -151,25 +174,31 @@ export function addInstance(input: BeaconInstanceInput): BeaconInstance {
 		updatedAt: now
 	};
 
-	listStore.update((list) => [...list, instance]);
+	listStore.update((list) => [...list, stored]);
 
 	if (getCurrentInstance() === null) {
-		selectedIdStore.set(instance.id);
+		selectedIdStore.set(stored.id);
 	}
 
-	return instance;
+	return { ...stored, ...UNKNOWN_HEALTH };
 }
 
 /**
  * Changes an instance. The function returns the new record, or `null` if the id
  * is unknown. An edit of the selected instance takes effect at once, because
  * the selection holds an id only.
+ *
+ * A new URL or token points at another node, so the function drops the health.
+ * The next check fills it again.
  */
 export function updateInstance(
 	id: string,
 	input: Partial<BeaconInstanceInput>
 ): BeaconInstance | null {
-	let updated: BeaconInstance | null = null;
+	const previous = findById(id);
+	if (!previous) return null;
+
+	let updated: StoredBeaconInstance = previous;
 
 	listStore.update((list) =>
 		list.map((instance) => {
@@ -180,7 +209,14 @@ export function updateInstance(
 		})
 	);
 
-	return updated;
+	const targetChanged = updated.url !== previous.url || updated.token !== previous.token;
+
+	if (targetChanged) {
+		dropHealth(id);
+		return { ...updated, ...UNKNOWN_HEALTH };
+	}
+
+	return { ...updated, ...getHealthOf(id) };
 }
 
 /**
@@ -195,6 +231,7 @@ export function removeInstance(id: string): BeaconInstance | null {
 	const wasSelected = get(selectedIdStore) === id;
 
 	listStore.update((list) => list.filter((instance) => instance.id !== id));
+	dropHealth(id);
 
 	if (wasSelected) {
 		selectedIdStore.set(null);

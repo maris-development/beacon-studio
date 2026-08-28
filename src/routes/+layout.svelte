@@ -1,8 +1,13 @@
 <script lang="ts">
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
 	import Toasts from '@/components/toasts/toasts.svelte';
+	import { startHealthMonitor } from '@/services/beacon-instance-connect';
+	import { onMount } from 'svelte';
 	import '../app.scss';
 	import '../tailwind.css';
+
+	// One monitor for the whole app. It checks every instance each hour.
+	onMount(() => startHealthMonitor());
 </script>
 
 <Toasts />
