@@ -2,6 +2,8 @@ import type { CompiledQuery } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
 import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter, SQLQueryBuilder, SQLQueryExporter } from "@/beacon-api/query";
+import { resolve } from '$app/paths';
+import { buildShareLink, SHARE_LINK_PATH } from "@/stores/stored-query";
 
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
@@ -37,14 +39,40 @@ export function copyJSON(compileQuery: () => CompiledQuery): void {
 
     if (!compiledQuery) return;
 
-    const queryJson = JSON.stringify(compiledQuery, null, 2);
+    let queryJson: string;
 
-    
+    try {
+        queryJson = JSON.stringify(compiledQuery, null, 2);
+    } catch (error) {
+        console.error('Error serializing query to JSON:', error);
 
-    addToast({
-        message: 'Query JSON copied to clipboard',
-        type: 'success'
-    });
+        addToast({
+            message: `Error serializing query to JSON: ${error.message}`,
+            type: 'error'
+        });
+    }
+
+    try {
+        if(!queryJson){
+            return;
+        }
+
+        Utils.copyToClipboard(queryJson);
+
+        addToast({
+            message: 'JSON code copied to clipboard',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error copying JSON code to clipboard:', error);
+
+        addToast({
+            message: `Error copying JSON code to clipboard: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
 export function downloadJSON(compileQuery: () => CompiledQuery): void {
 
@@ -52,9 +80,24 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
 
     if (!compiledQuery) return;
 
-    const queryJson = JSON.stringify(compiledQuery, null, 2);
+    let queryJson: string;
 
     try {
+        queryJson = JSON.stringify(compiledQuery, null, 2);
+    } catch (error) {
+        console.error('Error serializing query to JSON:', error);
+
+        addToast({
+            message: `Error serializing query to JSON: ${error.message}`,
+            type: 'error'
+        });
+    }
+
+    try {
+        if(!queryJson){
+            return;
+        }
+
         JSONQueryExporter.downloadAsJson(queryJson);
 
         addToast({
@@ -255,9 +298,41 @@ export function copyUrl(compileQuery: () => CompiledQuery): void {
 
     if (!compiledQuery) return;
 
-    console.log("Placeholder function for share query as URL for compiled query:", compiledQuery);
+    let link: string;
 
-    notImplementedYetToast('Copy URL');
+    try {
+        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH));
+    }
+    catch (error) {
+        console.error('Error building Query URL:', error);
+
+        addToast({
+            message: `Error building Query URL: ${error.message}`,
+            type: 'error'
+        });
+    }
+
+    try {
+        if(!link){
+            return;
+        }
+
+        Utils.copyToClipboard(link);
+
+        addToast({
+            message: 'Query URL copied to clipboard',
+            type: 'success'
+        });
+    } catch (error) {
+        console.error('Error copying Query Url to clipboard:', error);
+
+        addToast({
+            message: `Error copying Query URL to clipboard: ${error.message}`,
+            type: 'error'
+        });
+
+        return;
+    }
 }
 
 function notImplementedYetToast(feature: string = ''): void {
