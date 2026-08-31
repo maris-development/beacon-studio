@@ -12,6 +12,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import XIcon from '@lucide/svelte/icons/x';
 	import DownloadIcon from '@lucide/svelte/icons/download';
+	import ResetIcon from '@lucide/svelte/icons/refresh-ccw';
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import { addToast } from '@/stores/toasts';
@@ -19,11 +20,14 @@
 
 	let {
 		controller,
-		onExport
+		onExport,
+		onResetView
 	}: {
 		controller: ChartExplorerController;
 		/** Write the active plot to a PNG file. Absent while the canvas is not ready. */
 		onExport?: (() => void) | null;
+		/** Reset the plot's zoom/pan to show all data. Absent while the canvas is not ready. */
+		onResetView?: (() => void) | null;
 	} = $props();
 
 	const canClose = $derived(controller.plots.length > 1);
@@ -161,6 +165,13 @@
 			<span>Duplicate</span>
 		</button>
 	</div>
+
+	{#if onResetView}
+		<button type="button" class="action" title="Reset the plot view" onclick={onResetView}>
+			<ResetIcon size={14} />
+			<span>Reset view</span>
+		</button>
+	{/if}
 
 	{#if onExport}
 		<button type="button" class="action export" title="Export this plot as PNG" onclick={onExport}>

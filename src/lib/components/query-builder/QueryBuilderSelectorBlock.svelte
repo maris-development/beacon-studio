@@ -108,11 +108,24 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		}	
 	}
 
+	function handleQueryBlocksWheel(event: WheelEvent): void {
+		const row = event.currentTarget as HTMLDivElement;
+
+		if (event.deltaY === 0 || row.scrollWidth <= row.clientWidth) {
+			return;
+		}
+
+		event.preventDefault();
+		row.scrollBy({
+			left: event.deltaY
+		});
+	}
+
 
 </script>
 
 <div class="query-blocks">
-	<div class="query-blocks-row">
+	<div class="query-blocks-row" onwheel={handleQueryBlocksWheel}>
 		{#each workspace.blocks as block (block.id)}
 			<!-- Derive display data for this block from the workspace. -->
 			{@const status = QueryWorkspace.getStatus(block)}
@@ -356,6 +369,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			align-items: stretch;
 			gap: 0.75rem;
 			overflow-x: auto;
+			overflow-y: hidden;
 			padding-bottom: 0.25rem;
 		}
 	}

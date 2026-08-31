@@ -169,6 +169,10 @@
 
 		plotCanvas.exportPng(plot.title || plot.name);
 	}
+
+	function resetView() {
+		plotCanvas?.resetView();
+	}
 </script>
 
 <svelte:head>
@@ -204,7 +208,7 @@
 					{/if}
 				</p> -->
 
-				<PlotTabs controller={charts} onExport={exportPng} />
+				<PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
 
 				<div class="plot-layout">
 					<PlotConfigPanel controller={charts} />

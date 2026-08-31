@@ -515,6 +515,21 @@
 		return true;
 	}
 
+	/**
+	 * Reset the view to show all data.
+	 *
+	 * uPlot's own dblclick handler already does this (autoScaleX, then the y scale
+	 * auto-ranges from it) but isn't exposed as a method, so this dispatches the same
+	 * event its native double-click binding listens for.
+	 */
+	export function resetView(): boolean {
+		if (!chart) return false;
+
+		chart.over.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, button: 0 }));
+
+		return true;
+	}
+
 	/** Strip the characters that a file system refuses. */
 	function safeFileName(name: string): string {
 		const cleaned = name.replace(/[\\/:*?"<>|]/g, '-').trim();
