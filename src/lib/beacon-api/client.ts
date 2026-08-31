@@ -1,7 +1,6 @@
 
-import type { BeaconInstance } from '@/stores/config';
 import { MemoryCache } from '@/cache';
-import type { BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconInstance, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
@@ -348,11 +347,16 @@ export class BeaconClient {
         return response;
     }
 
-    async getHealth(): Promise<boolean> {
+    /**
+     * Asks the node for its health. Pass `init` to add an abort signal, for
+     * example `AbortSignal.timeout(...)`. The method shows no toast. Use it for
+     * a background check. See {@link testConnection} for the interactive test.
+     */
+    async getHealth(init: RequestInit = {}): Promise<boolean> {
 
         const url = new URL(`${this.host}/api/health`);
 
-        const response: string = await this.fetch(url, {}, 'text');
+        const response: string = await this.fetch(url, init, 'text');
 
         return response == "Ok";
     }

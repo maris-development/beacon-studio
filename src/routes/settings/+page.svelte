@@ -41,7 +41,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2>Settings</h2>
+		<h1>Settings</h1>
 
 		<p>
 			Manage your Beacon Studio settings here. The app keeps every value in this browser. A change

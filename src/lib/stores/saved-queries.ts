@@ -21,8 +21,7 @@ import {
 } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
-import { get } from 'svelte/store';
-import { currentBeaconInstance } from '@/stores/config';
+import { getCurrentInstance } from '@/services/beacon-instance';
 
 /** The persisted list of saved queries for the full app. The newest comes first. */
 export const savedQueries = createQueryCollection({
@@ -48,7 +47,7 @@ export function addSavedQuery(input: SaveQueryInput): StoredQuery {
 		name: input.name,
 		draft: input.draft ?? null,
 		compiled: input.compiled,
-		instance: input.instance ?? snapshotInstance(get(currentBeaconInstance))
+		instance: input.instance ?? snapshotInstance(getCurrentInstance())
 	});
 }
 

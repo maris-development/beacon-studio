@@ -173,6 +173,7 @@
 	<title>Chart explorer - Beacon Studio</title>
 </svelte:head>
 
+<h1 class="sr-only">Chart explorer</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },

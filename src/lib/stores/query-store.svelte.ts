@@ -17,11 +17,10 @@
  */
 
 import * as ApacheArrow from 'apache-arrow';
-import { get } from 'svelte/store';
 import { getArrowDecoder, type QueryInput } from '@beacon/client';
 import { makeBeaconClient } from '@/beacon-api/client';
 import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
-import { currentBeaconInstance } from '@/stores/config';
+import { getCurrentInstance } from '@/services/beacon-instance';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
 import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
@@ -146,7 +145,7 @@ class QueryStore {
 	 * never share an entry.
 	 */
 	keyFor(query: CompiledQuery): string {
-		const instance = get(currentBeaconInstance);
+		const instance = getCurrentInstance();
 		return stableStringify({ instance: instance?.url ?? null, query });
 	}
 
@@ -254,7 +253,7 @@ class QueryStore {
 	 * A failure here must never stop the execution of a query.
 	 */
 	private recordHistory(entry: DatasetEntry, storedQueryId?: string): void {
-		const instance = get(currentBeaconInstance);
+		const instance = getCurrentInstance();
 		if (!instance) return;
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
@@ -285,7 +284,7 @@ class QueryStore {
 	 * the caller.
 	 */
 	recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
-		const instance = get(currentBeaconInstance);
+		const instance = getCurrentInstance();
 		if (!instance) return;
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
@@ -461,7 +460,7 @@ class QueryStore {
 	/** Executes the query arrow-native and builds a {@link DatasetEntry}. */
 	private async fetch(query: CompiledQuery, key: string): Promise<DatasetEntry> {
 
-		const client = makeBeaconClient(get(currentBeaconInstance));
+		const client = makeBeaconClient(getCurrentInstance());
 
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;

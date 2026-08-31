@@ -1,6 +1,5 @@
 import type { CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Select } from "./types";
-import { currentBeaconInstance} from "$lib/stores/config";
-import { get } from "svelte/store";
+import { requireCurrentInstance } from "@/services/beacon-instance";
 import { Utils } from "@/utils";
 // import type { ObjectEncodingOptions } from "node:fs";
 
@@ -97,11 +96,7 @@ export class PythonQueryBuilder  {
         let code = "from beacon_api import Client\n";
         code += "from beacon_api.query import *\n";
 
-	    const beaconInstance = get(currentBeaconInstance);
-
-        if(!beaconInstance){
-            throw new Error("No beacon instance selected");
-        }
+	    const beaconInstance = requireCurrentInstance();
 
         let tokenArg = "";
 

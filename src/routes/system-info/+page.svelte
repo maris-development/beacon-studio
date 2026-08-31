@@ -63,7 +63,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2>System Information</h2>
+		<h1>System Information</h1>
 
 		<p>
 			View detailed information about the Beacon Studio system, including version, CPU usage, memory,

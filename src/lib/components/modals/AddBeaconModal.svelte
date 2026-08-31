@@ -2,7 +2,9 @@
 <script lang="ts">
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
-	import type { BeaconInstance } from '$lib/stores/config';
+	import type { BeaconInstance } from '@/beacon-api/types';
+	import { addInstance, updateInstance, removeInstance } from '@/services/beacon-instance';
+	import { testInstance } from '@/services/beacon-instance-connect';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Utils } from '@/utils';
 	import SaveIcon from '@lucide/svelte/icons/save';
@@ -12,11 +14,13 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import { BeaconClient } from '@/beacon-api/client';
 	import { addToast } from '@/stores/toasts';
 
-	/** Parent passes these in to handle save/close; optionally an instance for editing */
-	export let onSave: (instance: BeaconInstance, isDeleted: boolean) => void;
+	/**
+	 * The modal writes to the instance service itself. `onSave` tells the parent
+	 * to close the form. `instance` switches the form to edit mode.
+	 */
+	export let onSave: () => void;
 	export let onClose: () => void;
 	export let instance: BeaconInstance | null = null;
 
@@ -66,26 +70,20 @@
 	async function submitForm() {
 		const validConnection = await testConnection();
 
-		// console.log('Connection test result:', validConnection);
-
 		if (!validConnection) return;
 
-		const now = new Date();
+		const values = { name, url, description, token };
 
-		const newInstance: BeaconInstance = {
-			id: instance?.id ?? Utils.uuidv4(),
-			name: name.trim(),
-			url: url.trim(),
-			description: description.trim() || '',
-			token: token.trim() || '',
-			createdAt: instance?.createdAt ?? now,
-			updatedAt: now
-		};
+		if (instance) {
+			updateInstance(instance.id, values);
+		} else {
+			addInstance(values);
+		}
 
-		onSave(newInstance, false);
+		onSave();
 	}
 
-	async function removeInstance() {
+	function confirmRemove() {
 		if (!instance) return;
 
 		let confirmation = confirm(
@@ -94,7 +92,14 @@
 
 		if (!confirmation) return;
 
-		onSave(instance, true);
+		removeInstance(instance.id);
+
+		addToast({
+			message: `The Beacon instance "${instance.name}" has been deleted.`,
+			type: 'info'
+		});
+
+		onSave();
 	}
 
 	type CheckConnectionState = 'untested' | 'testing' | 'valid' | 'invalid';
@@ -102,25 +107,13 @@
 	let connectionCheckState: CheckConnectionState = 'untested';
 
 	async function testConnection() {
-		if (connectionCheckState === 'testing') return; // prevent multiple tests at once
+		if (connectionCheckState === 'testing') return false; // prevent multiple tests at once
 
 		connectionCheckState = 'testing';
 
-		const testingInstance: BeaconInstance = {
-			id: 'testing-instance',
-			name: 'Testing Instance',
-			url: url,
-			description: description,
-			token: token,
-			createdAt: new Date(),
-			updatedAt: new Date()
-		};
-
-		const testingClient = BeaconClient.new(testingInstance);
-
 		await Utils.sleep(330);
 
-		let couldConnect = await testingClient.testConnection();
+		const couldConnect = await testInstance({ url, token });
 
 		if (couldConnect) {
 			connectionCheckState = 'valid';
@@ -164,7 +157,7 @@
 				<CircleXIcon />
 			</Button>
 
-			<Button type="button" variant="destructive" onclick={removeInstance} disabled={!instance}>
+			<Button type="button" variant="destructive" onclick={confirmRemove} disabled={!instance}>
 				Delete
 				<Trash2Icon />
 			</Button>

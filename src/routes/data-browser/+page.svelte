@@ -55,7 +55,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2>Data Browser</h2>
+		<h1>Data Browser</h1>
 
 		<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
 
