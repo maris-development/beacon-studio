@@ -57,25 +57,14 @@
 		selectInstance(added.id);
 	}
 
-	function openModalIfNoInstance() {
-		if (selectFirstIfNone() == null) {
-			showChooseBeaconModal = true;
-		}
-	}
 
 	function onModalClose() {
-		if (selectFirstIfNone() != null) {
 			showChooseBeaconModal = false;
-		} else {
-			alert('No Beacon instance selected. Please select one before proceeding.');
-		}
 	}
 
 	onMount(async () => {
 		// The app can run on the same host as a Beacon node. Add that node once.
 		await ensureHostInstance(window.location.origin);
-
-		openModalIfNoInstance();
 	});
 </script>
 
