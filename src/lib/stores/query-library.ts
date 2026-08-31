@@ -11,9 +11,15 @@
 import { queryBlocks } from '@/stores/query-blocks';
 import { queryHistory } from '@/stores/query-history';
 import { savedQueries } from '@/stores/saved-queries';
-import type { StoredQuery } from '@/stores/stored-query';
+import {
+	instanceRefFromUrl,
+	SHARE_INSTANCE_PARAM,
+	type InstanceRef,
+	type StoredQuery
+} from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
+import { resolveRef } from '@/services/beacon-instance';
 import { Utils } from '@/utils';
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
@@ -74,10 +80,22 @@ export interface ResolvedUrlQuery {
 	query: CompiledQuery | null;
 	/**
 	 * The value of `entry.id`, or undefined if there is no record. Send it to
-	 * `ensureQuery(query, storedQueryId)`. The app then writes the run to the
-	 * record. See `QueryStore.ensure` for the effects of this link.
+	 * `ensureQuery(query, instance, storedQueryId)`. The app then writes the run
+	 * to the record. See `QueryStore.ensure` for the effects of this link.
 	 */
 	storedQueryId?: string;
+	/**
+	 * The node that must run the query. A `?q=` link takes it from the record. A
+	 * share link takes it from `?instance=`. It is null when the URL named none.
+	 * The caller then falls back to its own default.
+	 */
+	instance: InstanceRef | null;
+	/**
+	 * The URL of a node that the link named, but that the instance list does not
+	 * hold. The page shows a toast, and asks the user to add that node. It is
+	 * null when the node resolves, and when the link named none.
+	 */
+	missingInstanceUrl: string | null;
 }
 
 /**
@@ -99,7 +117,13 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const entry = resolveStoredQuery(id);
 
 	if (entry?.compiled) {
-		return { entry, query: entry.compiled, storedQueryId: entry.id };
+		return {
+			entry,
+			query: entry.compiled,
+			storedQueryId: entry.id,
+			instance: entry.instance,
+			missingInstanceUrl: missingUrlOf(entry.instance)
+		};
 	}
 
 	const shared = url.searchParams.get('query');
@@ -109,11 +133,42 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			if (typeof query === 'string') {
 				query = JSON.parse(query) as CompiledQuery;
 			}
-			return { entry: null, query };
+
+			const instance = sharedInstanceRef(url);
+
+			return {
+				entry: null,
+				query,
+				instance,
+				missingInstanceUrl: missingUrlOf(instance)
+			};
 		} catch (error) {
 			console.error('Failed to decode a shared query from the URL.', error);
 		}
 	}
 
-	return { entry: null, query: null };
+	return { entry: null, query: null, instance: null, missingInstanceUrl: null };
+}
+
+/**
+ * The node of a share link, or null. A link of an older app version carries no
+ * node. The caller then uses its own default.
+ */
+function sharedInstanceRef(url: URL): InstanceRef | null {
+	const shared = url.searchParams.get(SHARE_INSTANCE_PARAM)?.trim();
+	if (!shared) return null;
+
+	// The list can already hold this node. Take the full ref then, so the record
+	// keeps the name that the user gave it.
+	const known = resolveRef(instanceRefFromUrl(shared));
+	if (known) return { id: known.id, name: known.name, url: known.url };
+
+	return instanceRefFromUrl(shared);
+}
+
+/** The URL of a ref that the instance list does not hold, else null. */
+function missingUrlOf(ref: InstanceRef | null): string | null {
+	if (!ref?.url) return null;
+	if (resolveRef(ref)) return null;
+	return ref.url;
 }

@@ -1,4 +1,4 @@
-import type { CompiledQuery } from "@/beacon-api/types";
+import type { BeaconInstance, CompiledQuery } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
 import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter } from "@/beacon-api/query";
@@ -72,7 +72,10 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
     }
 }
 
-export function copyPython(compileQuery: () => CompiledQuery): void {
+export function copyPython(
+    compileQuery: () => CompiledQuery,
+    instance: BeaconInstance | null
+): void {
     
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -80,7 +83,7 @@ export function copyPython(compileQuery: () => CompiledQuery): void {
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
 
     } catch (error) {
         console.error('Error generating Python code:', error);
@@ -115,7 +118,10 @@ export function copyPython(compileQuery: () => CompiledQuery): void {
         return;
     }
 }
-export function downloadPython(compileQuery: () => CompiledQuery): void {
+export function downloadPython(
+    compileQuery: () => CompiledQuery,
+    instance: BeaconInstance | null
+): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -123,7 +129,7 @@ export function downloadPython(compileQuery: () => CompiledQuery): void {
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
 
     } catch (error) {
         console.error('Error generating Python code:', error);

@@ -28,7 +28,7 @@ import * as ApacheArrow from 'apache-arrow';
 import { unmount } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 import { queryStore } from '@/stores/query-store.svelte';
-import type { CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
+import type { BeaconInstance, CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
 import { ApacheArrowUtils } from '@/arrow-utils';
 import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
@@ -290,14 +290,14 @@ export class MapViewController {
 	 * block, for example after the user applied an area filter. The camera then
 	 * stays where the user left it.
 	 */
-	async runAndShowQuery(query: CompiledQuery, blockId: string, keepCamera: boolean): Promise<void> {
+	async runAndShowQuery(query: CompiledQuery, instance: BeaconInstance, blockId: string, keepCamera: boolean): Promise<void> {
 		this.isLoading = true;
 		this.markRunning(true);
 
 		try {
 			this.deriveColumnNames(query);
 
-			this.entry = await BeaconClient.ensureQuery(query, blockId);
+			this.entry = await BeaconClient.ensureQuery(query, instance, blockId);
 			this.markRun(this.entry.rowCount);
 
 			if (this.entry.rowCount === 0) {
@@ -308,9 +308,14 @@ export class MapViewController {
 
 			await this.prepareTable(keepCamera);
 		} catch (error) {
-			console.error('Failed to execute query:', error);
 			this.isLoading = false;
 			this.markRunning(false);
+
+			// The app runs one query at a time. A newer run stopped this one. The
+			// user asked for that, so it is no error.
+			if (BeaconClient.isQueryAbort(error)) return;
+
+			console.error('Failed to execute query:', error);
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${(error as Error).message}`

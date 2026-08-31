@@ -21,6 +21,7 @@
 	import type { QueryDraft } from '@/query/draft';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
+	import type { BeaconInstance } from '@/beacon-api/types';
 	import * as QueryFunctions from '@/query/functions';
 
 	let { 
@@ -65,6 +66,17 @@
 	function handleDraftChange(draft: QueryDraft) {
 		workspace.updateActiveDraft(draft);
 	}
+
+	/**
+	 * The node of the active block. The builder re-mounts on a change of this
+	 * value, so its client is built once per node. See the key below.
+	 */
+	const activeInstance = $derived(workspace.activeInstance);
+
+	/** Put a node on the active block. The workspace empties the draft. */
+	function handleInstanceChange(instance: BeaconInstance) {
+		workspace.setActiveInstance(instance);
+	}
 </script>
 
 <div class="query-workbench-panes">
@@ -90,9 +102,19 @@
 
 		{#if showLeft}
 			<div class="pane-body">
-				<!-- Re-mount per active block so the builder re-hydrates from its query. -->
-				{#key workspace.activeBlockId}
+				<!--
+					Re-mount per active block so the builder re-hydrates from its query.
+
+					The node is part of the key. A new node needs a new client, new
+					tables and a new schema. A re-mount drops the answers of the old
+					node, so a slow load cannot write the tables of one node over the
+					tables of another.
+				-->
+				{#key `${workspace.activeBlockId}:${activeInstance?.url ?? ''}`}
 					<QueryBuilder
+						instance={activeInstance}
+						missingInstanceUrl={workspace.missingInstanceUrl}
+						onInstanceChange={handleInstanceChange}
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
 						onDraftChange={handleDraftChange}

@@ -14,18 +14,11 @@
     import { page } from '$app/state';
     import { QueryWorkspace } from './QueryWorkspace.svelte';
     import { resolveUrlQuery } from '@/stores/query-library';
-    import { currentBeaconInstance } from '@/stores/config';
-    import { BeaconClient } from '@/beacon-api/client';
     import { getDefaultQueryActions } from './QueryActions';
 
 	const workspace = $state(new QueryWorkspace());
-    let client: BeaconClient | null = $state(null);
 
     onMount(() => {
-        const instance = $currentBeaconInstance;
-        
-        if (instance) client = BeaconClient.new(instance);
-
         // A deep-link opens one more block. `?q=` comes from "open in workbench"
         // and brings the saved builder state. `?query=` comes from a share link.
         workspace.openFromUrl(resolveUrlQuery(page.url));
@@ -35,7 +28,7 @@
 
     // const status = $derived(workspace.statusFor(workspace.activeBlock));
 
-    const queryActions = $derived(getDefaultQueryActions(workspace, client));
+    const queryActions = $derived(getDefaultQueryActions(workspace));
 
 </script>
 

@@ -6,6 +6,7 @@ import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
 
 import {
+    isAbortError,
     queryStore,
     type DatasetEntry,
     type MemoryCacheStats
@@ -40,8 +41,9 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *  3. **Query execution + result cache** (the `static` query methods below): the
  *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
  *     (memory + OPFS) result cache. These are `static` because the result cache is
- *     app-wide and keyed by the live Beacon instance, independent of any single
- *     client instance's host.
+ *     app-wide, independent of any single client instance's host. They take the
+ *     node of the query as an argument: a query record owns its node, and the URL
+ *     of that node is part of the cache key.
  *
  * Prefer this facade for anything that talks to a Beacon instance; do not import
  * `@beacon/client` directly from app code.
@@ -54,6 +56,14 @@ const schemaCache = new Map<string, Promise<Schema>>();
 export class BeaconClient {
     host: string;
     token: string | null = null;
+    /**
+     * The configured node that this client talks to, or null. {@link new} sets it.
+     * A client that a health check builds from a bare URL has none.
+     *
+     * The query history needs the node of a download, and only this client knows
+     * it. Therefore the client carries it. See {@link queryToDownload}.
+     */
+    instance: BeaconInstance | null = null;
     private memCache = new MemoryCache();
 
     constructor(host: string, token: string | null = null) {
@@ -91,6 +101,7 @@ export class BeaconClient {
 
     static new(instance: BeaconInstance): BeaconClient {
         const client = new BeaconClient(instance.url, instance.token);
+        client.instance = instance;
         return client;
     }
 
@@ -157,7 +168,12 @@ export class BeaconClient {
 
         // Downloads are server-materialized and bypass the result cache, so record
         // them in the query history here (row count is unknown from a blob).
-        BeaconClient.recordDownload(query, performance.now() - started, storedQueryId);
+        // The history keeps the node of every run. A client with no node writes no
+        // history row. Only a health check builds such a client, and it downloads
+        // nothing, so this drops no real download.
+        if (this.instance) {
+            BeaconClient.recordDownload(query, this.instance, performance.now() - started, storedQueryId);
+        }
 
         // Try to get the filename from the headers
         const contentDisposition = response.headers.get('Content-Disposition');
@@ -458,22 +474,41 @@ export class BeaconClient {
         }
     }
 
-    // -- Query execution + result cache (app-wide, live-instance keyed) ----------
-    // Static: the result cache is a single app-wide store keyed by the currently
-    // selected Beacon instance, so it must not be bound to one client's host.
+    // -- Query execution + result cache (app-wide, per-query instance) -----------
+    // Static: the result cache is one app-wide store, so it must not be bound to
+    // the host of one client. Every method takes the node of the query, because a
+    // query record owns its node. The URL of that node is part of the cache key.
 
     /**
-     * Executes `query` (or returns the cached result) and caches the resulting Arrow
-     * table across navigations. Concurrent identical calls share one request. See
-     * {@link setQueryCacheEnabled} to bypass the cache entirely.
+     * Executes `query` on `instance` (or returns the cached result) and caches the
+     * resulting Arrow table across navigations.
+     *
+     * The app runs one query at a time. A call for another query aborts the run
+     * that is busy. That older promise rejects with an `AbortError`. Test a
+     * rejection with {@link isQueryAbort}, and show no error for an abort. See
+     * `QueryStore.ensure`.
      */
-    static ensureQuery(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
-        return queryStore.ensure(query, storedQueryId);
+    static ensureQuery(
+        query: CompiledQuery,
+        instance: BeaconInstance,
+        storedQueryId?: string
+    ): Promise<DatasetEntry> {
+        return queryStore.ensure(query, instance, storedQueryId);
     }
 
     /** Returns a cached result without executing, or `undefined` if absent. */
-    static peekQuery(query: CompiledQuery): DatasetEntry | undefined {
-        return queryStore.peek(query);
+    static peekQuery(query: CompiledQuery, instance: BeaconInstance | null): DatasetEntry | undefined {
+        return queryStore.peek(query, instance);
+    }
+
+    /** Stops the query that runs, if there is one. */
+    static cancelQuery(): void {
+        queryStore.cancel();
+    }
+
+    /** True when a rejection is the abort of a superseded run, not a failure. */
+    static isQueryAbort(error: unknown): boolean {
+        return isAbortError(error);
     }
 
     /**
@@ -488,8 +523,8 @@ export class BeaconClient {
      * Invalidates cached query results. With a `query`, removes just that entry
      * (memory + OPFS); with no argument, clears the whole result cache.
      */
-    static invalidateQueryCache(query?: CompiledQuery): void {
-        queryStore.invalidate(query);
+    static invalidateQueryCache(query?: CompiledQuery, instance?: BeaconInstance | null): void {
+        queryStore.invalidate(query, instance);
     }
 
     /** Snapshot of the in-memory result cache, for the cache-info UI. */
@@ -516,8 +551,13 @@ export class BeaconClient {
      * existing history entry's count is preserved. `duration` is the client-observed
      * round-trip time in milliseconds.
      */
-    static recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
-        queryStore.recordDownload(query, duration, storedQueryId);
+    static recordDownload(
+        query: CompiledQuery,
+        instance: BeaconInstance,
+        duration: number,
+        storedQueryId?: string
+    ): void {
+        queryStore.recordDownload(query, instance, duration, storedQueryId);
     }
 
     static responseToTextOrError(response: Response): Promise<string> {

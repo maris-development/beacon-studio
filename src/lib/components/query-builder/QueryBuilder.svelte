@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import type { BeaconInstance } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
+    import QueryBuilderInstanceSelector from './QueryBuilderInstanceSelector.svelte';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import type { QuerySelectionStatus } from '@/query/selection-status';
     import type { QueryActions } from './QueryActions';
@@ -13,6 +14,9 @@
 		
 
     let {
+        instance,
+        missingInstanceUrl = null,
+        onInstanceChange,
         initialDraft = null,
         pendingSeed = null,
         onDraftChange,
@@ -26,6 +30,16 @@
         actions: queryActions = $bindable<QueryActions>({}),
         workbenchActions,
     }: {
+        /**
+         * The Beacon node of this query, or null while it has none. The parent
+         * re-mounts the builder when this changes, so the client below is built
+         * once and never goes stale.
+         */
+        instance: BeaconInstance | null;
+        /** The URL of a node that the instance list does not hold, or null. */
+        missingInstanceUrl?: string | null;
+        /** Called with the node the user picked in the first step. */
+        onInstanceChange: (instance: BeaconInstance) => void;
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
         onDraftChange?: (draft: QueryDraft) => void;
@@ -41,19 +55,18 @@
         workbenchActions: QueryActions;
     } = $props();
 
-    let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
-    let client: BeaconClient = $state(null);
+    let client: BeaconClient | null = $state(null);
 
     let loaded = $state(false);
     let selected_table_name = $state(initialDraft?.tableName ?? '');
 	let table_names = $state<string[]>([]);
 
 	onMount(async () => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
+		// No node, no tables. The user picks a node in the first step, which
+		// re-mounts this component with a client.
+		if (!instance) return;
 
-		// let tables = await client.getTables();
-		// let default_table = await client.getDefaultTable();
+		client = BeaconClient.new(instance);
 
         let tables = await client.getCachedTables();
         let default_table = await client.getCachedDefaultTable();
@@ -73,11 +86,21 @@
 
 </script>
 
-<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
-
-<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} {pendingSeed} {onDraftChange} bind:status bind:actions={queryActions} />
+<QueryBuilderInstanceSelector
+	selected={instance}
+	missingUrl={missingInstanceUrl}
+	onPick={onInstanceChange}
+/>
 
 <hr>
+
+{#if instance && client}
+	<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
+
+	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} {pendingSeed} {onDraftChange} bind:status bind:actions={queryActions} />
+
+	<hr>
+{/if}
 
 <DownloadDataButton downloadData={workbenchActions.downloadData} />
 

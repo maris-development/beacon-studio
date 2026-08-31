@@ -3,7 +3,8 @@
  *
  * These live apart from `beacon-instance.ts` so that the state service imports
  * no client code. `BeaconClient` imports the query store, and the query store
- * imports the state service. A single file would close that import cycle.
+ * imports several other stores. A single file would risk an import cycle through
+ * that graph.
  *
  * The health checks here write to `beacon-instance-health.ts`. That file holds
  * state only, so the state service can read it without a cycle.

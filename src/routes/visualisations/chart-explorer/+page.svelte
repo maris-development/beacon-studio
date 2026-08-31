@@ -4,11 +4,9 @@
 	import { page } from '$app/state';
 	import { Utils } from '@/utils';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import { BeaconClient } from '@/beacon-api/client';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
 	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
-	import { currentBeaconInstance } from '@/stores/config';
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
@@ -19,7 +17,6 @@
 	import { type ChartViewState } from '@/plots/plot-config';
 
 	const workspace = $state(new QueryWorkspace());
-	let client: BeaconClient | null = $state(null);
 
 	// The controller owns the result, the plots and the numbers behind them. The
 	// page keeps only the query effect and the markup.
@@ -35,9 +32,6 @@
 	);
 
 	onMount(() => {
-		const instance = $currentBeaconInstance;
-		if (instance) client = BeaconClient.new(instance);
-
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
 		// and brings the saved builder state. `?query=` comes from a share link.
 		workspace.openFromUrl(resolveUrlQuery(page.url));
@@ -45,7 +39,7 @@
 		return () => workspace.destroy();
 	});
 
-	const queryActions = $derived(getDefaultQueryActions(workspace, client));
+	const queryActions = $derived(getDefaultQueryActions(workspace));
 
 	// `workspace.activeBlock` is a new object on every write to the block
 	// collection — including our own `markBlockRun` below. Tracking that object
@@ -58,6 +52,15 @@
 	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
+	// The node of the active block. A block owns its node, so a switch of block
+	// switches the node. The URL is a primitive, so the run effect below can track
+	// it. It is null while the block names no node, and while the instance list
+	// holds no node for its ref. The effect then runs nothing.
+	//
+	// The URL also belongs in the run key. A user can add a node that a share link
+	// asked for. The query must then run, with no other change to the block.
+	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
+
 	let lastRunKey: string | null = $state(null);
 	/** The block of the last run. A new block brings its own plots. */
 	let lastRunBlockId: string | null = $state(null);
@@ -66,14 +69,15 @@
 	$effect(() => {
 		const blockId = activeBlockId;
 		const key = queryKey;
+		const instanceUrl = activeInstanceUrl;
 
-		if (!blockId || !key) {
+		if (!blockId || !key || !instanceUrl) {
 			charts.clearQueryResult();
 			lastRunKey = null;
 			return;
 		}
 
-		const runKey = `${blockId}:${key}`;
+		const runKey = `${blockId}:${instanceUrl}:${key}`;
 		if (runKey === lastRunKey) return;
 
 		const isSameBlock = blockId === lastRunBlockId;
@@ -82,11 +86,12 @@
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
-		const { block, query } = untrack(() => ({
+		const { block, query, instance } = untrack(() => ({
 			block: workspace.activeBlock,
-			query: compiledQuery
+			query: compiledQuery,
+			instance: workspace.activeInstance
 		}));
-		if (!block || !query) return;
+		if (!block || !query || !instance) return;
 
 		// The saved plots of this block belong on the page again. A block with no
 		// saved plots gets one default plot.
@@ -101,7 +106,7 @@
 		// Show a cached result at once if the block already has one.
 		charts.showQueryFromCache(block.datasetKey);
 
-		charts.runAndShowQuery(query, block.id);
+		charts.runAndShowQuery(query, instance, block.id);
 	});
 
 	// Keep the plots with the block. Therefore a visit to the map or the table

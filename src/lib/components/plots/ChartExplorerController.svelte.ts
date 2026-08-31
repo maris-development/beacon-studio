@@ -23,7 +23,7 @@
  */
 import { untrack } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-import type { CompiledQuery } from '@/beacon-api/types';
+import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
 import type { SpatialSelection } from '@/geo/spatial-selection';
 import {
@@ -402,12 +402,12 @@ export class ChartExplorerController {
 	// ------------------------------------------------------------- query cycle
 
 	/** Run a query and show it. */
-	async runAndShowQuery(query: CompiledQuery, blockId: string): Promise<void> {
+	async runAndShowQuery(query: CompiledQuery, instance: BeaconInstance, blockId: string): Promise<void> {
 		this.isLoading = true;
 		this.markRunning(true);
 
 		try {
-			this.entry = await BeaconClient.ensureQuery(query, blockId);
+			this.entry = await BeaconClient.ensureQuery(query, instance, blockId);
 			this.markRun(this.entry.rowCount);
 			this.isLoading = false;
 
@@ -418,9 +418,14 @@ export class ChartExplorerController {
 
 			this.syncPlotToColumns();
 		} catch (error) {
-			console.error('Failed to execute query:', error);
 			this.isLoading = false;
 			this.markRunning(false);
+
+			// The app runs one query at a time. A newer run stopped this one. The
+			// user asked for that, so it is no error.
+			if (BeaconClient.isQueryAbort(error)) return;
+
+			console.error('Failed to execute query:', error);
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${(error as Error).message}`

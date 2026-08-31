@@ -1,4 +1,4 @@
-import type { CompiledQuery } from '@/beacon-api/types';
+import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
 import { QueryWorkspace } from './QueryWorkspace.svelte';
 import { BeaconClient } from '@/beacon-api/client';
 import { addToast } from '@/stores/toasts';
@@ -17,16 +17,52 @@ export type QueryActions = {
     saveQuery?: ActionCallback;   // links to visualise data in map page
     resetQuery?: ActionCallback;          // reset query selection
     editQuery?: ActionCallback;           // edit query selection
+    /**
+     * The Beacon node of the active query, or null. The Python export needs the
+     * URL and the token of that node. See `PythonQueryBuilder.toPythonCode`.
+     */
+    getInstance?: () => BeaconInstance | null;
 };
 
 /**
  * Builds the workbench's query actions: compile, run, download and save the
- * active block, and navigate to a visualiser after a run. `client` is used
- * for direct downloads; `workspace` holds the active block and run state.
+ * active block, and navigate to a visualiser after a run.
+ *
+ * Every action reads the node from `workspace.activeInstance`. A query record
+ * owns its node, so a switch of block switches the node with no extra work here.
+ * The actions take no client: a client of the mount would go stale at the next
+ * switch.
  */
-export function getDefaultQueryActions(workspace: QueryWorkspace, client: BeaconClient | null): QueryActions {
+export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions {
     function compileQuery() {
         return QueryWorkspace.getQuery(workspace.activeBlock);
+    }
+
+    function getInstance(): BeaconInstance | null {
+        return workspace.activeInstance;
+    }
+
+    /**
+     * The node of the active block, or null with a toast. Every action that talks
+     * to a node starts here. A missing node is a normal state: the block can come
+     * from a share link, or the user can have removed the node.
+     */
+    function requireInstance(): BeaconInstance | null {
+        const instance = workspace.activeInstance;
+        if (instance) return instance;
+
+        const missing = workspace.missingInstanceUrl;
+
+        if (missing) {
+            addToast({
+                message: `Add the Beacon instance ${missing} to run this query.`,
+                type: 'warning'
+            });
+        } else {
+            addToast({ message: 'Pick a Beacon instance for this query first.', type: 'warning' });
+        }
+
+        return null;
     }
 
     async function runActive(): Promise<string | null> {
@@ -39,6 +75,9 @@ export function getDefaultQueryActions(workspace: QueryWorkspace, client: Beacon
             return null;
         }
 
+        const instance = requireInstance();
+        if (!instance) return null;
+
         if (workspace.getRunState(block).isRunning) return null;
 
         workspace.markBlockRunning(block.id, true);
@@ -46,10 +85,15 @@ export function getDefaultQueryActions(workspace: QueryWorkspace, client: Beacon
         try {
             // With `storedQueryId` the store writes the cache key of the result to
             // this block. The visualisation pages then link to that block.
-            const entry = await BeaconClient.ensureQuery(query, block.id);
+            const entry = await BeaconClient.ensureQuery(query, instance, block.id);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
             workspace.markBlockRunning(block.id, false);
+
+            // The app runs one query at a time. A newer run stopped this one. That
+            // is the intent of the user, so it needs no error.
+            if (BeaconClient.isQueryAbort(e)) return null;
+
             addToast({ message: `Query failed: ${e?.message ?? e}`, type: 'error' });
             return null;
         }
@@ -73,10 +117,17 @@ export function getDefaultQueryActions(workspace: QueryWorkspace, client: Beacon
 
         const query = QueryWorkspace.getQuery(workspace.activeBlock);
 
-        if (!query || !client) {
+        if (!block || !query) {
             addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
             return;
         }
+
+        const instance = requireInstance();
+        if (!instance) return;
+
+        // Built here, and not at the mount of the page. The node of the active
+        // block can differ from the node of the block at the mount.
+        const client = BeaconClient.new(instance);
 
         if (workspace.getRunState(block).isRunning) return;
 
@@ -143,7 +194,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace, client: Beacon
         visualiseChart,
         visualiseMap,
         resetQuery,
-        saveQuery
+        saveQuery,
+        getInstance
     };
 }
 
