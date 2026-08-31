@@ -57,15 +57,11 @@ export function getDefaultQueryActions(workspace: QueryWorkspace, client: Beacon
         return block.id;
     }
 
-    /**
-     * Run the active block, then open a visualiser for it. The query stays in the
-     * library. Only `?q=<block id>` goes on the URL. Therefore the target page
-     * reads the cached dataset, and does not decode a query payload.
-     */
+    /** Run the active block, then open a visualiser with the persisted selection. */
     async function visualiseOn(resolvedPath: string): Promise<void> {
         const blockId = await runActive();
         if (!blockId) return;
-        await goto(`${resolvedPath}?q=${encodeURIComponent(blockId)}`);
+        await goto(resolvedPath);
     }
 
     async function downloadData(): Promise<void> {

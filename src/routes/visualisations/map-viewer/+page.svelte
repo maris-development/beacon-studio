@@ -47,7 +47,8 @@
 
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
 		// and brings the saved builder state. `?query=` comes from a share link.
-		workspace.openFromUrl(resolveUrlQuery(page.url));
+		const resolved = resolveUrlQuery(page.url);
+		workspace.openFromUrl(resolved);
 
 		return () => workspace.destroy();
 	});

@@ -102,7 +102,8 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const entry = resolveStoredQuery(id);
 
 	if (entry?.compiled) {
-		return { entry, query: entry.compiled, storedQueryId: entry.id, containsQueryParam: false };
+		// clear URL ofzo
+		return { entry, query: entry.compiled, storedQueryId: entry.id, containsQueryParam: true };
 	}
 
 	const shared = url.searchParams.get('query');
