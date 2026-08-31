@@ -21,6 +21,7 @@
 	let isLoading = $state(false);
 
     async function handleVisualise(visualise:  () => void|Promise<void>){
+        if (isLoading) return;
         isLoading = true;
         try {
             await visualise();
@@ -33,8 +34,8 @@
 
 
 <DropdownMenu.Root>
-    <DropdownMenu.Trigger>
-        <Button>
+    <DropdownMenu.Trigger disabled={isLoading}>
+        <Button disabled={isLoading}>
         {#if isLoading}
             <LoadingIcon class="animate-spin" />
             Executing...
