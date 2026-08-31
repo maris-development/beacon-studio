@@ -20,7 +20,7 @@
  */
 
 import type { CompiledQuery } from '@/beacon-api/types';
-import type { BeaconInstance } from '@/stores/config';
+import type { BeaconInstance } from '@/beacon-api/types';
 import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';

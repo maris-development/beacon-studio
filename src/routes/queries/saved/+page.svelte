@@ -99,7 +99,7 @@
 	<div class="page-container">
 		<div class="header">
 			<div>
-				<h2>Saved Queries</h2>
+				<h1>Saved Queries</h1>
 				<p>Queries you've saved from the workbench. Re-run, visualise, or open any saved query.</p>
 			</div>
 			{#if entries.length > 0}
@@ -121,102 +121,104 @@
 				</p>
 			</Card>
 		{:else}
-			<div class="saved-queries">
+			<ul class="saved-queries">
 				{#each entries as entry (entry.id)}
-					<Card>
-						<div class="entry">
-							<div class="entry-main">
-								{#if renamingId === entry.id}
-									<div class="rename-row">
-										<input
-											class="rename-input"
-											bind:value={renameValue}
-											onkeydown={(e) => {
-												if (e.key === 'Enter') commitRename(entry.id);
-												if (e.key === 'Escape') cancelRename();
-											}}
-										/>
-										<Button size="sm" variant="outline" onclick={() => commitRename(entry.id)}>
-											Save
-										</Button>
-										<Button size="sm" variant="ghost" onclick={cancelRename}>Cancel</Button>
-									</div>
-								{:else}
-									<h2 class="entry-name" title={entry.name}>{entry.name}</h2>
-								{/if}
-								<div class="meta">
-									{#if entry.instance.name || entry.instance.url}
-										<span class="badge">{entry.instance.name || entry.instance.url}</span>
+					<li>
+						<Card>
+							<div class="entry">
+								<div class="entry-main">
+									{#if renamingId === entry.id}
+										<div class="rename-row">
+											<input
+												class="rename-input"
+												bind:value={renameValue}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') commitRename(entry.id);
+													if (e.key === 'Escape') cancelRename();
+												}}
+											/>
+											<Button size="sm" variant="outline" onclick={() => commitRename(entry.id)}>
+												Save
+											</Button>
+											<Button size="sm" variant="ghost" onclick={cancelRename}>Cancel</Button>
+										</div>
+									{:else}
+										<div class="entry-name" title={entry.name}>{entry.name}</div>
 									{/if}
-									<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
-									<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-									<span title={new Date(entry.createdAt).toLocaleString()}>saved {savedAgo(entry)}</span>
+									<div class="meta">
+										{#if entry.instance.name || entry.instance.url}
+											<span class="badge">{entry.instance.name || entry.instance.url}</span>
+										{/if}
+										<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
+										<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
+										<span title={new Date(entry.createdAt).toLocaleString()}>saved {savedAgo(entry)}</span>
+									</div>
+								</div>
+
+								<div class="actions">
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openInWorkbench(entry)}
+										title="Open in Query Workbench"
+									>
+										<WorkbenchIcon />
+										Workbench
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
+									>
+										<TableIcon />
+										Table
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
+									>
+										<MapIcon />
+										Map
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
+									>
+										<ChartPieIcon />
+										Chart
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onclick={() => startRename(entry)}
+										title="Rename"
+									>
+										<PencilLineIcon />
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onclick={() => copyShareLink(entry)}
+										title="Copy a link that works in any browser"
+									>
+										<Share2Icon />
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onclick={() => removeSavedQuery(entry.id)}
+										title="Remove saved query"
+									>
+										<Trash2Icon />
+									</Button>
 								</div>
 							</div>
-
-							<div class="actions">
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openInWorkbench(entry)}
-									title="Open in Query Workbench"
-								>
-									<WorkbenchIcon />
-									Workbench
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
-								>
-									<TableIcon />
-									Table
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
-								>
-									<MapIcon />
-									Map
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
-								>
-									<ChartPieIcon />
-									Chart
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onclick={() => startRename(entry)}
-									title="Rename"
-								>
-									<PencilLineIcon />
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onclick={() => copyShareLink(entry)}
-									title="Copy a link that works in any browser"
-								>
-									<Share2Icon />
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onclick={() => removeSavedQuery(entry.id)}
-									title="Remove saved query"
-								>
-									<Trash2Icon />
-								</Button>
-							</div>
-						</div>
-					</Card>
+						</Card>
+					</li>
 				{/each}
-			</div>
+			</ul>
 		{/if}
 	</div>
 </div>

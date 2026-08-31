@@ -98,7 +98,7 @@
 	<div class="page-container">
 		<div class="header">
 			<div>
-				<h2>Query History</h2>
+				<h1>Query History</h1>
 				<p>Queries you've executed. Re-run, view, or edit any of them.</p>
 			</div>
 			<div class="buttons">
@@ -121,80 +121,82 @@
 				<p>Once you execute a query, it will show up here.</p>
 			</Card>
 		{:else}
-			<div class="executed-queries">
+			<ul class="executed-queries">
 				{#each entries as entry (entry.id)}
-					<Card>
-						<div class="entry">
-							<div class="entry-main">
-								<h2 class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</h2>
-								<div class="meta">
-									<span class="badge">{entry.instance.name || entry.instance.url}</span>
-									<span>{(entry.rowCount ?? 0).toLocaleString()} rows</span>
-									<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-									<span>{Math.round(entry.duration ?? 0).toLocaleString()} ms</span>
-									<span title={entry.lastExecutedAt ? new Date(entry.lastExecutedAt).toLocaleString() : ''}>
-										{lastExecuted(entry)}
-									</span>
-									{#if entry.executionCount > 1}
-										<span>· run {entry.executionCount}×</span>
-									{/if}
+					<li>
+						<Card>
+							<div class="entry">
+								<div class="entry-main">
+									<div class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</div>
+									<div class="meta">
+										<span class="badge">{entry.instance.name || entry.instance.url}</span>
+										<span>{(entry.rowCount ?? 0).toLocaleString()} rows</span>
+										<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
+										<span>{Math.round(entry.duration ?? 0).toLocaleString()} ms</span>
+										<span title={entry.lastExecutedAt ? new Date(entry.lastExecutedAt).toLocaleString() : ''}>
+											{lastExecuted(entry)}
+										</span>
+										{#if entry.executionCount > 1}
+											<span>· run {entry.executionCount}×</span>
+										{/if}
+									</div>
+								</div>
+
+								<div class="actions">
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
+									>
+										Table
+										<TableIcon />
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
+									>
+										Map
+										<MapIcon />
+									</Button>
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
+									>
+										Chart
+										<ChartPieIcon />
+									</Button>
+									<!-- <Button
+									size="sm"
+									variant="outline"
+									onclick={() => openWith(resolve('/queries/query-editor'), entry)}
+								>
+									Edit
+									<PencilIcon />
+								</Button> -->
+									<Button
+										size="sm"
+										variant="ghost"
+										onclick={() => copyShareLink(entry)}
+										title="Copy a link that works in any browser"
+									>
+										<Share2Icon />
+									</Button>
+									<Button
+										size="sm"
+										variant="ghost"
+										onclick={() => queryHistory.remove(entry.id)}
+										title="Remove from history"
+									>
+										<Trash2Icon />
+									</Button>
 								</div>
 							</div>
-
-							<div class="actions">
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
-								>
-									Table
-									<TableIcon />
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
-								>
-									Map
-									<MapIcon />
-								</Button>
-								<Button
-									size="sm"
-									variant="outline"
-									onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
-								>
-									Chart
-									<ChartPieIcon />
-								</Button>
-								<!-- <Button
-								size="sm"
-								variant="outline"
-								onclick={() => openWith(resolve('/queries/query-editor'), entry)}
-							>
-								Edit
-								<PencilIcon />
-							</Button> -->
-								<Button
-									size="sm"
-									variant="ghost"
-									onclick={() => copyShareLink(entry)}
-									title="Copy a link that works in any browser"
-								>
-									<Share2Icon />
-								</Button>
-								<Button
-									size="sm"
-									variant="ghost"
-									onclick={() => queryHistory.remove(entry.id)}
-									title="Remove from history"
-								>
-									<Trash2Icon />
-								</Button>
-							</div>
-						</div>
-					</Card>
+						</Card>
+					</li>
 				{/each}
-			</div>
+			</ul>
 		{/if}
 	</div>
 </div>

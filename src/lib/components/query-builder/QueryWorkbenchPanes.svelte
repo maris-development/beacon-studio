@@ -67,7 +67,7 @@
 	}
 </script>
 
-<div class="builder-pane">
+<div class="query-workbench-panes">
 	<!-- Left: builder -->
 	<section class="pane left" class:pane--collapsed={!showLeft}>
 		<header class="pane-header">
@@ -145,7 +145,7 @@
 </div>
 
 <style lang="scss">
-	.builder-pane {
+	.query-workbench-panes {
 		display: flex;
 		gap: 1rem;
 		align-items: stretch;

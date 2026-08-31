@@ -163,6 +163,7 @@
 	onMount(() => {});
 </script>
 
+<h1 class="sr-only">Query editor</h1>
 <div class="page-wrapper">
 	<Cookiecrumb
 		crumbs={[

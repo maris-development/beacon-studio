@@ -131,7 +131,7 @@
 
 <div class="page-wrapper">
     <div class="page-container">
-        <h2>Table '{tableName}' ({totalRows} fields)</h2>
+        <h1>Table '{tableName}' ({totalRows} fields)</h1>
 
         <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
 

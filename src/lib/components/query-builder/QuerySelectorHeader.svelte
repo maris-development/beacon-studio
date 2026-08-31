@@ -58,7 +58,7 @@
                 {/if}
             </Button>
             <div class="page-title">
-                <h2>{mode === 'edit' ? 'Editing' : 'Viewing'} {workspace.activeBlock.name}</h2>
+                <h1 class="h2-like">{mode === 'edit' ? 'Editing' : 'Viewing'} {workspace.activeBlock.name}</h1>
             </div>
         </div>
         <QueryActionBar queryActions={queryActionsForBar} />
@@ -93,7 +93,7 @@
                 .page-title {
                     flex-grow: 1;
                 }
-                h2 {
+                h1 {
                     margin: 0;
                 }
             }

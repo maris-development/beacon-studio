@@ -12,7 +12,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2>Visualisations</h2>
+		<h1>Visualisations</h1>
 
 		<p>Use the following ways to visualise your Beacon contents.</p>
 

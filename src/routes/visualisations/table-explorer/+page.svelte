@@ -199,6 +199,7 @@
 	<title>Table explorer - Beacon Studio</title>
 </svelte:head>
 
+<h1 class="sr-only">Table explorer</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },

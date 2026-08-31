@@ -7,7 +7,7 @@
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h2>Error: {page.error.message}</h2>
+		<h1>Error: {page.error.message}</h1>
 		<p>Please try again later or contact support if the issue persists.</p>
 	</div>
 </div>

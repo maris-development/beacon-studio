@@ -7,7 +7,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 <script lang="ts">
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import Card from '../card/card.svelte';
+	import Card from '../card/Card.svelte';
 	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CopyIcon from '@lucide/svelte/icons/copy';

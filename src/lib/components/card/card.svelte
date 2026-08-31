@@ -47,21 +47,19 @@
 	.card {
 		display: flex;
 		flex-direction: column;
-		border-radius: 0.625rem;
-		padding: 1.5rem;
-		box-shadow: var(--shadow-sm);
-		border-style: var(--tw-border-style);
-		border-width: 1.5px;
+		border-radius: 0.75rem;
+		padding: 1rem;
+		background-color: var(--card);
+		border: 1px solid var(--card-border);
 		color: var(--foreground);
-		gap: 0.75rem;
+		gap: 0.5rem;
 
 		&.clickable {
 			cursor: pointer;
-			transition: background-color 0.2s ease, box-shadow 0.2s ease;
+			transition: background-color 0.2s ease;
 
 			&:hover {
 				background-color: color-mix(in oklab, var(--accent) 50%, transparent);
-				box-shadow: var(--shadow-md);
 			}
 		}
 	}

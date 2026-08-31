@@ -41,11 +41,11 @@ export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
 		label: 'Cross section',
 		description: 'X is the distance along the cross section line drawn on the map.'
 	},
-	{
-		id: 'line',
-		label: 'Line / profile',
-		description: 'The rows join into a stroke. A group column draws one stroke per cast.'
-	},
+	// {
+	// 	id: 'line',
+	// 	label: 'Line / profile',
+	// 	description: 'The rows join into a stroke. A group column draws one stroke per cast.'
+	// },
 	{
 		id: 'histogram',
 		label: 'Histogram',
