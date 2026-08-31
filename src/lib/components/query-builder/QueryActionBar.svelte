@@ -73,7 +73,7 @@
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content class="w-48">
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.compileQuery, queryActions.getInstanceRef?.() ?? null)}>
 						<UrlIcon class="text-muted-foreground" />
 						<span>Share URL</span>
 					</DropdownMenu.Item>
@@ -83,7 +83,7 @@
 						<span>Copy JSON</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(queryActions.compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(queryActions.compileQuery, queryActions.getInstance?.() ?? null)}>
 						<CopyIcon class="text-muted-foreground" />
 						<span>Copy Python</span>
 					</DropdownMenu.Item>
@@ -100,7 +100,7 @@
 						<span>Download JSON</span>
 					</DropdownMenu.Item>
 
-					<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(queryActions.compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(queryActions.compileQuery, queryActions.getInstance?.() ?? null)}>
 						<PythonIcon class="text-muted-foreground" />
 						<span>Download Python</span>
 					</DropdownMenu.Item>

@@ -1,4 +1,4 @@
-import type { CompiledQuery } from "@/beacon-api/types";
+import type { BeaconInstance, CompiledQuery, InstanceRef } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
 import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter, SQLQueryBuilder, SQLQueryExporter } from "@/beacon-api/query";
@@ -115,7 +115,10 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
     }
 }
 
-export function copyPython(compileQuery: () => CompiledQuery): void {
+export function copyPython(
+    compileQuery: () => CompiledQuery,
+    instance: BeaconInstance | null
+): void {
     
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -123,7 +126,7 @@ export function copyPython(compileQuery: () => CompiledQuery): void {
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
 
     } catch (error) {
         console.error('Error generating Python code:', error);
@@ -158,7 +161,10 @@ export function copyPython(compileQuery: () => CompiledQuery): void {
         return;
     }
 }
-export function downloadPython(compileQuery: () => CompiledQuery): void {
+export function downloadPython(
+    compileQuery: () => CompiledQuery,
+    instance: BeaconInstance | null
+): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -166,7 +172,7 @@ export function downloadPython(compileQuery: () => CompiledQuery): void {
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
 
     } catch (error) {
         console.error('Error generating Python code:', error);
@@ -292,7 +298,17 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
 }
 
 
-export function copyUrl(compileQuery: () => CompiledQuery): void {
+/**
+ * Copy a share link for a query to the clipboard.
+ *
+ * `instance` is the node ref of the query, and not the resolved node. A ref
+ * keeps the URL of a node that this app does not have, so the link still names
+ * it. The link never carries a token. See `buildShareLink`.
+ */
+export function copyUrl(
+    compileQuery: () => CompiledQuery,
+    instance: InstanceRef | null
+): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
 
@@ -301,7 +317,7 @@ export function copyUrl(compileQuery: () => CompiledQuery): void {
     let link: string;
 
     try {
-        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH));
+        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), instance);
     }
     catch (error) {
         console.error('Error building Query URL:', error);

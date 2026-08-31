@@ -6,14 +6,12 @@
 	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import { Utils } from '@/utils';
 	import type { CompiledQuery } from '@/beacon-api/types';
-	import { BeaconClient } from '@/beacon-api/client';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import Legend from '@/components/legend/Legend.svelte';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
 	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
-	import { currentBeaconInstance } from '@/stores/config';
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
@@ -23,28 +21,21 @@
 	let mapContainer: HTMLDivElement | null = null;
 
 	const workspace = $state(new QueryWorkspace());
-	let client: BeaconClient | null = $state(null);
 
 	// The controller owns the map, the deck.gl overlay and the query result. The
 	// page keeps only the query effect, the area selection and the markup.
 	const map = new MapViewController(
-		(running) => {
-			const id = workspace.activeBlockId;
-			if (id) workspace.markBlockRunning(id, running);
-		},
-		(rows) => {
-			const id = workspace.activeBlockId;
-			if (id) workspace.markBlockRun(id, rows);
-		}
+		// The controller names the block of its run. The active block can change
+		// while a query runs, so the callbacks must not read the selection.
+		(id) => workspace.beginBlockRun(id),
+		(id, token) => workspace.endBlockRun(id, token),
+		(id, rows) => workspace.markBlockRun(id, rows)
 	);
 
 	/** The area drawn on the map. Applied to the query by the Apply filter button. */
 	let selection: SpatialSelection | null = $state(null);
 
 	onMount(() => {
-		const instance = $currentBeaconInstance;
-		if (instance) client = BeaconClient.new(instance);
-
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
 		// and brings the saved builder state. `?query=` comes from a share link.
 		const resolved = resolveUrlQuery(page.url);
@@ -60,7 +51,7 @@
 
 	onDestroy(() => map.destroy());
 
-	const queryActions = $derived(getDefaultQueryActions(workspace, client));
+	const queryActions = $derived(getDefaultQueryActions(workspace));
 
 	// `workspace.activeBlock` is a new object on every write to the block
 	// collection — including our own `markBlockRun` below. Tracking that object
@@ -72,6 +63,15 @@
 		QueryWorkspace.getQuery(workspace.activeBlock)
 	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+
+	// The node of the active block. A block owns its node, so a switch of block
+	// switches the node. The URL is a primitive, so the run effect below can track
+	// it. It is null while the block names no node, and while the instance list
+	// holds no node for its ref. The effect then runs nothing.
+	//
+	// The URL also belongs in the run key. A user can add a node that a share link
+	// asked for. The query must then run, with no other change to the block.
+	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
 	/** The block of the last run. A new block may move the camera; a re-run may not. */
@@ -94,14 +94,15 @@
 	$effect(() => {
 		const blockId = activeBlockId;
 		const key = queryKey;
+		const instanceUrl = activeInstanceUrl;
 
-		if (!blockId || !key) {
+		if (!blockId || !key || !instanceUrl) {
 			map.clearQueryResult();
 			lastRunKey = null;
 			return;
 		}
 
-		const runKey = `${blockId}:${key}`;
+		const runKey = `${blockId}:${instanceUrl}:${key}`;
 		if (runKey === lastRunKey) return;
 
 		const isSameBlock = blockId === lastRunBlockId;
@@ -110,11 +111,12 @@
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
-		const { block, query } = untrack(() => ({
+		const { block, query, instance } = untrack(() => ({
 			block: workspace.activeBlock,
-			query: compiledQuery
+			query: compiledQuery,
+			instance: workspace.activeInstance
 		}));
-		if (!block || !query) return;
+		if (!block || !query || !instance) return;
 
 		// The saved area and the saved map view of this block belong on the map
 		// again. A block with no saved view gets the defaults back.
@@ -127,7 +129,7 @@
 		map.showQueryFromCache(block.datasetKey);
 
 		// An edit of the same block keeps the camera where the user put it.
-		map.runAndShowQuery(query, block.id, isSameBlock);
+		map.runAndShowQuery(query, instance, block.id, isSameBlock);
 	});
 
 	// Keep the display state of the map with the block: the painted column, the
@@ -153,7 +155,6 @@
 	<title>Map - Beacon Studio</title>
 </svelte:head>
 
-<h1 class="sr-only">Map viewer</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },

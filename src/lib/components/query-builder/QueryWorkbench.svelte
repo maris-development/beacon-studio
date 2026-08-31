@@ -14,21 +14,16 @@
     import { page } from '$app/state';
     import { QueryWorkspace } from './QueryWorkspace.svelte';
     import { resolveUrlQuery } from '@/stores/query-library';
-    import { currentBeaconInstance } from '@/stores/config';
-    import { BeaconClient } from '@/beacon-api/client';
     import { getDefaultQueryActions } from './QueryActions';
     import { replaceState } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const workspace = $state(new QueryWorkspace());
-    let client: BeaconClient | null = $state(null);
 
     onMount(() => {
-        const instance = $currentBeaconInstance;
-        if (instance) client = BeaconClient.new(instance);
-
         const resolved = resolveUrlQuery(page.url);
+
         workspace.openFromUrl(resolved);
 
         if (resolved.containsQueryParam) {
@@ -42,7 +37,7 @@
 
     // const status = $derived(workspace.statusFor(workspace.activeBlock));
 
-    const queryActions = $derived(getDefaultQueryActions(workspace, client));
+    const queryActions = $derived(getDefaultQueryActions(workspace));
 
 </script>
 

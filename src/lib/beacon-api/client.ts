@@ -6,6 +6,7 @@ import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
 
 import {
+    isAbortError,
     queryStore,
     type DatasetEntry,
     type MemoryCacheStats
@@ -22,7 +23,7 @@ export type {
 // -- Metadata cache (shared across per-page BeaconClient instances) --------------
 // These caches are module-level so they survive client-side navigation even though
 // `BeaconClient.new()` is called per page. Keyed by host so multiple instances
-// don't collide. Previously lived in the deleted `metadata-cache.ts`.
+// don't collide.
 const tablesCache = new Map<string, Promise<string[]>>();
 const defaultTableCache = new Map<string, Promise<string>>();
 const schemaCache = new Map<string, Promise<Schema>>();
@@ -30,7 +31,7 @@ const schemaCache = new Map<string, Promise<Schema>>();
 
 /**
  * Unified Beacon client facade. This is the single entry point the app uses to talk
- * to a Beacon instance. It wraps three concerns that used to be separate:
+ * to a Beacon instance. It wraps three concerns:
  *
  *  1. **Metadata + downloads** (this class' instance methods): datasets, tables,
  *     schemas, system info, and server-materialized downloads via
@@ -40,8 +41,9 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *  3. **Query execution + result cache** (the `static` query methods below): the
  *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
  *     (memory + OPFS) result cache. These are `static` because the result cache is
- *     app-wide and keyed by the live Beacon instance, independent of any single
- *     client instance's host.
+ *     app-wide, independent of any single client instance's host. They take the
+ *     node of the query as an argument: a query record owns its node, and the URL
+ *     of that node is part of the cache key.
  *
  * Prefer this facade for anything that talks to a Beacon instance; do not import
  * `@beacon/client` directly from app code.
@@ -54,6 +56,14 @@ const schemaCache = new Map<string, Promise<Schema>>();
 export class BeaconClient {
     host: string;
     token: string | null = null;
+    /**
+     * The configured node that this client talks to, or null. {@link new} sets it.
+     * A client that a health check builds from a bare URL has none.
+     *
+     * The query history needs the node of a download, and only this client knows
+     * it. Therefore the client carries it. See {@link queryToDownload}.
+     */
+    instance: BeaconInstance | null = null;
     private memCache = new MemoryCache();
 
     constructor(host: string, token: string | null = null) {
@@ -91,6 +101,7 @@ export class BeaconClient {
 
     static new(instance: BeaconInstance): BeaconClient {
         const client = new BeaconClient(instance.url, instance.token);
+        client.instance = instance;
         return client;
     }
 
@@ -98,36 +109,50 @@ export class BeaconClient {
     // Host-keyed memoization of the (immutable-per-session) metadata endpoints.
     // Shared across every BeaconClient for the same host, so repeated builder
     // mounts and instance re-selection don't refetch.
+    //
+    // A cache holds a promise, so a failure would stay for the session. A node
+    // that is down at the first contact would then never answer again, also after
+    // it comes back. Therefore {@link memoize} drops a rejected promise.
+
+    /**
+     * Reads `key` from `cache`, or stores the result of `load()` under it.
+     *
+     * A rejected promise deletes itself from the cache. The next call therefore
+     * asks the node again. Do not remove this: a builder that mounts while a node
+     * is down must recover, and only a new request can give it the tables.
+     */
+    private static memoize<T>(
+        cache: Map<string, Promise<T>>,
+        key: string,
+        load: () => Promise<T>
+    ): Promise<T> {
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        const pending = load().catch((error) => {
+            if (cache.get(key) === pending) cache.delete(key);
+            throw error;
+        });
+
+        cache.set(key, pending);
+        return pending;
+    }
 
     /** Cached list of table names for this instance's host. */
     getCachedTables(): Promise<string[]> {
-        let cached = tablesCache.get(this.host);
-        if (!cached) {
-            cached = this.getTables();
-            tablesCache.set(this.host, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(tablesCache, this.host, () => this.getTables());
     }
 
     /** Cached default table name for this instance's host. */
     getCachedDefaultTable(): Promise<string> {
-        let cached = defaultTableCache.get(this.host);
-        if (!cached) {
-            cached = this.getDefaultTable();
-            defaultTableCache.set(this.host, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(defaultTableCache, this.host, () => this.getDefaultTable());
     }
 
     /** Cached schema for a table on this instance's host. */
     getCachedSchema(tableName: string): Promise<Schema> {
-        const key = `${this.host}::${tableName}`;
-        let cached = schemaCache.get(key);
-        if (!cached) {
-            cached = this.getTableSchema(tableName);
-            schemaCache.set(key, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(schemaCache, `${this.host}::${tableName}`, () =>
+            this.getTableSchema(tableName)
+        );
     }
 
     /** Drops cached metadata for this instance's host (tables, default table, schemas). */
@@ -157,7 +182,12 @@ export class BeaconClient {
 
         // Downloads are server-materialized and bypass the result cache, so record
         // them in the query history here (row count is unknown from a blob).
-        BeaconClient.recordDownload(query, performance.now() - started, storedQueryId);
+        // The history keeps the node of every run. A client with no node writes no
+        // history row. Only a health check builds such a client, and it downloads
+        // nothing, so this drops no real download.
+        if (this.instance) {
+            BeaconClient.recordDownload(query, this.instance, performance.now() - started, storedQueryId);
+        }
 
         // Try to get the filename from the headers
         const contentDisposition = response.headers.get('Content-Disposition');
@@ -300,12 +330,7 @@ export class BeaconClient {
         return response;
     }
 
-    // TODO: `/api/table-config` is retired. Beacon 2.0 routes only
-    // `/api/admin/table-config`, which needs super-user credentials and answers a
-    // `{ message }` stub instead of a TableDefinition. This method therefore always
-    // fails. It has no callers today. Either delete it and {@link getPresetTables},
-    // or rebuild both on `/api/table-schema` (columns) plus
-    // `SHOW EXTENSIONS FOR <table>` (extensions), which is what the SDK now advises.
+    // TODO: always fails and has no callers. Beacon 2.0 retires `/api/table-config`.
     async getTableConfig(table: string): Promise<TableDefinition> {
         const url = new URL(`${this.host}/api/table-config`);
 
@@ -316,8 +341,7 @@ export class BeaconClient {
         return response;
     }
 
-    // TODO: broken while {@link getTableConfig} is broken — see the note there. Also
-    // unused today.
+    // TODO: always fails and has no callers. It depends on {@link getTableConfig}.
     async getPresetTables(): Promise<Array<TableDefinition>> {
         const table_names = await this.getTables();
 
@@ -458,22 +482,41 @@ export class BeaconClient {
         }
     }
 
-    // -- Query execution + result cache (app-wide, live-instance keyed) ----------
-    // Static: the result cache is a single app-wide store keyed by the currently
-    // selected Beacon instance, so it must not be bound to one client's host.
+    // -- Query execution + result cache (app-wide, per-query instance) -----------
+    // Static: the result cache is one app-wide store, so it must not be bound to
+    // the host of one client. Every method takes the node of the query, because a
+    // query record owns its node. The URL of that node is part of the cache key.
 
     /**
-     * Executes `query` (or returns the cached result) and caches the resulting Arrow
-     * table across navigations. Concurrent identical calls share one request. See
-     * {@link setQueryCacheEnabled} to bypass the cache entirely.
+     * Executes `query` on `instance` (or returns the cached result) and caches the
+     * resulting Arrow table across navigations.
+     *
+     * The app runs one query at a time. A call for another query aborts the run
+     * that is busy. That older promise rejects with an `AbortError`. Test a
+     * rejection with {@link isQueryAbort}, and show no error for an abort. See
+     * `QueryStore.ensure`.
      */
-    static ensureQuery(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
-        return queryStore.ensure(query, storedQueryId);
+    static ensureQuery(
+        query: CompiledQuery,
+        instance: BeaconInstance,
+        storedQueryId?: string
+    ): Promise<DatasetEntry> {
+        return queryStore.ensure(query, instance, storedQueryId);
     }
 
     /** Returns a cached result without executing, or `undefined` if absent. */
-    static peekQuery(query: CompiledQuery): DatasetEntry | undefined {
-        return queryStore.peek(query);
+    static peekQuery(query: CompiledQuery, instance: BeaconInstance | null): DatasetEntry | undefined {
+        return queryStore.peek(query, instance);
+    }
+
+    /** Stops the query that runs, if there is one. */
+    static cancelQuery(): void {
+        queryStore.cancel();
+    }
+
+    /** True when a rejection is the abort of a superseded run, not a failure. */
+    static isQueryAbort(error: unknown): boolean {
+        return isAbortError(error);
     }
 
     /**
@@ -488,8 +531,8 @@ export class BeaconClient {
      * Invalidates cached query results. With a `query`, removes just that entry
      * (memory + OPFS); with no argument, clears the whole result cache.
      */
-    static invalidateQueryCache(query?: CompiledQuery): void {
-        queryStore.invalidate(query);
+    static invalidateQueryCache(query?: CompiledQuery, instance?: BeaconInstance | null): void {
+        queryStore.invalidate(query, instance);
     }
 
     /** Snapshot of the in-memory result cache, for the cache-info UI. */
@@ -516,8 +559,13 @@ export class BeaconClient {
      * existing history entry's count is preserved. `duration` is the client-observed
      * round-trip time in milliseconds.
      */
-    static recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
-        queryStore.recordDownload(query, duration, storedQueryId);
+    static recordDownload(
+        query: CompiledQuery,
+        instance: BeaconInstance,
+        duration: number,
+        storedQueryId?: string
+    ): void {
+        queryStore.recordDownload(query, instance, duration, storedQueryId);
     }
 
     static responseToTextOrError(response: Response): Promise<string> {
@@ -562,8 +610,7 @@ export class BeaconClient {
  *   header on every request. The SDK's own `username`/`password` option is for
  *   HTTP Basic super-user auth and is intentionally not used here.
  * - `timeoutMs: 0` disables the SDK's default 60s per-request timeout so large
- *   query results aren't cut off mid-download — matching the legacy client, which
- *   sets no timeout.
+ *   query results aren't cut off mid-download.
  *
  * @throws if no instance (or no URL) is provided.
  */

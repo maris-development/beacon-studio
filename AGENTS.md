@@ -172,3 +172,13 @@ Imports point one way only:
 - Static adapter outputs to `build/` and uses `fallback: 'index.html'`.
 - Monaco editor and Perspective viewer are included and loaded client-side.
 - Project currently contains generated `build/` artifacts in repo; avoid editing generated files directly unless explicitly asked.
+
+## Comment Rules
+- Write short comments.
+- Comment complex logic only. Skip comments on clear code.
+- Use one line per comment. Avoid comment blocks.
+- Describe what the code does now.
+- Do not describe old code or old bugs.
+- Do not use phrases like "used to," "previously," or "before this fix."
+- Do not write user stories or issue lists in comments.
+- Do not repeat the code in words. State only new information.

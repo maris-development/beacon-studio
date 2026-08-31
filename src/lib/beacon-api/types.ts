@@ -329,3 +329,22 @@ export type StoredBeaconInstance = {
  * The health fields are live values. The app persists none of them.
  */
 export type BeaconInstance = StoredBeaconInstance & BeaconInstanceHealth;
+
+/**
+ * The Beacon node that owns a query record. The app copies these fields by
+ * value. Therefore a record stays readable after a user renames or removes that
+ * node.
+ *
+ * A ref never holds a token. The token stays in the instance list.
+ *
+ * An empty `id` with a set `url` is a real state: the node is known, but the app
+ * has no record of it. A share link gives this state, and so does a removed
+ * instance. The UI then reads `url` to name the node.
+ *
+ * Use `resolveRef` in `@/services/beacon-instance` to get the live node.
+ */
+export type InstanceRef = {
+    id: string;
+    name: string;
+    url: string;
+};

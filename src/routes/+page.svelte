@@ -231,14 +231,14 @@
 			}
 
 			thead {
-				background-color: var(--muted-background);
+				background-color: var(--muted);
 				color: var(--muted-foreground);
 			}
 
 			tbody {
 				tr {
 					&:nth-child(even) {
-						background-color: var(--muted-background);
+						background-color: var(--muted);
 					}
 				}
 			}

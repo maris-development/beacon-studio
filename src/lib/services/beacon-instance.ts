@@ -24,13 +24,14 @@ import { persisted } from 'svelte-local-storage-store';
 import type {
 	BeaconInstance,
 	BeaconInstanceHealth,
+	InstanceRef,
 	StoredBeaconInstance
 } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-instance-health';
 import { normalizeUrl } from './beacon-instance-url';
 
-export type { BeaconInstance, StoredBeaconInstance };
+export type { BeaconInstance, InstanceRef, StoredBeaconInstance };
 export { normalizeUrl };
 
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
@@ -132,6 +133,40 @@ export function findByUrl(url: string): BeaconInstance | null {
 	const target = normalizeUrl(url);
 
 	return getInstances().find((instance) => normalizeUrl(instance.url) === target) ?? null;
+}
+
+/**
+ * The instance that a query record ref names, or `null`.
+ *
+ * A record holds the ref by value, so the ref can name a node that the list no
+ * longer holds. The match uses the id first, then the URL. A user can remove a
+ * node and add it again, which gives it a new id.
+ *
+ * The function is pure, so a component can call it inside a `$derived` on a
+ * mirror of the list. See `resolveRef` for the snapshot form.
+ */
+export function matchRef(
+	list: BeaconInstance[],
+	ref: InstanceRef | null | undefined
+): BeaconInstance | null {
+	if (!ref) return null;
+
+	if (ref.id) {
+		const byId = list.find((instance) => instance.id === ref.id);
+		if (byId) return byId;
+	}
+
+	if (ref.url) {
+		const target = normalizeUrl(ref.url);
+		return list.find((instance) => normalizeUrl(instance.url) === target) ?? null;
+	}
+
+	return null;
+}
+
+/** {@link matchRef} against the list of now. Use it in a plain module. */
+export function resolveRef(ref: InstanceRef | null | undefined): BeaconInstance | null {
+	return matchRef(getInstances(), ref);
 }
 
 // -- Writes -----------------------------------------------------------------

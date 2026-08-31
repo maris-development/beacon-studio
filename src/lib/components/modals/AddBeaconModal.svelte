@@ -23,6 +23,12 @@
 	export let onSave: () => void;
 	export let onClose: () => void;
 	export let instance: BeaconInstance | null = null;
+	/**
+	 * The URL to put in the form of a new node. A share link names a node that the
+	 * app does not have. The user then adds it, and needs no copy and paste.
+	 * `instance` wins over this, because an edit keeps the URL of the record.
+	 */
+	export let presetUrl: string | null = null;
 
 	// form fields
 	let name = '';
@@ -40,6 +46,15 @@
 			url = instance.url;
 			description = instance.description ?? '';
 			token = instance.token ?? '';
+		} else if (presetUrl) {
+			url = presetUrl;
+
+			// A name is required. Take the host, which the user can change.
+			try {
+				name = new URL(presetUrl).hostname;
+			} catch {
+				name = '';
+			}
 		}
 
 		return () => document.removeEventListener('keydown', handleKeydown);
