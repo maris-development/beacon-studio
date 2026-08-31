@@ -324,10 +324,134 @@ export class PythonQueryBuilder  {
     }
 }
 
-export class SQLQueryBuilder{
-    /**
-     * not yet implemented
-     */
+export class SQLQueryBuilder {
+
+    static toSQL(compiledQuery: CompiledQuery): string {
+        const columns = compiledQuery.query_parameters
+            .map(select => {
+                if (select.alias) {
+                    return `"${select.column}" AS "${select.alias}"`;
+                }
+
+                return `"${select.column}"`;
+            })
+            .join(",\n    ");
+
+        let sql = `SELECT\n    ${columns}`;
+        sql += `\nFROM "${compiledQuery.from}"`;
+
+        if (compiledQuery.filters && compiledQuery.filters.length > 0) {
+            const filters = compiledQuery.filters
+                .map(filter => SQLQueryBuilder.filterToSQL(filter))
+                .join("\n    AND ");
+
+            sql += `\nWHERE ${filters}`;
+        }
+
+        sql += ";";
+
+        return sql;
+    }
+
+    private static filterToSQL(filter: Filter): string {
+
+        if ("geometry" in filter) {
+            const geometry = JSON.stringify(filter.geometry);
+
+            return `ST_Within(
+            ST_Point("${filter.longitude_query_parameter}", "${filter.latitude_query_parameter}"),
+            ST_GeomFromGeoJSON('${geometry.replace(/'/g, "''")}'))`;
+        }
+
+        if ("min" in filter && "max" in filter) {
+            const conditions: string[] = [];
+
+            if (filter.min !== undefined && filter.min !== null && filter.min !== "") {
+                conditions.push(
+                    `"${filter.for_query_parameter}" >= ${SQLQueryBuilder.valueToSQL(filter.min)}`
+                );
+            }
+
+            if (filter.max !== undefined && filter.max !== null && filter.max !== "") {
+                conditions.push(
+                    `"${filter.for_query_parameter}" <= ${SQLQueryBuilder.valueToSQL(filter.max)}`
+                );
+            }
+
+            return conditions.join(" AND ");
+        }
+
+        if ("eq" in filter) {
+            return `"${filter.for_query_parameter}" = ${SQLQueryBuilder.valueToSQL(filter.eq)}`;
+        }
+
+        if ("neq" in filter) {
+            return `"${filter.for_query_parameter}" <> ${SQLQueryBuilder.valueToSQL(filter.neq)}`;
+        }
+
+        if ("gt" in filter) {
+            return `"${filter.for_query_parameter}" > ${SQLQueryBuilder.valueToSQL(filter.gt)}`;
+        }
+
+        if ("gt_eq" in filter) {
+            return `"${filter.for_query_parameter}" >= ${SQLQueryBuilder.valueToSQL(filter.gt_eq)}`;
+        }
+
+        if ("lt" in filter) {
+            return `"${filter.for_query_parameter}" < ${SQLQueryBuilder.valueToSQL(filter.lt)}`;
+        }
+
+        if ("lt_eq" in filter) {
+            return `"${filter.for_query_parameter}" <= ${SQLQueryBuilder.valueToSQL(filter.lt_eq)}`;
+        }
+
+        if ("is_not_null" in filter) {
+            return `"${filter.is_not_null.for_query_parameter}" IS NOT NULL`;
+        }
+
+        if ("is_null" in filter) {
+            return `"${filter.is_null.for_query_parameter}" IS NULL`;
+        }
+
+        if ("or" in filter) {
+            const filters = filter.or
+                .map(f => SQLQueryBuilder.filterToSQL(f))
+                .join(" OR ");
+
+            return `(${filters})`;
+        }
+
+        if ("and" in filter) {
+            const filters = filter.and
+                .map(f => SQLQueryBuilder.filterToSQL(f))
+                .join(" AND ");
+
+            return `(${filters})`;
+        }
+
+        throw new Error("Unsupported filter type");
+    }
+
+    private static valueToSQL(value: unknown): string {
+        if (value === null || value === undefined) {
+            return "NULL";
+        }
+
+        if (typeof value === "number") {
+            return String(value);
+        }
+
+        if (typeof value === "boolean") {
+            return value ? "TRUE" : "FALSE";
+        }
+
+        if (typeof value === "string") {
+            // Escape single quotes for SQL
+            return `'${value.replace(/'/g, "''")}'`;
+        }
+
+        throw new Error(`Unsupported SQL value type: ${typeof value}`);
+    }
 }
 
 export class FileDownloader {
@@ -400,9 +524,9 @@ export class PythonQueryExporter {
     /**
      * Attempts to export the provided python code to a Jupyter Notebook file and download it to the user's machine.
      * @param pythonCode python code (as string) to be exported to notebook.
-     * @param notebookName name of the notebook file to be downloaded.
+     * @param fileName name of the notebook file to be downloaded.
      */
-    public static downloadAsNotebook(pythonCode: string, notebookName: string = "beacon-studio-query.ipynb"): void {
+    public static downloadAsNotebook(pythonCode: string, fileName: string = "beacon-studio-query.ipynb"): void {
        
         let ipynbCode: string;
         try{
@@ -415,7 +539,7 @@ export class PythonQueryExporter {
         try{
             if(!ipynbCode) return;
 
-            FileDownloader.download(ipynbCode, "beacon-studio-query.ipynb", "application/x-ipynb+json");
+            FileDownloader.download(ipynbCode, fileName, "application/x-ipynb+json");
         }
         catch(error){
             throw new Error(`Failed to write Jupyter Notebook file: ${error.message}`);
@@ -432,16 +556,41 @@ export class JSONQueryExporter {
  * @param jsonCode JSON content as a string.
  * @param fileName Name of the JSON file to be downloaded.
  */
-    public static downloadAsJson(jsonCode: string,fileName: string = "beacon-studio-query.json"): void {
+    public static downloadAsJson(jsonCode: string, fileName: string = "beacon-studio-query.json"): void {
 
         try {
             if (!jsonCode) return;
 
-            FileDownloader.download(jsonCode, "beacon-studio-query.json", "application/json");
+            FileDownloader.download(jsonCode, fileName, "application/json");
         }
         catch (error) {
             throw new Error(
                 `Failed to write JSON file: ${error instanceof Error ? error.message : String(error)
+                }`
+            );
+        }
+    }
+}
+
+export class SQLQueryExporter {
+
+    /**
+     * Attempts to export the provided SQL to a .sql file and download it
+     * to the user's machine.
+     *
+     * @param sqlCode SQL content as a string.
+     * @param fileName Name of the SQL file to be downloaded.
+     */
+    public static downloadAsSql(sqlCode: string, fileName: string = "beacon-studio-query.sql"): void {
+        try {
+            if (!sqlCode) return;
+
+            FileDownloader.download(sqlCode, fileName, "application/sql");
+        }
+        catch (error) {
+            throw new Error(
+                `Failed to write SQL file: ${
+                    error instanceof Error ? error.message : String(error)
                 }`
             );
         }

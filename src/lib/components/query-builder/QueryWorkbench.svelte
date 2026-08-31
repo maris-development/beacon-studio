@@ -15,13 +15,22 @@
     import { QueryWorkspace } from './QueryWorkspace.svelte';
     import { resolveUrlQuery } from '@/stores/query-library';
     import { getDefaultQueryActions } from './QueryActions';
+    import { replaceState } from '$app/navigation';
+    import { resolve } from '$app/paths';
+    import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const workspace = $state(new QueryWorkspace());
 
     onMount(() => {
-        // A deep-link opens one more block. `?q=` comes from "open in workbench"
-        // and brings the saved builder state. `?query=` comes from a share link.
-        workspace.openFromUrl(resolveUrlQuery(page.url));
+        const resolved = resolveUrlQuery(page.url);
+
+        workspace.openFromUrl(resolved);
+
+        if (resolved.containsQueryParam) {
+            queueMicrotask(() => {
+                replaceState(resolve(SHARE_LINK_PATH), page.state);
+            });
+        }
 
         return () => workspace.destroy();
     });

@@ -21,6 +21,7 @@ import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
 import { resolveRef } from '@/services/beacon-instance';
 import { Utils } from '@/utils';
+import { addToast } from "@/stores/toasts";
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
 const COLLECTIONS: QueryCollection[] = [queryBlocks, savedQueries, queryHistory];
@@ -96,6 +97,13 @@ export interface ResolvedUrlQuery {
 	 * null when the node resolves, and when the link named none.
 	 */
 	missingInstanceUrl: string | null;
+
+	/**
+	 * True if the URL had either `?q=` or `?query=`. A page uses this to decide
+	 * whether to show a toast for a missing query. A page shows no toast when the
+	 * user navigates to the workbench, and then removes all blocks.
+	 */
+	containsQueryParam: boolean;
 }
 
 /**
@@ -122,7 +130,8 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			query: entry.compiled,
 			storedQueryId: entry.id,
 			instance: entry.instance,
-			missingInstanceUrl: missingUrlOf(entry.instance)
+			missingInstanceUrl: missingUrlOf(entry.instance),
+			containsQueryParam: true
 		};
 	}
 
@@ -140,14 +149,22 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				entry: null,
 				query,
 				instance,
-				missingInstanceUrl: missingUrlOf(instance)
+				missingInstanceUrl: missingUrlOf(instance),
+				containsQueryParam: true 
 			};
 		} catch (error) {
 			console.error('Failed to decode a shared query from the URL.', error);
+
+			addToast({
+				message: `Failed to decode a shared query from the URL: ${error?.message ?? error}`,
+				type: 'error'
+			});
+
+			return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam: true };
 		}
 	}
 
-	return { entry: null, query: null, instance: null, missingInstanceUrl: null };
+	return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam: false };
 }
 
 /**
