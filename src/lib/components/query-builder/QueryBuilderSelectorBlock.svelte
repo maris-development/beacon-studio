@@ -115,8 +115,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 		event.preventDefault();
 		row.scrollBy({
-			left: event.deltaY,
-			behavior: 'smooth'
+			left: event.deltaY
 		});
 	}
 
