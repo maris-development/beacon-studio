@@ -341,9 +341,17 @@ export class ChartExplorerController {
 		this.isPreparing = false;
 	}
 
+	/**
+	 * The number of the newest run of this controller. The store runs one query at
+	 * a time, so a new run stops the run in flight. That older run rejects after
+	 * the newer one set the spinner, and must therefore reset nothing.
+	 */
+	private latestRun = 0;
+
 	constructor(
-		private markRunning: (running: boolean) => void = () => {},
-		private markRun: (rows: number) => void = () => {}
+		private beginRun: (blockId: string) => number = () => 0,
+		private endRun: (blockId: string, token: number) => void = () => {},
+		private markRun: (blockId: string, rows: number) => void = () => {}
 	) {}
 
 	// --------------------------------------------------------------- view state
@@ -403,12 +411,13 @@ export class ChartExplorerController {
 
 	/** Run a query and show it. */
 	async runAndShowQuery(query: CompiledQuery, instance: BeaconInstance, blockId: string): Promise<void> {
+		const token = this.beginRun(blockId);
+		this.latestRun = token;
 		this.isLoading = true;
-		this.markRunning(true);
 
 		try {
 			this.entry = await BeaconClient.ensureQuery(query, instance, blockId);
-			this.markRun(this.entry.rowCount);
+			this.markRun(blockId, this.entry.rowCount);
 			this.isLoading = false;
 
 			if (this.entry.rowCount === 0) {
@@ -418,8 +427,8 @@ export class ChartExplorerController {
 
 			this.syncPlotToColumns();
 		} catch (error) {
-			this.isLoading = false;
-			this.markRunning(false);
+			this.endRun(blockId, token);
+			if (this.latestRun === token) this.isLoading = false;
 
 			// The app runs one query at a time. A newer run stopped this one. The
 			// user asked for that, so it is no error.

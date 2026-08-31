@@ -109,36 +109,50 @@ export class BeaconClient {
     // Host-keyed memoization of the (immutable-per-session) metadata endpoints.
     // Shared across every BeaconClient for the same host, so repeated builder
     // mounts and instance re-selection don't refetch.
+    //
+    // A cache holds a promise, so a failure would stay for the session. A node
+    // that is down at the first contact would then never answer again, also after
+    // it comes back. Therefore {@link memoize} drops a rejected promise.
+
+    /**
+     * Reads `key` from `cache`, or stores the result of `load()` under it.
+     *
+     * A rejected promise deletes itself from the cache. The next call therefore
+     * asks the node again. Do not remove this: a builder that mounts while a node
+     * is down must recover, and only a new request can give it the tables.
+     */
+    private static memoize<T>(
+        cache: Map<string, Promise<T>>,
+        key: string,
+        load: () => Promise<T>
+    ): Promise<T> {
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        const pending = load().catch((error) => {
+            if (cache.get(key) === pending) cache.delete(key);
+            throw error;
+        });
+
+        cache.set(key, pending);
+        return pending;
+    }
 
     /** Cached list of table names for this instance's host. */
     getCachedTables(): Promise<string[]> {
-        let cached = tablesCache.get(this.host);
-        if (!cached) {
-            cached = this.getTables();
-            tablesCache.set(this.host, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(tablesCache, this.host, () => this.getTables());
     }
 
     /** Cached default table name for this instance's host. */
     getCachedDefaultTable(): Promise<string> {
-        let cached = defaultTableCache.get(this.host);
-        if (!cached) {
-            cached = this.getDefaultTable();
-            defaultTableCache.set(this.host, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(defaultTableCache, this.host, () => this.getDefaultTable());
     }
 
     /** Cached schema for a table on this instance's host. */
     getCachedSchema(tableName: string): Promise<Schema> {
-        const key = `${this.host}::${tableName}`;
-        let cached = schemaCache.get(key);
-        if (!cached) {
-            cached = this.getTableSchema(tableName);
-            schemaCache.set(key, cached);
-        }
-        return cached;
+        return BeaconClient.memoize(schemaCache, `${this.host}::${tableName}`, () =>
+            this.getTableSchema(tableName)
+        );
     }
 
     /** Drops cached metadata for this instance's host (tables, default table, schemas). */

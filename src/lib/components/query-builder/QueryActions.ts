@@ -93,7 +93,9 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         if (workspace.getRunState(block).isRunning) return null;
 
-        workspace.markBlockRunning(block.id, true);
+        // The number names this run. A newer run of the same block takes the
+        // spinner over, and `endBlockRun` then leaves it alone.
+        const token = workspace.beginBlockRun(block.id);
 
         try {
             // With `storedQueryId` the store writes the cache key of the result to
@@ -101,7 +103,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
             const entry = await BeaconClient.ensureQuery(query, instance, block.id);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
-            workspace.markBlockRunning(block.id, false);
+            workspace.endBlockRun(block.id, token);
 
             // The app runs one query at a time. A newer run stopped this one. That
             // is the intent of the user, so it needs no error.
@@ -140,7 +142,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         if (workspace.getRunState(block).isRunning) return;
 
-        workspace.markBlockRunning(block.id, true);
+        const token = workspace.beginBlockRun(block.id);
 
         addToast({ message: 'Downloading dataset...', type: 'info' });
 
@@ -154,7 +156,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         } catch (e) {
             addToast({ message: `Download failed: ${e?.message ?? e}`, type: 'error' });
         } finally {
-            workspace.markBlockRunning(block.id, false);
+            workspace.endBlockRun(block.id, token);
         }
     }
 

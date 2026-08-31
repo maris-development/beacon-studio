@@ -48,6 +48,10 @@ const inFlight = new Map<string, Promise<void>>();
 /**
  * Checks one node and records the result. The function shows no toast, so it
  * fits a background sweep. A failure or a timeout records `offline`.
+ *
+ * A node that does not answer also loses its cached tables and schemas. That
+ * cache holds one answer for the session. A node that comes back can hold other
+ * tables, and a restart of the app would be the only way to see them.
  */
 export async function checkInstance(target: HealthTarget): Promise<void> {
 	const client = new BeaconClient(target.url, target.token ?? null);
@@ -57,12 +61,15 @@ export async function checkInstance(target: HealthTarget): Promise<void> {
 		const isHealthy = await client.getHealth({ signal: AbortSignal.timeout(PROBE_TIMEOUT_MS) });
 		const latencyMs = Math.round(performance.now() - startedAt);
 
+		if (!isHealthy) client.clearMetadataCache();
+
 		setHealth(target.url, {
 			status: isHealthy ? 'online' : 'offline',
 			latencyMs: isHealthy ? latencyMs : null,
 			lastCheckedAt: new Date()
 		});
 	} catch {
+		client.clearMetadataCache();
 		setHealth(target.url, { status: 'offline', latencyMs: null, lastCheckedAt: new Date() });
 	}
 }

@@ -25,14 +25,11 @@
 	// The controller owns the map, the deck.gl overlay and the query result. The
 	// page keeps only the query effect, the area selection and the markup.
 	const map = new MapViewController(
-		(running) => {
-			const id = workspace.activeBlockId;
-			if (id) workspace.markBlockRunning(id, running);
-		},
-		(rows) => {
-			const id = workspace.activeBlockId;
-			if (id) workspace.markBlockRun(id, rows);
-		}
+		// The controller names the block of its run. The active block can change
+		// while a query runs, so the callbacks must not read the selection.
+		(id) => workspace.beginBlockRun(id),
+		(id, token) => workspace.endBlockRun(id, token),
+		(id, rows) => workspace.markBlockRun(id, rows)
 	);
 
 	/** The area drawn on the map. Applied to the query by the Apply filter button. */

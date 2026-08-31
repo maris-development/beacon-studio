@@ -92,6 +92,16 @@ export class QueryWorkspace {
 	private running = $state<Record<string, boolean>>({});
 
 	/**
+	 * The run of now for each block. The number names one run. A run that another
+	 * run of the same block stops must not clear the spinner, because the newer
+	 * run owns it. See {@link beginBlockRun}.
+	 */
+	private runToken = $state<Record<string, number>>({});
+
+	/** The number for the next run. It only grows. */
+	private nextRunToken = 1;
+
+	/**
 	 * A reactive mirror of the configured instances. The workspace resolves the
 	 * ref of a block against this list, so a new instance, an edit of a URL or a
 	 * health check reaches the builder at once. Do not assign to this field.
@@ -240,9 +250,16 @@ export class QueryWorkspace {
 	}
 
 	/**
-	 * Put a node on a block. The table and the columns of one node do not apply to
-	 * another, so the method empties the draft. It keeps the output format, which
-	 * is a preference of the user and not a property of the node.
+	 * Put a node on a block.
+	 *
+	 * A block with a draft loses that draft. The table and the columns of one node
+	 * do not apply to another. The method keeps the output format, which is a
+	 * preference of the user and not a property of the node.
+	 *
+	 * A block with no draft keeps its query. Such a block comes from a share link
+	 * or from the JSON editor, and its query lives in `compiled`. The user picks a
+	 * node to run that query on, so the method must not drop it. The builder seeds
+	 * a draft from it against the new node. See {@link seedFor}.
 	 *
 	 * The method also drops the link to the last result, because the cache key
 	 * holds the URL of the node.
@@ -254,7 +271,10 @@ export class QueryWorkspace {
 		const block = this.blocks.find((candidate) => candidate.id === id);
 		if (!block) return false;
 
-		if (block.instance.id === instance.id) return true;
+		// Compare the node, not the ref. A share link gives a ref with no id, and
+		// `matchRef` resolves it by URL. Such a block already runs on this node, so
+		// a pick of the same node must change nothing.
+		if (this.instanceFor(block)?.id === instance.id) return true;
 
 		const columns = block.draft?.selectedFields.length ?? 0;
 
@@ -265,16 +285,24 @@ export class QueryWorkspace {
 			if (!shouldContinue) return false;
 		}
 
-		const draft = makeEmptyDraft();
-		draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
+		if (needsDraftSeed(block)) {
+			queryBlocks.update(id, {
+				instance: snapshotInstance(instance),
+				datasetKey: null,
+				rowCount: null
+			});
+		} else {
+			const draft = makeEmptyDraft();
+			draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
 
-		queryBlocks.update(id, {
-			instance: snapshotInstance(instance),
-			draft,
-			compiled: null,
-			datasetKey: null,
-			rowCount: null
-		});
+			queryBlocks.update(id, {
+				instance: snapshotInstance(instance),
+				draft,
+				compiled: null,
+				datasetKey: null,
+				rowCount: null
+			});
+		}
 
 		// The user chose this node. It is no longer a guess of the app.
 		this.clearGuessedInstance(id);
@@ -316,8 +344,8 @@ export class QueryWorkspace {
 			addToast({
 				type: 'error',
 				message:
-					`Could not load the query. The link named no Beacon instance, ` +
-					`and "${nodeName}" ${missing}. Pick the instance of this query.`
+					`The link named no Beacon instance, and "${nodeName}" ${missing}. ` +
+					`The query is kept. Pick the instance of this query.`
 			});
 
 			// Report this one time. The user now picks a node, or edits the query.
@@ -327,7 +355,9 @@ export class QueryWorkspace {
 
 		addToast({
 			type: 'warning',
-			message: `"${nodeName}" ${missing}. Pick another instance, or edit the query.`
+			message:
+				`"${nodeName}" ${missing}. The query is kept. ` +
+				`Pick another instance, or edit the query.`
 		});
 	}
 
@@ -440,6 +470,13 @@ export class QueryWorkspace {
 	 *
 	 * The method also removes the link to the last result. That cached dataset
 	 * belongs to the query before the edit.
+	 *
+	 * A block that waits for a seed keeps its query in `compiled`, and has no
+	 * draft. The builder can emit an empty draft for such a block, for example
+	 * when the node holds no column of the query. That draft compiles to nothing,
+	 * and the write would destroy the query of a share link. Therefore the method
+	 * drops it. A draft with content is a real edit of the user, and that edit
+	 * takes the block over.
 	 */
 	updateActiveDraft(draft: QueryDraft): void {
 		const block = this.activeBlock;
@@ -447,9 +484,12 @@ export class QueryWorkspace {
 
 		if (JSON.stringify(block.draft) === JSON.stringify(draft)) return;
 
+		const compiled = compileDraft(draft);
+		if (!compiled && needsDraftSeed(block)) return;
+
 		queryBlocks.update(block.id, {
 			draft: Utils.cloneObject(draft),
-			compiled: compileDraft(draft),
+			compiled,
 			datasetKey: null,
 			rowCount: null
 		});
@@ -640,6 +680,30 @@ export class QueryWorkspace {
 	/** Start or stop the spinner of a block. The visualisation view calls this. */
 	markBlockRunning(id: string, running: boolean): void {
 		this.running = { ...this.running, [id]: running };
+	}
+
+	/**
+	 * Start the spinner of a block. The number it returns names this run. Give it
+	 * back to {@link endBlockRun}.
+	 *
+	 * The store runs one query at a time, so a new run stops the run in flight.
+	 * That older run rejects after the newer one set the spinner. A blind reset
+	 * would then clear the spinner of a query that still runs.
+	 */
+	beginBlockRun(id: string): number {
+		const token = this.nextRunToken++;
+		this.runToken = { ...this.runToken, [id]: token };
+		this.markBlockRunning(id, true);
+		return token;
+	}
+
+	/**
+	 * Stop the spinner of a block after the run with this number. It does nothing
+	 * when a newer run of the same block owns the spinner now.
+	 */
+	endBlockRun(id: string, token: number): void {
+		if (this.runToken[id] !== token) return;
+		this.markBlockRunning(id, false);
 	}
 
 	/**

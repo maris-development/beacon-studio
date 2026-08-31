@@ -67,6 +67,11 @@
 
 	let lastRunKey: string | null = $state(null);
 
+	// The number of the newest run of this page. The store runs one query at a
+	// time, so a new run stops the run in flight. That older run rejects after the
+	// newer one set the spinner, and must therefore reset nothing.
+	let latestRun = 0;
+
 	// Re-run only when the selected block, or its compiled query content, actually changes.
 	$effect(() => {
 		const blockId = activeBlockId;
@@ -108,8 +113,9 @@
 		query: CompiledQuery,
 		instance: BeaconInstance
 	) {
+		const token = workspace.beginBlockRun(block.id);
+		latestRun = token;
 		isLoading = true;
-		workspace.markBlockRunning(block.id, true);
 
 		try {
 			entry = await BeaconClient.ensureQuery(query, instance, block.id);
@@ -129,8 +135,8 @@
 
 			prepareTableForDisplay();
 		} catch (error) {
-			isLoading = false;
-			workspace.markBlockRunning(block.id, false);
+			workspace.endBlockRun(block.id, token);
+			if (latestRun === token) isLoading = false;
 
 			// The app runs one query at a time. A newer run stopped this one, so it
 			// is no error.
