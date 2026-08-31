@@ -23,7 +23,7 @@ export type {
 // -- Metadata cache (shared across per-page BeaconClient instances) --------------
 // These caches are module-level so they survive client-side navigation even though
 // `BeaconClient.new()` is called per page. Keyed by host so multiple instances
-// don't collide. Previously lived in the deleted `metadata-cache.ts`.
+// don't collide.
 const tablesCache = new Map<string, Promise<string[]>>();
 const defaultTableCache = new Map<string, Promise<string>>();
 const schemaCache = new Map<string, Promise<Schema>>();
@@ -31,7 +31,7 @@ const schemaCache = new Map<string, Promise<Schema>>();
 
 /**
  * Unified Beacon client facade. This is the single entry point the app uses to talk
- * to a Beacon instance. It wraps three concerns that used to be separate:
+ * to a Beacon instance. It wraps three concerns:
  *
  *  1. **Metadata + downloads** (this class' instance methods): datasets, tables,
  *     schemas, system info, and server-materialized downloads via
@@ -330,12 +330,7 @@ export class BeaconClient {
         return response;
     }
 
-    // TODO: `/api/table-config` is retired. Beacon 2.0 routes only
-    // `/api/admin/table-config`, which needs super-user credentials and answers a
-    // `{ message }` stub instead of a TableDefinition. This method therefore always
-    // fails. It has no callers today. Either delete it and {@link getPresetTables},
-    // or rebuild both on `/api/table-schema` (columns) plus
-    // `SHOW EXTENSIONS FOR <table>` (extensions), which is what the SDK now advises.
+    // TODO: always fails and has no callers. Beacon 2.0 retires `/api/table-config`.
     async getTableConfig(table: string): Promise<TableDefinition> {
         const url = new URL(`${this.host}/api/table-config`);
 
@@ -346,8 +341,7 @@ export class BeaconClient {
         return response;
     }
 
-    // TODO: broken while {@link getTableConfig} is broken — see the note there. Also
-    // unused today.
+    // TODO: always fails and has no callers. It depends on {@link getTableConfig}.
     async getPresetTables(): Promise<Array<TableDefinition>> {
         const table_names = await this.getTables();
 
@@ -616,8 +610,7 @@ export class BeaconClient {
  *   header on every request. The SDK's own `username`/`password` option is for
  *   HTTP Basic super-user auth and is intentionally not used here.
  * - `timeoutMs: 0` disables the SDK's default 60s per-request timeout so large
- *   query results aren't cut off mid-download — matching the legacy client, which
- *   sets no timeout.
+ *   query results aren't cut off mid-download.
  *
  * @throws if no instance (or no URL) is provided.
  */

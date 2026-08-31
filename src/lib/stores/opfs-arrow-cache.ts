@@ -1,6 +1,6 @@
 /**
  * OPFS-backed cache of raw query results — the second tier under the in-memory
- * `QueryStore` cache (see [[persistent-query-migration]]).
+ * `QueryStore` cache.
  *
  * Each entry is the server's zstd-compressed Arrow IPC stream, persisted byte-for-
  * byte as it came off the wire (never re-serialized), plus a JSON sidecar with the

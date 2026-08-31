@@ -127,11 +127,8 @@
 
 	// The app needs at least one instance. Send the user to the home page, which
 	// opens the picker. The store auto-subscriptions make this react to a change.
-	//
-	// An empty selection is no longer a reason to leave. A query record holds its
-	// own node, so the workbench works without a selection here. This selection is
-	// the node of the browse pages, and the node of a new query. An empty list is
-	// the only blocked state.
+	// An empty list is the only blocked state: this selection is the node of the
+	// browse pages and of a new query, and a query record holds its own node.
 	$effect(() => {
 		if ($instances.length === 0) {
 			goto(resolve('/'));
@@ -149,8 +146,7 @@
 		const onMobileChange = (e: MediaQueryListEvent) => applyMobile(e.matches);
 		mobileQuery.addEventListener('change', onMobileChange);
 
-		// Give the browse pages a node, with no modal. The picker interrupted the
-		// user here before. It is no longer needed: a query carries its own node,
+		// Give the browse pages a node, with no modal. A query carries its own node,
 		// and the builder asks for one where it is missing.
 		selectFirstIfNone();
 

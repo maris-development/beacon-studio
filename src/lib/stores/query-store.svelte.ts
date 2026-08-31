@@ -13,7 +13,7 @@
  * OPFS cache of the raw compressed Arrow IPC bytes (`stores/opfs-arrow-cache.ts`)
  * that survives reloads and app restarts — a memory miss rehydrates locally
  * instead of re-executing the query. Heavy transforms (sort / dedup / min-max /
- * geometry) are delegated to a shared worker. See [[persistent-query-migration]].
+ * geometry) are delegated to a shared worker.
  *
  * Every method that touches a node takes the {@link BeaconInstance} as an
  * argument. The store reads no app-wide selection. A query record owns its node,
@@ -40,9 +40,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser
- * stable. Mirrors the legacy client's `QUERY_LIMIT`; the per-query `limit` is this
- * divided by the number of selected columns. The user sets the value on the
- * settings page (`queryCellLimit`).
+ * stable. The per-query `limit` is this divided by the number of selected
+ * columns. The user sets the value on the settings page (`queryCellLimit`).
  *
  * Call this at the point of use. A read at module load would keep the value of
  * the first page load for ever.
