@@ -77,6 +77,18 @@
 	function handleInstanceChange(instance: BeaconInstance) {
 		workspace.setActiveInstance(instance);
 	}
+
+	/**
+	 * The node of the active block does not hold the query of a deep-link seed.
+	 * The workspace writes the message, because it knows whether the app guessed
+	 * that node. A share link of an older app version carries no `?instance=`.
+	 */
+	function handleSeedMismatch(table: string, part: 'table' | 'columns') {
+		const blockId = workspace.activeBlockId;
+		if (!blockId) return;
+
+		workspace.reportSeedMismatch(blockId, table, part);
+	}
 </script>
 
 <div class="query-workbench-panes">
@@ -115,6 +127,7 @@
 						instance={activeInstance}
 						missingInstanceUrl={workspace.missingInstanceUrl}
 						onInstanceChange={handleInstanceChange}
+						onSeedMismatch={handleSeedMismatch}
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
 						onDraftChange={handleDraftChange}

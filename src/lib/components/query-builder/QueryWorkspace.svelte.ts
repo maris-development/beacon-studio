@@ -98,6 +98,17 @@ export class QueryWorkspace {
 	 */
 	private instanceList = $state<BeaconInstance[]>([]);
 
+	/**
+	 * The blocks whose node the app guessed. A share link of an older app version
+	 * carries no `?instance=`, so the block falls back to the default node. That
+	 * node often has other tables, and the query then loads no columns.
+	 *
+	 * The record does not hold this flag. It is a fact about the link, not about
+	 * the query. The user sees the report once, and the block is theirs after
+	 * that. Therefore a reload must not report it again.
+	 */
+	private guessedInstance = $state<Record<string, boolean>>({});
+
 	/** Releases the two store subscriptions. See {@link destroy}. */
 	private unsubscribe: () => void;
 
@@ -152,7 +163,14 @@ export class QueryWorkspace {
 			// the list holds no node for it. The builder then names the URL, and asks
 			// the user to add it. A link of an older app version carries no node, so
 			// the block falls back to the default.
-			this.addFromQuery(resolved.query, undefined, resolved.instance);
+			const block = this.addFromQuery(resolved.query, undefined, resolved.instance);
+
+			// Mark the guess. The default node often has other tables, and the
+			// builder then loads no columns. See {@link reportSeedMismatch}.
+			if (!hasInstanceRef(resolved.instance)) {
+				this.guessedInstance = { ...this.guessedInstance, [block.id]: true };
+			}
+
 			this.warnMissingInstance(resolved.missingInstanceUrl);
 		}
 	}
@@ -258,6 +276,9 @@ export class QueryWorkspace {
 			rowCount: null
 		});
 
+		// The user chose this node. It is no longer a guess of the app.
+		this.clearGuessedInstance(id);
+
 		return true;
 	}
 
@@ -265,6 +286,58 @@ export class QueryWorkspace {
 	setActiveInstance(instance: BeaconInstance): boolean {
 		if (!this.activeBlockId) return false;
 		return this.setBlockInstance(this.activeBlockId, instance);
+	}
+
+	/** True when the app guessed the node of this block. See {@link guessedInstance}. */
+	hasGuessedInstance(id: string | null | undefined): boolean {
+		return !!id && !!this.guessedInstance[id];
+	}
+
+	/**
+	 * Tell the builder that the node of a block does not hold the query.
+	 *
+	 * The builder finds this, because only the builder reads the tables and the
+	 * schema of the node. The message belongs here, because only the workspace
+	 * knows whether the app guessed the node.
+	 *
+	 * `table` is the table that the query reads. `part` says what is missing: the
+	 * table itself, or the columns inside it.
+	 */
+	reportSeedMismatch(blockId: string, table: string, part: 'table' | 'columns'): void {
+		const node = this.instanceFor(this.blocks.find((b) => b.id === blockId) ?? null);
+		const nodeName = node?.name || node?.url || 'this instance';
+
+		let missing = `has no table "${table}"`;
+		if (part === 'columns') {
+			missing = `has no columns of the query in "${table}"`;
+		}
+
+		if (this.hasGuessedInstance(blockId)) {
+			addToast({
+				type: 'error',
+				message:
+					`Could not load the query. The link named no Beacon instance, ` +
+					`and "${nodeName}" ${missing}. Pick the instance of this query.`
+			});
+
+			// Report this one time. The user now picks a node, or edits the query.
+			this.clearGuessedInstance(blockId);
+			return;
+		}
+
+		addToast({
+			type: 'warning',
+			message: `"${nodeName}" ${missing}. Pick another instance, or edit the query.`
+		});
+	}
+
+	/** Forget the guess for a block. The user now owns the choice of node. */
+	private clearGuessedInstance(id: string): void {
+		if (!this.guessedInstance[id]) return;
+
+		const next = { ...this.guessedInstance };
+		delete next[id];
+		this.guessedInstance = next;
 	}
 
 	/** Add an empty block and select it. It inherits the node of the active block. */

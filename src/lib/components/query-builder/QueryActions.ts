@@ -1,4 +1,4 @@
-import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
+import type { BeaconInstance, CompiledQuery, InstanceRef } from '@/beacon-api/types';
 import { QueryWorkspace } from './QueryWorkspace.svelte';
 import { BeaconClient } from '@/beacon-api/client';
 import { addToast } from '@/stores/toasts';
@@ -20,8 +20,17 @@ export type QueryActions = {
     /**
      * The Beacon node of the active query, or null. The Python export needs the
      * URL and the token of that node. See `PythonQueryBuilder.toPythonCode`.
+     *
+     * The value is the resolved node. It is null when the instance list holds no
+     * node for the query. Use {@link getInstanceRef} where a URL is enough.
      */
     getInstance?: () => BeaconInstance | null;
+    /**
+     * The node ref of the active query, or null. A ref keeps the URL of a node
+     * that the app does not have. A share link therefore still names that node.
+     * See `buildShareLink`.
+     */
+    getInstanceRef?: () => InstanceRef | null;
 };
 
 /**
@@ -40,6 +49,10 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
     function getInstance(): BeaconInstance | null {
         return workspace.activeInstance;
+    }
+
+    function getInstanceRef(): InstanceRef | null {
+        return workspace.activeBlock?.instance ?? null;
     }
 
     /**
@@ -191,7 +204,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         visualiseMap,
         resetQuery,
         saveQuery,
-        getInstance
+        getInstance,
+        getInstanceRef
     };
 }
 

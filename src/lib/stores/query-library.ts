@@ -121,6 +121,11 @@ export interface ResolvedUrlQuery {
  * result. It is not an error.
  */
 export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
+	// Read this from the URL, and not from the result below. A `?q=` link to a
+	// record that history dropped resolves to nothing, but the URL still asked
+	// for a query. That stale bookmark is the case the flag exists for.
+	const containsQueryParam = url.searchParams.has('q') || url.searchParams.has('query');
+
 	const id = url.searchParams.get('q');
 	const entry = resolveStoredQuery(id);
 
@@ -131,7 +136,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			storedQueryId: entry.id,
 			instance: entry.instance,
 			missingInstanceUrl: missingUrlOf(entry.instance),
-			containsQueryParam: true
+			containsQueryParam
 		};
 	}
 
@@ -150,7 +155,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				query,
 				instance,
 				missingInstanceUrl: missingUrlOf(instance),
-				containsQueryParam: true 
+				containsQueryParam
 			};
 		} catch (error) {
 			console.error('Failed to decode a shared query from the URL.', error);
@@ -160,11 +165,11 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				type: 'error'
 			});
 
-			return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam: true };
+			return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam };
 		}
 	}
 
-	return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam: false };
+	return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam };
 }
 
 /**

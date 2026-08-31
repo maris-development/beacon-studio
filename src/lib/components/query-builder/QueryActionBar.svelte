@@ -73,7 +73,7 @@
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content class="w-48">
-					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.compileQuery)}>
+					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.compileQuery, queryActions.getInstanceRef?.() ?? null)}>
 						<UrlIcon class="text-muted-foreground" />
 						<span>Share URL</span>
 					</DropdownMenu.Item>

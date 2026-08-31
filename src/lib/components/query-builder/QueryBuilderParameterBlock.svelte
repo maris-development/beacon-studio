@@ -8,7 +8,6 @@
 
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -34,6 +33,10 @@
 		initialDraft = null,
 		pendingSeed = null,
 		onDraftChange,
+		onSeedMismatch,
+		// The output format control lives in the parent, next to the other
+		// query wide settings. This block still reads and writes the value.
+		selected_output_format = $bindable<string>(defaultOutputFormat()),
 		status = $bindable<QuerySelectionStatus>({
 			dataTable: '',
 			columns: 0,
@@ -54,13 +57,19 @@
 		pendingSeed?: CompiledQuery | null;
 		/** Emitted on every builder edit with the current draft. */
 		onDraftChange?: (draft: QueryDraft) => void;
+		/**
+		 * Called when the schema of the node holds no column of a deep-link seed.
+		 * The parent writes the message: it knows whether the app guessed the node.
+		 */
+		onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
+		/** Bound to the parent, which shows the output format control. */
+		selected_output_format?: string;
 		status?: QuerySelectionStatus;
         actions?: QueryActions; // todo
 	} = $props();
 
 	let searchInput;
 	let searchQuery = $state('');
-	let selected_output_format = $state(initialDraft?.outputFormat ?? defaultOutputFormat());
 	let fields: {
 		name: string;
 		type: DataType;
@@ -136,18 +145,36 @@
 			return;
 		}
 
-		client.getCachedSchema(table_name).then((schema) => {
-			fields = schema.fields.map((field) => ({
-				name: field.name,
-				type: field.data_type
-			}));
+		const table = table_name;
 
-			// Hydrate a one-time deep-link seed once the schema is available.
-			if (pendingSeed && !hasHydratedSeed) {
-				hydrateFromSeed();
-				hasHydratedSeed = true;
-			}
-		});
+		client
+			.getCachedSchema(table)
+			.then((schema) => {
+				fields = schema.fields.map((field) => ({
+					name: field.name,
+					type: field.data_type
+				}));
+
+				// Hydrate a one-time deep-link seed once the schema is available.
+				if (pendingSeed && !hasHydratedSeed) {
+					hydrateFromSeed(table);
+					hasHydratedSeed = true;
+				}
+			})
+			.catch((error) => {
+				// A node answers 404 for a table it does not have. The parent already
+				// falls back to the default table, so this is the rest of the guard.
+				// Without the catch the browser reports an unhandled rejection, and
+				// the builder shows an empty column list with no reason.
+				console.warn(`Could not read the schema of the table "${table}".`, error);
+
+				fields = [];
+
+				if (pendingSeed && !hasHydratedSeed) {
+					hasHydratedSeed = true;
+					onSeedMismatch?.(table, 'table');
+				}
+			});
 	});
 
 	// Reset the selected columns when the user actually switches to a different
@@ -299,7 +326,7 @@
 	// The parent binds `actions`, so such a handler also replaces the one of the
 	// workbench without a warning.
 
-	function hydrateFromSeed() {
+	function hydrateFromSeed(table: string) {
 		const seed = hydrateDraftFromQuery(pendingSeed, fields);
 
 		spatialFilter = seed.spatialFilter;
@@ -307,6 +334,17 @@
 
 		if (seed.outputFormat) {
 			selected_output_format = seed.outputFormat;
+		}
+
+		// The seed asked for columns, and the schema of this node holds none of
+		// them. The table therefore belongs to another node. The parent reports it,
+		// because it knows whether the app guessed the node. The generic
+		// "best effort" message below would hide the true cause.
+		const wantedColumns = pendingSeed?.query_parameters?.length ?? 0;
+
+		if (wantedColumns > 0 && seed.selectedFields.length === 0) {
+			onSeedMismatch?.(table, 'columns');
+			return;
 		}
 
 		if (seed.droppedParts > 0) {
@@ -393,20 +431,6 @@
 		{/if}
 	</div>
 
-	<h3>Output Format</h3>
-	<Select.Root type="single" name="outputFormat" bind:value={selected_output_format}>
-		<Select.Trigger class="w-[180px]">
-			{selected_output_format}
-		</Select.Trigger>
-		<Select.Content>
-			<Select.Group>
-				<Select.Label>Tables</Select.Label>
-				{#each Object.entries(BeaconClient.output_formats) as [label, value], index (index)}
-					<Select.Item {label} {value} />
-				{/each}
-			</Select.Group>
-		</Select.Content>
-	</Select.Root>
 </div>
 
 <style lang="scss">
