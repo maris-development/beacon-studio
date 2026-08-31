@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import Button from '@/components/buttons/Button.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
@@ -22,25 +23,31 @@
 	}
 
 	const isHeaderActive = $derived(isActive(url));
-	const hasActiveChild = $derived(items.some((i) => isActive(i.url)));
+	const storageKey = $derived(`beacon-studio.sidebar-menu.${url}.open`);
 
-	// Initialize open from current URL so there's no flash on first render
-	let open = $state(isActive(url) || items.some((i) => isActive(i.url)));
+	let open = $state(true);
 
-	// Keep open when navigating into a child route
-	$effect(() => {
-		if (isHeaderActive || hasActiveChild) open = true;
+	onMount(() => {
+		const savedOpen = localStorage.getItem(storageKey);
+		if (savedOpen !== null) {
+			open = savedOpen === 'true';
+		}
 	});
+
+	function toggleOpen(): void {
+		open = !open;
+		localStorage.setItem(storageKey, String(open));
+	}
 </script>
 
 <div class="collapsible-menu" class:open>
 	<div class="collapsible-menu-header">
 		<a class:active={isHeaderActive} href={url}>
-			<Icon class="size-4" />
+			<span class="menu-icon"><Icon /></span>
 			<span class="submenu-title">{title}</span>
 		</a>
-		<Button variant="ghost" size="xs" onclick={() => (open = !open)}>
-			<span class="chevron"><ChevronDownIcon class="size-4" /></span>
+		<Button variant="ghost" size="xs" onclick={toggleOpen}>
+			<span class="chevron"><ChevronDownIcon /></span>
 		</Button>
 	</div>
 
@@ -78,6 +85,16 @@
 				text-decoration: none;
 				color: inherit;
 
+				.menu-icon {
+					display: flex;
+					flex-shrink: 0;
+
+					:global(svg) {
+						width: 1rem;
+						height: 1rem;
+					}
+				}
+
 				&:hover {
 					color: var(--primary);
 					background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
@@ -93,6 +110,11 @@
 			.chevron {
 				display: flex;
 				transition: transform 0.2s ease;
+
+				:global(svg) {
+					width: 1rem;
+					height: 1rem;
+				}
 			}
 		}
 
