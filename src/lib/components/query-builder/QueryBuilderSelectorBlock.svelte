@@ -106,11 +106,25 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		}	
 	}
 
+	function handleQueryBlocksWheel(event: WheelEvent): void {
+		const row = event.currentTarget as HTMLDivElement;
+
+		if (event.deltaY === 0 || row.scrollWidth <= row.clientWidth) {
+			return;
+		}
+
+		event.preventDefault();
+		row.scrollBy({
+			left: event.deltaY,
+			behavior: 'smooth'
+		});
+	}
+
 
 </script>
 
 <div class="query-blocks">
-	<div class="query-blocks-row">
+	<div class="query-blocks-row" onwheel={handleQueryBlocksWheel}>
 		{#each workspace.blocks as block (block.id)}
 			<!-- Derive display data for this block from the workspace. -->
 			{@const status = QueryWorkspace.getStatus(block)}
