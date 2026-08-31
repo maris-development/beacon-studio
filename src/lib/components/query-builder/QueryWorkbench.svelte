@@ -23,6 +23,7 @@
 
     onMount(() => {
         const instance = $currentBeaconInstance;
+        
         if (instance) client = BeaconClient.new(instance);
 
         // A deep-link opens one more block. `?q=` comes from "open in workbench"

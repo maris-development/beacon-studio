@@ -152,7 +152,6 @@
 	<title>Map - Beacon Studio</title>
 </svelte:head>
 
-<h1 class="sr-only">Map viewer</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },

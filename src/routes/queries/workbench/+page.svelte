@@ -9,7 +9,6 @@
 	<title>Query workbench - Beacon Studio</title>
 </svelte:head>
 
-<h1 class="sr-only">Query workbench</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Queries', href: resolve('/queries') },
