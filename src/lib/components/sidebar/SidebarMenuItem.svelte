@@ -21,7 +21,7 @@
 
 <a class="menu-item" class:active={isActive} href={url} {target}>
 	{#if Icon}
-		<Icon class="size-4" />
+		<span class="menu-icon"><Icon /></span>
 	{/if}
 	<span class="item-title">{title}</span>
 </a>
@@ -38,6 +38,16 @@
 		border-left: 2px solid transparent;
 		text-decoration: none;
 		color: inherit;
+
+		.menu-icon {
+			display: flex;
+			flex-shrink: 0;
+
+			:global(svg) {
+				width: 1rem;
+				height: 1rem;
+			}
+		}
 
 		&:hover {
 			color: var(--primary);

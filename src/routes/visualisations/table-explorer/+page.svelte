@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
-	import type { CompiledQuery } from '@/beacon-api/types';
+	import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { queryStore } from '@/stores/query-store.svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
@@ -14,7 +14,6 @@
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
 	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
 	import type { StoredQuery } from '@/stores/stored-query';
-	import { currentBeaconInstance } from '@/stores/config';
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import { Input } from '@/components/ui/input';
@@ -35,12 +34,8 @@
 	let isLoading = $state(true);
 
 	const workspace = $state(new QueryWorkspace());
-	let client: BeaconClient | null = $state(null);
 
 	onMount(() => {
-		const instance = $currentBeaconInstance;
-		if (instance) client = BeaconClient.new(instance);
-
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
 		// and brings the saved builder state. `?query=` comes from a share link.
 		workspace.openFromUrl(resolveUrlQuery(page.url));
@@ -48,7 +43,7 @@
 		return () => workspace.destroy();
 	});
 
-	const queryActions = $derived(getDefaultQueryActions(workspace, client));
+	const queryActions = $derived(getDefaultQueryActions(workspace));
 
 	// `workspace.activeBlock` is a new object on every write to the block
 	// collection — including our own `markBlockRun` below. Tracking that object
@@ -61,14 +56,29 @@
 	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
+	// The node of the active block. A block owns its node, so a switch of block
+	// switches the node. The URL is a primitive, so the run effect below can track
+	// it. It is null while the block names no node, and while the instance list
+	// holds no node for its ref. The effect then runs nothing.
+	//
+	// The URL also belongs in the run key. A user can add a node that a share link
+	// asked for. The query must then run, with no other change to the block.
+	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
+
 	let lastRunKey: string | null = $state(null);
+
+	// The number of the newest run of this page. The store runs one query at a
+	// time, so a new run stops the run in flight. That older run rejects after the
+	// newer one set the spinner, and must therefore reset nothing.
+	let latestRun = 0;
 
 	// Re-run only when the selected block, or its compiled query content, actually changes.
 	$effect(() => {
 		const blockId = activeBlockId;
 		const key = queryKey;
+		const instanceUrl = activeInstanceUrl;
 
-		if (!blockId || !key) {
+		if (!blockId || !key || !instanceUrl) {
 			entry = null;
 			columns = [];
 			displayRows = [];
@@ -78,31 +88,37 @@
 			return;
 		}
 
-		const runKey = `${blockId}:${key}`;
+		const runKey = `${blockId}:${instanceUrl}:${key}`;
 		if (runKey === lastRunKey) return;
 		lastRunKey = runKey;
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
-		const { block, query } = untrack(() => ({
+		const { block, query, instance } = untrack(() => ({
 			block: workspace.activeBlock,
-			query: compiledQuery
+			query: compiledQuery,
+			instance: workspace.activeInstance
 		}));
-		if (!block || !query) return;
+		if (!block || !query || !instance) return;
 
 		// Show a cached result at once if the block already has one.
 		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
 		if (entry) prepareTableForDisplay();
 
-		executeAndDisplayQuery(block, query);
+		executeAndDisplayQuery(block, query, instance);
 	});
 
-	async function executeAndDisplayQuery(block: StoredQuery, query: CompiledQuery) {
+	async function executeAndDisplayQuery(
+		block: StoredQuery,
+		query: CompiledQuery,
+		instance: BeaconInstance
+	) {
+		const token = workspace.beginBlockRun(block.id);
+		latestRun = token;
 		isLoading = true;
-		workspace.markBlockRunning(block.id, true);
 
 		try {
-			entry = await BeaconClient.ensureQuery(query, block.id);
+			entry = await BeaconClient.ensureQuery(query, instance, block.id);
 			workspace.markBlockRun(block.id, entry.rowCount);
 
 			if (entry.rowCount === 0) {
@@ -119,9 +135,14 @@
 
 			prepareTableForDisplay();
 		} catch (error) {
+			workspace.endBlockRun(block.id, token);
+			if (latestRun === token) isLoading = false;
+
+			// The app runs one query at a time. A newer run stopped this one, so it
+			// is no error.
+			if (BeaconClient.isQueryAbort(error)) return;
+
 			console.error('Failed to execute query:', error);
-			isLoading = false;
-			workspace.markBlockRunning(block.id, false);
 			addToast({
 				type: 'error',
 				message: `Failed to execute query: ${error.message}`
@@ -199,7 +220,6 @@
 	<title>Table explorer - Beacon Studio</title>
 </svelte:head>
 
-<h1 class="sr-only">Table explorer</h1>
 <Cookiecrumb
 	crumbs={[
 		{ label: 'Visualisations', href: '/visualisations' },

@@ -1,5 +1,4 @@
-import type { CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Select } from "./types";
-import { requireCurrentInstance } from "@/services/beacon-instance";
+import type { BeaconInstance, CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Select } from "./types";
 import { Utils } from "@/utils";
 // import type { ObjectEncodingOptions } from "node:fs";
 
@@ -92,11 +91,19 @@ export class QueryBuilder {
 
 export class PythonQueryBuilder  {
 
-    static toPythonCode(compiledQuery: CompiledQuery): string {
+    /**
+     * The Python code for a query. `instance` is the node that the query runs on.
+     * A query record owns its node, so the caller supplies it.
+     */
+    static toPythonCode(compiledQuery: CompiledQuery, instance: BeaconInstance | null): string {
+        if (!instance) {
+            throw new Error("Pick a Beacon instance for this query first.");
+        }
+
         let code = "from beacon_api import Client\n";
         code += "from beacon_api.query import *\n";
 
-	    const beaconInstance = requireCurrentInstance();
+        const beaconInstance = instance;
 
         let tokenArg = "";
 

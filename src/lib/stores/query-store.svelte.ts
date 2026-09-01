@@ -13,14 +13,20 @@
  * OPFS cache of the raw compressed Arrow IPC bytes (`stores/opfs-arrow-cache.ts`)
  * that survives reloads and app restarts — a memory miss rehydrates locally
  * instead of re-executing the query. Heavy transforms (sort / dedup / min-max /
- * geometry) are delegated to a shared worker. See [[persistent-query-migration]].
+ * geometry) are delegated to a shared worker.
+ *
+ * Every method that touches a node takes the {@link BeaconInstance} as an
+ * argument. The store reads no app-wide selection. A query record owns its node,
+ * so two open queries can run on two nodes. The instance URL is part of the
+ * cache key, so results of two nodes never mix.
+ *
+ * The store runs one query at a time. See {@link QueryStore.ensure}.
  */
 
 import * as ApacheArrow from 'apache-arrow';
 import { getArrowDecoder, type QueryInput } from '@beacon/client';
 import { makeBeaconClient } from '@/beacon-api/client';
-import type { CompiledQuery, QueryWarning } from '@/beacon-api/types';
-import { getCurrentInstance } from '@/services/beacon-instance';
+import type { BeaconInstance, CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
 import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
@@ -34,9 +40,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser
- * stable. Mirrors the legacy client's `QUERY_LIMIT`; the per-query `limit` is this
- * divided by the number of selected columns. The user sets the value on the
- * settings page (`queryCellLimit`).
+ * stable. The per-query `limit` is this divided by the number of selected
+ * columns. The user sets the value on the settings page (`queryCellLimit`).
  *
  * Call this at the point of use. A read at module load would keep the value of
  * the first page load for ever.
@@ -108,10 +113,15 @@ class QueryStore {
 	/** True while at least one fetch is in flight. */
 	isLoading = $state(false);
 
-	/** Insertion-ordered LRU of cached datasets, keyed by `keyFor(query)`. */
+	/** Insertion-ordered LRU of cached datasets, keyed by `keyFor(query, instance)`. */
 	private cache = new Map<string, DatasetEntry>();
 	/** In-flight fetches, so concurrent `ensure()` calls for the same key share one request. */
 	private inFlight = new Map<string, Promise<DatasetEntry>>();
+	/**
+	 * The run of now, and the control that stops it. The store runs one query at a
+	 * time, so a run of another query aborts this one first. See {@link ensure}.
+	 */
+	private activeRun: { key: string; controller: AbortController } | null = null;
 	/** Memoized map display tables (dedup + geometry), keyed by dataset + lat/lon + decimals. */
 	private mapTableCache = new Map<string, Promise<ApacheArrow.Table>>();
 
@@ -140,18 +150,16 @@ class QueryStore {
 
 	/**
 	 * Computes a stable cache key for a query (object key order doesn't matter).
-	 * The current Beacon instance's URL is part of the key: results persist across
-	 * sessions (OPFS tier), so the same query against a different instance must
-	 * never share an entry.
+	 * The URL of the node is part of the key: results persist across sessions
+	 * (OPFS tier), so the same query on another node must never share an entry.
 	 */
-	keyFor(query: CompiledQuery): string {
-		const instance = getCurrentInstance();
+	keyFor(query: CompiledQuery, instance: Pick<BeaconInstance, 'url'> | null): string {
 		return stableStringify({ instance: instance?.url ?? null, query });
 	}
 
 	/** Returns a cached entry without fetching, or `undefined` if absent. */
-	peek(query: CompiledQuery): DatasetEntry | undefined {
-		return this.cache.get(this.keyFor(query));
+	peek(query: CompiledQuery, instance: Pick<BeaconInstance, 'url'> | null): DatasetEntry | undefined {
+		return this.cache.get(this.keyFor(query, instance));
 	}
 
 	/**
@@ -168,9 +176,14 @@ class QueryStore {
 
 	/**
 	 * Returns the cached result for `query`: from memory, else rehydrated from the
-	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`). Concurrent
-	 * calls for the same query share a single request. On success the entry becomes
-	 * {@link current}.
+	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`) from
+	 * `instance`. On success the entry becomes {@link current}.
+	 *
+	 * The store runs one query at a time. Two calls for the same key share one
+	 * request. A call for another key aborts the request that runs, and the old
+	 * promise rejects with an `AbortError`. The last action of the user therefore
+	 * wins, and a slow node blocks no other query. A caller must test a rejection
+	 * with {@link isAbortError}, and must show no error for an abort.
 	 *
 	 * Does not throw on empty results — callers should check `entry.rowCount === 0`.
 	 *
@@ -192,15 +205,19 @@ class QueryStore {
 	 * history row. That row has no name and no draft. No record points to its
 	 * result.
 	 */
-	async ensure(query: CompiledQuery, storedQueryId?: string): Promise<DatasetEntry> {
-		const key = this.keyFor(query);
+	async ensure(
+		query: CompiledQuery,
+		instance: BeaconInstance,
+		storedQueryId?: string
+	): Promise<DatasetEntry> {
+		const key = this.keyFor(query, instance);
 
 		if (this.cacheEnabled) {
 			const cached = this.cache.get(key);
 			if (cached) {
 				this.touch(key, cached);
 				this.current = cached;
-				this.recordHistory(cached, storedQueryId);
+				this.recordHistory(cached, instance, storedQueryId);
 				return cached;
 			}
 		}
@@ -209,18 +226,23 @@ class QueryStore {
 
 		if (existing) return existing;
 
+		// One query at a time. A run of another query stops this one.
+		this.abortActiveRun();
+
+		const controller = new AbortController();
+		this.activeRun = { key, controller };
 		this.isLoading = true;
 
-		const promise = this.load(query, key)
+		const promise = this.load(query, key, instance, controller.signal)
 			.then((entry) => {
-				// console.log('QueryStore.ensure: loaded', entry.key, entry.rowCount, 'rows in', entry.duration.toFixed(1), 'ms');
 				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry, storedQueryId);
+				this.recordHistory(entry, instance, storedQueryId);
 				return entry;
 			})
 			.finally(() => {
 				this.inFlight.delete(key);
+				if (this.activeRun?.controller === controller) this.activeRun = null;
 				if (this.inFlight.size === 0) this.isLoading = false;
 			});
 
@@ -229,8 +251,29 @@ class QueryStore {
 		return promise;
 	}
 
-	/** Removes a single cached query, or clears everything when called with no argument. */
-	invalidate(query?: CompiledQuery): void {
+	/**
+	 * Stop the run of now, if there is one. The promise of that run rejects with
+	 * an `AbortError`. The `finally` of {@link ensure} then clears the state.
+	 */
+	private abortActiveRun(): void {
+		this.activeRun?.controller.abort();
+		this.activeRun = null;
+	}
+
+	/**
+	 * Stop the query that runs. The user asked for it, or the page closed. The
+	 * caller of {@link ensure} sees an `AbortError`. See {@link isAbortError}.
+	 */
+	cancel(): void {
+		this.abortActiveRun();
+	}
+
+	/**
+	 * Removes a single cached query, or clears everything when called with no
+	 * argument. Pass the node of the query with `query`: the URL of the node is
+	 * part of the key, so a call without it matches no entry.
+	 */
+	invalidate(query?: CompiledQuery, instance?: Pick<BeaconInstance, 'url'> | null): void {
 		if (!query) {
 			this.cache.clear();
 			this.mapTableCache.clear();
@@ -238,7 +281,7 @@ class QueryStore {
 			void opfsArrowCache.clear();
 			return;
 		}
-		const key = this.keyFor(query);
+		const key = this.keyFor(query, instance ?? null);
 		this.cache.delete(key);
 		this.purgeDerived(key);
 		if (this.current?.key === key) this.current = null;
@@ -252,9 +295,11 @@ class QueryStore {
 	 *
 	 * A failure here must never stop the execution of a query.
 	 */
-	private recordHistory(entry: DatasetEntry, storedQueryId?: string): void {
-		const instance = getCurrentInstance();
-		if (!instance) return;
+	private recordHistory(
+		entry: DatasetEntry,
+		instance: BeaconInstance,
+		storedQueryId?: string
+	): void {
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
@@ -283,13 +328,16 @@ class QueryStore {
 	 * entry's count. Best-effort, mirroring {@link recordHistory}: never throws into
 	 * the caller.
 	 */
-	recordDownload(query: CompiledQuery, duration: number, storedQueryId?: string): void {
-		const instance = getCurrentInstance();
-		if (!instance) return;
+	recordDownload(
+		query: CompiledQuery,
+		instance: BeaconInstance,
+		duration: number,
+		storedQueryId?: string
+	): void {
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
-				datasetKey: this.keyFor(query),
+				datasetKey: this.keyFor(query, instance),
 				compiled: query,
 				draft: origin?.draft ?? null,
 				name: origin?.name,
@@ -422,12 +470,19 @@ class QueryStore {
 	}
 
 	/** Loads a dataset: rehydrate from the OPFS tier if present, else fetch. */
-	private async load(query: CompiledQuery, key: string): Promise<DatasetEntry> {
+	private async load(
+		query: CompiledQuery,
+		key: string,
+		instance: BeaconInstance,
+		signal: AbortSignal
+	): Promise<DatasetEntry> {
 		if (this.cacheEnabled) {
 			const restored = await this.restore(query, key);
 			if (restored) return restored;
 		}
-		return this.fetch(query, key);
+		// The OPFS read can take a moment. A newer run can start in that time.
+		signal.throwIfAborted();
+		return this.fetch(query, key, instance, signal);
 	}
 
 	/**
@@ -457,10 +512,15 @@ class QueryStore {
 		}
 	}
 
-	/** Executes the query arrow-native and builds a {@link DatasetEntry}. */
-	private async fetch(query: CompiledQuery, key: string): Promise<DatasetEntry> {
+	/** Executes the query arrow-native on `instance` and builds a {@link DatasetEntry}. */
+	private async fetch(
+		query: CompiledQuery,
+		key: string,
+		instance: BeaconInstance,
+		signal: AbortSignal
+	): Promise<DatasetEntry> {
 
-		const client = makeBeaconClient(getCurrentInstance());
+		const client = makeBeaconClient(instance);
 
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;
@@ -481,7 +541,7 @@ class QueryStore {
 		// SDK's own `getArrowDecoder`, which registers the zstd codec and the buffer
 		// alignment patch, so we never re-implement zstd/IPC decoding here. The Table
 		// is a real apache-arrow Table (arrow is deduped to one copy).
-		const response = await client.queryRaw(payload as unknown as QueryInput);
+		const response = await client.queryRaw(payload as unknown as QueryInput, undefined, signal);
 
 		// console.log('headers', [...response.headers.entries()]);
 
@@ -572,6 +632,19 @@ class QueryStore {
 		}
 		return cells;
 	}
+}
+
+/**
+ * True when a rejection is the abort of a superseded run. A caller must treat it
+ * as a normal stop: no toast, no error state. See {@link QueryStore.ensure}.
+ *
+ * The test reads `name`, and not the class. `fetch` and `AbortSignal` both throw
+ * a `DOMException` in a browser, but a polyfill can throw another error type.
+ */
+export function isAbortError(error: unknown): boolean {
+	if (!error || typeof error !== 'object') return false;
+
+	return (error as { name?: unknown }).name === 'AbortError';
 }
 
 /** Estimated in-memory footprint of an Arrow table (sum of its batch buffers). */

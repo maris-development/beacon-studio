@@ -19,23 +19,13 @@
  * key. The OPFS tier uses the same key. It is null before the first run.
  */
 
-import type { CompiledQuery } from '@/beacon-api/types';
-import type { BeaconInstance } from '@/beacon-api/types';
+import type { BeaconInstance, CompiledQuery, InstanceRef } from '@/beacon-api/types';
 import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';
 import { Utils } from '@/utils';
 
-/**
- * A snapshot of the Beacon instance that owns a query. The app copies these
- * fields by value. Therefore the record stays readable after a user renames or
- * removes that instance.
- */
-export interface InstanceRef {
-	id: string;
-	name: string;
-	url: string;
-}
+export type { InstanceRef };
 
 /** Which collection a record belongs to. */
 export type StoredQueryRole = 'block' | 'saved' | 'history';
@@ -92,6 +82,11 @@ export interface StoredQuery {
 	draft: QueryDraft | null;
 	/** The runnable query. Null while the draft is incomplete. */
 	compiled: CompiledQuery | null;
+	/**
+	 * The Beacon node that runs this query. It is the connection of the record,
+	 * not a label. Every run, download and cache key uses it. Resolve it with
+	 * `matchRef` or `resolveRef` in `@/services/beacon-instance`.
+	 */
 	instance: InstanceRef;
 	/**
 	 * How the visualisation pages show this query. Null for a record that the
@@ -116,13 +111,27 @@ export type StoredQueryInput = Partial<Omit<StoredQuery, 'id' | 'role'>> & {
 	role: StoredQueryRole;
 };
 
-/** Copies a config instance down to the fields a record needs. */
+/** Copies a config instance down to the fields a record needs. Never the token. */
 export function snapshotInstance(instance: BeaconInstance | null | undefined): InstanceRef {
 	return {
 		id: instance?.id ?? '',
 		name: instance?.name ?? '',
 		url: instance?.url ?? ''
 	};
+}
+
+/**
+ * A ref for a node that the app knows by URL only. A share link gives this.
+ * `matchRef` finds the instance if the list holds that URL. If it does not, the
+ * UI reads `url` and asks the user to add the node.
+ */
+export function instanceRefFromUrl(url: string): InstanceRef {
+	return { id: '', name: '', url: url.trim() };
+}
+
+/** True when a ref names a node at all. An empty ref names none. */
+export function hasInstanceRef(ref: InstanceRef | null | undefined): boolean {
+	return !!ref && (!!ref.id || !!ref.url);
 }
 
 export function createId(): string {
@@ -231,12 +240,23 @@ export function cloneStoredQuery(
  */
 export const SHARE_LINK_PATH = '/queries/workbench';
 
+/** The search parameter that carries the node of a shared query. */
+export const SHARE_INSTANCE_PARAM = 'instance';
+
 /**
  * Build an absolute share URL for a query. Returns null if the app cannot encode
  * the query. Supply `resolve(SHARE_LINK_PATH)` as `basePath`. Path resolution is
  * a SvelteKit task, so this module does not do it.
+ *
+ * The link carries the URL of the node as `?instance=`. A query runs on one node
+ * only, so the receiver needs it. The link never carries the token. The receiver
+ * supplies their own credentials for a node that needs one.
  */
-export function buildShareLink(query: CompiledQuery | null, basePath: string): string | null {
+export function buildShareLink(
+	query: CompiledQuery | null,
+	basePath: string,
+	instance?: InstanceRef | null
+): string | null {
 	if (!query) return null;
 	const gzipped = Utils.objectToGzipString(query);
 	if (!gzipped) return null;
@@ -248,5 +268,10 @@ export function buildShareLink(query: CompiledQuery | null, basePath: string): s
 
 	const url = new URL(basePath, origin);
 	url.searchParams.set('query', gzipped);
+
+	if (instance?.url) {
+		url.searchParams.set(SHARE_INSTANCE_PARAM, instance.url);
+	}
+
 	return url.toString();
 }

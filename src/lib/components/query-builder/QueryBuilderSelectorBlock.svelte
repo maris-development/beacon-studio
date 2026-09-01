@@ -13,6 +13,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import XIcon from '@lucide/svelte/icons/x';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
 	import { addToast } from '@/stores/toasts';
 	// import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
@@ -129,6 +131,13 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			{@const status = QueryWorkspace.getStatus(block)}
 			{@const columns = QueryWorkspace.getSelectedColumns(block)}
 			{@const run = workspace.getRunState(block)}
+			<!--
+				Each block runs on its own node, so every card names it. `instance` is
+				null when the node is gone, and `missingUrl` then holds the address
+				that the block asks for.
+			-->
+			{@const instance = workspace.instanceFor(block)}
+			{@const missingUrl = workspace.missingInstanceUrlFor(block)}
 			<div
 				
 				class="query-block-wrapper"
@@ -226,6 +235,21 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                         </div> -->
 
 						<div class="query-stats">
+							{#if instance}
+								<span class="query-stat instance-stat" title="Beacon instance: {instance.url}">
+									<BeaconInstanceStatus health={instance} variant="dot" />
+									{instance.name || instance.url}
+								</span>
+							{:else if missingUrl}
+								<span class="query-stat instance-stat missing" title="This instance is not configured">
+									<TriangleAlertIcon size="0.75rem" />
+									{missingUrl}
+								</span>
+							{:else}
+								<span class="query-stat instance-stat missing" title="Pick an instance for this query">
+									No instance
+								</span>
+							{/if}
 							<span class="query-stat" title="Selected table">
 								{status.dataTable || 'No table'}
 							</span>
@@ -317,6 +341,20 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 				content: '•';
 				margin-left: 0.5rem;
 				margin-right: 0.5rem;
+			}
+		}
+
+		// The node of the block. The dot and the icon sit on the text baseline.
+		.instance-stat {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem;
+			max-width: 12rem;
+			overflow: hidden;
+			text-overflow: ellipsis;
+
+			&.missing {
+				color: IndianRed;
 			}
 		}
 	}

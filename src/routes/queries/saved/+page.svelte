@@ -52,9 +52,12 @@
 	 * storage of this browser. Therefore a shared link carries the query itself.
 	 * Every shared link opens the workbench. That page accepts a query with no
 	 * record.
+	 *
+	 * The link also carries the node of the query. A query runs on one node only,
+	 * so the receiver needs it. The link never carries the token.
 	 */
 	async function copyShareLink(entry: StoredQuery): Promise<void> {
-		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH));
+		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH), entry.instance);
 
 		if (!link) {
 			addToast({ type: 'warning', message: 'This entry has no shareable query.' });

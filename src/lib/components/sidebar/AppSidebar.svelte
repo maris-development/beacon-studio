@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Instance service
-	import { currentInstance, instances } from '@/services/beacon-instance';
+	import { currentInstance, instances, selectFirstIfNone } from '@/services/beacon-instance';
 	import { ensureFresh } from '@/services/beacon-instance-connect';
 	import logo from '$lib/assets/logo-gradient.svg';
 
@@ -49,18 +49,18 @@
 					url: resolve('/queries/workbench'),
 					icon: TextSearchIcon,
 					children: [
-						{ title: 'Workbench', url: resolve('/queries/workbench') },
-						{ title: 'Saved', url: resolve('/queries/saved') },
-						{ title: 'History', url: resolve('/queries/history') }
+						{ title: 'Query Builder', url: resolve('/queries/workbench') },
+						{ title: 'Saved Queries', url: resolve('/queries/saved') },
+						{ title: 'Query History', url: resolve('/queries/history') }
 					]
 				}
 			]
 		},
 		{
-			title: 'Data Analysis',
+			title: 'Explore and Analyze',
 			items: [
 				{
-					title: 'Visualisations',
+					title: 'Workspace',
 					url: resolve('/visualisations/map-viewer'),
 					icon: EyeIcon,
 					children: [
@@ -72,7 +72,7 @@
 			]
 		},
 		{
-			title: 'Contents',
+			title: 'Node Management',
 			items: [
 				{
 					title: 'Data Browser',
@@ -134,8 +134,10 @@
 
 	// The app needs at least one instance. Send the user to the home page, which
 	// opens the picker. The store auto-subscriptions make this react to a change.
+	// An empty list is the only blocked state: this selection is the node of the
+	// browse pages and of a new query, and a query record holds its own node.
 	$effect(() => {
-		if ($currentInstance == null && $instances.length === 0) {
+		if ($instances.length === 0) {
 			goto(resolve('/'));
 		}
 	});
@@ -151,9 +153,9 @@
 		const onMobileChange = (e: MediaQueryListEvent) => applyMobile(e.matches);
 		mobileQuery.addEventListener('change', onMobileChange);
 
-		if ($currentInstance == null) {
-			openBeaconInstancePicker();
-		}
+		// Give the browse pages a node, with no modal. A query carries its own node,
+		// and the builder asks for one where it is missing.
+		selectFirstIfNone();
 
 		return () => mobileQuery.removeEventListener('change', onMobileChange);
 	});
@@ -169,17 +171,15 @@
 {/if}
 
 {#if isMobile && !collapsed}
-	<button class="sidebar-backdrop" aria-label="Close menu" onclick={() => (collapsed = true)}
-	></button>
+	<button class="sidebar-backdrop" aria-label="Close menu" onclick={() => (collapsed = true)}></button>
 {/if}
 
 <div class="sidebar" class:collapsed>
 	<div class="sidebar-header">
 		<div class="logo-wrapper">
 			<a class="header-link" href={resolve('/')}>
-				<!-- <DatabaseZapIcon class="size-4" /> -->
-				<img src={logo} alt="Beacon Logo" class="beacon-logo"/>
-				<span class="app-name truncate">Beacon Studio</span>
+				<img src={logo} alt="Beacon Logo" class="beacon-logo" />
+				<span class="app-name">Beacon Studio</span>
 			</a>
 			<button
 				class="collapse-toggle"
@@ -189,22 +189,29 @@
 				}}
 			>
 				{#if isMobile}
-					<MenuIcon class="size-4" />
+					<MenuIcon class="toggle-icon" />
 				{:else if collapsed}
-					<PanelLeftOpenIcon class="size-4" />
+					<PanelLeftOpenIcon class="toggle-icon" />
 				{:else}
-					<PanelLeftCloseIcon class="size-4" />
+					<PanelLeftCloseIcon class="toggle-icon" />
 				{/if}
 			</button>
 		</div>
 
-		<button class="current-instance" onclick={openBeaconInstancePicker}>
-			<LinkIcon class="size-4" />
-			<div class="instance-text grid flex-1 text-left text-sm leading-tight">
-				<span class="truncate font-medium"
-					>{$currentInstance?.name ?? 'No instance picked'}</span
-				>
-				<span class="truncate text-xs">{$currentInstance?.url ?? ''}</span>
+		<!--
+			The node of the browse pages, and the node of a new query block. It is
+			not the node of an open query: a query record owns that one, and the
+			workbench shows it. See `QueryWorkspace.activeInstance`.
+		-->
+		<button
+			class="current-instance"
+			title="The instance for browsing, and for a new query"
+			onclick={openBeaconInstancePicker}
+		>
+			<span class="instance-icon"><LinkIcon /></span>
+			<div class="instance-text">
+				<span class="instance-name">{$currentInstance?.name ?? 'No instance picked'}</span>
+				<span class="instance-url">{$currentInstance?.url ?? ''}</span>
 			</div>
 			{#if $currentInstance}
 				<BeaconInstanceStatus health={$currentInstance} variant="dot" />
@@ -243,6 +250,8 @@
 
 <style lang="scss">
 	.sidebar {
+		--sidebar-bold-font-weight: 600;
+
 		background: var(--sidebar);
 		border-right: 1px solid var(--sidebar-border);
 
@@ -251,10 +260,13 @@
 		flex-direction: column;
 		min-width: 250px;
 		transition:
-		min-width 0.2s ease,
-		width 0.2s ease;
+			min-width 0.2s ease,
+			width 0.2s ease;
 
 		.sidebar-header {
+			padding-bottom: 1rem;
+			border-bottom: 1px solid var(--sidebar-border);
+
 			.logo-wrapper {
 				display: flex;
 				align-items: center;
@@ -283,6 +295,9 @@
 						font-weight: 600;
 						line-height: 1.5rem;
 						margin: 0;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
 					}
 
 					&:hover {
@@ -301,6 +316,11 @@
 					padding: 0.25rem;
 					border-radius: 0.375rem;
 					color: inherit;
+
+					:global(.toggle-icon) {
+						width: 1rem;
+						height: 1rem;
+					}
 
 					&:hover {
 						background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
@@ -321,7 +341,41 @@
 				border: none;
 				cursor: pointer;
 
-				background-color: rgba(255,255,255, 0.25);
+				background-color: rgba(255, 255, 255, 0.25);
+
+				.instance-icon {
+					display: flex;
+					flex-shrink: 0;
+
+					:global(svg) {
+						width: 1rem;
+						height: 1rem;
+					}
+				}
+
+				.instance-text {
+					display: grid;
+					flex: 1;
+					min-width: 0;
+					text-align: left;
+					font-size: 0.875rem;
+					line-height: 1.25;
+				}
+
+				.instance-name {
+					font-weight: var(--sidebar-bold-font-weight);
+				}
+
+				.instance-name,
+				.instance-url {
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+
+				.instance-url {
+					font-size: 0.75rem;
+				}
 
 				&:hover {
 					background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
@@ -333,13 +387,18 @@
 			flex-grow: 1;
 		}
 
+		.sidebar-footer {
+			.menu-group {
+				border-top: 1px solid var(--sidebar-border);
+			}
+		}
+
 		.menu-group {
-			padding-top: 0.5rem;
-			padding-bottom: 0.5rem;
+			padding-top: 1rem;
+			padding-bottom: 1rem;
 			gap: 0.5rem;
 			display: flex;
 			flex-direction: column;
-			margin-top: 1.5rem;
 
 			.menu-title {
 				font-size: 0.75rem;
@@ -347,6 +406,11 @@
 				line-height: 1rem;
 				text-transform: uppercase;
 				color: var(--foreground);
+			}
+
+			:global(> .menu-item > .item-title),
+			:global(.submenu-title) {
+				font-weight: var(--sidebar-bold-font-weight);
 			}
 		}
 
