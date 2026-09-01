@@ -30,7 +30,7 @@ npm run tauri:dev
 Build the web app (static output):
 
 ```bash
-npm run build
+npm run build --omit=dev
 ```
 
 Build the web app for a subdirectory deployment (example: `beacon-wod.maris.nl/studio`):

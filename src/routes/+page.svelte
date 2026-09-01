@@ -5,7 +5,6 @@
 		findByUrl,
 		instances,
 		normalizeUrl,
-		selectFirstIfNone,
 		selectInstance
 	} from '@/services/beacon-instance';
 	import { ensureFresh, ensureHostInstance } from '@/services/beacon-instance-connect';
@@ -18,7 +17,7 @@
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 
-	import { resolve } from '$app/paths';
+	import { asset, resolve } from '$app/paths';
 
 	// The sidebar owns the health check of the selection. This card shows the
 	// result. See `AppSidebar.svelte` and `@/services/beacon-instance-connect`.
@@ -115,7 +114,7 @@
 				<Button href={resolve('/queries/workbench')}>New Query</Button>
 			</div>
 			<div class="image">
-				<img src="/images/small-query-workbench.png" alt="Query Workbench" />
+				<img src={asset('/images/small-query-workbench.png')} alt="Query Workbench" />
 			</div>
 		</Card>
 
@@ -128,7 +127,7 @@
 				>
 			</div>
 			<div class="image">
-				<img src="/images/small-map-viewer.png" alt="Map Viewer" />
+				<img src={asset('/images/small-map-viewer.png')} alt="Map Viewer" />
 			</div>
 		</Card>
 
@@ -141,7 +140,7 @@
 				>
 			</div>
 			<div class="image">
-				<img src="/images/small-chart-explorer.png" alt="Chart Explorer" />
+				<img src={asset('/images/small-chart-explorer.png')} alt="Chart Explorer" />
 			</div>
 		</Card>
 	</div>
