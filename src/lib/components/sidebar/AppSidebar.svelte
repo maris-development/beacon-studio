@@ -86,6 +86,13 @@
 				{ title: 'System Info', url: resolve('/system-info'), icon: CpuIcon },
 				{ title: 'Settings', url: resolve('/settings'), icon: Settings2Icon }
 			]
+		},
+		{
+			title: 'Beacon Studio',
+			items: [
+				{ title: 'Beacon Instances', url: resolve('/beacon-instances'), icon: LinkIcon },
+				{ title: 'Settings', url: resolve('/settings'), icon: Settings2Icon }
+			]
 		}
 	];
 

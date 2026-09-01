@@ -3,14 +3,15 @@
 	import Toasts from '@/components/toasts/toasts.svelte';
 	import { startHealthMonitor } from '@/services/beacon-instance-connect';
 	import { loadOpenInstances } from '@/services/open-instances';
+	import { importOpenInstances } from '@/services/open-instances-import';
 	import { onMount } from 'svelte';
 	import '../app.scss';
 	import '../tailwind.css';
 
 	// One monitor for the whole app. It checks every node each hour.
 	onMount(() => {
-		// The public list is an offer. A failure leaves the list empty.
-		void loadOpenInstances();
+		// A failure leaves the list empty, so the import then adds nothing.
+		void loadOpenInstances().then(importOpenInstances);
 
 		return startHealthMonitor();
 	});
