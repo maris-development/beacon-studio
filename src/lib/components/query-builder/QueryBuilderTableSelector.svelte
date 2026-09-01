@@ -170,7 +170,7 @@
         }
 
         :global(.table-select-trigger) {
-            width: 180px;
+            width: 250px;
         }
     }
 </style>
