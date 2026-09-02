@@ -209,7 +209,7 @@
 			not the node of an open query: a query record owns that one, and the
 			workbench shows it. See `QueryWorkspace.activeInstance`.
 		-->
-		<button
+		<!-- <button
 			class="current-instance"
 			title="The instance for browsing, and for a new query"
 			onclick={openBeaconInstancePicker}
@@ -222,7 +222,7 @@
 			{#if $currentInstance}
 				<BeaconInstanceStatus health={$currentInstance} variant="dot" />
 			{/if}
-		</button>
+		</button> -->
 	</div>
 
 	<div class="sidebar-content">
