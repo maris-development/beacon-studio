@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { instances } from '@/services/beacon-instance';
+	import { ensureFresh } from '@/services/beacon-instance-connect';
 	import { BeaconClient } from '@/beacon-api/client';
-	import { onMount } from 'svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
@@ -11,6 +11,15 @@
 	import { resolve } from '$app/paths';
 	import Button from '@/components/buttons/Button.svelte';
 	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
+	import { persisted } from 'svelte-local-storage-store';
+
+	let selectedInstanceId = persisted<string | null>('data-browser-data-tables-instance-id', null);
+	let selectedInstance = $derived(
+		$instances.find((instance) => instance.id === $selectedInstanceId) ?? $instances[0] ?? null
+	);
+	let client: BeaconClient;
 
 	let columns: Column[] = $state([
 		{ key: 'table', header: 'Table', sortable: false, rawHtml: true }
@@ -24,16 +33,26 @@
 	let firstLoad = true;
 	let create_table_modal_open: boolean = $state(false);
 
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
-	let client: BeaconClient;
+	let loadedInstanceId: string | null = null;
 
-	onMount(() => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
+	$effect(() => {
+		if (!selectedInstance || selectedInstance.id === loadedInstanceId) return;
+		loadedInstanceId = selectedInstance.id;
 
+		// Persist a fallback pick (e.g. first instance) the same as an explicit one.
+		if ($selectedInstanceId !== selectedInstance.id) selectedInstanceId.set(selectedInstance.id);
+
+		client = BeaconClient.new(selectedInstance);
+		pageIndex = 1;
+
+		firstLoad = true; // let getTables() run again despite the isLoading guard
 		onAsyncMount();
+	});
 
-		return () => {};
+	// Show a true status dot for the picker. `ensureFresh` skips a check that is
+	// not due, so this costs nothing on a second visit.
+	$effect(() => {
+		for (const instance of $instances) void ensureFresh(instance);
 	});
 
 	async function onAsyncMount() {
@@ -112,32 +131,64 @@
 <div class="page-wrapper">
 	<div class="page-container">
 		<h1>Data Tables</h1>
-		<div class="mb-4 flex items-center justify-between">
-			<p>Explore and manage the tables that are available in your Beacon instance.</p>
 
-			<Button variant="outline" onclick={() => (create_table_modal_open = true)}
-				>Create Table</Button
+		<p>Explore and manage the tables that are available in your Beacon instance.</p>
+
+		<div class="mb-4 flex items-center gap-2 instance-picker">
+			<Select.Root
+				type="single"
+				name="beaconInstance"
+				value={selectedInstance?.id ?? ''}
+				onValueChange={(id) => selectedInstanceId.set(id)}
 			>
+				<Select.Trigger class="instance-select-trigger">
+					{selectedInstance?.name ?? 'Select an instance'}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Label>Instances</Select.Label>
+						{#each $instances as instance (instance.id)}
+							<Select.Item value={instance.id} label={instance.name}>
+								{instance.name}
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+
+			{#if selectedInstance}
+				<BeaconInstanceStatus health={selectedInstance} variant="dot" />
+			{/if}
 		</div>
 
-		<DataTable
-			rowClass="arrow-row"
-			{onChangeSort}
-			{onPageChange}
-			{onCellClick}
-			{columns}
-			{rows}
-			{totalRows}
-			{pageSize}
-			{pageIndex}
-			{isLoading}
-		/>
+		{#if $instances.length === 0}
+			<p>No saved Beacon instances yet. Add one from the sidebar to browse data tables.</p>
+		{:else}
+			<div class="mb-4 flex items-center justify-end">
+				<Button variant="outline" onclick={() => (create_table_modal_open = true)}
+					>Create Table</Button
+				>
+			</div>
 
-		{#if create_table_modal_open}
-			<CreateTableModal
-				onCancel={() => (create_table_modal_open = false)}
-				instance={currentBeaconInstanceValue}
+			<DataTable
+				rowClass="arrow-row"
+				{onChangeSort}
+				{onPageChange}
+				{onCellClick}
+				{columns}
+				{rows}
+				{totalRows}
+				{pageSize}
+				{pageIndex}
+				{isLoading}
 			/>
+
+			{#if create_table_modal_open}
+				<CreateTableModal
+					onCancel={() => (create_table_modal_open = false)}
+					instance={selectedInstance}
+				/>
+			{/if}
 		{/if}
 	</div>
 </div>
