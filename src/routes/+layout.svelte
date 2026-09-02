@@ -1,8 +1,9 @@
 <script lang="ts">
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
 	import Toasts from '@/components/toasts/toasts.svelte';
-	import { startHealthMonitor } from '@/services/beacon-instance-connect';
+	import { checkAllInstances, startHealthMonitor } from '@/services/beacon-instance-connect';
 	import { loadOpenInstances } from '@/services/open-instances';
+	import { FRESH_MS } from '@/services/beacon-instance-health';
 	import { importOpenInstances } from '@/services/open-instances-import';
 	import { onMount } from 'svelte';
 	import '../app.scss';
@@ -10,8 +11,11 @@
 
 	// One monitor for the whole app. It checks every node each hour.
 	onMount(() => {
-		// A failure leaves the list empty, so the import then adds nothing.
-		void loadOpenInstances().then(importOpenInstances);
+		// A failure leaves the list empty, so the import then adds nothing. The
+		// monitor sweeps before the fetch answers, so the new nodes need a check.
+		void loadOpenInstances()
+			.then(importOpenInstances)
+			.then(() => checkAllInstances(FRESH_MS));
 
 		return startHealthMonitor();
 	});

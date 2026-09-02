@@ -12,6 +12,7 @@
 	import AddBeaconModal from '@/components/modals/AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 
 	let editingInstance: BeaconInstance | null = $state(null);
@@ -44,7 +45,7 @@
 	<title>Beacon Instances - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Beacon Instances', href: '/beacon-instances' }]} />
+<Cookiecrumb crumbs={[{ label: 'Beacon Instances', href: resolve('/beacon-instances') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
@@ -140,14 +141,14 @@
 		}
 
 		thead {
-			background-color: var(--muted-background);
+			background-color: var(--muted);
 			color: var(--muted-foreground);
 		}
 
 		tbody {
 			tr {
 				&:nth-child(even) {
-					background-color: var(--muted-background);
+					background-color: var(--muted);
 				}
 			}
 		}

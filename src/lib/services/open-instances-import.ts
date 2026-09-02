@@ -14,7 +14,13 @@
 
 import { persisted } from 'svelte-local-storage-store';
 import { get } from 'svelte/store';
-import { addInstance, findByUrl, normalizeUrl } from './beacon-instance';
+import {
+	addInstance,
+	findByUrl,
+	getCurrentInstance,
+	normalizeUrl,
+	selectInstance
+} from './beacon-instance';
 import { getOpenInstances, type OpenInstance } from './open-instances';
 
 /** The key of the normalized URLs that the app imported. */
@@ -34,6 +40,7 @@ const importedUrlsStore = persisted<string[]>(IMPORTED_KEY, []);
  */
 export function importOpenInstances(list: OpenInstance[] = getOpenInstances()): number {
 	const imported = new Set(get(importedUrlsStore));
+	const hadSelection = getCurrentInstance() !== null;
 	let added = 0;
 
 	for (const node of [...list].reverse()) {
@@ -55,5 +62,22 @@ export function importOpenInstances(list: OpenInstance[] = getOpenInstances()): 
 
 	importedUrlsStore.set([...imported]);
 
+	// `addInstance` selects the first record it adds, which the backward loop
+	// makes the last node of the public list. Take the first node of that list
+	// instead. MARIS puts the node it prefers at the top.
+	if (!hadSelection && added > 0) selectFirstOf(list);
+
 	return added;
+}
+
+/** Selects the first node of the list that the saved list holds. */
+function selectFirstOf(list: OpenInstance[]): void {
+	for (const node of list) {
+		const instance = findByUrl(node.url);
+
+		if (instance) {
+			selectInstance(instance.id);
+			return;
+		}
+	}
 }
