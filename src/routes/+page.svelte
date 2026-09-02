@@ -91,7 +91,7 @@
 		<p class="subtitle">Explore and analyse your Beacon node data</p>
 	</div>
 
-	<h2>Connected Instances</h2>
+	<h2>Connected Instances ({$instances.length})</h2>
 
 	<div class="connected-instances">
 		<Card>

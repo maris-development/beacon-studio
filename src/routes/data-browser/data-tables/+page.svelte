@@ -159,17 +159,19 @@
 			{#if selectedInstance}
 				<BeaconInstanceStatus health={selectedInstance} variant="dot" />
 			{/if}
+
+			{#if $instances.length > 0}
+				<Button
+					class="ml-auto"
+					variant="outline"
+					onclick={() => (create_table_modal_open = true)}>Create Table</Button
+				>
+			{/if}
 		</div>
 
 		{#if $instances.length === 0}
 			<p>No saved Beacon instances yet. Add one from the sidebar to browse data tables.</p>
 		{:else}
-			<div class="mb-4 flex items-center justify-end">
-				<Button variant="outline" onclick={() => (create_table_modal_open = true)}
-					>Create Table</Button
-				>
-			</div>
-
 			<DataTable
 				rowClass="arrow-row"
 				{onChangeSort}
