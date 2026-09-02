@@ -11,21 +11,23 @@
 	import { healthMap, healthOf } from '@/services/beacon-instance-health';
 	import { openInstances, type OpenInstance } from '@/services/open-instances';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import ChooseBeaconModal from '@/components/modals/ChooseBeaconModal.svelte';
 	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
 	import { onMount } from 'svelte';
+	import { fade } from 'svelte/transition';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 
 	import { asset, resolve } from '$app/paths';
 
-	// The sidebar owns the health check of the selection. This card shows the
-	// result. See `AppSidebar.svelte` and `@/services/beacon-instance-connect`.
-	let showChooseBeaconModal = $state(false);
-
 	// The table shows the health of every public node. The layout loads the list.
 	$effect(() => {
 		for (const node of $openInstances) void ensureFresh(node);
+	});
+
+	// The Connected Instances card cycles through every configured instance, so
+	// each one needs a true status dot. `ensureFresh` skips a check that is not due.
+	$effect(() => {
+		for (const instance of $instances) void ensureFresh(instance);
 	});
 
 	/** The normalized URL of the selection, or `null`. */
@@ -34,6 +36,17 @@
 	// A plain `findByUrl` in the markup reads no store, so the button label would
 	// not follow a change of the list. This set does.
 	let configuredUrls = $derived(new Set($instances.map((instance) => normalizeUrl(instance.url))));
+
+	const CYCLE_INTERVAL_MS = 5_000;
+
+	/** Advances every `CYCLE_INTERVAL_MS`. The Connected Instances card uses it to
+	 * step through `$instances`. */
+	let cycleIndex = $state(0);
+
+	/** The instance the Connected Instances card shows now, or `null` if none is configured. */
+	let displayedInstance = $derived(
+		$instances.length > 0 ? $instances[cycleIndex % $instances.length] : null
+	);
 
 	/**
 	 * Adds the node and selects it. A node that the list already holds needs no
@@ -57,13 +70,12 @@
 	}
 
 
-	function onModalClose() {
-			showChooseBeaconModal = false;
-	}
-
-	onMount(async () => {
+	onMount(() => {
 		// The app can run on the same host as a Beacon node. Add that node once.
-		await ensureHostInstance(window.location.origin);
+		void ensureHostInstance(window.location.origin);
+
+		const timer = setInterval(() => (cycleIndex += 1), CYCLE_INTERVAL_MS);
+		return () => clearInterval(timer);
 	});
 </script>
 
@@ -79,28 +91,27 @@
 		<p class="subtitle">Explore and analyse your Beacon node data</p>
 	</div>
 
-	<h2>Current Node</h2>
+	<h2>Connected Instances</h2>
 
 	<Card>
 		<div class="current-node">
-			{#if $currentInstance}
-				<div class="current-node-info">
-					<div class="name-url">
-						<p class="name">{$currentInstance.name}</p>
-						<a class="url" href={$currentInstance.url} rel="noopener noreferrer" target="_blank"
-							>{$currentInstance.url}</a
-						>
-					</div>
-					<BeaconInstanceStatus health={$currentInstance} />
+			{#key displayedInstance?.id ?? 'none'}
+				<div class="cycle-content" transition:fade={{ duration: 500 }}>
+					{#if displayedInstance}
+						<div class="current-node-info">
+							<div class="name-url">
+								<p class="name">{displayedInstance.name}</p>
+								<a class="url" href={displayedInstance.url} rel="noopener noreferrer" target="_blank"
+									>{displayedInstance.url}</a
+								>
+							</div>
+							<BeaconInstanceStatus health={displayedInstance} />
+						</div>
+					{:else}
+						<p class="no-instance">No Beacon instance is configured.</p>
+					{/if}
 				</div>
-			{/if}
-			<Button onclick={() => (showChooseBeaconModal = true)}>
-				{#if $currentInstance}
-					Switch instance
-				{:else}
-					Connect to instance
-				{/if}
-			</Button>
+			{/key}
 		</div>
 	</Card>
 
@@ -145,7 +156,7 @@
 		</Card>
 	</div>
 
-	<h2>Try out available nodes</h2>
+	<!-- <h2>Try out available nodes</h2>
 
 	<Card class="available-nodes">
 		<div class="table-scroll">
@@ -194,12 +205,8 @@
 				</tbody>
 			</table>
 		</div>
-	</Card>
+	</Card> -->
 </div>
-
-{#if showChooseBeaconModal}
-	<ChooseBeaconModal onClose={onModalClose} />
-{/if}
 
 <style lang="scss">
 	.page-wrapper {
@@ -295,10 +302,18 @@
 		}
 
 		.current-node {
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			justify-content: space-between;
+			// Grid stacks the outgoing and incoming .cycle-content in one cell, so
+			// the crossfade overlaps in place instead of shifting the layout.
+			display: grid;
+
+			.cycle-content {
+				grid-column: 1;
+				grid-row: 1;
+			}
+
+			.no-instance {
+				color: var(--muted-foreground);
+			}
 
 			.current-node-info {
 				display: flex;
