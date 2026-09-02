@@ -182,7 +182,7 @@
 		</div>
 
 		{#if $instances.length === 0}
-			<p>No saved Beacon instances yet. Add one from the sidebar to browse datasets.</p>
+			<p>No saved Beacon instances yet. Please add a Beacon instance on the Beacon Instances page to browse datasets.</p>
 		{:else}
 			<div class="mb-4 flex items-center justify-between">
 				<input

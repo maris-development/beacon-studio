@@ -170,7 +170,7 @@
 		</div>
 
 		{#if $instances.length === 0}
-			<p>No saved Beacon instances yet. Add one from the sidebar to browse data tables.</p>
+			<p>No saved Beacon instances yet. Please add a Beacon instance on the Beacon Instances page to browse data tables.</p>
 		{:else}
 			<DataTable
 				rowClass="arrow-row"
