@@ -103,7 +103,7 @@
 		<div class="header">
 			<div>
 				<h1>Saved Queries</h1>
-				<p>Queries you've saved from the workbench. Re-run, visualise, or open any saved query.</p>
+				<p>Queries you've saved from the query builder. Re-run, visualise, or open any saved query.</p>
 			</div>
 			{#if entries.length > 0}
 				<div class="buttons">
@@ -119,7 +119,7 @@
 			<Card>
 				<h2>No saved queries yet</h2>
 				<p>
-					Build a query in the <a href={resolve('/queries/workbench')}>Query Workbench</a> and click
+					Build a query in the <a href={resolve('/queries/workbench')}>Query Builder</a> and click
 					<strong>Save Query</strong> to add it here.
 				</p>
 			</Card>

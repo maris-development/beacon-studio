@@ -8,6 +8,7 @@
 	import { onMount } from 'svelte';
 	import { goto, afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -83,7 +84,13 @@
 						{ title: 'Data Tables', url: resolve('/data-browser/data-tables') }
 					]
 				},
-				{ title: 'System Info', url: resolve('/system-info'), icon: CpuIcon },
+				{ title: 'System Info', url: resolve('/system-info'), icon: CpuIcon }
+			]
+		},
+		{
+			title: 'Beacon Studio',
+			items: [
+				{ title: 'Beacon Instances', url: resolve('/beacon-instances'), icon: LinkIcon },
 				{ title: 'Settings', url: resolve('/settings'), icon: Settings2Icon }
 			]
 		}
@@ -125,14 +132,20 @@
 		if (instance) void ensureFresh(instance);
 	});
 
+	// The routes that work with an empty list. Both of them can add an instance.
+	const INSTANCE_FREE_ROUTES = new Set(['/', '/beacon-instances']);
+
 	// The app needs at least one instance. Send the user to the home page, which
-	// opens the picker. The store auto-subscriptions make this react to a change.
-	// An empty list is the only blocked state: this selection is the node of the
-	// browse pages and of a new query, and a query record holds its own node.
+	// offers the public nodes. The store auto-subscriptions make this react to a
+	// change. An empty list is the only blocked state: this selection is the node
+	// of the browse pages and of a new query, and a query record holds its own
+	// node. The guard skips the routes above, or the user could not add the first
+	// instance. `page.route.id` carries no base path, so it needs no `resolve`.
 	$effect(() => {
-		if ($instances.length === 0) {
-			goto(resolve('/'));
-		}
+		if ($instances.length > 0) return;
+		if (INSTANCE_FREE_ROUTES.has(page.route.id ?? '')) return;
+
+		goto(resolve('/'));
 	});
 
 	onMount(() => {
@@ -196,7 +209,7 @@
 			not the node of an open query: a query record owns that one, and the
 			workbench shows it. See `QueryWorkspace.activeInstance`.
 		-->
-		<button
+		<!-- <button
 			class="current-instance"
 			title="The instance for browsing, and for a new query"
 			onclick={openBeaconInstancePicker}
@@ -209,7 +222,7 @@
 			{#if $currentInstance}
 				<BeaconInstanceStatus health={$currentInstance} variant="dot" />
 			{/if}
-		</button>
+		</button> -->
 	</div>
 
 	<div class="sidebar-content">

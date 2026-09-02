@@ -5,9 +5,8 @@
  * MARIS. The list comes from a URL, not from the bundle, so MARIS can change it
  * without a release of the app.
  *
- * These entries are an offer. The app does not persist them, and does not add
- * them to the instance list. The home page shows them, and the user adds one
- * with the Connect button. A node that the user removes therefore stays out.
+ * This file holds the list only. `open-instances-import.ts` adds each node to
+ * the saved instance list, once. A node that the user removes stays out.
  *
  * This file holds no client code, so `beacon-instance-connect.ts` can sweep the
  * list without an import cycle.

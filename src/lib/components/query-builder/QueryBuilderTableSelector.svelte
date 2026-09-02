@@ -71,7 +71,7 @@
                 <Card class={selected_table_name === table_name ? 'selected' : ''}
                     onclick={() => pickTable(table_name)}>
                     <div class="table-header">
-                        <h4>{table_name}</h4>
+                        <h4 title={table_name}>{table_name}</h4>
                         {#if selected_table_name === table_name}
                             <CircleCheck class="check" size="1rem"/>
                         {/if}
@@ -131,7 +131,7 @@
 
         .cards-view {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
             gap: 0.5rem;
 
             :global(.card) {
@@ -152,9 +152,17 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                min-width: 0;
 
                 h4 {
                     margin: 0;
+                    overflow: hidden;
+                    display: -webkit-box;
+                    -webkit-box-orient: vertical;
+                    -webkit-line-clamp: 2;
+                    line-clamp: 2;
+                    overflow-wrap: anywhere;
+                    word-break: break-word;
                 }
             }
 
@@ -170,7 +178,7 @@
         }
 
         :global(.table-select-trigger) {
-            width: 180px;
+            width: 250px;
         }
     }
 </style>

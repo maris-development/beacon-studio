@@ -1219,7 +1219,8 @@
 					</div>
 				</details>
 
-				<details class="analysis-subsection density-subsection">
+				<!-- Future addition -->
+				<!-- <details class="analysis-subsection density-subsection">
 					<summary class="analysis-header">
 						<span>Density Overlays</span>
 					</summary>
@@ -1231,7 +1232,7 @@
 							>
 						</label>
 					</div>
-				</details>
+				</details> -->
 			{/if}
 		</PlotSection>
 
