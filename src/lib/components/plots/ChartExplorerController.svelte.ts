@@ -372,9 +372,9 @@ export class ChartExplorerController {
 		this.selection = selection;
 		this.view = normaliseChartView(view) ?? makeChartViewState([makePlotConfig()]);
 
-		// A result may already be loaded, for example after a return to a block
-		// that ran before. Its columns must reach the new plot at once.
-		this.syncPlotToColumns();
+		// Do not sync against columns here: `entry` still holds the previous
+		// block's result at this point. `showQueryFromCache`/`runAndShowQuery`
+		// sync the plot once the new block's own result is in.
 	}
 
 	/**

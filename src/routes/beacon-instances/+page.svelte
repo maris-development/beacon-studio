@@ -51,7 +51,12 @@
 	<div class="page-container">
 		<h1>Beacon Instances</h1>
 
-		<p>Use this page to manage your connected Beacon instances.</p>
+		<p>
+			Use this page to manage your connected Beacon instances. Explore publicly available Beacon
+			instances at <a href="https://beacon-datalake.org/use-cases" rel="noopener noreferrer" target="_blank"
+				>Beacon datalake</a
+			>.
+		</p>
 
 		<div class="actions">
 			<Button onclick={() => openForm(null)}>

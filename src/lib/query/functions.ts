@@ -18,7 +18,8 @@ function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | nul
     }
 
     if(!result){
-        let message = 'Error compiling query: compileQuery function returned null.';
+        // let message = 'Error compiling query: compileQuery function returned null.';
+        let message = 'Cannot share an empty query. Please select a table and atleast one column.';
 
         if(error?.message){
             message += `Error compiling query: ${error.message}`;
