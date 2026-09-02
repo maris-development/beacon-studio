@@ -6,9 +6,10 @@
 
 	// Svelte lifecycle and navigation
 	import { onMount } from 'svelte';
-	import { goto, afterNavigate } from '$app/navigation';
+	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import { addToast } from '@/stores/toasts';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -135,17 +136,28 @@
 	// The routes that work with an empty list. Both of them can add an instance.
 	const INSTANCE_FREE_ROUTES = new Set(['/', '/beacon-instances']);
 
-	// The app needs at least one instance. Send the user to the home page, which
-	// offers the public nodes. The store auto-subscriptions make this react to a
-	// change. An empty list is the only blocked state: this selection is the node
-	// of the browse pages and of a new query, and a query record holds its own
-	// node. The guard skips the routes above, or the user could not add the first
-	// instance. `page.route.id` carries no base path, so it needs no `resolve`.
-	$effect(() => {
-		if ($instances.length > 0) return;
-		if (INSTANCE_FREE_ROUTES.has(page.route.id ?? '')) return;
+	// `page.route.id` carries no base path, so it needs no `resolve`.
+	function needsInstance(routeId: string | null | undefined): boolean {
+		return !INSTANCE_FREE_ROUTES.has(routeId ?? '');
+	}
 
-		goto(resolve('/'));
+	function warnNoInstance(): void {
+		addToast({
+			type: 'error',
+			message: 'This page needs a Beacon instance. Add one on the Beacon Instances page.'
+		});
+	}
+
+	// The app needs at least one instance for every route but the two above: this
+	// selection is the node of the browse pages and of a new query, and a query
+	// record holds its own node. Block the navigation instead of following it, so
+	// the user stays on the page they came from and sees why the target failed.
+	beforeNavigate((navigation) => {
+		if ($instances.length > 0) return;
+		if (!needsInstance(navigation.to?.route.id)) return;
+
+		navigation.cancel();
+		warnNoInstance();
 	});
 
 	onMount(() => {
@@ -162,6 +174,14 @@
 		// Give the browse pages a node, with no modal. A query carries its own node,
 		// and the builder asks for one where it is missing.
 		selectFirstIfNone();
+
+		// `beforeNavigate` never runs for the page a session opens on. A direct
+		// load of a blocked route (a bookmark, a refresh, a shared link) has no
+		// prior page to stay on, so send it home instead.
+		if ($instances.length === 0 && needsInstance(page.route.id)) {
+			warnNoInstance();
+			goto(resolve('/'));
+		}
 
 		return () => mobileQuery.removeEventListener('change', onMobileChange);
 	});
