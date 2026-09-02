@@ -93,27 +93,30 @@
 
 	<h2>Connected Instances</h2>
 
-	<Card>
-		<div class="current-node">
-			{#key displayedInstance?.id ?? 'none'}
-				<div class="cycle-content" transition:fade={{ duration: 500 }}>
-					{#if displayedInstance}
-						<div class="current-node-info">
-							<div class="name-url">
-								<p class="name">{displayedInstance.name}</p>
-								<a class="url" href={displayedInstance.url} rel="noopener noreferrer" target="_blank"
-									>{displayedInstance.url}</a
-								>
+	<div class="connected-instances">
+		<Card>
+			<div class="current-node">
+				{#key displayedInstance?.id ?? 'none'}
+					<div class="cycle-content" transition:fade={{ duration: 500 }}>
+						{#if displayedInstance}
+							<div class="current-node-info">
+								<div class="name-url">
+									<p class="name">{displayedInstance.name}</p>
+									<a class="url" href={displayedInstance.url} rel="noopener noreferrer" target="_blank"
+										>{displayedInstance.url}</a
+									>
+								</div>
+								<BeaconInstanceStatus health={displayedInstance} />
 							</div>
-							<BeaconInstanceStatus health={displayedInstance} />
-						</div>
-					{:else}
-						<p class="no-instance">No Beacon instance is configured.</p>
-					{/if}
-				</div>
-			{/key}
-		</div>
-	</Card>
+						{:else}
+							<p class="no-instance">No Beacon instance is configured.</p>
+						{/if}
+					</div>
+				{/key}
+			</div>
+			<Button href={resolve('/beacon-instances')}>Manage Instances</Button>
+		</Card>
+	</div>
 
 	<h2>Launchpad</h2>
 
@@ -301,10 +304,21 @@
 			margin-top: 3rem;
 		}
 
+		.connected-instances {
+			:global(.card-content) {
+				display: flex;
+				flex-direction: row;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+			}
+		}
+
 		.current-node {
 			// Grid stacks the outgoing and incoming .cycle-content in one cell, so
 			// the crossfade overlaps in place instead of shifting the layout.
 			display: grid;
+			flex: 1;
 
 			.cycle-content {
 				grid-column: 1;
