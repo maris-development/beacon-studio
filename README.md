@@ -38,6 +38,9 @@ Build the web app for a subdirectory deployment (example: `beacon-wod.maris.nl/s
 ```bash
 BASE_PATH=//studio npm run build --omit=dev
 ```
+```powershell
+$env:BASE_PATH="/studio"; npm run build --omit=dev
+```
 
 Use `//` to prevent path lookup issues in bash.
 
