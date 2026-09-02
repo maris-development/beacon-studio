@@ -13,13 +13,13 @@
 	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
-	import { persisted } from 'svelte-local-storage-store';
+	import { dataBrowserInstanceId } from '@/stores/data-browser-instance';
 
 	type Dataset = {
 		dataset: string;
 	};
 
-	let selectedInstanceId = persisted<string | null>('data-browser-datasets-instance-id', null);
+	let selectedInstanceId = dataBrowserInstanceId;
 	let selectedInstance = $derived(
 		$instances.find((instance) => instance.id === $selectedInstanceId) ?? $instances[0] ?? null
 	);
