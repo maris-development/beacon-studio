@@ -464,8 +464,16 @@ export class MapViewController {
 	async showDataColumn(force = false, fitCamera = true): Promise<void> {
 		if (!this.selectedDataColumnName || !this.table) return;
 
-		if (this.selectedDataColumnName === this.renderedColumn && !force) return;
+		const columnChanged = this.selectedDataColumnName !== this.renderedColumn;
+		if (!columnChanged && !force) return;
 		this.renderedColumn = this.selectedDataColumnName;
+
+		// A new column has its own range. Reset to the defaults so `createLayer`
+		// recomputes the scale from this column's actual min/max.
+		if (columnChanged) {
+			this.colorScaleMin = SCALE_DEFAULT_MIN;
+			this.colorScaleMax = SCALE_DEFAULT_MAX;
+		}
 
 		this.isLoading = true;
 
