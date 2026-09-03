@@ -38,6 +38,7 @@ import MapPopupContent from '@/components/MapPopupContent.svelte';
 import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend-defaults';
 import { DEFAULT_PALETTE_ID, getRgbTable, loadColormaps, paletteIndex } from '@/colors/palettes';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
+import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
 
 /**
@@ -126,6 +127,29 @@ export class MapViewController {
 	readonly hasCoordinates = $derived.by(() => {
 		const { latitude, longitude } = detectCoordinateColumns(this.availableColumnNames);
 		return !!latitude && !!longitude;
+	});
+
+	/**
+	 * `availableColumnNames` minus latitude, longitude, and any timestamp
+	 * column. None of the three are meaningful to colour points by, so they
+	 * are hidden from the picker. The query still selects them for the lat/lon
+	 * plotting above; only the picker's list is filtered.
+	 */
+	readonly dataColumnOptions = $derived.by(() => {
+		if (!this.entry) return [];
+
+		const timeColumnNames = new Set(
+			plottableColumns(this.entry.table)
+				.filter((column) => column.kind === 'timestamp')
+				.map((column) => column.name)
+		);
+
+		return this.availableColumnNames.filter(
+			(name) =>
+				name !== this.latitudeColumnName &&
+				name !== this.longitudeColumnName &&
+				!timeColumnNames.has(name)
+		);
 	});
 
 	/**
@@ -394,17 +418,21 @@ export class MapViewController {
 
 		// Keep the column that the user picked, if the new result still has it.
 		// The user must not choose it again after every filter change.
-		if (this.selectedDataColumnName) {
-			if (this.availableColumnNames.includes(this.selectedDataColumnName)) {
-				await this.showDataColumn(true, fitCamera);
-				return;
-			}
-
-			this.selectedDataColumnName = undefined;
-			this.renderedColumn = undefined;
+		if (this.selectedDataColumnName && this.dataColumnOptions.includes(this.selectedDataColumnName)) {
+			await this.showDataColumn(true, fitCamera);
+			return;
 		}
 
-		addToast({ type: 'info', message: 'Select a data column to display on the map.' });
+		// No valid selection: pick the first pickable column, so points render
+		// at once instead of leaving the user to open the dropdown first.
+		this.renderedColumn = undefined;
+		this.selectedDataColumnName = this.dataColumnOptions[0];
+
+		if (this.selectedDataColumnName) {
+			await this.showDataColumn(true, fitCamera);
+		} else {
+			addToast({ type: 'info', message: 'This query has no data column to display on the map.' });
+		}
 	}
 
 	/**

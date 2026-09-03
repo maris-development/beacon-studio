@@ -195,7 +195,7 @@
 									<Select.Content>
 										<Select.Group>
 											<Select.Label>Available columns</Select.Label>
-											{#each map.availableColumnNames as column, index (index)}
+											{#each map.dataColumnOptions as column, index (index)}
 												<Select.Item value={column} label={column}>
 													{column}
 												</Select.Item>
