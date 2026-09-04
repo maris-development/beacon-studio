@@ -139,13 +139,29 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 	let rowEl: HTMLDivElement | undefined = $state();
 
-	// Keep the active block fully in view, including right after a page load/reload.
-	$effect(() => {
+	function scrollActiveBlockIntoView(): void {
 		const activeId = workspace.activeBlockId;
 		if (!rowEl || !activeId) return;
 
 		const activeEl = rowEl.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(activeId)}"]`);
-		activeEl?.scrollIntoView({ block: 'nearest', inline: 'nearest'});
+		activeEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	}
+
+	// Keep the active block fully in view, including right after a page load/reload.
+	$effect(() => {
+		scrollActiveBlockIntoView();
+	});
+
+	// Re-correct on width changes, e.g. the page scrollbar appearing/disappearing
+	// shrinks this row without changing activeBlockId, which would otherwise leave
+	// an edge block clipped.
+	$effect(() => {
+		if (!rowEl) return;
+
+		const observer = new ResizeObserver(() => scrollActiveBlockIntoView());
+		observer.observe(rowEl);
+
+		return () => observer.disconnect();
 	});
 
 </script>
