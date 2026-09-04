@@ -77,6 +77,26 @@ function migrateLegacySelection(): void {
 
 migrateLegacySelection();
 
+/**
+ * Puts every stored URL in the form of {@link normalizeUrl}. An older app
+ * version stored the value of the user, so a record can hold a trailing slash
+ * or a mixed case host.
+ *
+ * The function writes only when a URL changes. It is therefore safe to run on
+ * every start, and a list that needs no change writes nothing.
+ */
+function migrateInstanceUrls(): void {
+	if (!browser) return;
+
+	const list = get(listStore);
+
+	if (list.every((instance) => instance.url === normalizeUrl(instance.url))) return;
+
+	listStore.set(list.map((instance) => ({ ...instance, url: normalizeUrl(instance.url) })));
+}
+
+migrateInstanceUrls();
+
 // -- Reads ------------------------------------------------------------------
 
 /** Puts the live health on a stored record. */
@@ -179,7 +199,7 @@ function applyInput(
 	const next: StoredBeaconInstance = { ...instance, updatedAt: new Date() };
 
 	if (input.name !== undefined) next.name = input.name.trim();
-	if (input.url !== undefined) next.url = input.url.trim();
+	if (input.url !== undefined) next.url = normalizeUrl(input.url);
 	if (input.description !== undefined) next.description = input.description.trim();
 	if (input.token !== undefined) next.token = input.token.trim();
 
@@ -196,7 +216,7 @@ export function addInstance(input: BeaconInstanceInput): BeaconInstance {
 	const stored: StoredBeaconInstance = {
 		id: Utils.uuidv4(),
 		name: input.name.trim(),
-		url: input.url.trim(),
+		url: normalizeUrl(input.url),
 		description: input.description?.trim() ?? '',
 		token: input.token?.trim() ?? '',
 		createdAt: now,
