@@ -14,9 +14,11 @@ function git(command: string): string {
 
 // Remote URLs come in ssh and `.git` forms. The commit link needs the https form.
 function toHttpsUrl(remote: string): string {
-	const cleaned = remote.replace(/\.git$/, '');
-	const ssh = /^git@([^:]+):(.+)$/.exec(cleaned);
-	if (ssh) return `https://${ssh[1]}/${ssh[2]}`;
+	const cleaned = remote.trim().replace(/\.git$/, '');
+	const scp = /^git@([^:]+):(.+)$/.exec(cleaned);
+	if (scp) return `https://${scp[1]}/${scp[2]}`;
+	const sshUrl = /^ssh:\/\/git@([^/]+)\/(.+)$/.exec(cleaned);
+	if (sshUrl) return `https://${sshUrl[1]}/${sshUrl[2]}`;
 	return cleaned;
 }
 
