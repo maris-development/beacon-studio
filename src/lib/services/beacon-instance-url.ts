@@ -7,8 +7,13 @@
  * the two apart.
  */
 
+import { browser } from '$app/environment';
+
 /** A scheme at the start of a URL, for example `https://`. */
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
+
+/** The schemes a Beacon node can answer on. */
+const KNOWN_SCHEMES = ['http:', 'https:'];
 
 /** The origin and the path of one node. See {@link splitInstanceUrl}. */
 export type InstanceUrlParts = {
@@ -19,14 +24,38 @@ export type InstanceUrlParts = {
 };
 
 /**
- * Reads a URL that a user typed. A value with no scheme gets `https://`, so
- * `beacon.maris.nl` parses. The function returns `null` for an unusable value.
+ * The scheme for a value that the user typed with no scheme. The app takes its
+ * own scheme. A relative URL follows the same rule, and a node runs next to the
+ * app that uses it: a dev app on `http` reaches a node on `http`, and a hosted
+ * app on `https` reaches a node on `https`.
+ *
+ * The rule needs no list of host names. A user who wants the other scheme types
+ * it, and the value then keeps that scheme.
+ */
+function defaultScheme(): string {
+    if (!browser) return 'https:';
+
+    const scheme = window.location.protocol;
+
+    if (!KNOWN_SCHEMES.includes(scheme)) return 'https:';
+
+    return scheme;
+}
+
+/**
+ * Reads a URL that a user typed. A value with no scheme gets the scheme of
+ * {@link defaultScheme}, so `beacon.maris.nl` parses. The function returns
+ * `null` for an unusable value.
  */
 function parse(url: string): URL | null {
     const trimmed = url.trim();
     if (trimmed === '') return null;
 
-    const withScheme = SCHEME.test(trimmed) ? trimmed : `https://${trimmed}`;
+    let withScheme = trimmed;
+
+    if (!SCHEME.test(trimmed)) {
+        withScheme = `${defaultScheme()}//${trimmed}`;
+    }
 
     try {
         return new URL(withScheme);
