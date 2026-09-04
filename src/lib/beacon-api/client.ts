@@ -4,6 +4,7 @@ import type { BeaconInstance, BeaconSystemInfo, CompiledQuery, FunctionNameObjec
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
+import { normalizeUrl, splitInstanceUrl } from '@/services/beacon-instance-url';
 
 import {
     isAbortError,
@@ -22,7 +23,7 @@ export type {
 
 // -- Metadata cache (shared across per-page BeaconClient instances) --------------
 // These caches are module-level so they survive client-side navigation even though
-// `BeaconClient.new()` is called per page. Keyed by host so multiple instances
+// `BeaconClient.new()` is called per page. Keyed by base URL so multiple instances
 // don't collide.
 const tablesCache = new Map<string, Promise<string[]>>();
 const defaultTableCache = new Map<string, Promise<string>>();
@@ -37,11 +38,11 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *     schemas, system info, and server-materialized downloads via
  *     {@link queryToDownload}, over plain JSON/`fetch`.
  *  2. **Cached metadata** ({@link getCachedTables} / {@link getCachedDefaultTable} /
- *     {@link getCachedSchema}): host-keyed memoization that survives navigation.
+ *     {@link getCachedSchema}): memoization by base URL that survives navigation.
  *  3. **Query execution + result cache** (the `static` query methods below): the
  *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
  *     (memory + OPFS) result cache. These are `static` because the result cache is
- *     app-wide, independent of any single client instance's host. They take the
+ *     app-wide, independent of any single client instance's node. They take the
  *     node of the query as an argument: a query record owns its node, and the URL
  *     of that node is part of the cache key.
  *
@@ -54,7 +55,10 @@ const schemaCache = new Map<string, Promise<Schema>>();
  * directly for those.
  */
 export class BeaconClient {
-    host: string;
+    /** Scheme and host of the node, lower case, with no trailing slash. */
+    readonly origin: string;
+    /** The sub directory of the node, or `''`. A node can run under a path. */
+    readonly pathPrefix: string;
     token: string | null = null;
     /**
      * The configured node that this client talks to, or null. {@link new} sets it.
@@ -66,9 +70,26 @@ export class BeaconClient {
     instance: BeaconInstance | null = null;
     private memCache = new MemoryCache();
 
-    constructor(host: string, token: string | null = null) {
-        this.host = host;
+    /** Takes the URL of a node. {@link splitInstanceUrl} normalizes it. */
+    constructor(url: string, token: string | null = null) {
+        const parts = splitInstanceUrl(url);
+
+        this.origin = parts.origin;
+        this.pathPrefix = parts.pathPrefix;
         this.token = token;
+    }
+
+    /**
+     * The normalized URL of the node. Every metadata cache keys by this value,
+     * so two records of the same node share one entry.
+     */
+    get baseUrl(): string {
+        return this.origin + this.pathPrefix;
+    }
+
+    /** Builds the URL of one API path. `path` starts with a slash. */
+    private buildUrl(path: string): URL {
+        return new URL(this.baseUrl + path);
     }
 
     static output_formats: Record<string, string> = {
@@ -107,7 +128,7 @@ export class BeaconClient {
 
     // -- Cached metadata --------------------------------------------------------
     // Host-keyed memoization of the (immutable-per-session) metadata endpoints.
-    // Shared across every BeaconClient for the same host, so repeated builder
+    // Shared across every BeaconClient for the same node, so repeated builder
     // mounts and instance re-selection don't refetch.
     //
     // A cache holds a promise, so a failure would stay for the session. A node
@@ -138,30 +159,30 @@ export class BeaconClient {
         return pending;
     }
 
-    /** Cached list of table names for this instance's host. */
+    /** Cached list of table names for this node. */
     getCachedTables(): Promise<string[]> {
-        return BeaconClient.memoize(tablesCache, this.host, () => this.getTables());
+        return BeaconClient.memoize(tablesCache, this.baseUrl, () => this.getTables());
     }
 
-    /** Cached default table name for this instance's host. */
+    /** Cached default table name for this node. */
     getCachedDefaultTable(): Promise<string> {
-        return BeaconClient.memoize(defaultTableCache, this.host, () => this.getDefaultTable());
+        return BeaconClient.memoize(defaultTableCache, this.baseUrl, () => this.getDefaultTable());
     }
 
-    /** Cached schema for a table on this instance's host. */
+    /** Cached schema for a table on this node. */
     getCachedSchema(tableName: string): Promise<Schema> {
-        return BeaconClient.memoize(schemaCache, `${this.host}::${tableName}`, () =>
+        return BeaconClient.memoize(schemaCache, `${this.baseUrl}::${tableName}`, () =>
             this.getTableSchema(tableName)
         );
     }
 
-    /** Drops cached metadata for this instance's host (tables, default table, schemas). */
+    /** Drops cached metadata for this node (tables, default table, schemas). */
     clearMetadataCache(): void {
-        BeaconClient.clearMetadataCache(this.host);
+        BeaconClient.clearMetadataCache(this.baseUrl);
     }
 
     async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob', storedQueryId?: string): Promise<void> {
-        const endpoint = `${this.host}/api/query`;
+        const endpoint = this.buildUrl('/api/query');
 
         const request_info: RequestInit = {
             method: 'POST',
@@ -212,7 +233,7 @@ export class BeaconClient {
     }
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
-        const url = new URL(`${this.host}/api/explain-query`);
+        const url = this.buildUrl('/api/explain-query');
 
         const request_info: RequestInit = {
             method: 'POST',
@@ -227,7 +248,7 @@ export class BeaconClient {
     }
 
     async getQueryMetrics(query_id: string): Promise<QueryMetricsResult> {
-        const url = new URL(`${this.host}/api/query/metrics/${query_id}`);
+        const url = this.buildUrl(`/api/query/metrics/${query_id}`);
 
         const response: QueryMetricsResult = await this.fetch(url)
 
@@ -235,13 +256,13 @@ export class BeaconClient {
     }
 
     async getQueryFunctions(): Promise<Array<FunctionNameObject>> {
-        const request: Array<FunctionNameObject> = await this.fetch(`${this.host}/api/functions`);
+        const request: Array<FunctionNameObject> = await this.fetch(this.buildUrl('/api/functions'));
 
         return request;
     }
 
     async getDatasets(pattern: string | null = null, offset: number = 0, limit: number = 100): Promise<Array<string>> {
-        const url = new URL(`${this.host}/api/datasets`)
+        const url = this.buildUrl('/api/datasets')
 
         if (pattern) {
             url.searchParams.append('pattern', pattern);
@@ -259,7 +280,7 @@ export class BeaconClient {
     }
 
     async getDatasetSchema(file: string): Promise<Schema> {
-        const url = new URL(`${this.host}/api/dataset-schema`);
+        const url = this.buildUrl('/api/dataset-schema');
 
         url.searchParams.append('file', file);
 
@@ -269,7 +290,7 @@ export class BeaconClient {
     }
 
     async getTotalDatasets(): Promise<number> {
-        const url = new URL(`${this.host}/api/total-datasets`);
+        const url = this.buildUrl('/api/total-datasets');
 
         const response: number = await this.fetch(url);
 
@@ -277,13 +298,13 @@ export class BeaconClient {
     }
 
     async getTables(): Promise<Array<string>> {
-        const url = new URL(`${this.host}/api/tables`);
+        const url = this.buildUrl('/api/tables');
         const response: Array<string> = await this.fetch(url);
         return response;
     }
 
     async getDefaultTable(): Promise<string> {
-        const url = new URL(`${this.host}/api/default-table`);
+        const url = this.buildUrl('/api/default-table');
 
         const response: string = await this.fetch(url);
 
@@ -291,7 +312,7 @@ export class BeaconClient {
     }
 
     async getTableSchema(table: string): Promise<Schema> {
-        const url = new URL(`${this.host}/api/table-schema`);
+        const url = this.buildUrl('/api/table-schema');
 
         url.searchParams.append('table_name', table);
 
@@ -301,7 +322,7 @@ export class BeaconClient {
     }
 
     async getDefaultTableSchema(): Promise<Schema> {
-        const url = new URL(`${this.host}/api/default-table-schema`);
+        const url = this.buildUrl('/api/default-table-schema');
 
         const cacheResult = this.memCache.get<Schema>(url.toString());
 
@@ -321,7 +342,7 @@ export class BeaconClient {
 
     async getTableExtensions(table: string): Promise<Array<TableExtension>> {
 
-        const url = new URL(`${this.host}/api/table-extensions`);
+        const url = this.buildUrl('/api/table-extensions');
 
         url.searchParams.append('table_name', table);
 
@@ -332,7 +353,7 @@ export class BeaconClient {
 
     // TODO: always fails and has no callers. Beacon 2.0 retires `/api/table-config`.
     async getTableConfig(table: string): Promise<TableDefinition> {
-        const url = new URL(`${this.host}/api/table-config`);
+        const url = this.buildUrl('/api/table-config');
 
         url.searchParams.append('table_name', table);
 
@@ -364,7 +385,7 @@ export class BeaconClient {
     }
 
     async getSystemInfo(): Promise<BeaconSystemInfo> {
-        const url = new URL(`${this.host}/api/info`);
+        const url = this.buildUrl('/api/info');
 
         const response: BeaconSystemInfo = await this.fetch(url);
 
@@ -378,7 +399,7 @@ export class BeaconClient {
      */
     async getHealth(init: RequestInit = {}): Promise<boolean> {
 
-        const url = new URL(`${this.host}/api/health`);
+        const url = this.buildUrl('/api/health');
 
         const response: string = await this.fetch(url, init, 'text');
 
@@ -459,21 +480,21 @@ export class BeaconClient {
     // ============================================================================
     // Static members
     //
-    // Grouped here so the instance (per-host) methods above stay contiguous. The
+    // Grouped here so the instance (per-node) methods above stay contiguous. The
     // query result cache is app-wide and keyed by the live Beacon instance, so its
-    // facade is static and independent of any single client's host.
+    // facade is static and independent of any single client's node.
     // ============================================================================
 
     /**
-     * Drops cached metadata. With a `host`, only that host's entries are removed;
+     * Drops cached metadata. With a `baseUrl`, only that node's entries are removed;
      * with no argument, the entire metadata cache is cleared.
      */
-    static clearMetadataCache(host?: string): void {
-        if (host) {
-            tablesCache.delete(host);
-            defaultTableCache.delete(host);
+    static clearMetadataCache(baseUrl?: string): void {
+        if (baseUrl) {
+            tablesCache.delete(baseUrl);
+            defaultTableCache.delete(baseUrl);
             for (const key of schemaCache.keys()) {
-                if (key.startsWith(`${host}::`)) schemaCache.delete(key);
+                if (key.startsWith(`${baseUrl}::`)) schemaCache.delete(key);
             }
         } else {
             tablesCache.clear();
@@ -484,7 +505,7 @@ export class BeaconClient {
 
     // -- Query execution + result cache (app-wide, per-query instance) -----------
     // Static: the result cache is one app-wide store, so it must not be bound to
-    // the host of one client. Every method takes the node of the query, because a
+    // the node of one client. Every method takes the node of the query, because a
     // query record owns its node. The URL of that node is part of the cache key.
 
     /**
@@ -611,6 +632,8 @@ export class BeaconClient {
  *   HTTP Basic super-user auth and is intentionally not used here.
  * - `timeoutMs: 0` disables the SDK's default 60s per-request timeout so large
  *   query results aren't cut off mid-download.
+ * - The URL passes through {@link normalizeUrl}, so a trailing slash or a mixed
+ *   case host never reaches the SDK.
  *
  * @throws if no instance (or no URL) is provided.
  */
@@ -622,7 +645,7 @@ export function makeBeaconClient(instance: BeaconInstance | null): BeaconSdkClie
 	const headers = instance.token ? { Authorization: 'Bearer ' + instance.token } : undefined;
 
 	return new BeaconSdkClient({
-		url: instance.url,
+		url: normalizeUrl(instance.url),
 		headers,
 		timeoutMs: 0
 	});
