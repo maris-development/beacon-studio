@@ -137,11 +137,21 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		});
 	}
 
+	let rowEl: HTMLDivElement | undefined = $state();
+
+	// Keep the active block fully in view, including right after a page load/reload.
+	$effect(() => {
+		const activeId = workspace.activeBlockId;
+		if (!rowEl || !activeId) return;
+
+		const activeEl = rowEl.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(activeId)}"]`);
+		activeEl?.scrollIntoView({ block: 'nearest', inline: 'nearest'});
+	});
 
 </script>
 
 <div class="query-blocks">
-	<div class="query-blocks-row" onwheel={handleQueryBlocksWheel}>
+	<div class="query-blocks-row" bind:this={rowEl} onwheel={handleQueryBlocksWheel}>
 		{#each workspace.blocks as block (block.id)}
 			<!-- Derive display data for this block from the workspace. -->
 			{@const status = QueryWorkspace.getStatus(block)}
@@ -156,7 +166,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			{@const missingUrl = workspace.missingInstanceUrlFor(block)}
 			{@const blockReason = blockReasonFor(block)}
 			<div
-				
+				data-block-id={block.id}
 				class="query-block-wrapper"
 				class:query-block-wrapper--active={block.id === workspace.activeBlockId}
 				role="button"
