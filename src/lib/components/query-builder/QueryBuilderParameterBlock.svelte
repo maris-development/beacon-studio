@@ -3,8 +3,7 @@
 	 * QueryBuilderParametrBlock.svelte
 	 * Author: Jasper van der Barg
 	 * Description: Query Builder Parameter Block Component
-	*/
-
+	 */
 
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
@@ -12,23 +11,28 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { BeaconClient } from '@/beacon-api/client';
-	import type { CompiledQuery, DataType, OutputFormat } from '@/beacon-api/types';
+	import type { CompiledQuery, DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import Parameter from './Parameter.svelte';
 	import type { SelectedFilterType } from '@/query/filter-types';
-	import { QueryBuilder } from '@/beacon-api/query';
 	import { addToast } from '@/stores/toasts';
 	import type { QuerySelectionStatus } from '@/query/selection-status';
-    import type { QueryActions } from './QueryActions';
+	import type { QueryActions } from './QueryActions';
 	import { compileDraft, defaultOutputFormat, type QueryDraft } from '@/query/draft';
 	import MapPinnedIcon from '@lucide/svelte/icons/map-pinned';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import XIcon from '@lucide/svelte/icons/x';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
-	import { describeSelection, type SpatialSelection } from '@/geo/spatial-selection';
+	import {
+		describeSelection,
+		missingSelectionColumn,
+		selectionColumns,
+		type SpatialSelection
+	} from '@/geo/spatial-selection';
 	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
-
+	import GeospatialFilterModal from './GeospatialFilterModal.svelte';
+	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 
 	let {
 		table_name,
@@ -44,15 +48,15 @@
 			dataTable: '',
 			columns: 0,
 			filters: 0,
-			selection: 0,
+			selection: 0
 		}),
-        // Only the query actions live here. The workbench owns navigation, because
-        // it holds the StoredQuery block id for visualisation links.
-        actions = $bindable<QueryActions>({
+		// Only the query actions live here. The workbench owns navigation, because
+		// it holds the StoredQuery block id for visualisation links.
+		actions = $bindable<QueryActions>({
 			compileQuery: compileQuery,
-            downloadData: handleSubmit,
-            resetQuery: undefined
-        }),
+			downloadData: handleSubmit,
+			resetQuery: undefined
+		})
 	}: {
 		table_name: string;
 		client: BeaconClient;
@@ -68,7 +72,7 @@
 		/** Bound to the parent, which shows the output format control. */
 		selected_output_format?: string;
 		status?: QuerySelectionStatus;
-        actions?: QueryActions; // todo
+		actions?: QueryActions; // todo
 	} = $props();
 
 	let searchInput;
@@ -82,11 +86,13 @@
 	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
 		$state(initialDraft ? Utils.cloneObject(initialDraft.selectedFields) : []);
 	/**
-	 * The area drawn on the map viewer. The builder shows it, and can remove it,
-	 * but it cannot draw one. It applies to the latitude and the longitude column
+	 * The area of this query. The user draws it in {@link GeospatialFilterModal},
+	 * or on the map viewer. It applies to the latitude and the longitude column
 	 * together, so it has no card of its own.
 	 */
 	let spatialFilter: SpatialSelection | null = $state(initialDraft?.spatialFilter ?? null);
+	/** True while the geospatial filter modal is open. */
+	let isGeoFilterOpen = $state(false);
 	/** Table the current selection belongs to; used to reset on a real table change. */
 	let selectionTable = initialDraft?.tableName ?? null;
 	let hasInitialisedTable = $state(false);
@@ -116,7 +122,44 @@
 		);
 	});
 
-	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
+	/** The number columns of the query. An area filter can only test these. */
+	const numericColumnCount = $derived(
+		selectedFields.filter((field) => Utils.isNumericDataType(field.type)).length
+	);
+
+	/** The reason that the query takes no area, or null. */
+	const areaBlockReason = $derived.by(() => {
+		if (numericColumnCount < 2) {
+			return 'Select a latitude and a longitude column first.';
+		}
+
+		return null;
+	});
+
+	/**
+	 * The column of the area that the query no longer selects, or null.
+	 *
+	 * The compile drops such a filter, so the user must know. The area stays on
+	 * the draft, and the modal offers the pickers again.
+	 */
+	const missingAreaColumn = $derived(
+		missingSelectionColumn(
+			spatialFilter,
+			selectedFields.map((field) => field.name)
+		)
+	);
+
+	/** The two columns the area tests. The compile resolves the same pair. */
+	const areaColumns = $derived(
+		selectionColumns(
+			spatialFilter,
+			selectedFields.map((field) => field.name)
+		)
+	);
+
+	const firstVisibleItem = $derived(
+		fields.find((item) => !(item.ref as { hidden: boolean })?.hidden)
+	);
 
 	const firstVisibleMatchingItem = $derived.by(() => {
 		const normalized = searchQuery.trim().toLowerCase();
@@ -125,9 +168,7 @@
 			return firstVisibleItem;
 		}
 
-		return fields.find(
-			(item) => item.name.toLowerCase().includes(normalized)
-		);
+		return fields.find((item) => item.name.toLowerCase().includes(normalized));
 	});
 
 	// $effect(() => {
@@ -158,7 +199,6 @@
 			: null;
 		selectionTable = initialDraft.tableName;
 	});
-
 
 	// Load the schema for the selected table (cached per instance). Needed for the
 	// "Add Parameter" list and to parse a deep-link seed. Does NOT clear the current
@@ -219,6 +259,8 @@
 
 		if (table !== selectionTable) {
 			selectedFields = [];
+			// The area names two columns of the old table, so it goes with them.
+			spatialFilter = null;
 		}
 
 		selectionTable = table;
@@ -274,7 +316,7 @@
 
 		if (index !== -1) {
 			const selectedIndex = selectedFields.findIndex((f) => f.name === field_name);
-			
+
 			if (selectedIndex === -1) {
 				selectedFields.push({
 					name: fields[index].name,
@@ -299,25 +341,25 @@
 	}
 
 	// onReset = resetBuilder;
-    actions.resetQuery = resetBuilder;
+	actions.resetQuery = resetBuilder;
 
+	/**
+	 * The query of the controls above. `compileDraft` is the one compile rule, so
+	 * a download from here also carries the area filter.
+	 */
 	function compileQuery(): CompiledQuery {
-		let builder = new QueryBuilder();
+		const compiled = compileDraft({
+			tableName: table_name,
+			selectedFields,
+			outputFormat: selected_output_format,
+			spatialFilter
+		});
 
-		for (const field of selectedFields) {
-			builder.addSelect({ column: field.name, alias: null });
-			for (const filter of field.selected_filters) {
-				let bfilter = Utils.parameterFilterTypeToFilter(filter.filter_value, field.name);
-				if (bfilter) {
-					builder.addFilter(bfilter);
-				}  
-			}
+		if (!compiled) {
+			throw new Error('Pick a table and at least one column.');
 		}
 
-		builder.setFrom(table_name);
-		builder.setOutput({ format: selected_output_format as OutputFormat });
-
-		return builder.compile();
+		return compiled;
 	}
 	actions.compileQuery = compileQuery;
 
@@ -383,11 +425,31 @@
 <div id="new-query-builder">
 	<div class="flex flex-row items-center justify-between">
 		<h3>Query Parameters</h3>
-		<Button variant="outline" onclick={() => (open = true)}>
-			Add Parameter
-			<PlusIcon />
-		</Button>
+		<div class="header-actions">
+			<Button variant="outline" onclick={() => (open = true)}>
+				Add Parameter
+				<PlusIcon />
+			</Button>
+			{#if !spatialFilter}
+				<Button
+					variant="outline"
+					title={areaBlockReason ?? 'Draw an area on a map, and filter the query on it'}
+					disabled={!!areaBlockReason}
+					onclick={() => (isGeoFilterOpen = true)}
+				>
+					Add Geospatial Filter
+					<PlusIcon />
+				</Button>
+			{/if}
+		</div>
 	</div>
+
+	<GeospatialFilterModal
+		bind:open={isGeoFilterOpen}
+		{selectedFields}
+		selection={spatialFilter}
+		onApply={(next) => (spatialFilter = next)}
+	/>
 
 	<Dialog.Root bind:open>
 		<Dialog.Content class="search-columns-dialog" showCloseButton={false}>
@@ -418,7 +480,8 @@
 								bind:this={field.ref}
 							>
 								<span class="search-columns-item-name">{field.name}</span>
-								<span class="search-columns-item-details">{Utils.dataTypeToString(field.type)}</span>
+								<span class="search-columns-item-details">{Utils.dataTypeToString(field.type)}</span
+								>
 								{#if selectedFields.find((f) => f.name === field.name)}
 									<CheckIcon class="search-columns-item-icon" />
 								{/if}
@@ -441,12 +504,31 @@
 		<div class="area-filter">
 			<MapPinnedIcon size={16} />
 			<span class="area-filter-label">Area: {describeSelection(spatialFilter)}</span>
-			<span class="area-filter-hint">Drawn on the map viewer</span>
+
+			{#if missingAreaColumn}
+				<span class="area-filter-hint missing">
+					<TriangleAlertIcon size={14} />
+					The query does not select "{missingAreaColumn}", so this area filters nothing.
+				</span>
+			{:else if areaColumns}
+				<span class="area-filter-hint">
+					{areaColumns.latitude} / {areaColumns.longitude}
+				</span>
+			{:else}
+				<span class="area-filter-hint missing">
+					<TriangleAlertIcon size={14} />
+					The query selects no latitude and longitude column, so this area filters nothing.
+				</span>
+			{/if}
+
 			<Button
 				variant="ghost"
-				title="Remove the area filter"
-				onclick={() => (spatialFilter = null)}
+				title="Edit the geospatial filter"
+				onclick={() => (isGeoFilterOpen = true)}
 			>
+				<PencilLineIcon size={16} />
+			</Button>
+			<Button variant="ghost" title="Remove the area filter" onclick={() => (spatialFilter = null)}>
 				<XIcon size={16} />
 			</Button>
 		</div>
@@ -461,11 +543,9 @@
 			<h4 class="no-selection">No parameters selected, use the 'Add Parameter' button above.</h4>
 		{/if}
 	</div>
-
 </div>
 
 <style lang="scss">
-
 	.filter-warning {
 		display: flex;
 		align-items: center;
@@ -482,6 +562,13 @@
 		}
 	}
 
+	.header-actions {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
 	.area-filter {
 		display: flex;
 		flex-direction: row;
@@ -496,9 +583,21 @@
 		}
 
 		.area-filter-hint {
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: 0.35rem;
 			flex-grow: 1;
 			font-size: 0.8rem;
 			color: var(--muted-foreground);
+
+			&.missing {
+				color: var(--destructive);
+			}
+
+			:global(svg) {
+				flex-shrink: 0;
+			}
 		}
 	}
 
@@ -507,7 +606,6 @@
 		gap: 0.5rem;
 
 		grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
-
 
 		// // sm: ≥ 640px
 		// @media (min-width: 640px) {

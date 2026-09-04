@@ -11,19 +11,17 @@
 	let shortRandomString = Utils.uuidv4().slice(0, 8);
 
 	function closeModalOnEscape(event: KeyboardEvent) {
-		if (event.key === 'Escape') {
+		// The test reads the value of now. A caller can block the close while a
+		// task runs, and release it after.
+		if (event.key === 'Escape' && canCloseModal) {
 			onClose();
 		}
 	}
 
 	onMount(() => {
-		if (canCloseModal) {
-			//also add escape key listener to close modal
-			document.addEventListener('keydown', closeModalOnEscape);
-		}
+		document.addEventListener('keydown', closeModalOnEscape);
 
 		return () => {
-			// Cleanup: remove event listener if it was added
 			document.removeEventListener('keydown', closeModalOnEscape);
 		};
 	});
@@ -53,7 +51,7 @@
 				<button class="close-button" on:click={onClose} aria-label="Close modal"> &times; </button>
 			{/if}
 		</header>
-		<div id="modal-content-{shortRandomString}">
+		<div id="modal-content-{shortRandomString}" class="modal-content">
 			<slot />
 		</div>
 		<footer>
@@ -78,9 +76,19 @@
 			background: #fff;
 			padding: 1rem;
 			border-radius: 0.5rem;
+			// A modal never takes more than 90% of the window, in both directions.
+			// The header and the footer keep their place, and the content scrolls.
+			display: flex;
+			flex-direction: column;
 			width: 90%;
-			max-width: var(--width, 400px);
+			max-width: min(var(--width, 400px), 90vw);
+			max-height: 90vh;
 			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+			.modal-content {
+				min-height: 0;
+				overflow-y: auto;
+			}
 
 			header {
 				font-size: 1.25rem;

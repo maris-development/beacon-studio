@@ -33,16 +33,16 @@
  *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
  *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
-import type { CompiledQuery, MinMaxFilter } from '@/beacon-api/types';
+import type { CompiledQuery, GeoJsonFilter, MinMaxFilter } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import {
 	isGeoJsonFilter,
 	isUsableSelection,
+	selectionColumns,
 	toBboxFilters,
 	toGeoJsonFilter,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
-import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import {
 	ensureBlockCounter,
 	getBlocksState,
@@ -522,12 +522,18 @@ export class QueryWorkspace {
 
 		const compiled = Utils.cloneObject(block.compiled) as CompiledQuery;
 		const names = compiled.query_parameters.map((param) => param.alias ?? param.column);
-		const { latitude, longitude } = detectCoordinateColumns(names);
-		if (!latitude || !longitude) return;
+		const columns = selectionColumns(selection, names);
 
-		// Drop the filters of the previous area: the polygon, and the box that
-		// belongs to it on the two columns.
-		const spatialColumns = [latitude.name, longitude.name];
+		// The area already on the query names its own two columns. Its box goes
+		// with it, also when the new area tests another pair.
+		const previous = (compiled.filters ?? []).find(isGeoJsonFilter) as GeoJsonFilter | undefined;
+		const spatialColumns = [
+			previous?.latitude_query_parameter,
+			previous?.longitude_query_parameter,
+			columns?.latitude,
+			columns?.longitude
+		].filter(Boolean);
+
 		let filters = (compiled.filters ?? []).filter((filter) => {
 			if (isGeoJsonFilter(filter)) return false;
 			const minMax = filter as MinMaxFilter;
@@ -535,13 +541,16 @@ export class QueryWorkspace {
 			return !(isBox && spatialColumns.includes(minMax.for_query_parameter));
 		});
 
-		if (isUsableSelection(selection)) {
+		if (isUsableSelection(selection) && columns) {
 			filters = [
 				...filters,
-				toGeoJsonFilter(selection!, latitude.name, longitude.name),
-				...toBboxFilters(selection!, latitude.name, longitude.name)
+				toGeoJsonFilter(selection!, columns.latitude, columns.longitude),
+				...toBboxFilters(selection!, columns.latitude, columns.longitude)
 			];
 		}
+
+		// A query with no area, and no pair of columns, keeps its filters.
+		if (JSON.stringify(compiled.filters ?? []) === JSON.stringify(filters)) return;
 
 		compiled.filters = filters;
 

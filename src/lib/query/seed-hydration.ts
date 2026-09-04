@@ -139,16 +139,18 @@ function isDerivedBoxFilter(
 		return false;
 	}
 
-	const name = filter.for_query_parameter.toLowerCase();
+	const name = filter.for_query_parameter;
 	const matches = (min: number, max: number) => {
 		return Math.abs(Number(filter.min) - min) < 1e-9 && Math.abs(Number(filter.max) - max) < 1e-9;
 	};
 
-	if (name.includes('latitude')) {
+	// The geo filter names its own two columns, so an area on `x` and `y` also
+	// matches. A name test for "latitude" holds only for the default pair.
+	if (name === selection.latitudeColumn) {
 		return matches(bounds.minLat, bounds.maxLat);
 	}
 
-	if (name.includes('longitude')) {
+	if (name === selection.longitudeColumn) {
 		return matches(bounds.minLon, bounds.maxLon);
 	}
 

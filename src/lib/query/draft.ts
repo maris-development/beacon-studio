@@ -15,11 +15,11 @@ import { getSettings } from '@/stores/settings';
 import { Utils } from '@/utils';
 import {
 	isUsableSelection,
+	selectionColumns,
 	toBboxFilters,
 	toGeoJsonFilter,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
-import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 
 /** A single selected column plus the filters applied to it. */
 export type SelectedField = {
@@ -102,20 +102,21 @@ export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuer
  * The box is always derived here, and is never stored on a field. So one delete
  * of `spatialFilter` removes every part of the area again.
  *
- * The query keeps no filter when it does not select both a latitude and a
- * longitude column.
+ * The two columns come from the area itself, because the user picks them in the
+ * builder. See {@link selectionColumns}. The query keeps no filter while it
+ * selects neither pair.
  */
 function addSpatialFilters(builder: QueryBuilder, draft: QueryDraft): void {
 	const selection = draft.spatialFilter;
 	if (!isUsableSelection(selection)) return;
 
 	const names = draft.selectedFields.map((field) => field.name);
-	const { latitude, longitude } = detectCoordinateColumns(names);
-	if (!latitude || !longitude) return;
+	const columns = selectionColumns(selection, names);
+	if (!columns) return;
 
-	builder.addFilter(toGeoJsonFilter(selection!, latitude.name, longitude.name));
+	builder.addFilter(toGeoJsonFilter(selection!, columns.latitude, columns.longitude));
 
-	for (const filter of toBboxFilters(selection!, latitude.name, longitude.name)) {
+	for (const filter of toBboxFilters(selection!, columns.latitude, columns.longitude)) {
 		builder.addFilter(filter);
 	}
 }
