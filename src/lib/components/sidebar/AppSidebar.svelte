@@ -30,6 +30,7 @@
 	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
+	import BuildVersion from './BuildVersion.svelte';
 
 	type SubItem = { title: string; url: string };
 	type MenuItem = {
@@ -197,7 +198,9 @@
 {/if}
 
 {#if isMobile && !collapsed}
-	<button class="sidebar-backdrop" aria-label="Close menu" onclick={() => (collapsed = true)}></button>
+	<button class="sidebar-backdrop" 
+			aria-label="Close menu" 
+			onclick={() => (collapsed = true)}></button>
 {/if}
 
 <div class="sidebar" class:collapsed>
@@ -273,6 +276,8 @@
 		</div>
 	</div>
 </div>
+
+<BuildVersion />
 
 <style lang="scss">
 	.sidebar {
