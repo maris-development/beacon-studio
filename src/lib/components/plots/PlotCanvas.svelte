@@ -341,7 +341,10 @@
 			ticks: { show: true, stroke: grid, width: 1 }
 		};
 
-		if (axis === 'y') options.side = 3;
+		if (axis === 'y') {
+			options.side = 3;
+			options.size = yAxisSize;
+		}
 
 		if (title) {
 			let titleFontSize = style.xAxisTitleFontSize;
@@ -353,6 +356,32 @@
 		}
 
 		return options;
+	}
+
+	/**
+	 * The width of the Y axis gutter, sized to the widest tick label.
+	 *
+	 * uPlot's own default is a fixed 50px, so a large value (formatted with
+	 * thousands separators) draws wider than the gutter and overlaps the axis
+	 * title next to it. `values` is null on the first sizing pass, before uPlot
+	 * has computed real ticks, so this falls back to a fixed default then.
+	 */
+	function yAxisSize(self: uPlot, values: string[] | null, axisIdx: number): number {
+		const axis = self.axes[axisIdx];
+		const reserve = (axis.ticks?.size ?? 0) + (axis.gap ?? 0);
+
+		if (!values || values.length === 0) return reserve + 40;
+
+		const { ctx } = self;
+		ctx.save();
+		ctx.font = axis.font[0];
+
+		let maxWidth = 0;
+		for (const value of values) maxWidth = Math.max(maxWidth, ctx.measureText(value).width);
+
+		ctx.restore();
+
+		return Math.ceil(reserve + maxWidth / uPlot.pxRatio + 2);
 	}
 
 	function buildOptions(current: PlotSeries, width: number, height: number): uPlot.Options {
