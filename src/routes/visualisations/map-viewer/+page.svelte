@@ -17,6 +17,9 @@
 	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
 	import { MapViewController } from '@/components/visualisation/MapViewController.svelte';
 	import type { SpatialSelection } from '@/geo/spatial-selection';
+	import { addToast } from '@/stores/toasts';
+	import { runBlockReason } from '@/query/query-guard';
+	import { settings } from '@/stores/settings';
 
 	let mapContainer: HTMLDivElement | null = null;
 
@@ -74,8 +77,17 @@
 	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
+	/**
+	 * The query that the safeguard stopped last. It keeps the warning to one
+	 * toast: this effect writes `lastRunKey`, which makes it run a second time.
+	 */
+	let lastBlockedKey: string | null = $state(null);
 	/** The block of the last run. A new block may move the camera; a re-run may not. */
 	let lastRunBlockId: string | null = $state(null);
+
+	// The safeguard blocks a query with no filter. It belongs in the run key, so
+	// the query runs after the user turns the safeguard off.
+	const requireFilters = $derived($settings.requireQueryFilters);
 
 	// Repaint when the Legend changes the palette or the range. The reads below
 	// are the dependencies; the redraw itself rebuilds the colour table.
@@ -102,7 +114,24 @@
 			return;
 		}
 
-		const runKey = `${blockId}:${instanceUrl}:${key}`;
+		// The safeguard stops a query with no filter. Show nothing, and run nothing.
+		// The run key stays empty, so a revert of the edit runs the query again.
+		const blocked = runBlockReason(untrack(() => compiledQuery));
+		if (blocked) {
+			const blockedKey = `${blockId}:${instanceUrl}:${key}`;
+			if (blockedKey !== lastBlockedKey) {
+				lastBlockedKey = blockedKey;
+				addToast({ type: 'warning', message: blocked });
+			}
+
+			map.clearQueryResult();
+			lastRunKey = null;
+			return;
+		}
+
+		lastBlockedKey = null;
+
+		const runKey = `${blockId}:${instanceUrl}:${key}:${requireFilters}`;
 		if (runKey === lastRunKey) return;
 
 		const isSameBlock = blockId === lastRunBlockId;

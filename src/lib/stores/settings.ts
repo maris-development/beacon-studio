@@ -30,6 +30,8 @@ export interface BeaconStudioSettings {
 	// -- query ----------------------------------------------------------------
 	/** The output format of a new query block. */
 	defaultOutputFormat: string;
+	/** Blocks a query with no filters. It stops a read of a whole table. */
+	requireQueryFilters: boolean;
 	/** The cap on result size in cells (rows × columns). It protects the browser. */
 	queryCellLimit: number;
 	/** The number of decoded results that the memory cache holds. */
@@ -69,6 +71,7 @@ export interface BeaconStudioSettings {
 
 export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	defaultOutputFormat: 'parquet',
+	requireQueryFilters: true,
 	queryCellLimit: 50_000_000,
 	memoryCacheMaxEntries: 4,
 	queryHistoryMax: 100,
@@ -119,6 +122,10 @@ export interface TextSettingDefinition extends BaseDefinition {
 	placeholder?: string;
 }
 
+export interface BooleanSettingDefinition extends BaseDefinition {
+	type: 'boolean';
+}
+
 export interface SelectSettingDefinition extends BaseDefinition {
 	type: 'select';
 	options: Array<{ label: string; value: string }>;
@@ -127,6 +134,7 @@ export interface SelectSettingDefinition extends BaseDefinition {
 export type SettingDefinition =
 	| NumberSettingDefinition
 	| TextSettingDefinition
+	| BooleanSettingDefinition
 	| SelectSettingDefinition;
 
 /** One entry per setting. The settings page builds its form from this list. */
@@ -143,6 +151,14 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 			{ label: 'Arrow', value: 'arrow' },
 			{ label: 'NetCDF', value: 'netcdf' }
 		]
+	},
+	{
+		key: 'requireQueryFilters',
+		group: 'Queries',
+		type: 'boolean',
+		label: 'Require a filter',
+		description:
+			'Blocks a query with no filters in the workbench. Beacon must not read a whole table.'
 	},
 	{
 		key: 'queryCellLimit',
