@@ -17,12 +17,25 @@
     import UrlIcon from '@lucide/svelte/icons/link-2';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import { settings } from '@/stores/settings';
 	
 
 
 	let {
 		queryActions
 	}: { queryActions: QueryActions } = $props();
+
+	/**
+	 * The reason that the active query must not run, or null.
+	 *
+	 * The switch is read here as well. `runBlockReason` reads a snapshot of the
+	 * settings, so without this read the bar keeps its state after the user turns
+	 * the safeguard off on the settings page.
+	 */
+	const blockReason = $derived.by(() => {
+		if (!$settings.requireQueryFilters) return null;
+		return queryActions.runBlockReason?.() ?? null;
+	});
 
 	let showingCacheInfoModal = $state(false);
 
@@ -46,7 +59,11 @@
 
 	<div class="query-action-group">
 
-		<DownloadDataButton downloadData={queryActions.downloadData} />
+		<DownloadDataButton
+			downloadData={queryActions.downloadData}
+			disabled={!!blockReason}
+			title={blockReason ?? ''}
+		/>
 
 		{#if queryActions.editQuery}
 			<Button onclick={queryActions.editQuery} title="Edit query">
@@ -54,10 +71,12 @@
 				Edit Query
 			</Button>
 		{:else}
-			<VisualiseDataButton 
+			<VisualiseDataButton
 				visualiseTable={queryActions.visualiseTable}
 				visualiseChart={queryActions.visualiseChart}
 				visualiseMap={queryActions.visualiseMap}
+				disabled={!!blockReason}
+				title={blockReason ?? ''}
 			/>
 		{/if}
 		

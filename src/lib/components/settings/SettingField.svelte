@@ -11,6 +11,7 @@
 	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
 	import Button from '@/components/buttons/Button.svelte';
 	import { Input } from '@/components/ui/input';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import {
 		DEFAULT_SETTINGS,
@@ -54,6 +55,15 @@
 		return selectValue;
 	});
 
+	/** The stored value of a boolean setting. */
+	const booleanValue = $derived(stored === true);
+
+	/** The word beside the checkbox. */
+	const booleanLabel = $derived.by(() => {
+		if (booleanValue) return 'On';
+		return 'Off';
+	});
+
 	function onNumberChange(event: Event): void {
 		if (definition.type !== 'number') return;
 
@@ -76,6 +86,10 @@
 	}
 
 	function onSelectChange(value: string): void {
+		setSetting(definition.key, value);
+	}
+
+	function onBooleanChange(value: boolean): void {
 		setSetting(definition.key, value);
 	}
 </script>
@@ -101,6 +115,11 @@
 				{#if definition.unit}
 					<span class="unit">{definition.unit}</span>
 				{/if}
+			</div>
+		{:else if definition.type === 'boolean'}
+			<div class="boolean">
+				<Checkbox id={inputId} checked={booleanValue} onCheckedChange={onBooleanChange} />
+				<label class="boolean-label" for={inputId}>{booleanLabel}</label>
 			</div>
 		{:else if definition.type === 'select'}
 			<Select.Root type="single" value={selectValue} onValueChange={onSelectChange}>
@@ -163,6 +182,18 @@
 			display: flex;
 			align-items: center;
 			gap: 0.5rem;
+
+			.boolean {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				flex: 1;
+
+				.boolean-label {
+					font-size: 0.85rem;
+					color: var(--muted-foreground);
+				}
+			}
 
 			.number {
 				display: flex;

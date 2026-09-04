@@ -17,6 +17,8 @@
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import { Input } from '@/components/ui/input';
+	import { runBlockReason } from '@/query/query-guard';
+	import { settings } from '@/stores/settings';
 
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
@@ -66,6 +68,15 @@
 	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
+	/**
+	 * The query that the safeguard stopped last. It keeps the warning to one
+	 * toast: this effect writes `lastRunKey`, which makes it run a second time.
+	 */
+	let lastBlockedKey: string | null = $state(null);
+
+	// The safeguard blocks a query with no filter. It belongs in the run key, so
+	// the query runs after the user turns the safeguard off.
+	const requireFilters = $derived($settings.requireQueryFilters);
 
 	// The number of the newest run of this page. The store runs one query at a
 	// time, so a new run stops the run in flight. That older run rejects after the
@@ -88,7 +99,28 @@
 			return;
 		}
 
-		const runKey = `${blockId}:${instanceUrl}:${key}`;
+		// The safeguard stops a query with no filter. Show nothing, and run nothing.
+		// The run key stays empty, so a revert of the edit runs the query again.
+		const blocked = runBlockReason(untrack(() => compiledQuery));
+		if (blocked) {
+			const blockedKey = `${blockId}:${instanceUrl}:${key}`;
+			if (blockedKey !== lastBlockedKey) {
+				lastBlockedKey = blockedKey;
+				addToast({ type: 'warning', message: blocked });
+			}
+
+			entry = null;
+			columns = [];
+			displayRows = [];
+			totalRows = 0;
+			isLoading = false;
+			lastRunKey = null;
+			return;
+		}
+
+		lastBlockedKey = null;
+
+		const runKey = `${blockId}:${instanceUrl}:${key}:${requireFilters}`;
 		if (runKey === lastRunKey) return;
 		lastRunKey = runKey;
 

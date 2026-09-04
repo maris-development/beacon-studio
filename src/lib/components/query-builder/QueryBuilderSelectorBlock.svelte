@@ -19,6 +19,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	// import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { StoredQuery } from '@/stores/stored-query';
+	import { runBlockReason } from '@/query/query-guard';
+	import { settings } from '@/stores/settings';
 
 	// All state lives in the workspace; this component only reads/acts on it.
 	let { 
@@ -31,6 +33,20 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	} = $props();
 
 	const COLUMN_PREVIEW_LIMIT = 3;
+
+	/**
+	 * The reason that a block must not run, or null. The card shows a warning
+	 * triangle with this text.
+	 *
+	 * The switch is read here as well. `runBlockReason` reads a snapshot of the
+	 * settings, so without this read the cards keep the triangle after the user
+	 * turns the safeguard off on the settings page.
+	 */
+	function blockReasonFor(block: StoredQuery): string | null {
+		if (!$settings.requireQueryFilters) return null;
+		return runBlockReason(QueryWorkspace.getQuery(block));
+	}
+
 	let editingBlockId: string | null = $state(null);
 	let editingName = $state('');
 	let isCommittingFromKeyboard: boolean = $state(false);
@@ -138,6 +154,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			-->
 			{@const instance = workspace.instanceFor(block)}
 			{@const missingUrl = workspace.missingInstanceUrlFor(block)}
+			{@const blockReason = blockReasonFor(block)}
 			<div
 				
 				class="query-block-wrapper"
@@ -256,7 +273,14 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 							<span class="query-stat" title="Amount of selected columns">
 								{status.columns} columns
 							</span>
-							<span class="query-stat" title="Amount of applied filters">
+							<span
+								class="query-stat filter-stat"
+								class:missing={blockReason}
+								title={blockReason ?? 'Amount of applied filters'}
+							>
+								{#if blockReason}
+									<TriangleAlertIcon size="0.75rem" />
+								{/if}
 								{status.filters}
 								{status.filters == 1 ? 'filter' : 'filters'}
 							</span>
@@ -341,6 +365,17 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 				content: '•';
 				margin-left: 0.5rem;
 				margin-right: 0.5rem;
+			}
+		}
+
+		// The filter count of the block. The triangle sits on the text baseline.
+		.filter-stat {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.25rem;
+
+			&.missing {
+				color: IndianRed;
 			}
 		}
 

@@ -20,9 +20,12 @@
 	import { addToast } from '@/stores/toasts';
 	import type { QuerySelectionStatus } from '@/query/selection-status';
     import type { QueryActions } from './QueryActions';
-	import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
+	import { compileDraft, defaultOutputFormat, type QueryDraft } from '@/query/draft';
 	import MapPinnedIcon from '@lucide/svelte/icons/map-pinned';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import XIcon from '@lucide/svelte/icons/x';
+	import { runBlockReason } from '@/query/query-guard';
+	import { settings } from '@/stores/settings';
 	import { describeSelection, type SpatialSelection } from '@/geo/spatial-selection';
 	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
 
@@ -91,6 +94,27 @@
 	let hasHydratedSeed = $state(!pendingSeed);
 	let lastEmittedDraftKey = $state('');
 	let lastReceivedDraftKey = $state(initialDraft ? JSON.stringify(initialDraft) : '');
+
+	/**
+	 * The reason that this query must not run, or null. It compiles the draft,
+	 * because a filter with no value compiles to nothing.
+	 *
+	 * The switch is read here as well. `runBlockReason` reads a snapshot of the
+	 * settings, so without this read the warning stays after the user turns the
+	 * safeguard off on the settings page.
+	 */
+	const filterWarning = $derived.by(() => {
+		if (!$settings.requireQueryFilters) return null;
+
+		return runBlockReason(
+			compileDraft({
+				tableName: table_name,
+				selectedFields,
+				outputFormat: selected_output_format,
+				spatialFilter
+			})
+		);
+	});
 
 	const firstVisibleItem = $derived(fields.find((item) => !(item.ref as {hidden: boolean})?.hidden));
 
@@ -406,6 +430,13 @@
 		</Dialog.Content>
 	</Dialog.Root>
 
+	{#if filterWarning}
+		<p class="filter-warning">
+			<TriangleAlertIcon size={16} />
+			{filterWarning}
+		</p>
+	{/if}
+
 	{#if spatialFilter}
 		<div class="area-filter">
 			<MapPinnedIcon size={16} />
@@ -434,6 +465,22 @@
 </div>
 
 <style lang="scss">
+
+	.filter-warning {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.5rem 0 0;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--destructive);
+		border-radius: var(--radius, 0.5rem);
+		font-size: 0.85rem;
+		color: var(--destructive);
+
+		:global(svg) {
+			flex-shrink: 0;
+		}
+	}
 
 	.area-filter {
 		display: flex;

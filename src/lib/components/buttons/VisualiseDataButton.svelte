@@ -12,10 +12,14 @@
         visualiseTable,
         visualiseChart,
         visualiseMap,
+        disabled = false,
+        title = ''
 	}: {
 		visualiseTable: () => void|Promise<void>;
         visualiseChart: () => void|Promise<void>;
         visualiseMap: () => void|Promise<void>;
+        disabled?: boolean;
+        title?: string;
 	} = $props();
 
 	let isLoading = $state(false);
@@ -34,8 +38,8 @@
 
 
 <DropdownMenu.Root>
-    <DropdownMenu.Trigger disabled={isLoading}>
-        <Button disabled={isLoading}>
+    <DropdownMenu.Trigger disabled={isLoading || disabled}>
+        <Button disabled={isLoading || disabled} {title}>
         {#if isLoading}
             <LoadingIcon class="animate-spin" />
             Executing...
