@@ -5,6 +5,7 @@ import { addToast } from '@/stores/toasts';
 import { saveQueryFrom } from '@/stores/saved-queries';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
+import { runBlockReason } from '@/query/query-guard';
 
 export type ActionCallback = (() => void | Promise<void>) | undefined;
 
@@ -31,6 +32,14 @@ export type QueryActions = {
      * See `buildShareLink`.
      */
     getInstanceRef?: () => InstanceRef | null;
+    /**
+     * The reason that the active query must not run, or null. The action bar
+     * disables the run and download buttons with it, and names the reason.
+     *
+     * The value is a snapshot. A component that must react to a change of the
+     * safeguard switch reads `$settings` beside this call.
+     */
+    runBlockReason?: () => string | null;
 };
 
 /**
@@ -53,6 +62,23 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
     function getInstanceRef(): InstanceRef | null {
         return workspace.activeBlock?.instance ?? null;
+    }
+
+    /** The reason that the active query must not run. See {@link runBlockReason}. */
+    function activeRunBlockReason(): string | null {
+        return runBlockReason(QueryWorkspace.getQuery(workspace.activeBlock));
+    }
+
+    /**
+     * True when the safeguard stops this query. The caller must not talk to the
+     * node. A query with no filter reads a whole table.
+     */
+    function isBlocked(query: CompiledQuery): boolean {
+        const reason = runBlockReason(query);
+        if (!reason) return false;
+
+        addToast({ message: reason, type: 'warning' });
+        return true;
     }
 
     /**
@@ -87,6 +113,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
             addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
             return null;
         }
+
+        if (isBlocked(query)) return null;
 
         const instance = requireInstance();
         if (!instance) return null;
@@ -132,6 +160,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
             addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
             return;
         }
+
+        if (isBlocked(query)) return;
 
         const instance = requireInstance();
         if (!instance) return;
@@ -207,7 +237,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         resetQuery,
         saveQuery,
         getInstance,
-        getInstanceRef
+        getInstanceRef,
+        runBlockReason: activeRunBlockReason
     };
 }
 

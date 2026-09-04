@@ -15,6 +15,9 @@
 	import PlotTabs from '@/components/plots/PlotTabs.svelte';
 	import { ChartExplorerController } from '@/components/plots/ChartExplorerController.svelte';
 	import { type ChartViewState } from '@/plots/plot-config';
+	import { addToast } from '@/stores/toasts';
+	import { runBlockReason } from '@/query/query-guard';
+	import { settings } from '@/stores/settings';
 
 	const workspace = $state(new QueryWorkspace());
 
@@ -59,8 +62,17 @@
 	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
+	/**
+	 * The query that the safeguard stopped last. It keeps the warning to one
+	 * toast: this effect writes `lastRunKey`, which makes it run a second time.
+	 */
+	let lastBlockedKey: string | null = $state(null);
 	/** The block of the last run. A new block brings its own plots. */
 	let lastRunBlockId: string | null = $state(null);
+
+	// The safeguard blocks a query with no filter. It belongs in the run key, so
+	// the query runs after the user turns the safeguard off.
+	const requireFilters = $derived($settings.requireQueryFilters);
 
 	// Re-run only when the selected block, or its compiled query content, actually changes.
 	$effect(() => {
@@ -74,7 +86,24 @@
 			return;
 		}
 
-		const runKey = `${blockId}:${instanceUrl}:${key}`;
+		// The safeguard stops a query with no filter. Show nothing, and run nothing.
+		// The run key stays empty, so a revert of the edit runs the query again.
+		const blocked = runBlockReason(untrack(() => compiledQuery));
+		if (blocked) {
+			const blockedKey = `${blockId}:${instanceUrl}:${key}`;
+			if (blockedKey !== lastBlockedKey) {
+				lastBlockedKey = blockedKey;
+				addToast({ type: 'warning', message: blocked });
+			}
+
+			charts.clearQueryResult();
+			lastRunKey = null;
+			return;
+		}
+
+		lastBlockedKey = null;
+
+		const runKey = `${blockId}:${instanceUrl}:${key}:${requireFilters}`;
 		if (runKey === lastRunKey) return;
 
 		const isSameBlock = blockId === lastRunBlockId;
