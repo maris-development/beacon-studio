@@ -24,10 +24,8 @@ export type InstanceUrlParts = {
 };
 
 /**
- * The scheme for a value that the user typed with no scheme. The app takes its
- * own scheme. A relative URL follows the same rule, and a node runs next to the
- * app that uses it: a dev app on `http` reaches a node on `http`, and a hosted
- * app on `https` reaches a node on `https`.
+ * The scheme for a URL with no scheme. The app uses its own scheme.
+ * For example, `beacon.maris.nl` parses as `https://beacon.maris.nl` on an `https` app.
  *
  * The rule needs no list of host names. A user who wants the other scheme types
  * it, and the value then keeps that scheme.
