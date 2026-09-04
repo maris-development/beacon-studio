@@ -33,6 +33,11 @@ export type QueryActions = {
      */
     getInstanceRef?: () => InstanceRef | null;
     /**
+     * The name of the active query, or an empty string. A share link carries it,
+     * so the receiver keeps the name of the sender. See `buildShareLink`.
+     */
+    getQueryName?: () => string;
+    /**
      * The reason that the active query must not run, or null. The action bar
      * disables the run and download buttons with it, and names the reason.
      *
@@ -64,6 +69,10 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return workspace.activeBlock?.instance ?? null;
     }
 
+    function getQueryName(): string {
+        return workspace.activeBlock?.name ?? '';
+    }
+  
     /** The reason that the active query must not run. See {@link runBlockReason}. */
     function activeRunBlockReason(): string | null {
         return runBlockReason(QueryWorkspace.getQuery(workspace.activeBlock));
@@ -238,6 +247,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         saveQuery,
         getInstance,
         getInstanceRef,
+        getQueryName,
         runBlockReason: activeRunBlockReason
     };
 }

@@ -169,11 +169,11 @@ export class QueryWorkspace {
 		}
 
 		if (resolved.query) {
-			// A share link carries the node as `?instance=`. Keep that ref, even when
+			// A share link carries the node of the sender. Keep that ref, even when
 			// the list holds no node for it. The builder then names the URL, and asks
-			// the user to add it. A link of an older app version carries no node, so
-			// the block falls back to the default.
-			const block = this.addFromQuery(resolved.query, undefined, resolved.instance);
+			// the user to add it. A link with no node lets the block fall back to the
+			// default. An empty name does the same for the name of the block.
+			const block = this.addFromQuery(resolved.query, resolved.name || undefined, resolved.instance);
 
 			// Mark the guess. The default node often has other tables, and the
 			// builder then loads no columns. See {@link reportSeedMismatch}.
@@ -373,7 +373,7 @@ export class QueryWorkspace {
 	/** Add an empty block and select it. It inherits the node of the active block. */
 	addBlock(name?: string): StoredQuery {
 		const block = queryBlocks.append({
-			name: name ?? `Query ${nextBlockNumber()}`,
+			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: makeEmptyDraft(),
 			instance: this.defaultInstanceRef()
 		});
@@ -389,7 +389,7 @@ export class QueryWorkspace {
 	addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
 		const block = cloneStoredQuery(source, {
 			role: 'block',
-			name: name ?? source.name ?? `Query ${nextBlockNumber()}`
+			name: name ?? source.name ?? `Untitled (${nextBlockNumber()})`
 		});
 		queryBlocks.insertAt(this.blocks.length, block);
 		this.select(block.id);
@@ -408,7 +408,7 @@ export class QueryWorkspace {
 		}
 
 		const block = queryBlocks.append({
-			name: name ?? `Query ${nextBlockNumber()}`,
+			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: null,
 			compiled: Utils.cloneObject(query),
 			instance: ref

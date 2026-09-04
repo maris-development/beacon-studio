@@ -562,7 +562,7 @@ class QueryStore {
 			warnings.push('limit_reached');
 			addToast({
 				type: 'warning',
-				message: `The query result reached the ${cellLimit.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete. Refine your query to reduce the result size.`
+				message: `The query result reached the ${cellLimit.toLocaleString()} cell limit to keep your browser stable. Data may be incomplete (retrieved ${rowCount.toLocaleString()} rows). Refine your query to reduce the result size. You can also go to settings and change the "Query cell limit" to a higher limit, but note that this might impact browser performance.`
 			});
 		}
 

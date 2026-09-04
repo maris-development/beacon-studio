@@ -12,15 +12,14 @@ import { queryBlocks } from '@/stores/query-blocks';
 import { queryHistory } from '@/stores/query-history';
 import { savedQueries } from '@/stores/saved-queries';
 import {
+	decodeSharedQuery,
 	instanceRefFromUrl,
-	SHARE_INSTANCE_PARAM,
 	type InstanceRef,
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
 import { resolveRef } from '@/services/beacon-instance';
-import { Utils } from '@/utils';
 import { addToast } from "@/stores/toasts";
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
@@ -80,6 +79,12 @@ export interface ResolvedUrlQuery {
 	/** The query to run. Null if the URL carried no usable data. */
 	query: CompiledQuery | null;
 	/**
+	 * The name that the link carried, or null. A share link holds the name that
+	 * the sender gave the query. A new block takes it. It is empty when the sender
+	 * had no name, and the block then falls back to its own numbering.
+	 */
+	name: string | null;
+	/**
 	 * The value of `entry.id`, or undefined if there is no record. Send it to
 	 * `ensureQuery(query, instance, storedQueryId)`. The app then writes the run
 	 * to the record. See `QueryStore.ensure` for the effects of this link.
@@ -133,6 +138,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 		return {
 			entry,
 			query: entry.compiled,
+			name: entry.name,
 			storedQueryId: entry.id,
 			instance: entry.instance,
 			missingInstanceUrl: missingUrlOf(entry.instance),
@@ -143,16 +149,13 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const shared = url.searchParams.get('query');
 	if (shared) {
 		try {
-			let query = Utils.gzipStringToObject<CompiledQuery>(shared);
-			if (typeof query === 'string') {
-				query = JSON.parse(query) as CompiledQuery;
-			}
-
-			const instance = sharedInstanceRef(url);
+			const payload = decodeSharedQuery(shared);
+			const instance = sharedInstanceRef(payload.instanceUrl);
 
 			return {
 				entry: null,
-				query,
+				query: payload.query,
+				name: payload.name,
 				instance,
 				missingInstanceUrl: missingUrlOf(instance),
 				containsQueryParam
@@ -165,19 +168,19 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				type: 'error'
 			});
 
-			return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam };
+			return { entry: null, query: null, name: null, instance: null, missingInstanceUrl: null, containsQueryParam };
 		}
 	}
 
-	return { entry: null, query: null, instance: null, missingInstanceUrl: null, containsQueryParam };
+	return { entry: null, query: null, name: null, instance: null, missingInstanceUrl: null, containsQueryParam };
 }
 
 /**
- * The node of a share link, or null. A link of an older app version carries no
- * node. The caller then uses its own default.
+ * The node of a share link, or null. The payload holds an empty URL when the
+ * sender named no node. The caller then uses its own default.
  */
-function sharedInstanceRef(url: URL): InstanceRef | null {
-	const shared = url.searchParams.get(SHARE_INSTANCE_PARAM)?.trim();
+function sharedInstanceRef(instanceUrl: string): InstanceRef | null {
+	const shared = instanceUrl.trim();
 	if (!shared) return null;
 
 	// The list can already hold this node. Take the full ref then, so the record
