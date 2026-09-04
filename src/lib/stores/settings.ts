@@ -69,7 +69,7 @@ export interface BeaconStudioSettings {
 
 export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	defaultOutputFormat: 'parquet',
-	queryCellLimit: 50_000_000,
+	queryCellLimit: 10_000_000,
 	memoryCacheMaxEntries: 4,
 	queryHistoryMax: 100,
 	workerMaxLoadedTables: 2,
