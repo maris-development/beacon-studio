@@ -163,7 +163,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 	return {
 		id: createId(),
 		role: input.role,
-		name: input.name ?? 'Query',
+		name: input.name ?? 'Untitled',
 		draft,
 		compiled,
 		instance: input.instance ?? snapshotInstance(null),

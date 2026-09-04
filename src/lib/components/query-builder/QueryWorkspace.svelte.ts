@@ -373,7 +373,7 @@ export class QueryWorkspace {
 	/** Add an empty block and select it. It inherits the node of the active block. */
 	addBlock(name?: string): StoredQuery {
 		const block = queryBlocks.append({
-			name: name ?? `Query ${nextBlockNumber()}`,
+			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: makeEmptyDraft(),
 			instance: this.defaultInstanceRef()
 		});
@@ -389,7 +389,7 @@ export class QueryWorkspace {
 	addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
 		const block = cloneStoredQuery(source, {
 			role: 'block',
-			name: name ?? source.name ?? `Query ${nextBlockNumber()}`
+			name: name ?? source.name ?? `Untitled (${nextBlockNumber()})`
 		});
 		queryBlocks.insertAt(this.blocks.length, block);
 		this.select(block.id);
@@ -408,7 +408,7 @@ export class QueryWorkspace {
 		}
 
 		const block = queryBlocks.append({
-			name: name ?? `Query ${nextBlockNumber()}`,
+			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: null,
 			compiled: Utils.cloneObject(query),
 			instance: ref
