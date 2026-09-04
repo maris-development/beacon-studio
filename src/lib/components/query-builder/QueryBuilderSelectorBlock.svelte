@@ -432,6 +432,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			overflow-x: auto;
 			overflow-y: hidden;
 			padding-bottom: 0.25rem;
+			scrollbar-width: thin;
 		}
 	}
 
