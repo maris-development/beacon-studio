@@ -204,11 +204,11 @@
 			<div class="geo-filter-map">
 				<div class="geo-filter-tools">
 					<MapDrawTools
-					{map}
-					bind:selection={draft}
-					showApply={false}
-					onDrawingChange={(drawing) => (isDrawing = drawing)}
-				/>
+						{map}
+						bind:selection={draft}
+						showApply={false}
+						onDrawingChange={(drawing) => (isDrawing = drawing)}
+					/>
 				</div>
 
 				<SpatialFilterMap bind:map bounds={initialBounds} />
