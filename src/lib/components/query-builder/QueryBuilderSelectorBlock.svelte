@@ -137,11 +137,37 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		});
 	}
 
+	let rowEl: HTMLDivElement | undefined = $state();
+
+	function scrollActiveBlockIntoView(): void {
+		const activeId = workspace.activeBlockId;
+		if (!rowEl || !activeId) return;
+
+		const activeEl = rowEl.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(activeId)}"]`);
+		activeEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	}
+
+	// Keep the active block fully in view, including right after a page load/reload.
+	$effect(() => {
+		scrollActiveBlockIntoView();
+	});
+
+	// Re-correct on width changes, e.g. the page scrollbar appearing/disappearing
+	// shrinks this row without changing activeBlockId, which would otherwise leave
+	// an edge block clipped.
+	$effect(() => {
+		if (!rowEl) return;
+
+		const observer = new ResizeObserver(() => scrollActiveBlockIntoView());
+		observer.observe(rowEl);
+
+		return () => observer.disconnect();
+	});
 
 </script>
 
 <div class="query-blocks">
-	<div class="query-blocks-row" onwheel={handleQueryBlocksWheel}>
+	<div class="query-blocks-row" bind:this={rowEl} onwheel={handleQueryBlocksWheel}>
 		{#each workspace.blocks as block (block.id)}
 			<!-- Derive display data for this block from the workspace. -->
 			{@const status = QueryWorkspace.getStatus(block)}
@@ -156,7 +182,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			{@const missingUrl = workspace.missingInstanceUrlFor(block)}
 			{@const blockReason = blockReasonFor(block)}
 			<div
-				
+				data-block-id={block.id}
 				class="query-block-wrapper"
 				class:query-block-wrapper--active={block.id === workspace.activeBlockId}
 				role="button"
@@ -406,6 +432,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			overflow-x: auto;
 			overflow-y: hidden;
 			padding-bottom: 0.25rem;
+			scrollbar-width: thin;
 		}
 	}
 

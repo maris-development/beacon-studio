@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconInstance } from '@/beacon-api/types';
 	import { addInstance, updateInstance, removeInstance } from '@/services/beacon-instance';
-	import { testInstance } from '@/services/beacon-instance-connect';
+	import { checkInstance, testInstance } from '@/services/beacon-instance-connect';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Utils } from '@/utils';
 	import SaveIcon from '@lucide/svelte/icons/save';
@@ -94,6 +94,10 @@
 		} else {
 			addInstance(values);
 		}
+
+		// The table shows this instance right away. Without this, its status stays
+		// "unknown" until the next sweep or page reload.
+		void checkInstance({ url, token });
 
 		onSave();
 	}
