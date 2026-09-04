@@ -9,6 +9,7 @@
 	import type { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
 	import type { StoredQuery } from '@/stores/stored-query';
+	import { resolve } from '$app/paths';
 
     type QuerySelectorMode = 'view' | 'edit';
 
@@ -41,7 +42,7 @@
         if(queryId){
             const params = new SvelteURLSearchParams();
             params.set('q', queryId);
-            goto(`/queries/workbench?${params.toString()}`);
+            goto(resolve(`/queries/workbench`) + '?' + params.toString());
         }
     }
 
