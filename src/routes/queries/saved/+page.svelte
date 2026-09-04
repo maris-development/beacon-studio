@@ -163,10 +163,10 @@
 										size="sm"
 										variant="outline"
 										onclick={() => openInWorkbench(entry)}
-										title="Open in Query Workbench"
+										title="Open in Query Builder"
 									>
 										<WorkbenchIcon />
-										Workbench
+										Query Builder
 									</Button>
 									<Button
 										size="sm"
