@@ -53,6 +53,7 @@
 		onApply,
 		canApply = true,
 		disabledReason = '',
+		showApply = true,
 		onDrawingChange,
 		countFeatures,
 		countKey = null
@@ -65,6 +66,8 @@
 		canApply?: boolean;
 		/** Shown as the button title when `canApply` is false. */
 		disabledReason?: string;
+		/** False while the parent owns the commit, for example a modal footer. */
+		showApply?: boolean;
 		/** Reports a running draw action, so the page can stop the point picking. */
 		onDrawingChange?: (drawing: boolean) => void;
 		/**
@@ -164,7 +167,14 @@
 	});
 
 	onDestroy(() => {
-		draw?.stop();
+		try {
+			draw?.stop();
+		} catch (error) {
+			// A parent can remove the map first. Terra Draw then has nothing to
+			// detach from, and the map takes its layers with it anyway.
+			console.warn('Could not stop the draw tools cleanly:', error);
+		}
+
 		draw = null;
 		ready = false;
 	});
@@ -421,15 +431,17 @@
 			<Trash2Icon size={16} />
 			Clear
 		</Button>
-		<Button
-			variant="default"
-			title={applyTitle}
-			disabled={!canApply || !isUsableSelection(selection)}
-			onclick={() => onApply?.()}
-		>
-			<FilterIcon size={16} />
-			Apply filter
-		</Button>
+		{#if showApply}
+			<Button
+				variant="default"
+				title={applyTitle}
+				disabled={!canApply || !isUsableSelection(selection)}
+				onclick={() => onApply?.()}
+			>
+				<FilterIcon size={16} />
+				Apply filter
+			</Button>
+		{/if}
 	</div>
 </div>
 

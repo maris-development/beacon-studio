@@ -104,6 +104,7 @@ This file is a quick operational guide for coding agents working in this reposit
 - Polygon, box and cross section all end as one closed ring, so there is one filter kind. A cross section is a line plus a width; `crossSectionRing` in `geo/spatial-selection.ts` converts it.
 - Always send the bounding box of the polygon beside it, as two `MinMaxFilter`s on the latitude and longitude columns. The server can prune data with those, but not with the polygon test. `compileDraft` derives the box; never store it on a field.
 - `QueryDraft.spatialFilter` holds the area, because it applies to two columns and has no card of its own. `QueryWorkspace.updateActiveSpatialFilter` writes it, and also handles a block that has no draft (share link, JSON editor) by patching `compiled.filters`.
+- The area carries the two columns it tests (`latitudeColumn` / `longitudeColumn`), because the user can pick another pair than the names say, for example `x` and `y`. Resolve the pair with `selectionColumns` (`geo/spatial-selection.ts`), never with `detectCoordinateColumns` alone: the names on the area win while the query still selects them, and detection is only the fallback for an older record. The draw tools rebuild the area on every shape change and drop the two names, so stamp them back with `withColumns` at the point of apply.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
 
 ## Layer Rule (Important)
@@ -170,7 +171,7 @@ Imports point one way only:
 
 ## Known Repo Facts
 - Static adapter outputs to `build/` and uses `fallback: 'index.html'`.
-- Monaco editor and Perspective viewer are included and loaded client-side.
+- Monaco editor is included and loaded client-side.
 - Project currently contains generated `build/` artifacts in repo; avoid editing generated files directly unless explicitly asked.
 
 ## Comment Rules

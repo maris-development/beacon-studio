@@ -16,7 +16,11 @@
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
 	import { MapViewController } from '@/components/visualisation/MapViewController.svelte';
-	import type { SpatialSelection } from '@/geo/spatial-selection';
+	import {
+		selectionColumns,
+		withColumns,
+		type SpatialSelection
+	} from '@/geo/spatial-selection';
 	import { addToast } from '@/stores/toasts';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
@@ -174,9 +178,23 @@
 		untrack(() => workspace.updateActiveMapView(state));
 	});
 
-	/** Write the drawn area into the query. The effect above then re-runs it. */
+	/**
+	 * Write the drawn area into the query. The effect above then re-runs it.
+	 *
+	 * The area names the two columns it tests. The builder can pick another pair
+	 * than the detection finds, for example `x` and `y`. A redraw here must keep
+	 * that pair, so the columns come from the area of the block.
+	 */
 	function applyAreaFilter() {
-		workspace.updateActiveSpatialFilter(selection);
+		if (!selection) {
+			workspace.updateActiveSpatialFilter(null);
+			return;
+		}
+
+		const stored = workspace.activeBlock?.draft?.spatialFilter ?? selection;
+		const columns = selectionColumns(stored, map.availableColumnNames);
+
+		workspace.updateActiveSpatialFilter(withColumns(selection, columns));
 	}
 </script>
 

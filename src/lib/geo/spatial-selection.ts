@@ -10,6 +10,7 @@
  * columns. See `beacon-core/src/query/filter/geo_json.rs`.
  */
 import type { GeoJsonFilter, GeoJsonPolygon, MinMaxFilter } from '@/beacon-api/types';
+import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import { getSettings } from '@/stores/settings';
 
 export type SpatialSelectionMode = 'polygon' | 'box' | 'cross-section';
@@ -25,6 +26,19 @@ export type SpatialSelection = {
     line?: LngLat[];
     /** Cross section only: the full width of the band, in kilometres. */
     widthKm?: number;
+    /**
+     * The columns the filter tests. The user picks them in the query builder.
+     * Both are absent on an area of an older record, and {@link selectionColumns}
+     * then falls back to {@link detectCoordinateColumns}.
+     */
+    latitudeColumn?: string;
+    longitudeColumn?: string;
+};
+
+/** The pair of columns a spatial filter tests. */
+export type CoordinatePair = {
+    latitude: string;
+    longitude: string;
 };
 
 export type Bounds = {
@@ -223,6 +237,67 @@ export function makeCrossSectionSelection(line: LngLat[], widthKm: number): Spat
     };
 }
 
+/** Put the two column names on a selection. The draw tools drop them. */
+export function withColumns(
+    selection: SpatialSelection,
+    columns: CoordinatePair | null
+): SpatialSelection {
+    if (!columns) return selection;
+
+    return {
+        ...selection,
+        latitudeColumn: columns.latitude,
+        longitudeColumn: columns.longitude
+    };
+}
+
+/**
+ * The two columns a spatial filter must test, or null.
+ *
+ * The names on the selection win, because the user picked them. They only win
+ * while the query still selects both: a filter on a column that the query does
+ * not select is invalid. Detection then answers, which also serves an area of
+ * an older record, and an area that the map viewer drew.
+ */
+export function selectionColumns(
+    selection: SpatialSelection | null | undefined,
+    availableNames: string[]
+): CoordinatePair | null {
+    const latitude = selection?.latitudeColumn;
+    const longitude = selection?.longitudeColumn;
+
+    if (
+        latitude &&
+        longitude &&
+        availableNames.includes(latitude) &&
+        availableNames.includes(longitude)
+    ) {
+        return { latitude, longitude };
+    }
+
+    const detection = detectCoordinateColumns(availableNames);
+    if (!detection.latitude || !detection.longitude) return null;
+
+    return { latitude: detection.latitude.name, longitude: detection.longitude.name };
+}
+
+/**
+ * The column of a selection that the query does not select, or null.
+ *
+ * The builder reports this. The area stays on the draft, so the user can pick
+ * the column again, or select it in the query.
+ */
+export function missingSelectionColumn(
+    selection: SpatialSelection | null | undefined,
+    availableNames: string[]
+): string | null {
+    const wanted = [selection?.latitudeColumn, selection?.longitudeColumn].filter(
+        Boolean
+    ) as string[];
+
+    return wanted.find((name) => !availableNames.includes(name)) ?? null;
+}
+
 /** True when the selection has a usable area. */
 export function isUsableSelection(selection: SpatialSelection | null | undefined): boolean {
     return !!selection && selection.ring.length >= 4;
@@ -284,7 +359,9 @@ export function fromGeoJsonFilter(filter: GeoJsonFilter): SpatialSelection | nul
 
     return {
         mode: 'polygon',
-        ring: ring.map((point) => [Number(point[0]), Number(point[1])] as LngLat)
+        ring: ring.map((point) => [Number(point[0]), Number(point[1])] as LngLat),
+        latitudeColumn: filter.latitude_query_parameter,
+        longitudeColumn: filter.longitude_query_parameter
     };
 }
 
