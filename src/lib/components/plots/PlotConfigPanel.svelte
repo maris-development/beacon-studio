@@ -1303,8 +1303,8 @@
 
 			// The Apply button only stands out while there is something to apply.
 			&.dirty .apply {
-				border-color: #2563eb;
-				background-color: #2563eb;
+				border-color: var(--primary);// #2563eb;
+				background-color: var(--primary);// #2563eb;
 				color: #ffffff;
 			}
 
