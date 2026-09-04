@@ -778,7 +778,8 @@
 									? 'Every stroke takes one colour from the palette.'
 									: 'Group the plot in step 2 to give each stroke its own colour.'}
 							</p>{:else if draft.type === 'histogram'}<p class="hint">
-								The bars take the first colour of the palette.
+								A solid palette colours every bar the same. A range palette colours each bar by
+								its count.
 							</p>{/if}
 					{:else}<p class="hint">
 							Bind a column to the colour axis in step 2 to pick a palette.

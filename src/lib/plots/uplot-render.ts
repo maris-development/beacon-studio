@@ -16,7 +16,13 @@
  * user set (radius, line width, font) by that ratio themselves.
  */
 import type uPlot from 'uplot';
-import { getColorTable, makePaletteScale, paletteIndex, samplePalette } from '@/colors/palettes';
+import {
+	getColormap,
+	getColorTable,
+	makePaletteScale,
+	paletteIndex,
+	samplePalette
+} from '@/colors/palettes';
 import { colorScalePosition, colorScaleValue } from '@/colors/color-scale';
 import type { ColorScale } from './plot-config';
 import { resolveRange, type PlotSeries } from './plot-data';
@@ -307,6 +313,9 @@ export function drawLines(u: uPlot, series: PlotSeries, plot: PlotConfig): void 
  * around its X and runs from the zero of the Y axis up to its count. The zero
  * is taken through the scale, not from the bottom of the plot, so a zoom moves
  * the baseline with the data.
+ *
+ * A solid palette gives every bar the same colour. A range palette instead
+ * shades each bar by its count, from zero up to the tallest bar.
  */
 export function drawBars(u: uPlot, series: PlotSeries, plot: PlotConfig): void {
 	if (!series.binWidth) return;
@@ -331,11 +340,25 @@ export function drawBars(u: uPlot, series: PlotSeries, plot: PlotConfig): void {
 
 	const baseline = Math.min(Math.max(pixelY(0), top), top + height);
 
+	let colorOf: (count: number) => string;
+
+	if (getColormap(plot.style.palette).solid) {
+		// `groupColors` returns the default point colour below a count of two,
+		// which is right for an ungrouped line but wrong here: a histogram bar
+		// takes the palette's own colour, not that fallback. Read the table
+		// directly instead.
+		const flatColor = getColorTable(plot.style.palette)[0];
+		colorOf = () => flatColor;
+	} else {
+		let maxCount = 0;
+		for (const count of ys) if (count > maxCount) maxCount = count;
+		colorOf = makePaletteScale(plot.style.palette, 0, maxCount);
+	}
+
 	ctx.save();
 	clipToPlot(u);
 
 	ctx.globalAlpha = plot.style.pointOpacity;
-	ctx.fillStyle = groupColors(plot.style.palette, 1, false)[0];
 
 	for (let i = 0; i < xs.length; i++) {
 		if (ys[i] === 0) continue;
@@ -347,6 +370,7 @@ export function drawBars(u: uPlot, series: PlotSeries, plot: PlotConfig): void {
 		const x = Math.min(leftEdge, rightEdge) + gap / 2;
 		const barWidth = Math.max(Math.abs(rightEdge - leftEdge) - gap, 0.5);
 
+		ctx.fillStyle = colorOf(ys[i]);
 		ctx.fillRect(x, Math.min(barTop, baseline), barWidth, Math.abs(baseline - barTop));
 	}
 
