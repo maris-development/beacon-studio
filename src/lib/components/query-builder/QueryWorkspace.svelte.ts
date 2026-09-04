@@ -169,11 +169,11 @@ export class QueryWorkspace {
 		}
 
 		if (resolved.query) {
-			// A share link carries the node as `?instance=`. Keep that ref, even when
+			// A share link carries the node of the sender. Keep that ref, even when
 			// the list holds no node for it. The builder then names the URL, and asks
-			// the user to add it. A link of an older app version carries no node, so
-			// the block falls back to the default.
-			const block = this.addFromQuery(resolved.query, undefined, resolved.instance);
+			// the user to add it. A link with no node lets the block fall back to the
+			// default. An empty name does the same for the name of the block.
+			const block = this.addFromQuery(resolved.query, resolved.name || undefined, resolved.instance);
 
 			// Mark the guess. The default node often has other tables, and the
 			// builder then loads no columns. See {@link reportSeedMismatch}.

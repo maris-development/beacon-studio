@@ -4,14 +4,13 @@ import { clsx, type ClassValue } from "clsx";
 import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
-import type { CompiledQuery, DataType, Filter } from "./beacon-api/types";
+import type { DataType, Filter } from "./beacon-api/types";
 import type { ParameterFilterType } from "./query/filter-types";
 import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
 import { ApacheArrowUtils } from './arrow-utils';
 import type { Rendered, SortDirection } from './util-types';
 export type { WithElementRef, WithoutChild, WithoutChildren, WithoutChildrenOrChild } from './util-types';
-import { page } from '$app/state';
 import { get, type Readable } from "svelte/store";
 
 // import * as aq from 'arquero';
@@ -138,26 +137,6 @@ export class Utils {
         return typeof obj === "object" && obj !== null && prop in obj;
     }
 
-
-    static getUrlSuppliedQuery(): CompiledQuery | null {
-        const urlSuppliedQuery = page.url.searchParams.get('query');
-
-        let query: CompiledQuery | null = null;
-
-        if (urlSuppliedQuery) {
-            try {
-                query = Utils.gzipStringToObject(urlSuppliedQuery);
-                
-                if(typeof query == 'string') {
-                    query = JSON.parse(query) as CompiledQuery;
-                }
-            } catch (error) {
-                console.error('Failed to decode query:', error);
-            }
-        }
-
-        return query;
-    }
 
     static renderComponent<T extends Record<string, unknown>>(
         component: Component<T, Record<string, unknown>, string>,

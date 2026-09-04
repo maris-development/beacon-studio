@@ -31,6 +31,11 @@ export type QueryActions = {
      * See `buildShareLink`.
      */
     getInstanceRef?: () => InstanceRef | null;
+    /**
+     * The name of the active query, or an empty string. A share link carries it,
+     * so the receiver keeps the name of the sender. See `buildShareLink`.
+     */
+    getQueryName?: () => string;
 };
 
 /**
@@ -53,6 +58,10 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
     function getInstanceRef(): InstanceRef | null {
         return workspace.activeBlock?.instance ?? null;
+    }
+
+    function getQueryName(): string {
+        return workspace.activeBlock?.name ?? '';
     }
 
     /**
@@ -207,7 +216,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         resetQuery,
         saveQuery,
         getInstance,
-        getInstanceRef
+        getInstanceRef,
+        getQueryName
     };
 }
 

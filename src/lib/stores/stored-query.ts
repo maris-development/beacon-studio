@@ -232,33 +232,76 @@ export function cloneStoredQuery(
 /**
  * Internal navigation sends a record `id` as `?q=`. That id resolves only
  * against the storage of this browser. Therefore a share link must carry the
- * query itself, as gzip in `?query=`. The app keeps that older encoding for this
- * purpose alone.
+ * query itself, as a gzipped {@link SharedQuery} in `?query=`.
  *
  * Every share link opens the workbench. The workbench is the only page that
  * accepts a query without a record. From there the user can open any other page.
  */
 export const SHARE_LINK_PATH = '/queries/workbench';
 
-/** The search parameter that carries the node of a shared query. */
-export const SHARE_INSTANCE_PARAM = 'instance';
+/**
+ * The payload of `?query=`. It carries everything that the receiver needs, so
+ * the link needs no second parameter.
+ *
+ * The payload never carries the token. The receiver supplies their own
+ * credentials for a node that needs one.
+ */
+export type SharedQuery = {
+	/** The runnable query. */
+	query: CompiledQuery;
+	/** The name that the sender gave the query. */
+	name: string;
+	/** The node that runs the query. Empty when the sender named none. */
+	instanceUrl: string;
+};
+
+/** Gzip a payload for `?query=`. */
+export function encodeSharedQuery(shared: SharedQuery): string {
+	return Utils.objectToGzipString(shared);
+}
+
+/**
+ * Read a `?query=` payload. The function throws for every other input. A link of
+ * an older app version holds a bare `CompiledQuery`, and therefore fails here.
+ * The caller shows that message to the user.
+ */
+export function decodeSharedQuery(value: string): SharedQuery {
+	const payload = Utils.gzipStringToObject<Partial<SharedQuery>>(value);
+	const hasQuery = !!payload && typeof payload === 'object' && !!payload.query;
+
+	if (!hasQuery || typeof payload.query !== 'object') {
+		throw new Error('This link does not hold a shared query of this app version.');
+	}
+
+	return {
+		query: payload.query as CompiledQuery,
+		name: payload.name ?? '',
+		instanceUrl: payload.instanceUrl ?? ''
+	};
+}
 
 /**
  * Build an absolute share URL for a query. Returns null if the app cannot encode
  * the query. Supply `resolve(SHARE_LINK_PATH)` as `basePath`. Path resolution is
  * a SvelteKit task, so this module does not do it.
  *
- * The link carries the URL of the node as `?instance=`. A query runs on one node
- * only, so the receiver needs it. The link never carries the token. The receiver
- * supplies their own credentials for a node that needs one.
+ * The link carries the name and the URL of the node inside `?query=`. A query
+ * runs on one node only, so the receiver needs that URL.
  */
 export function buildShareLink(
 	query: CompiledQuery | null,
 	basePath: string,
+	name: string,
 	instance?: InstanceRef | null
 ): string | null {
 	if (!query) return null;
-	const gzipped = Utils.objectToGzipString(query);
+
+	const gzipped = encodeSharedQuery({
+		query,
+		name,
+		instanceUrl: instance?.url ?? ''
+	});
+
 	if (!gzipped) return null;
 
 	let origin = 'http://localhost';
@@ -268,10 +311,6 @@ export function buildShareLink(
 
 	const url = new URL(basePath, origin);
 	url.searchParams.set('query', gzipped);
-
-	if (instance?.url) {
-		url.searchParams.set(SHARE_INSTANCE_PARAM, instance.url);
-	}
 
 	return url.toString();
 }

@@ -305,10 +305,13 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
  * `instance` is the node ref of the query, and not the resolved node. A ref
  * keeps the URL of a node that this app does not have, so the link still names
  * it. The link never carries a token. See `buildShareLink`.
+ *
+ * `name` is the name of the query. The receiver names their new block after it.
  */
 export function copyUrl(
     compileQuery: () => CompiledQuery,
-    instance: InstanceRef | null
+    instance: InstanceRef | null,
+    name: string
 ): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
@@ -318,7 +321,7 @@ export function copyUrl(
     let link: string;
 
     try {
-        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), instance);
+        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), name, instance);
     }
     catch (error) {
         console.error('Error building Query URL:', error);

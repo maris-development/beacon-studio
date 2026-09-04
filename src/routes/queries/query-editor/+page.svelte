@@ -4,7 +4,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import QueryEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import QueryActionBar from '$lib/components/query-builder/QueryActionBar.svelte';
-	import { Utils } from '@/utils';
+	import { encodeSharedQuery } from '@/stores/stored-query';
 	import { goto } from '$app/navigation';
 	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
 	import { BeaconClient } from '@/beacon-api/client';
@@ -104,6 +104,9 @@
 	 * Send the query to a visualiser. This page is the only source of a query with
 	 * no library record, because the user types it here. Therefore the link uses
 	 * the gzip form `?query=`, and not `?q=<id>`. A target page accepts both forms.
+	 *
+	 * The payload names no node and no name. The target page then takes its own
+	 * default node, and numbers the new block itself.
 	 */
 	function handOff(resolvedPath: string) {
 		const query = parseSourceCodeToCompiledQuery();
@@ -111,7 +114,7 @@
 			return;
 		}
 
-		const gzippedQuery = Utils.objectToGzipString(query);
+		const gzippedQuery = encodeSharedQuery({ query, name: '', instanceUrl: '' });
 		if (gzippedQuery) {
 			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
 		}
