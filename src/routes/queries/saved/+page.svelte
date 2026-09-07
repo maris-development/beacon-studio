@@ -57,7 +57,7 @@
 	 * The link also carries the name and the node of the query. A query runs on one
 	 * node only, so the receiver needs it. The link never carries the token.
 	 */
-	function copyShareLink(entry: StoredQuery): void {
+	async function copyShareLink(entry: StoredQuery): Promise<void> {
 		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH), entry.name, entry.instance);
 
 		if (!link) {
@@ -65,7 +65,7 @@
 			return;
 		}
 
-		if (Utils.copyToClipboard(link)) {
+		if (await Utils.copyToClipboard(link)) {
 			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
 		} else {
 			addToast({ type: 'error', message: 'Could not copy the share link.' });

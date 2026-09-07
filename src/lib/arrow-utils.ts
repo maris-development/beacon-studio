@@ -143,16 +143,29 @@ export class ApacheArrowUtils {
         const longitudes = new LongitudeRange();
 
         for (let i = 0; i < table.numRows; i++) {
-            const lat = latCol.get(i);
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-            const lon = lonCol.get(i);
-            if (lon !== null && lon !== undefined) longitudes.add(Number(lon));
+            // Null coerces to 0 in a comparison, so it must not reach one.
+            const latValue = latCol.get(i);
+            if (latValue !== null && latValue !== undefined) {
+                const lat = Number(latValue);
+                if (Number.isFinite(lat)) {
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                }
+            }
+
+            const lonValue = lonCol.get(i);
+            if (lonValue !== null && lonValue !== undefined) longitudes.add(Number(lonValue));
         }
 
         // A table of 0..360 longitudes reports its wrapped extent, so the map
         // fits the world that the points draw in.
         const extent = longitudes.extent() ?? { west: -180, east: 180 };
+
+        // No row carries a latitude. Report the full range.
+        if (minLat === Infinity) {
+            minLat = -90;
+            maxLat = 90;
+        }
 
         return [
             [extent.west, minLat],
@@ -519,13 +532,34 @@ export class ApacheArrowUtils {
             // to -180..180: deck.gl draws one world, and a point outside it
             // disappears as soon as the viewport leaves the second copy.
             const coords = new Float64Array(rows * 2);
+            const validity = new Uint8Array((rows + 7) >> 3);
+            let nullCount = 0;
+
             for (let i = 0; i < rows; i++) {
-                coords[i * 2] = wrapLongitude(Number(lonCol.get(i)));
-                coords[i * 2 + 1] = Number(latCol.get(i));
+                const lon = Number(lonCol.get(i) ?? NaN);
+                const lat = Number(latCol.get(i) ?? NaN);
+
+                if (Number.isFinite(lon) && Number.isFinite(lat)) {
+                    coords[i * 2] = wrapLongitude(lon);
+                    coords[i * 2 + 1] = lat;
+                    validity[i >> 3] |= 1 << (i & 7);
+                } else {
+                    // deck.gl reads this buffer and ignores the bitmap. NaN keeps
+                    // the point off the map; 0 would draw it at null island.
+                    coords[i * 2] = NaN;
+                    coords[i * 2 + 1] = NaN;
+                    nullCount++;
+                }
             }
 
             const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
-            const geometryData = ApacheArrow.makeData({ type: pointType, length: rows, child: childData });
+            const geometryData = ApacheArrow.makeData({
+                type: pointType,
+                length: rows,
+                nullCount,
+                nullBitmap: nullCount > 0 ? validity : undefined,
+                child: childData
+            });
             const structData = ApacheArrow.makeData({
                 type: structType,
                 length: rows,
@@ -597,12 +631,14 @@ export class ApacheArrowUtils {
             const lon = alignLongitude(Number(lons[i]), ringLon);
             if (!Number.isFinite(lon)) continue;
 
-            // A ring wider than half the world reaches past the aligned copy, so
-            // the neighbour copies get a test as well.
+            // A ring over 360 degrees wide reaches past the aligned copy, so the
+            // neighbour copies get a test as well. A row counts once at most.
             for (const candidate of [lon, lon + 360, lon - 360]) {
                 if (candidate < minLon || candidate > maxLon) continue;
-                if (ApacheArrowUtils.pointInRing(candidate, lat, ring)) count++;
-                break;
+                if (ApacheArrowUtils.pointInRing(candidate, lat, ring)) {
+                    count++;
+                    break;
+                }
             }
         }
 
