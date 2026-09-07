@@ -11,6 +11,7 @@
 	import { healthMap, healthOf } from '@/services/beacon-instance-health';
 	import { openInstances, type OpenInstance } from '@/services/open-instances';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import HeroNetwork from '@/components/HeroNetwork.svelte';
 	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
@@ -84,6 +85,8 @@
 </svelte:head>
 
 <Cookiecrumb />
+
+<HeroNetwork />
 
 <div class="page-wrapper">
 	<div class="header">
