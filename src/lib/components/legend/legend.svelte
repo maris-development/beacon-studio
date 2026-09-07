@@ -14,20 +14,35 @@
 	import { Label } from '../ui/label';
 	import PalettePicker from '@/components/palette/PalettePicker.svelte';
 	import { loadColormaps, samplePalette } from '@/colors/palettes';
-	import { COLOR_SCALE_BLIPS, SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from './legend-defaults';
+	import { COLOR_SCALE_BLIPS } from './legend-defaults';
 	import { onMount } from 'svelte';
 
 	let {
-		colorScaleMin = $bindable(SCALE_DEFAULT_MIN),
-		colorScaleMax = $bindable(SCALE_DEFAULT_MAX),
+		colorScaleMin = $bindable(null),
+		colorScaleMax = $bindable(null),
+		autoColorScaleMin,
+		autoColorScaleMax,
 		palette = $bindable(''),
 		paletteReverse = $bindable(false)
 	}: {
-		colorScaleMin?: number;
-		colorScaleMax?: number;
+		/** Null shows the field empty ("auto") and paints with the matching auto bound. */
+		colorScaleMin?: number | null;
+		colorScaleMax?: number | null;
+		/** The selected column's actual min/max, for the strip and for "auto". */
+		autoColorScaleMin: number;
+		autoColorScaleMax: number;
 		palette?: string;
 		paletteReverse?: boolean;
 	} = $props();
+
+	/** An empty field means "auto", which falls back to the column's actual range. */
+	function numberOrNull(value: string): number | null {
+		if (value.trim() === '') return null;
+
+		const parsed = Number(value);
+		if (!Number.isFinite(parsed)) return null;
+		return parsed;
+	}
 
 	/**
 	 * Flips once the colormap file has loaded. The strip below reads the palette
@@ -50,13 +65,16 @@
 	const strip = $derived.by(() => {
 		void palettesLoaded;
 
+		const min = colorScaleMin ?? autoColorScaleMin;
+		const max = colorScaleMax ?? autoColorScaleMax;
+
 		const colors = samplePalette(palette, COLOR_SCALE_BLIPS, paletteReverse);
-		const span = colorScaleMax - colorScaleMin;
+		const span = max - min;
 		const step = span / (COLOR_SCALE_BLIPS - 1);
 
 		return colors.map((color, index) => ({
 			color,
-			value: Math.round((colorScaleMin + index * step) * 100) / 100
+			value: Math.round((min + index * step) * 100) / 100
 		}));
 	});
 </script>
@@ -85,7 +103,9 @@
 				step="any"
 				name="colorScaleMin"
 				id="colorScaleMin"
-				bind:value={colorScaleMin}
+				value={colorScaleMin ?? ''}
+				placeholder="auto"
+				oninput={(event) => (colorScaleMin = numberOrNull(event.currentTarget.value))}
 				title="The value at the left of the scale"
 			/>
 		</div>
@@ -97,7 +117,9 @@
 				step="any"
 				name="colorScaleMax"
 				id="colorScaleMax"
-				bind:value={colorScaleMax}
+				value={colorScaleMax ?? ''}
+				placeholder="auto"
+				oninput={(event) => (colorScaleMax = numberOrNull(event.currentTarget.value))}
 				title="The value at the right of the scale"
 			/>
 		</div>
