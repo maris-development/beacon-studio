@@ -50,6 +50,9 @@ export type PaletteId = string;
 
 export const DEFAULT_PALETTE_ID: PaletteId = 'thermal';
 
+/** The solid palette a non-numeric column falls back to. */
+export const DEFAULT_SOLID_PALETTE_ID: PaletteId = 'solid_blue';
+
 /** How many steps a cached colour table holds. */
 const TABLE_SIZE = 256;
 

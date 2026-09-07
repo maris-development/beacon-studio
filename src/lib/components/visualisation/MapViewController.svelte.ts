@@ -36,7 +36,14 @@ import { Utils } from '@/utils';
 import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
 import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend-defaults';
-import { DEFAULT_PALETTE_ID, getRgbTable, loadColormaps, paletteIndex } from '@/colors/palettes';
+import {
+	DEFAULT_PALETTE_ID,
+	DEFAULT_SOLID_PALETTE_ID,
+	getColormap,
+	getRgbTable,
+	loadColormaps,
+	paletteIndex
+} from '@/colors/palettes';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
@@ -487,6 +494,16 @@ export class MapViewController {
 		if (columnChanged) {
 			this.colorScaleMin = SCALE_DEFAULT_MIN;
 			this.colorScaleMax = SCALE_DEFAULT_MAX;
+
+			// A gradient palette has no meaning on a non-numeric column. Fall back
+			// to solid blue, but leave an already-solid palette alone.
+			const isNumeric = plottableColumns(this.entry?.table ?? this.table!).some(
+				(column) => column.name === this.selectedDataColumnName && column.kind === 'number'
+			);
+
+			if (!isNumeric && !getColormap(this.palette).solid) {
+				this.palette = DEFAULT_SOLID_PALETTE_ID;
+			}
 		}
 
 		this.isLoading = true;
@@ -580,7 +597,18 @@ export class MapViewController {
 		if (!row) return [0, 0, 0, 0];
 
 		const value = row[this.selectedDataColumnName!];
-		if (typeof value !== 'number' || isNaN(value)) return [0, 0, 0, 0];
+		// A missing value hides the point, for a numeric column and a text one alike.
+		if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+			return [0, 0, 0, 0];
+		}
+
+		// A solid palette paints every present value the same colour. This is also
+		// the only path for a non-numeric column, whose values cannot feed the scale.
+		if (getColormap(this.palette).solid) {
+			return [this.rgbTable[0], this.rgbTable[1], this.rgbTable[2], 192];
+		}
+
+		if (typeof value !== 'number') return [0, 0, 0, 0];
 
 		const offset =
 			paletteIndex(value, this.colorScaleMin, this.colorScaleMax, this.paletteReverse) * 3;
