@@ -113,6 +113,7 @@ export class ApacheArrowUtils {
      * @returns A tuple containing the minimum and maximum longitude and latitude values:
      *          `[[minLongitude, minLatitude], [maxLongitude, maxLatitude]]`.
      *          If `table` is `null`, returns world bounds: `[[-180, -90], [180, 90]]`.
+     *          A row without both coordinates does not count.
      * @throws If the table does not contain the specified latitude and longitude columns.
      */
     static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
@@ -145,16 +146,20 @@ export class ApacheArrowUtils {
         for (let i = 0; i < table.numRows; i++) {
             // Null coerces to 0 in a comparison, so it must not reach one.
             const latValue = latCol.get(i);
-            if (latValue !== null && latValue !== undefined) {
-                const lat = Number(latValue);
-                if (Number.isFinite(lat)) {
-                    if (lat < minLat) minLat = lat;
-                    if (lat > maxLat) maxLat = lat;
-                }
-            }
-
             const lonValue = lonCol.get(i);
-            if (lonValue !== null && lonValue !== undefined) longitudes.add(Number(lonValue));
+            if (latValue === null || latValue === undefined) continue;
+            if (lonValue === null || lonValue === undefined) continue;
+
+            const lat = Number(latValue);
+            const lon = Number(lonValue);
+
+            // A corner of the box must hold a point, so a row counts with both of
+            // its coordinates or with neither.
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            longitudes.add(lon);
         }
 
         // A table of 0..360 longitudes reports its wrapped extent, so the map
@@ -618,6 +623,10 @@ export class ApacheArrowUtils {
         const lats = latCol.toArray();
         const rows = Math.min(lons.length, lats.length);
 
+        // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
+        // a column with nulls needs the slower reader that reports them.
+        const hasNulls = latCol.nullCount > 0 || lonCol.nullCount > 0;
+
         // The ring holds the longitudes of the map, the column holds those of the
         // producer. A point at 185 must therefore also meet a ring at -175.
         const ringLon = (minLon + maxLon) / 2;
@@ -625,6 +634,8 @@ export class ApacheArrowUtils {
         let count = 0;
 
         for (let i = 0; i < rows; i++) {
+            if (hasNulls && (latCol.get(i) == null || lonCol.get(i) == null)) continue;
+
             const lat = Number(lats[i]);
             if (!Number.isFinite(lat) || lat < minLat || lat > maxLat) continue;
 
