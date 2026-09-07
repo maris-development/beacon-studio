@@ -27,6 +27,7 @@
 
 	// Components
 	import ChooseBeaconModal from '../modals/ChooseBeaconModal.svelte';
+	import FeedbackModal from '../modals/FeedbackModal.svelte';
 	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
@@ -110,18 +111,13 @@
 			url: 'https://github.com/maris-development/beacon',
 			icon: LifeBuoyIcon,
 			target: '_blank'
-		},
-		{
-			title: 'Feedback',
-			url: 'https://github.com/maris-development/beacon/issues',
-			icon: SendIcon,
-			target: '_blank'
 		}
 	];
 
 	let collapsed = $state(false);
 	let isMobile = $state(false);
 	let showChooseBeaconModal: boolean = $state(false);
+	let showFeedbackModal: boolean = $state(false);
 
 	function openBeaconInstancePicker(): void {
 		showChooseBeaconModal = true;
@@ -195,6 +191,10 @@
 
 {#if showChooseBeaconModal}
 	<ChooseBeaconModal onClose={() => (showChooseBeaconModal = false)} />
+{/if}
+
+{#if showFeedbackModal}
+	<FeedbackModal onClose={() => (showFeedbackModal = false)} />
 {/if}
 
 {#if isMobile && !collapsed}
@@ -273,6 +273,11 @@
 			{#each footer as item (item.url)}
 				<SidebarMenuItem title={item.title} url={item.url} icon={item.icon} target={item.target} />
 			{/each}
+			<SidebarMenuItem
+				title="Feedback"
+				icon={SendIcon}
+				onclick={() => (showFeedbackModal = true)}
+			/>
 		</div>
 	</div>
 </div>
