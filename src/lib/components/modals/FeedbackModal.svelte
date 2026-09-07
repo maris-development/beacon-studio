@@ -9,7 +9,12 @@
 
 <Modal title="Feedback" onClose={() => onClose()} width="900px">
 	<div class="feedback-frame">
-		<iframe src={FEEDBACK_URL} title="Beacon Studio feedback form"></iframe>
+		<iframe
+			src={FEEDBACK_URL}
+			title="Beacon Studio feedback form"
+			loading="lazy"
+			referrerpolicy="no-referrer"
+		></iframe>
 	</div>
 
 	<p slot="footer" class="fallback">
