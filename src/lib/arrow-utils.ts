@@ -1,5 +1,6 @@
 import * as ApacheArrow from 'apache-arrow';
 import type { SortDirection } from './util-types';
+import { alignLongitude, LongitudeRange, wrapLongitude } from './geo/longitude';
 
 
 export class ApacheArrowUtils {
@@ -139,21 +140,23 @@ export class ApacheArrowUtils {
 
         let minLat = Infinity;
         let maxLat = -Infinity;
-        let minLon = Infinity;
-        let maxLon = -Infinity;
+        const longitudes = new LongitudeRange();
 
         for (let i = 0; i < table.numRows; i++) {
             const lat = latCol.get(i);
-            const lon = lonCol.get(i);
             if (lat < minLat) minLat = lat;
             if (lat > maxLat) maxLat = lat;
-            if (lon < minLon) minLon = lon;
-            if (lon > maxLon) maxLon = lon;
+            const lon = lonCol.get(i);
+            if (lon !== null && lon !== undefined) longitudes.add(Number(lon));
         }
 
+        // A table of 0..360 longitudes reports its wrapped extent, so the map
+        // fits the world that the points draw in.
+        const extent = longitudes.extent() ?? { west: -180, east: 180 };
+
         return [
-            [minLon, minLat],
-            [maxLon, maxLat]
+            [extent.west, minLat],
+            [extent.east, maxLat]
         ];
     }
 
@@ -483,8 +486,6 @@ export class ApacheArrowUtils {
         const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
         const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
 
-        console.log('table schema addPointGeometryColumn', table.schema, latitudeColumnName, longitudeColumnName);
-
         if (latIndex === -1 || lonIndex === -1) {
             throw new Error(
                 `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`
@@ -514,10 +515,12 @@ export class ApacheArrowUtils {
             const latCol = batch.getChildAt(latIndex)!;
             const lonCol = batch.getChildAt(lonIndex)!;
 
-            // Interleaved [x=lon, y=lat] coordinate buffer.
+            // Interleaved [x=lon, y=lat] coordinate buffer. The longitude wraps
+            // to -180..180: deck.gl draws one world, and a point outside it
+            // disappears as soon as the viewport leaves the second copy.
             const coords = new Float64Array(rows * 2);
             for (let i = 0; i < rows; i++) {
-                coords[i * 2] = Number(lonCol.get(i));
+                coords[i * 2] = wrapLongitude(Number(lonCol.get(i)));
                 coords[i * 2 + 1] = Number(latCol.get(i));
             }
 
@@ -581,15 +584,26 @@ export class ApacheArrowUtils {
         const lats = latCol.toArray();
         const rows = Math.min(lons.length, lats.length);
 
+        // The ring holds the longitudes of the map, the column holds those of the
+        // producer. A point at 185 must therefore also meet a ring at -175.
+        const ringLon = (minLon + maxLon) / 2;
+
         let count = 0;
 
         for (let i = 0; i < rows; i++) {
-            const lon = Number(lons[i]);
             const lat = Number(lats[i]);
+            if (!Number.isFinite(lat) || lat < minLat || lat > maxLat) continue;
 
-            if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
-            if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) continue;
-            if (ApacheArrowUtils.pointInRing(lon, lat, ring)) count++;
+            const lon = alignLongitude(Number(lons[i]), ringLon);
+            if (!Number.isFinite(lon)) continue;
+
+            // A ring wider than half the world reaches past the aligned copy, so
+            // the neighbour copies get a test as well.
+            for (const candidate of [lon, lon + 360, lon - 360]) {
+                if (candidate < minLon || candidate > maxLon) continue;
+                if (ApacheArrowUtils.pointInRing(candidate, lat, ring)) count++;
+                break;
+            }
         }
 
         return count;

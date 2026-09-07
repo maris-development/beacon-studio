@@ -40,6 +40,7 @@ import { DEFAULT_PALETTE_ID, getRgbTable, loadColormaps, paletteIndex } from '@/
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
+import { SvelteSet } from 'svelte/reactivity';
 
 /**
  * Decimals to group latitude and longitude by. The user sets the value on the
@@ -138,7 +139,7 @@ export class MapViewController {
 	readonly dataColumnOptions = $derived.by(() => {
 		if (!this.entry) return [];
 
-		const timeColumnNames = new Set(
+		const timeColumnNames = new SvelteSet(
 			plottableColumns(this.entry.table)
 				.filter((column) => column.kind === 'timestamp')
 				.map((column) => column.name)
