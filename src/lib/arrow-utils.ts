@@ -631,6 +631,10 @@ export class ApacheArrowUtils {
         // producer. A point at 185 must therefore also meet a ring at -175.
         const ringLon = (minLon + maxLon) / 2;
 
+        // alignLongitude gives back the copy within 180 degrees of the centre, and
+        // a narrower ring holds no other copy. Only a wider one tests the neighbours.
+        const wideRing = maxLon - minLon > 360;
+
         let count = 0;
 
         for (let i = 0; i < rows; i++) {
@@ -642,18 +646,34 @@ export class ApacheArrowUtils {
             const lon = alignLongitude(Number(lons[i]), ringLon);
             if (!Number.isFinite(lon)) continue;
 
-            // A ring over 360 degrees wide reaches past the aligned copy, so the
-            // neighbour copies get a test as well. A row counts once at most.
-            for (const candidate of [lon, lon + 360, lon - 360]) {
-                if (candidate < minLon || candidate > maxLon) continue;
-                if (ApacheArrowUtils.pointInRing(candidate, lat, ring)) {
-                    count++;
-                    break;
-                }
+            if (ApacheArrowUtils.pointInRingBox(lon, lat, ring, minLon, maxLon)) {
+                count++;
+                continue;
+            }
+
+            // A row counts once at most.
+            if (!wideRing) continue;
+            if (
+                ApacheArrowUtils.pointInRingBox(lon + 360, lat, ring, minLon, maxLon) ||
+                ApacheArrowUtils.pointInRingBox(lon - 360, lat, ring, minLon, maxLon)
+            ) {
+                count++;
             }
         }
 
         return count;
+    }
+
+    /** The bounding box test of the ring, then the ray cast. */
+    private static pointInRingBox(
+        lon: number,
+        lat: number,
+        ring: [number, number][],
+        minLon: number,
+        maxLon: number
+    ): boolean {
+        if (lon < minLon || lon > maxLon) return false;
+        return ApacheArrowUtils.pointInRing(lon, lat, ring);
     }
 
     /** Ray cast point-in-polygon test over a closed ring of `[longitude, latitude]`. */

@@ -385,15 +385,16 @@ export class Utils {
     }
 
     static async copyToClipboard(text: string): Promise<boolean> {
-        // Use the modern clipboard API if available and we're in a secure context
-        if (navigator.clipboard) {
-            try {
+        // The caller reads the result, so every path must return one.
+        try {
+            // Use the modern clipboard API if available and we're in a secure context
+            if (navigator.clipboard) {
                 await navigator.clipboard.writeText(text);
                 return true;
-            } catch (err) {
-                // A denied permission or an unfocused document rejects the write
-                console.error('Clipboard API copy failed, using fallback:', err);
             }
+        } catch (err) {
+            // A denied permission or an unfocused document rejects the write
+            console.error('Clipboard API copy failed, using fallback:', err);
         }
 
         return Utils.copyWithTextarea(text);
