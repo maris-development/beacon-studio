@@ -13,7 +13,7 @@
  */
 
 /** Degrees in one turn of the globe. */
-const TURN = 360;
+export const TURN = 360;
 
 /** The value of `longitude` in -180..180. A value of 180 becomes -180. */
 export function wrapLongitude(longitude: number): number {
