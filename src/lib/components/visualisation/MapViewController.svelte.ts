@@ -468,9 +468,16 @@ export class MapViewController {
 		this.selectedDataColumnName = this.firstNumericColumnName ?? this.dataColumnOptions[0];
 
 		if (this.selectedDataColumnName) {
+			if (this.firstNumericColumnName) {
+				addToast({
+					type: 'info',
+					message:
+						'Make sure to select the data column you want to display in the map viewer. By default, the first (numerical) data column is displayed.'
+				});
+			}
 			await this.showDataColumn(true, fitCamera);
 		} else {
-			addToast({ type: 'info', message: 'This query has no data column to display on the map.' });
+			addToast({ type: 'warning', message: 'This query has no data column to display on the map.' });
 		}
 	}
 
