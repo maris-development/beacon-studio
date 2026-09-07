@@ -152,6 +152,19 @@ export class MapViewController {
 		);
 	});
 
+	/** The first of {@link dataColumnOptions} that holds numbers, for the default selection. */
+	private readonly firstNumericColumnName = $derived.by(() => {
+		if (!this.entry) return undefined;
+
+		const numericColumnNames = new Set(
+			plottableColumns(this.entry.table)
+				.filter((column) => column.kind === 'number')
+				.map((column) => column.name)
+		);
+
+		return this.dataColumnOptions.find((name) => numericColumnNames.has(name));
+	});
+
 	/**
 	 * The number of the newest run of this controller. The store runs one query at
 	 * a time, so a new run stops the run in flight. That older run rejects after
@@ -423,10 +436,11 @@ export class MapViewController {
 			return;
 		}
 
-		// No valid selection: pick the first pickable column, so points render
-		// at once instead of leaving the user to open the dropdown first.
+		// No valid selection: pick the first numeric column, so the legend has a
+		// range to show at once. A text column stays in the list, but is not a
+		// good default because it cannot colour a point.
 		this.renderedColumn = undefined;
-		this.selectedDataColumnName = this.dataColumnOptions[0];
+		this.selectedDataColumnName = this.firstNumericColumnName ?? this.dataColumnOptions[0];
 
 		if (this.selectedDataColumnName) {
 			await this.showDataColumn(true, fitCamera);
