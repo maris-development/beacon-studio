@@ -3,28 +3,39 @@
 
 	let {
 		title,
-		url,
+		url = undefined,
 		icon: Icon = undefined,
 		target = undefined,
+		onclick = undefined
 	}: {
 		title: string;
-		url: string;
+		url?: string;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon?: any;
 		target?: string;
+		onclick?: () => void;
 	} = $props();
 
 	const isActive = $derived(
-		page.url.pathname === url || page.url.pathname.startsWith(url + '/')
+		!!url && (page.url.pathname === url || page.url.pathname.startsWith(url + '/'))
 	);
 </script>
 
-<a class="menu-item" class:active={isActive} href={url} {target}>
-	{#if Icon}
-		<span class="menu-icon"><Icon /></span>
-	{/if}
-	<span class="item-title">{title}</span>
-</a>
+{#if onclick}
+	<button class="menu-item" type="button" {onclick}>
+		{#if Icon}
+			<span class="menu-icon"><Icon /></span>
+		{/if}
+		<span class="item-title">{title}</span>
+	</button>
+{:else}
+	<a class="menu-item" class:active={isActive} href={url} {target}>
+		{#if Icon}
+			<span class="menu-icon"><Icon /></span>
+		{/if}
+		<span class="item-title">{title}</span>
+	</a>
+{/if}
 
 <style lang="scss">
 	.menu-item {
@@ -35,9 +46,14 @@
 		cursor: pointer;
 		padding: 0.25rem 0.5rem;
 		border-radius: 0.5rem;
+		border: none;
 		border-left: 2px solid transparent;
 		text-decoration: none;
 		color: inherit;
+		background: none;
+		font: inherit;
+		text-align: left;
+		width: 100%;
 
 		.menu-icon {
 			display: flex;
