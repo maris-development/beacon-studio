@@ -135,7 +135,9 @@
 			</div>
 		</Card>
 
-		<Card class="map-explorer">
+		<!-- for later updates -->
+
+		<!-- <Card class="map-explorer">
 			<div class="content">
 				<h2>Map Explorer</h2>
 				<p>Visualize spatial distributions and point observations on an interactive map.</p>
@@ -159,7 +161,7 @@
 			<div class="image">
 				<img src={asset('/images/small-chart-explorer.png')} alt="Chart Explorer" />
 			</div>
-		</Card>
+		</Card> -->
 	</div>
 
 	<!-- <h2>Try out available nodes</h2>
