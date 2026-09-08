@@ -14,20 +14,14 @@
 	import Card from '@/components/card/card.svelte';
 	import { Badge } from '@/components/ui/badge/index.js';
 	import { HOME_EXAMPLES, type HomeExample } from '@/data/home-examples';
-	import { encodeSharedQuery, SHARE_LINK_PATH } from '@/stores/stored-query';
+	import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const PENDING_HINT = 'Work in progress';
 	const METRIC_HINT = 'Measured on a reference run. Your run can differ.';
 
 	/** The share link of one example. */
 	function exampleHref(example: HomeExample): string {
-		const payload = encodeSharedQuery({
-			query: example.query,
-			name: example.queryName,
-			instanceUrl: example.instanceUrl
-		});
-
-		return `${resolve(SHARE_LINK_PATH)}?query=${encodeURIComponent(payload)}`;
+		return `${resolve(SHARE_LINK_PATH)}${example.shareQuery}`;
 	}
 </script>
 

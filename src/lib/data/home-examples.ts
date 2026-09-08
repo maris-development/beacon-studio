@@ -1,5 +1,3 @@
-import type { CompiledQuery } from '@/beacon-api/types';
-
 /**
  * One card of the Quick start examples section on the home page.
  *
@@ -23,12 +21,12 @@ export type HomeExample = {
 	seconds: number;
 	/** Output format of the query, in words. */
 	format: string;
-	/** The name that the workbench shows for the query. */
-	queryName: string;
-	/** The node that runs the query. */
-	instanceUrl: string;
-	/** The runnable query. */
-	query: CompiledQuery;
+	/**
+	 * The `?query=...` part of a share link for this example, copied from the
+	 * workbench's own Share button. To update an example, share the query
+	 * again and paste the new value here.
+	 */
+	shareQuery: string;
 };
 
 /** The examples, in the order that the home page shows them. */
@@ -43,122 +41,8 @@ export const HOME_EXAMPLES: HomeExample[] = [
 		rows: 2_235_503,
 		seconds: 5.6,
 		format: 'Parquet',
-		queryName: 'WOD - Example 1',
-		instanceUrl: 'https://beacon-wod.maris.nl',
-		query: {
-			from: 'easy-wod',
-			query_parameters: [
-				{
-					column: 'time',
-					alias: null
-				},
-				{
-					column: 'longitude',
-					alias: null
-				},
-				{
-					column: 'latitude',
-					alias: null
-				},
-				{
-					column: 'depth',
-					alias: null
-				},
-				{
-					column: 'temperature',
-					alias: null
-				},
-				{
-					column: 'salinity',
-					alias: null
-				},
-				{
-					column: 'oxygen',
-					alias: null
-				}
-			],
-			filters: [
-				{
-					is_not_null: {
-						for_query_parameter: 'time'
-					}
-				},
-				{
-					for_query_parameter: 'longitude',
-					min: -30,
-					max: -12
-				},
-				{
-					for_query_parameter: 'latitude',
-					min: -30,
-					max: 32
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'depth'
-					}
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'temperature'
-					}
-				},
-				{
-					for_query_parameter: 'temperature',
-					min: 0,
-					max: 50
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'salinity'
-					}
-				},
-				{
-					for_query_parameter: 'salinity',
-					min: 30,
-					max: 40
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'oxygen'
-					}
-				},
-				{
-					for_query_parameter: 'oxygen',
-					min: 0,
-					max: 300
-				},
-				{
-					longitude_query_parameter: 'longitude',
-					latitude_query_parameter: 'latitude',
-					geometry: {
-						type: 'Polygon',
-						coordinates: [
-							[
-								[-24.8163642143815, -31.932664221325005],
-								[-25.0036975643815, 34.27535394167498],
-								[-24.105201819618497, 34.277895140324986],
-								[-23.917868469618497, -31.930123022674998],
-								[-24.8163642143815, -31.932664221325005]
-							]
-						]
-					}
-				},
-				{
-					for_query_parameter: 'latitude',
-					min: -31.932664221325005,
-					max: 34.277895140324986
-				},
-				{
-					for_query_parameter: 'longitude',
-					min: -25.0036975643815,
-					max: -23.917868469618497
-				}
-			],
-			output: {
-				format: 'parquet'
-			}
-		}
+		shareQuery:
+			'?query=H4sIAAAAAAAAA5VUTY%2BbMBD9K5HPwPobyLl7bi9VD1EUuYk3awnbrDFqUJT%2FXgOBZsPKSW%2BW53nezHszPoOPVroOrM%2FgzVkN1kCKpkv%2F2ANIxtCuFk5o6aVrwHpzBntbtdoEoFdaBpColAgR01bVJbkJV9YclW8PUYzwjyAHWfv3SNxLXUsnfOtiWZoQMMp3EYg9dUdp7gDbBLypau5dNTtj%2Fa4PDYpZt7vTaNLl0uf%2BOn4rjFaBOiUwnMQpnBCOvPsn1t0zMrx6qrhRzsvT%2BFt5Iz19dmEobyqOwafJZpciTDdODjSzCPR5nqvVEZZ5GD61QuDAMRv4wNzJsLiXR2nD7biCvqtliP6wVXe0Pf3eWndQRnjZD%2BBmk2KaFYgTTjGipEAsSQnKSoJ5uMGIYAYh2yYBxzIICS9zxkccoRnOGWGkpIjntCwGFM0QZBiiApUcFbTMR1xelAxRSHDA8QFIshLlBS8on4AjMUSYQIz7jHPKxwVut7H9WMz5IsHkx6LW%2F9m6hUTXHVz22n8DtvV1668zpUU4gZA%2B8Ph%2BjoAJROHq1%2Fdvq3T1ehK6ruQKBS5lGi%2FMXv50YSDBu%2Fd1s355%2BS3F3pr%2Bm820cKrJTAUufwFUCgthjAUAAA%3D%3D'
 	},
 	{
 		title: 'Global temperature, summer 2025',
@@ -170,43 +54,8 @@ export const HOME_EXAMPLES: HomeExample[] = [
 		rows: 5_191_200,
 		seconds: 3.2,
 		format: 'Parquet',
-		queryName: 'ERA5 Global Temperature Distribution - Example 2',
-		instanceUrl: 'https://beacon-era5.maris.nl/',
-		query: {
-			from: 'era5_daily_max_2m_temperature',
-			query_parameters: [
-				{
-					column: 'valid_time',
-					alias: null
-				},
-				{
-					column: 'latitude',
-					alias: null
-				},
-				{
-					column: 'longitude',
-					alias: null
-				},
-				{
-					column: 't2m',
-					alias: null
-				},
-				{
-					column: 'number',
-					alias: null
-				}
-			],
-			filters: [
-				{
-					for_query_parameter: 'valid_time',
-					min: '2025-07-12T00:00:00Z',
-					max: '2025-07-16T00:00:00Z'
-				}
-			],
-			output: {
-				format: 'parquet'
-			}
-		}
+		shareQuery:
+			'?query=H4sIAAAAAAAAA4WRTUvEMBCG%2F0qYc7utgSr0Jrh4l%2FWiSJi2qQYySU0n0qX0v5uuoKWHFXIY5n0y73zM8Bl1OEM9Qx88QQ06YKU6NPasCCclSbGmIWU5Bg3ZD68GDEiadRihfp2h9TaSS7%2B%2F0JpOsaEVTTEm3UVrl2wDWWTDsbuKePf%2BH8OSrqguUqPDDnjLoDf2t%2B3eB7WbZz8DmbWYLGWVl3f5jTyVZX15L6uI01a83YirlY88RL7s1gfCFEHySYYMy5KBS44pdXy6r8Sj9Q1acfpbtXgwIwfTRDbeiVwcJ6TBaiGTr3Ejo2v1c7CpwAfzMNZF0WhsvcvXAx4IgxkPzhawfAO0rS434wEAAA%3D%3D'
 	},
 	{
 		title: 'Mediterranean Basin',
@@ -218,121 +67,7 @@ export const HOME_EXAMPLES: HomeExample[] = [
 		rows: 7_142_857,
 		seconds: 12.0,
 		format: 'Parquet',
-		queryName: 'WOD Mediterranean Basin - Example 3',
-		instanceUrl: 'https://beacon-wod.maris.nl',
-		query: {
-			from: 'easy-wod',
-			query_parameters: [
-				{
-					column: 'time',
-					alias: null
-				},
-				{
-					column: 'longitude',
-					alias: null
-				},
-				{
-					column: 'latitude',
-					alias: null
-				},
-				{
-					column: 'depth',
-					alias: null
-				},
-				{
-					column: 'temperature',
-					alias: null
-				},
-				{
-					column: 'salinity',
-					alias: null
-				},
-				{
-					column: 'oxygen',
-					alias: null
-				}
-			],
-			filters: [
-				{
-					is_not_null: {
-						for_query_parameter: 'time'
-					}
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'depth'
-					}
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'temperature'
-					}
-				},
-				{
-					for_query_parameter: 'temperature',
-					min: 0,
-					max: 50
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'salinity'
-					}
-				},
-				{
-					for_query_parameter: 'salinity',
-					min: 30,
-					max: 40
-				},
-				{
-					is_not_null: {
-						for_query_parameter: 'oxygen'
-					}
-				},
-				{
-					for_query_parameter: 'oxygen',
-					min: 0,
-					max: 300
-				},
-				{
-					longitude_query_parameter: 'longitude',
-					latitude_query_parameter: 'latitude',
-					geometry: {
-						type: 'Polygon',
-						coordinates: [
-							[
-								[-5.741093105, 35.202007432],
-								[-4.414345256, 34.124950747],
-								[5.682728896, 35.637296403],
-								[8.784218603, 33.106192169],
-								[15.60749596, 29.620179478],
-								[21.431402308, 30.202654008],
-								[35.043498128, 29.859557176],
-								[37.748688476, 36.652994792],
-								[29.598658538, 41.0387842],
-								[23.688598647, 42.121410904],
-								[15.383497378, 46.186182262],
-								[8.422378137, 46.066762751],
-								[1.340641727, 42.883584753],
-								[-5.672170586, 37.354754936],
-								[-5.741093105, 35.202007432]
-							]
-						]
-					}
-				},
-				{
-					for_query_parameter: 'latitude',
-					min: 29.620179478,
-					max: 46.186182262
-				},
-				{
-					for_query_parameter: 'longitude',
-					min: -5.741093105,
-					max: 37.748688476
-				}
-			],
-			output: {
-				format: 'parquet'
-			}
-		}
+		shareQuery:
+			'?query=H4sIAAAAAAAAA41Uy27bMBD8FYNnmSG5fPpYtMeivRQ9GIbB2owjQCJViUZjBPn3LuXYVYJU8ckGZ3ZndrjUE%2Fl9DP2JrJ7IfZ9asiLBD6fln7Qn1Rnadr73bcihH8hq%2FUR2qTm2EYm5bgOSfFN7ROKxaZ6rCdykeKjzcT%2FL8fkjyj50%2BWEGz6HtQu%2FzsZ%2FrMiAQ63yaoaTH0yHEN4RNRe7r5jp7PWxjytsCjYmlfvsmo0suz6X3TfTzgLfzpwOPVR%2FTKtLWOCLDX%2F9IVordLHbNbUZpku0oAxcdebvOS%2FgzKtfreTUKsFHjumvvFE738LJv79H%2BreIhJDw9P4p86gKi31NzOqQiv0up39fR51BWYr1eKmokZw44UxUoKphgzEgQm2q9lFRyCVIJpSuQlAvpFIIGMUW1FUZY63Qp02CE05IBQpYaKwW3mkEFQDnT3AmuHUIcmdjAKawSjmrBuHHSWIQEpxK4ZAKYrYAVI1pJxgqGAgx9OMuFLXVWOaUMN7pgBgew2lpp0ImmWgmHLV0ZAKnKWa2sAltJThnYYq0ggP5tAaWppMDReEmBybNJsKhmwGCVpjgJt0JoMc4mhcBzDqZATGujhVG8lFGQTEtuxNjRWlDoSZVEMGRtBDdMWfRoKCgEpAN9xv5zAZvNzD5N7nvcqGmal%2F2dWJ9pNNmvsdMrQy9rOsm4fFPSMXfH%2FPIcWo%2F%2FCLbE3rk8ARKxOR79%2FPZ58TXsa9TpfQw%2BLj75oY6L5eLLo2%2B7JiwANes4ZB934UeP74s85NwNq7u7X8HvUizfcdr6vh5obMjzX67sMUbtBQAA'
 	}
 ];
