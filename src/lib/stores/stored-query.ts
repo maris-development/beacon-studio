@@ -53,8 +53,9 @@ export interface MapCameraState {
 export interface MapViewState {
 	/** The column that the map paints. Null while the user picked none. */
 	dataColumn: string | null;
-	colorScaleMin: number;
-	colorScaleMax: number;
+	/** Null means "auto": the column's actual min/max. See `MapViewController`. */
+	colorScaleMin: number | null;
+	colorScaleMax: number | null;
 	/**
 	 * The id of the colormap that paints the points. See `colors/palettes.ts`.
 	 * An unknown id falls back to the default, so an old record still draws.

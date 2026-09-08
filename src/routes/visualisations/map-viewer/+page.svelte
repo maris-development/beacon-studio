@@ -255,6 +255,8 @@
 							<Legend
 								bind:colorScaleMin={map.colorScaleMin}
 								bind:colorScaleMax={map.colorScaleMax}
+								autoColorScaleMin={map.autoColorScaleMin}
+								autoColorScaleMax={map.autoColorScaleMax}
 								bind:palette={map.palette}
 								bind:paletteReverse={map.paletteReverse}
 							/>

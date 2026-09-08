@@ -35,8 +35,14 @@ import { addToast } from '@/stores/toasts';
 import { Utils } from '@/utils';
 import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
-import { SCALE_DEFAULT_MAX, SCALE_DEFAULT_MIN } from '@/components/legend/legend-defaults';
-import { DEFAULT_PALETTE_ID, getRgbTable, loadColormaps, paletteIndex } from '@/colors/palettes';
+import {
+	DEFAULT_PALETTE_ID,
+	DEFAULT_SOLID_PALETTE_ID,
+	getColormap,
+	getRgbTable,
+	loadColormaps,
+	paletteIndex
+} from '@/colors/palettes';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
@@ -100,8 +106,27 @@ export class MapViewController {
 	availableColumnNames: string[] = $state([]);
 	selectedDataColumnName: string | undefined = $state(undefined);
 
-	colorScaleMin: number = $state(SCALE_DEFAULT_MIN);
-	colorScaleMax: number = $state(SCALE_DEFAULT_MAX);
+	/**
+	 * The legend's min and max inputs. Null means "auto": the Legend shows the
+	 * field empty, and the map paints with {@link autoColorScaleMin} /
+	 * {@link autoColorScaleMax} instead. See {@link effectiveColorScaleMin}.
+	 */
+	colorScaleMin: number | null = $state(null);
+	colorScaleMax: number | null = $state(null);
+
+	/**
+	 * The actual min and max of the selected column, recomputed by
+	 * {@link showDataColumn} whenever the column changes. This is what "auto"
+	 * resolves to, and what the Legend draws its strip from.
+	 */
+	autoColorScaleMin: number = $state(0);
+	autoColorScaleMax: number = $state(1);
+
+	/** {@link colorScaleMin}, resolved to a paintable number. */
+	readonly effectiveColorScaleMin = $derived(this.colorScaleMin ?? this.autoColorScaleMin);
+	/** {@link colorScaleMax}, resolved to a paintable number. */
+	readonly effectiveColorScaleMax = $derived(this.colorScaleMax ?? this.autoColorScaleMax);
+
 	/** The id of the colormap that paints the points. See `colors/palettes.ts`. */
 	palette: string = $state(DEFAULT_PALETTE_ID);
 	paletteReverse: boolean = $state(false);
@@ -150,6 +175,19 @@ export class MapViewController {
 				name !== this.longitudeColumnName &&
 				!timeColumnNames.has(name)
 		);
+	});
+
+	/** The first of {@link dataColumnOptions} that holds numbers, for the default selection. */
+	private readonly firstNumericColumnName = $derived.by(() => {
+		if (!this.entry) return undefined;
+
+		const numericColumnNames = new Set(
+			plottableColumns(this.entry.table)
+				.filter((column) => column.kind === 'number')
+				.map((column) => column.name)
+		);
+
+		return this.dataColumnOptions.find((name) => numericColumnNames.has(name));
 	});
 
 	/**
@@ -250,8 +288,8 @@ export class MapViewController {
 		this.viewBlockId = blockId;
 
 		this.selectedDataColumnName = view?.dataColumn ?? undefined;
-		this.colorScaleMin = view?.colorScaleMin ?? SCALE_DEFAULT_MIN;
-		this.colorScaleMax = view?.colorScaleMax ?? SCALE_DEFAULT_MAX;
+		this.colorScaleMin = view?.colorScaleMin ?? null;
+		this.colorScaleMax = view?.colorScaleMax ?? null;
 		// An unknown palette id is not repaired here. `getRgbTable` falls back to
 		// the default for it, so an old record still paints.
 		this.palette = view?.palette ?? DEFAULT_PALETTE_ID;
@@ -423,15 +461,23 @@ export class MapViewController {
 			return;
 		}
 
-		// No valid selection: pick the first pickable column, so points render
-		// at once instead of leaving the user to open the dropdown first.
+		// No valid selection: pick the first numeric column, so the legend has a
+		// range to show at once. A text column stays in the list, but is not a
+		// good default because it cannot colour a point.
 		this.renderedColumn = undefined;
-		this.selectedDataColumnName = this.dataColumnOptions[0];
+		this.selectedDataColumnName = this.firstNumericColumnName ?? this.dataColumnOptions[0];
 
 		if (this.selectedDataColumnName) {
+			if (this.firstNumericColumnName) {
+				addToast({
+					type: 'info',
+					message:
+						'Make sure to select the data column you want to display in the map viewer. By default, the first (numerical) data column is displayed.'
+				});
+			}
 			await this.showDataColumn(true, fitCamera);
 		} else {
-			addToast({ type: 'info', message: 'This query has no data column to display on the map.' });
+			addToast({ type: 'warning', message: 'This query has no data column to display on the map.' });
 		}
 	}
 
@@ -468,16 +514,28 @@ export class MapViewController {
 		if (!columnChanged && !force) return;
 		this.renderedColumn = this.selectedDataColumnName;
 
-		// A new column has its own range. Reset to the defaults so `createLayer`
-		// recomputes the scale from this column's actual min/max.
+		// A new column has its own range. Clear any custom bounds, so the legend
+		// inputs go back to "auto", and refresh what "auto" resolves to.
 		if (columnChanged) {
-			this.colorScaleMin = SCALE_DEFAULT_MIN;
-			this.colorScaleMax = SCALE_DEFAULT_MAX;
+			this.colorScaleMin = null;
+			this.colorScaleMax = null;
+
+			// A gradient palette has no meaning on a non-numeric column. Fall back
+			// to solid blue, but leave an already-solid palette alone.
+			const isNumeric = plottableColumns(this.entry?.table ?? this.table!).some(
+				(column) => column.name === this.selectedDataColumnName && column.kind === 'number'
+			);
+
+			if (!isNumeric && !getColormap(this.palette).solid) {
+				this.palette = DEFAULT_SOLID_PALETTE_ID;
+			}
+
+			await this.refreshAutoColorScale();
 		}
 
 		this.isLoading = true;
 
-		this.layer = await this.createLayer();
+		this.layer = this.createLayer();
 		this.overlay?.setProps({ layers: [this.layer] });
 
 		if (fitCamera) {
@@ -499,24 +557,27 @@ export class MapViewController {
 		this.map.fitBounds(bounds, { padding: { top: 50, bottom: 50, left: 50, right: 50 } });
 	}
 
-	private async createLayer() {
+	/**
+	 * Recompute {@link autoColorScaleMin} / {@link autoColorScaleMax} from the
+	 * selected column's actual range. Called once per column change; a value the
+	 * user typed does not need this, since {@link effectiveColorScaleMin} only
+	 * falls back to it while the field is empty.
+	 */
+	private async refreshAutoColorScale(): Promise<void> {
+		if (!this.entry || !this.selectedDataColumnName) return;
+
+		const minMax = await queryStore.minMax(this.entry, this.selectedDataColumnName);
+
+		// Round the range for the legend inputs. A float column gives values like
+		// 27.856000900268555, which fills the field and tells the user nothing.
+		// Six digits keep every range this app shows apart.
+		this.autoColorScaleMin = roundForDisplay(minMax.min);
+		this.autoColorScaleMax = roundForDisplay(minMax.max);
+	}
+
+	private createLayer() {
 		if (!this.table) {
 			throw new Error('Table is not loaded');
-		}
-
-		if (
-			this.entry &&
-			this.selectedDataColumnName &&
-			this.colorScaleMin === SCALE_DEFAULT_MIN &&
-			this.colorScaleMax === SCALE_DEFAULT_MAX
-		) {
-			const minMax = await queryStore.minMax(this.entry, this.selectedDataColumnName);
-
-			// Round the range for the legend inputs. A float column gives values
-			// like 27.856000900268555, which fills the field and tells the user
-			// nothing. Six digits keep every range this app shows apart.
-			this.colorScaleMin = roundForDisplay(minMax.min);
-			this.colorScaleMax = roundForDisplay(minMax.max);
 		}
 
 		return new GeoArrowScatterplotLayer({
@@ -536,8 +597,8 @@ export class MapViewController {
 				getFillColor: [
 					this.palette,
 					this.paletteReverse,
-					this.colorScaleMin,
-					this.colorScaleMax,
+					this.effectiveColorScaleMin,
+					this.effectiveColorScaleMax,
 					this.selectedDataColumnName
 				]
 			}
@@ -566,10 +627,26 @@ export class MapViewController {
 		if (!row) return [0, 0, 0, 0];
 
 		const value = row[this.selectedDataColumnName!];
-		if (typeof value !== 'number' || isNaN(value)) return [0, 0, 0, 0];
+		// A missing value hides the point, for a numeric column and a text one alike.
+		if (value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
+			return [0, 0, 0, 0];
+		}
+
+		// A solid palette paints every present value the same colour. This is also
+		// the only path for a non-numeric column, whose values cannot feed the scale.
+		if (getColormap(this.palette).solid) {
+			return [this.rgbTable[0], this.rgbTable[1], this.rgbTable[2], 192];
+		}
+
+		if (typeof value !== 'number') return [0, 0, 0, 0];
 
 		const offset =
-			paletteIndex(value, this.colorScaleMin, this.colorScaleMax, this.paletteReverse) * 3;
+			paletteIndex(
+				value,
+				this.effectiveColorScaleMin,
+				this.effectiveColorScaleMax,
+				this.paletteReverse
+			) * 3;
 
 		return [this.rgbTable[offset], this.rgbTable[offset + 1], this.rgbTable[offset + 2], 192];
 	}
