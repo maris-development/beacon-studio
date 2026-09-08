@@ -363,6 +363,7 @@
 			:global(.card) {
 				padding: 0;
 				overflow: hidden;
+				max-width: 400px;
 			}
 
 			:global(.card-content) {
