@@ -7,10 +7,14 @@
  * needs one spatial filter kind.
  *
  * The server side filter is a point-in-polygon test over the longitude and latitude
- * columns. See `beacon-core/src/query/filter/geo_json.rs`.
+ * columns. See `beacon-core/src/query/filter/geo_json.rs`. The test reads the raw
+ * column, and a producer can store longitudes as -180..180 or as 0..360. So the
+ * filter holds every copy of the ring that those two ranges can hold. See
+ * {@link ringWorldCopies}.
  */
-import type { GeoJsonFilter, GeoJsonPolygon, MinMaxFilter } from '@/beacon-api/types';
+import type { Filter, GeoJsonFilter, GeoJsonPolygon, MinMaxFilter } from '@/beacon-api/types';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
+import { alignLongitude, TURN } from '@/geo/longitude';
 import { getSettings } from '@/stores/settings';
 
 export type SpatialSelectionMode = 'polygon' | 'box' | 'cross-section';
@@ -303,42 +307,145 @@ export function isUsableSelection(selection: SpatialSelection | null | undefined
     return !!selection && selection.ring.length >= 4;
 }
 
-export function toGeoJsonPolygon(selection: SpatialSelection): GeoJsonPolygon {
-    return { type: 'Polygon', coordinates: [closeRing(selection.ring)] };
+export function toGeoJsonPolygon(ring: LngLat[]): GeoJsonPolygon {
+    return { type: 'Polygon', coordinates: [closeRing(ring)] };
 }
 
-/** The point-in-polygon filter for the server. */
-export function toGeoJsonFilter(
+/** The lowest and the highest longitude that a producer stores. */
+const WORLD_MIN = -180;
+const WORLD_MAX = TURN;
+
+/**
+ * The copies of the ring that a dataset can match.
+ *
+ * The map draws -180..180, but a producer stores longitudes in that range or in
+ * 0..360, and the server tests the raw column. So the filter holds every copy of
+ * the ring that reaches -180..360. A row matches one copy at most, so the copies
+ * select the drawn area, and nothing more.
+ *
+ * The ring moves to -180..180 first, and every point of it moves by the same
+ * amount: a move per point breaks the shape. That copy comes first, so a read of
+ * the filter finds the ring of the map. See {@link fromGeoJsonFilter}.
+ *
+ * An area away from a seam gives one copy. An area over a seam gives two, because
+ * no single polygon holds both sides of a seam.
+ */
+export function ringWorldCopies(ring: LngLat[]): LngLat[][] {
+    const bounds = ringBounds(ring);
+    if (!bounds) return [ring];
+
+    const centre = (bounds.minLon + bounds.maxLon) / 2;
+    const home = alignLongitude(centre, 0) - centre;
+
+    const reaching = [home, home - TURN, home + TURN].filter((amount) => {
+        return bounds.minLon + amount <= WORLD_MAX && bounds.maxLon + amount >= WORLD_MIN;
+    });
+
+    if (reaching.length === 0) {
+        return [shiftRing(ring, home)];
+    }
+
+    return reaching.map((amount) => shiftRing(ring, amount));
+}
+
+/** Move every point of the ring by the same number of degrees. */
+function shiftRing(ring: LngLat[], degrees: number): LngLat[] {
+    if (degrees === 0) return ring;
+    return ring.map(([lon, lat]) => [lon + degrees, lat] as LngLat);
+}
+
+/**
+ * The filters of a drawn area.
+ *
+ * The area gives a point-in-polygon filter, plus the bounding box of the polygon.
+ * The server can prune data with a min/max test, but not with the polygon test.
+ * The box therefore makes the query much faster, and it never removes a row that
+ * the polygon keeps.
+ *
+ * An area that needs two copies of its ring gives two polygons. Each one keeps
+ * its own longitude box, so every copy becomes one and-group inside an or-group.
+ * The latitude box holds for every copy, so it stays outside. See
+ * {@link ringWorldCopies}.
+ */
+export function toSpatialFilters(
     selection: SpatialSelection,
+    latitudeColumn: string,
+    longitudeColumn: string
+): Filter[] {
+    const bounds = ringBounds(selection.ring);
+    if (!bounds) return [];
+
+    const latitudeBox: MinMaxFilter = {
+        for_query_parameter: latitudeColumn,
+        min: bounds.minLat,
+        max: bounds.maxLat
+    };
+
+    const branches = ringWorldCopies(selection.ring).map((ring) => [
+        ringFilter(ring, latitudeColumn, longitudeColumn),
+        longitudeBox(ring, longitudeColumn)
+    ]);
+
+    if (branches.length === 1) {
+        return [...branches[0], latitudeBox];
+    }
+
+    return [{ or: branches.map((filters) => ({ and: filters })) }, latitudeBox];
+}
+
+/** The point-in-polygon filter of one ring. */
+function ringFilter(
+    ring: LngLat[],
     latitudeColumn: string,
     longitudeColumn: string
 ): GeoJsonFilter {
     return {
         longitude_query_parameter: longitudeColumn,
         latitude_query_parameter: latitudeColumn,
-        geometry: toGeoJsonPolygon(selection)
+        geometry: toGeoJsonPolygon(ring)
     };
 }
 
-/**
- * The bounding box filters that go beside the polygon filter.
- *
- * The server can prune data with a min/max test on the two columns, but not with
- * the polygon test. The box therefore makes the query much faster, and it never
- * removes a row that the polygon keeps.
- */
-export function toBboxFilters(
-    selection: SpatialSelection,
-    latitudeColumn: string,
-    longitudeColumn: string
-): MinMaxFilter[] {
-    const bounds = ringBounds(selection.ring);
-    if (!bounds) return [];
+/** The longitude box of one ring. */
+function longitudeBox(ring: LngLat[], longitudeColumn: string): MinMaxFilter {
+    const bounds = ringBounds(ring);
 
-    return [
-        { for_query_parameter: latitudeColumn, min: bounds.minLat, max: bounds.maxLat },
-        { for_query_parameter: longitudeColumn, min: bounds.minLon, max: bounds.maxLon }
-    ];
+    return {
+        for_query_parameter: longitudeColumn,
+        min: bounds?.minLon ?? -180,
+        max: bounds?.maxLon ?? 180
+    };
+}
+
+/** The area filter of a query, also inside a group. */
+export function findGeoJsonFilter(filters: Filter[]): GeoJsonFilter | null {
+    for (const filter of filters) {
+        if (isGeoJsonFilter(filter)) return filter;
+
+        const members = groupMembers(filter);
+        if (!members) continue;
+
+        const found = findGeoJsonFilter(members);
+        if (found) return found;
+    }
+
+    return null;
+}
+
+/** True when the filter is a group that holds an area filter. */
+export function holdsGeoJsonFilter(filter: Filter): boolean {
+    const members = groupMembers(filter);
+    return !!members && !!findGeoJsonFilter(members);
+}
+
+/** The filters of a group, or null for a leaf filter. */
+function groupMembers(filter: Filter): Filter[] | null {
+    const group = filter as Partial<{ and: Filter[]; or: Filter[] }>;
+
+    if (Array.isArray(group.and)) return group.and;
+    if (Array.isArray(group.or)) return group.or;
+
+    return null;
 }
 
 /** True when the filter is a point-in-polygon filter. */
@@ -352,14 +459,24 @@ export function isGeoJsonFilter(filter: unknown): filter is GeoJsonFilter {
     );
 }
 
-/** Read a drawn selection back out of a compiled filter. */
+/**
+ * Read a drawn selection back out of a compiled filter.
+ *
+ * A copy of the ring can lie outside -180..180, so the ring moves back to the
+ * range the map draws. The next compile of the area then gives the same copies
+ * again. See {@link ringWorldCopies}.
+ */
 export function fromGeoJsonFilter(filter: GeoJsonFilter): SpatialSelection | null {
-    const ring = filter.geometry?.coordinates?.[0];
-    if (!Array.isArray(ring) || ring.length < 4) return null;
+    const points = filter.geometry?.coordinates?.[0];
+    if (!Array.isArray(points) || points.length < 4) return null;
+
+    const ring = points.map((point) => [Number(point[0]), Number(point[1])] as LngLat);
+    const bounds = ringBounds(ring);
+    const centre = bounds ? (bounds.minLon + bounds.maxLon) / 2 : 0;
 
     return {
         mode: 'polygon',
-        ring: ring.map((point) => [Number(point[0]), Number(point[1])] as LngLat),
+        ring: shiftRing(ring, alignLongitude(centre, 0) - centre),
         latitudeColumn: filter.latitude_query_parameter,
         longitudeColumn: filter.longitude_query_parameter
     };

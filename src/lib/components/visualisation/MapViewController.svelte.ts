@@ -163,6 +163,7 @@ export class MapViewController {
 	readonly dataColumnOptions = $derived.by(() => {
 		if (!this.entry) return [];
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const timeColumnNames = new Set(
 			plottableColumns(this.entry.table)
 				.filter((column) => column.kind === 'timestamp')

@@ -384,15 +384,25 @@ export class Utils {
         return null;
     }
 
-    static copyToClipboard(text: string): boolean {
+    static async copyToClipboard(text: string): Promise<boolean> {
+        // The caller reads the result, so every path must return one.
         try {
             // Use the modern clipboard API if available and we're in a secure context
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text);
+                await navigator.clipboard.writeText(text);
                 return true;
             }
+        } catch (err) {
+            // A denied permission or an unfocused document rejects the write
+            console.error('Clipboard API copy failed, using fallback:', err);
+        }
 
-            // Fallback: use a hidden textarea for older/insecure environments
+        return Utils.copyWithTextarea(text);
+    }
+
+    // Fallback for older/insecure environments
+    private static copyWithTextarea(text: string): boolean {
+        try {
             const textarea = document.createElement('textarea');
             textarea.value = text;
             textarea.style.position = 'fixed'; // avoid scrolling to bottom

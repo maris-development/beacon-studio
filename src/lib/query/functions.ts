@@ -34,7 +34,7 @@ function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | nul
     return result;
 }
 
-export function copyJSON(compileQuery: () => CompiledQuery): void {
+export async function copyJSON(compileQuery: () => CompiledQuery): Promise<void> {
 
     const compiledQuery = tryCompileQuery(compileQuery);
 
@@ -58,7 +58,16 @@ export function copyJSON(compileQuery: () => CompiledQuery): void {
             return;
         }
 
-        Utils.copyToClipboard(queryJson);
+        const copied = await Utils.copyToClipboard(queryJson);
+
+        if (!copied) {
+            addToast({
+                message: 'Could not copy the JSON code to the clipboard',
+                type: 'error'
+            });
+
+            return;
+        }
 
         addToast({
             message: 'JSON code copied to clipboard',
@@ -116,10 +125,10 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
     }
 }
 
-export function copyPython(
+export async function copyPython(
     compileQuery: () => CompiledQuery,
     instance: BeaconInstance | null
-): void {
+): Promise<void> {
     
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -145,7 +154,16 @@ export function copyPython(
             return;
         }
 
-        Utils.copyToClipboard(pythonCode);
+        const copied = await Utils.copyToClipboard(pythonCode);
+
+        if (!copied) {
+            addToast({
+                message: 'Could not copy the Python code to the clipboard',
+                type: 'error'
+            });
+
+            return;
+        }
 
         addToast({
             message: 'Python code copied to clipboard',
@@ -210,7 +228,7 @@ export function downloadPython(
 }
 
 
-export function copySQL(compileQuery: () => CompiledQuery): void {
+export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> {
 
     const compiledQuery = tryCompileQuery(compileQuery);
     if (!compiledQuery) return;
@@ -236,7 +254,16 @@ export function copySQL(compileQuery: () => CompiledQuery): void {
             return;
         }
 
-        Utils.copyToClipboard(sqlQuery);
+        const copied = await Utils.copyToClipboard(sqlQuery);
+
+        if (!copied) {
+            addToast({
+                message: 'Could not copy the SQL code to the clipboard',
+                type: 'error'
+            });
+
+            return;
+        }
 
         addToast({
             message: 'SQL code copied to clipboard',
@@ -308,11 +335,11 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
  *
  * `name` is the name of the query. The receiver names their new block after it.
  */
-export function copyUrl(
+export async function copyUrl(
     compileQuery: () => CompiledQuery,
     instance: InstanceRef | null,
     name: string
-): void {
+): Promise<void> {
 
     const compiledQuery = tryCompileQuery(compileQuery);
 
@@ -337,7 +364,16 @@ export function copyUrl(
             return;
         }
 
-        Utils.copyToClipboard(link);
+        const copied = await Utils.copyToClipboard(link);
+
+        if (!copied) {
+            addToast({
+                message: 'Could not copy the Query URL to the clipboard',
+                type: 'error'
+            });
+
+            return;
+        }
 
         addToast({
             message: 'Query URL copied to clipboard',

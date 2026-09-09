@@ -1,5 +1,6 @@
 import * as ApacheArrow from 'apache-arrow';
 import type { SortDirection } from './util-types';
+import { alignLongitude, LongitudeRange, wrapLongitude } from './geo/longitude';
 
 
 export class ApacheArrowUtils {
@@ -112,6 +113,7 @@ export class ApacheArrowUtils {
      * @returns A tuple containing the minimum and maximum longitude and latitude values:
      *          `[[minLongitude, minLatitude], [maxLongitude, maxLatitude]]`.
      *          If `table` is `null`, returns world bounds: `[[-180, -90], [180, 90]]`.
+     *          A row without both coordinates does not count.
      * @throws If the table does not contain the specified latitude and longitude columns.
      */
     static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
@@ -139,21 +141,40 @@ export class ApacheArrowUtils {
 
         let minLat = Infinity;
         let maxLat = -Infinity;
-        let minLon = Infinity;
-        let maxLon = -Infinity;
+        const longitudes = new LongitudeRange();
 
         for (let i = 0; i < table.numRows; i++) {
-            const lat = latCol.get(i);
-            const lon = lonCol.get(i);
+            // Null coerces to 0 in a comparison, so it must not reach one.
+            const latValue = latCol.get(i);
+            const lonValue = lonCol.get(i);
+            if (latValue === null || latValue === undefined) continue;
+            if (lonValue === null || lonValue === undefined) continue;
+
+            const lat = Number(latValue);
+            const lon = Number(lonValue);
+
+            // A corner of the box must hold a point, so a row counts with both of
+            // its coordinates or with neither.
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
             if (lat < minLat) minLat = lat;
             if (lat > maxLat) maxLat = lat;
-            if (lon < minLon) minLon = lon;
-            if (lon > maxLon) maxLon = lon;
+            longitudes.add(lon);
+        }
+
+        // A table of 0..360 longitudes reports its wrapped extent, so the map
+        // fits the world that the points draw in.
+        const extent = longitudes.extent() ?? { west: -180, east: 180 };
+
+        // No row carries a latitude. Report the full range.
+        if (minLat === Infinity) {
+            minLat = -90;
+            maxLat = 90;
         }
 
         return [
-            [minLon, minLat],
-            [maxLon, maxLat]
+            [extent.west, minLat],
+            [extent.east, maxLat]
         ];
     }
 
@@ -483,8 +504,6 @@ export class ApacheArrowUtils {
         const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
         const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
 
-        console.log('table schema addPointGeometryColumn', table.schema, latitudeColumnName, longitudeColumnName);
-
         if (latIndex === -1 || lonIndex === -1) {
             throw new Error(
                 `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`
@@ -514,15 +533,38 @@ export class ApacheArrowUtils {
             const latCol = batch.getChildAt(latIndex)!;
             const lonCol = batch.getChildAt(lonIndex)!;
 
-            // Interleaved [x=lon, y=lat] coordinate buffer.
+            // Interleaved [x=lon, y=lat] coordinate buffer. The longitude wraps
+            // to -180..180: deck.gl draws one world, and a point outside it
+            // disappears as soon as the viewport leaves the second copy.
             const coords = new Float64Array(rows * 2);
+            const validity = new Uint8Array((rows + 7) >> 3);
+            let nullCount = 0;
+
             for (let i = 0; i < rows; i++) {
-                coords[i * 2] = Number(lonCol.get(i));
-                coords[i * 2 + 1] = Number(latCol.get(i));
+                const lon = Number(lonCol.get(i) ?? NaN);
+                const lat = Number(latCol.get(i) ?? NaN);
+
+                if (Number.isFinite(lon) && Number.isFinite(lat)) {
+                    coords[i * 2] = wrapLongitude(lon);
+                    coords[i * 2 + 1] = lat;
+                    validity[i >> 3] |= 1 << (i & 7);
+                } else {
+                    // deck.gl reads this buffer and ignores the bitmap. NaN keeps
+                    // the point off the map; 0 would draw it at null island.
+                    coords[i * 2] = NaN;
+                    coords[i * 2 + 1] = NaN;
+                    nullCount++;
+                }
             }
 
             const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
-            const geometryData = ApacheArrow.makeData({ type: pointType, length: rows, child: childData });
+            const geometryData = ApacheArrow.makeData({
+                type: pointType,
+                length: rows,
+                nullCount,
+                nullBitmap: nullCount > 0 ? validity : undefined,
+                child: childData
+            });
             const structData = ApacheArrow.makeData({
                 type: structType,
                 length: rows,
@@ -581,18 +623,57 @@ export class ApacheArrowUtils {
         const lats = latCol.toArray();
         const rows = Math.min(lons.length, lats.length);
 
+        // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
+        // a column with nulls needs the slower reader that reports them.
+        const hasNulls = latCol.nullCount > 0 || lonCol.nullCount > 0;
+
+        // The ring holds the longitudes of the map, the column holds those of the
+        // producer. A point at 185 must therefore also meet a ring at -175.
+        const ringLon = (minLon + maxLon) / 2;
+
+        // alignLongitude gives back the copy within 180 degrees of the centre, and
+        // a narrower ring holds no other copy. Only a wider one tests the neighbours.
+        const wideRing = maxLon - minLon > 360;
+
         let count = 0;
 
         for (let i = 0; i < rows; i++) {
-            const lon = Number(lons[i]);
-            const lat = Number(lats[i]);
+            if (hasNulls && (latCol.get(i) == null || lonCol.get(i) == null)) continue;
 
-            if (!Number.isFinite(lon) || !Number.isFinite(lat)) continue;
-            if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) continue;
-            if (ApacheArrowUtils.pointInRing(lon, lat, ring)) count++;
+            const lat = Number(lats[i]);
+            if (!Number.isFinite(lat) || lat < minLat || lat > maxLat) continue;
+
+            const lon = alignLongitude(Number(lons[i]), ringLon);
+            if (!Number.isFinite(lon)) continue;
+
+            if (ApacheArrowUtils.pointInRingBox(lon, lat, ring, minLon, maxLon)) {
+                count++;
+                continue;
+            }
+
+            // A row counts once at most.
+            if (!wideRing) continue;
+            if (
+                ApacheArrowUtils.pointInRingBox(lon + 360, lat, ring, minLon, maxLon) ||
+                ApacheArrowUtils.pointInRingBox(lon - 360, lat, ring, minLon, maxLon)
+            ) {
+                count++;
+            }
         }
 
         return count;
+    }
+
+    /** The bounding box test of the ring, then the ray cast. */
+    private static pointInRingBox(
+        lon: number,
+        lat: number,
+        ring: [number, number][],
+        minLon: number,
+        maxLon: number
+    ): boolean {
+        if (lon < minLon || lon > maxLon) return false;
+        return ApacheArrowUtils.pointInRing(lon, lat, ring);
     }
 
     /** Ray cast point-in-polygon test over a closed ring of `[longitude, latitude]`. */

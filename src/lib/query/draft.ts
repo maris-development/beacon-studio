@@ -16,8 +16,7 @@ import { Utils } from '@/utils';
 import {
 	isUsableSelection,
 	selectionColumns,
-	toBboxFilters,
-	toGeoJsonFilter,
+	toSpatialFilters,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 
@@ -95,9 +94,8 @@ export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuer
 }
 
 /**
- * Add the drawn area to a query: one point-in-polygon filter, plus the bounding
- * box of that polygon on the two columns. The box lets the server prune data
- * before it runs the slower polygon test.
+ * Add the drawn area to a query. See {@link toSpatialFilters} for the filters it
+ * gives: a polygon, and the bounding box that lets the server prune data first.
  *
  * The box is always derived here, and is never stored on a field. So one delete
  * of `spatialFilter` removes every part of the area again.
@@ -114,9 +112,7 @@ function addSpatialFilters(builder: QueryBuilder, draft: QueryDraft): void {
 	const columns = selectionColumns(selection, names);
 	if (!columns) return;
 
-	builder.addFilter(toGeoJsonFilter(selection!, columns.latitude, columns.longitude));
-
-	for (const filter of toBboxFilters(selection!, columns.latitude, columns.longitude)) {
+	for (const filter of toSpatialFilters(selection!, columns.latitude, columns.longitude)) {
 		builder.addFilter(filter);
 	}
 }

@@ -33,14 +33,15 @@
  *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
  *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
-import type { CompiledQuery, GeoJsonFilter, MinMaxFilter } from '@/beacon-api/types';
+import type { CompiledQuery, MinMaxFilter } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import {
+	findGeoJsonFilter,
+	holdsGeoJsonFilter,
 	isGeoJsonFilter,
 	isUsableSelection,
 	selectionColumns,
-	toBboxFilters,
-	toGeoJsonFilter,
+	toSpatialFilters,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 import {
@@ -526,7 +527,7 @@ export class QueryWorkspace {
 
 		// The area already on the query names its own two columns. Its box goes
 		// with it, also when the new area tests another pair.
-		const previous = (compiled.filters ?? []).find(isGeoJsonFilter) as GeoJsonFilter | undefined;
+		const previous = findGeoJsonFilter(compiled.filters ?? []);
 		const spatialColumns = [
 			previous?.latitude_query_parameter,
 			previous?.longitude_query_parameter,
@@ -535,7 +536,7 @@ export class QueryWorkspace {
 		].filter(Boolean);
 
 		let filters = (compiled.filters ?? []).filter((filter) => {
-			if (isGeoJsonFilter(filter)) return false;
+			if (isGeoJsonFilter(filter) || holdsGeoJsonFilter(filter)) return false;
 			const minMax = filter as MinMaxFilter;
 			const isBox = 'min' in minMax && 'max' in minMax;
 			return !(isBox && spatialColumns.includes(minMax.for_query_parameter));
@@ -544,8 +545,7 @@ export class QueryWorkspace {
 		if (isUsableSelection(selection) && columns) {
 			filters = [
 				...filters,
-				toGeoJsonFilter(selection!, columns.latitude, columns.longitude),
-				...toBboxFilters(selection!, columns.latitude, columns.longitude)
+				...toSpatialFilters(selection!, columns.latitude, columns.longitude)
 			];
 		}
 

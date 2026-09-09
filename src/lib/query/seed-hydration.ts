@@ -15,7 +15,9 @@ import { Utils } from '@/utils';
 import type { SelectedFilterType } from '@/query/filter-types';
 import type { SelectedField } from '@/query/draft';
 import {
+	findGeoJsonFilter,
 	fromGeoJsonFilter,
+	holdsGeoJsonFilter,
 	isGeoJsonFilter,
 	ringBounds,
 	type SpatialSelection
@@ -233,10 +235,17 @@ export function hydrateDraftFromQuery(
 		}
 	}
 
-	const seedFilters = flattenFilters(query.filters, drop);
-
-	const spatialFilter = seedFilters.filter(isGeoJsonFilter).map(fromGeoJsonFilter).find(Boolean) ?? null;
+	// An area that needs two copies of its ring compiles to a group. The group
+	// holds the area alone, so the builder keeps every part of it, and the read
+	// takes the first copy: the ring of the map.
+	const areaFilter = findGeoJsonFilter(query.filters ?? []);
+	const spatialFilter = areaFilter ? fromGeoJsonFilter(areaFilter) : null;
 	const selectionBounds = spatialFilter ? ringBounds(spatialFilter.ring) : null;
+
+	const seedFilters = flattenFilters(
+		(query.filters ?? []).filter((filter) => !holdsGeoJsonFilter(filter)),
+		drop
+	);
 
 	for (const filter of seedFilters) {
 		if (isGeoJsonFilter(filter) || isDerivedBoxFilter(filter, spatialFilter, selectionBounds)) {

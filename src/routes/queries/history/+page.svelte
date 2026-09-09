@@ -6,6 +6,7 @@
 	import { queryHistory, clearHistory } from '@/stores/query-history';
 	import { buildShareLink, SHARE_LINK_PATH, type StoredQuery } from '@/stores/stored-query';
 	import { addToast } from '@/stores/toasts';
+	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
@@ -67,11 +68,9 @@
 			return;
 		}
 
-		try {
-			await navigator.clipboard.writeText(link);
+		if (await Utils.copyToClipboard(link)) {
 			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
-		} catch (error) {
-			console.error('Failed to copy share link.', error);
+		} else {
 			addToast({ type: 'error', message: 'Could not copy the share link.' });
 		}
 	}
