@@ -216,7 +216,7 @@
 			:global(.card) {
 				padding: 0;
 				overflow: hidden;
-				max-width: 400px;
+				max-width: 32.7%;
 			}
 
 			:global(.card-content) {
