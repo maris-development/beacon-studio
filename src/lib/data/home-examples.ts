@@ -1,4 +1,27 @@
 /**
+ * The Quick start examples on the home page.
+ *
+ * `home-examples.default.json` seeds `localStorage` on the very first launch.
+ * `loadHomeExamples` then fetches {@link HOME_EXAMPLES_URL} and overwrites
+ * `localStorage` with the result, so MARIS can change the list without a
+ * release of the app, and the home page always shows the last list it
+ * managed to fetch, from any past launch, not the bundled default.
+ */
+
+import { get, readonly, type Readable } from 'svelte/store';
+import { persisted } from 'svelte-local-storage-store';
+import bundledExamples from './home-examples.default.json';
+
+/** The address of the examples list. */
+export const HOME_EXAMPLES_URL = 'https://beacon-datalake.org/home-examples.json';
+
+/** The localStorage key of the cached list. */
+const STORAGE_KEY = 'beacon-studio.home-examples';
+
+/** The time after which the fetch of the list counts as a failure. */
+const FETCH_TIMEOUT_MS = 10_000;
+
+/**
  * One card of the Quick start examples section on the home page.
  *
  * `rows` and `seconds` come from a reference run of the query. The card states
@@ -29,21 +52,6 @@ export type HomeExample = {
 	shareQuery: string;
 };
 
-import { asset } from '$app/paths';
-import { readonly, writable, type Readable } from 'svelte/store';
-
-/**
- * The examples file, under `static/home-examples.json`. Edit it there, in the
- * order the cards should show, to change the Quick start examples: the file
- * is fetched at runtime, not bundled, so no build or release is needed.
- */
-const HOME_EXAMPLES_PATH = '/home-examples.json';
-
-const homeExamplesStore = writable<HomeExample[]>([]);
-
-/** The examples, in the order that the home page shows them. Use `$homeExamples` in a component. */
-export const homeExamples: Readable<HomeExample[]> = readonly(homeExamplesStore);
-
 /** True if the value has every field of a `HomeExample`, with the right type. */
 function isHomeExample(value: unknown): value is HomeExample {
 	if (typeof value !== 'object' || value === null) return false;
@@ -64,7 +72,7 @@ function isHomeExample(value: unknown): value is HomeExample {
 /** Keeps the usable entries, in file order, and drops a malformed one. */
 function parseExamples(payload: unknown): HomeExample[] {
 	if (!Array.isArray(payload)) {
-		console.warn('home-examples.json is not an array. The home page shows no examples.');
+		console.warn('The home examples list is not an array. The cache keeps its last value.');
 		return [];
 	}
 
@@ -72,12 +80,29 @@ function parseExamples(payload: unknown): HomeExample[] {
 }
 
 /**
- * Reads `home-examples.json` and fills the store. A failure is not fatal: it
- * writes a warning to the console, and the home page then shows no cards.
+ * Seed shown before the first successful fetch: the bundled defaults, run
+ * through the same validation as an online payload.
+ */
+const homeExamplesStore = persisted<HomeExample[]>(STORAGE_KEY, parseExamples(bundledExamples));
+
+/**
+ * The cached examples, in the order that the home page shows them. Reads from
+ * `localStorage` at once, so a component has the last successful fetch to show
+ * before `loadHomeExamples` answers. Use `$homeExamples` in a component.
+ */
+export const homeExamples: Readable<HomeExample[]> = readonly(homeExamplesStore);
+
+/**
+ * Reads the examples list from {@link HOME_EXAMPLES_URL} and writes it to
+ * `localStorage`, overwriting the bundled defaults or an earlier fetch. A
+ * failure leaves the cached list as it was, so the home page still shows the
+ * last successful fetch.
  */
 export async function loadHomeExamples(): Promise<HomeExample[]> {
 	try {
-		const response = await fetch(asset(HOME_EXAMPLES_PATH));
+		const response = await fetch(HOME_EXAMPLES_URL, {
+			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+		});
 
 		if (!response.ok) {
 			throw new Error(`The server answered ${response.status}.`);
@@ -89,8 +114,8 @@ export async function loadHomeExamples(): Promise<HomeExample[]> {
 
 		return examples;
 	} catch (error) {
-		console.warn('Could not read home-examples.json.', error);
+		console.warn(`Could not read the home examples list at ${HOME_EXAMPLES_URL}.`, error);
 
-		return [];
+		return get(homeExamplesStore);
 	}
 }
