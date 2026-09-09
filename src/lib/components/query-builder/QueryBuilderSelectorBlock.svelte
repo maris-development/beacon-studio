@@ -63,6 +63,14 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		editingName = currentName;
 	}
 
+	// The native `autofocus` attribute is unreliable for inputs mounted after
+	// initial page load, so the input never gains focus and never blurs on an
+	// outside click. This action focuses it explicitly when it is created.
+	function focusAndSelect(node: HTMLInputElement): void {
+		node.focus();
+		node.select();
+	}
+
 	function cancelRenameBlock(): void {
 		editingBlockId = null;
 		editingName = '';
@@ -108,6 +116,13 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	function handleRenameBlur(id: string) : void{
 		if (isCommittingFromKeyboard) {
 			isCommittingFromKeyboard = false;
+			return;
+		}
+
+		// Removing the focused input from the DOM (e.g. right after the finish
+		// button already committed and closed the editor) fires a blur on it too.
+		// Ignore that: this block is no longer the one being edited.
+		if (editingBlockId !== id) {
 			return;
 		}
 
@@ -199,7 +214,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								<input
 									class="query-block-name-input"
 									value={editingName}
-									autofocus
+									use:focusAndSelect
 									title="Edit query name"
 									aria-label="Edit query name"
 									oninput={(event) => (editingName = event.currentTarget.value)}
@@ -221,6 +236,11 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								class="query-block-icon-button"
 								title={editingBlockId === block.id ? 'Finish editing name' : 'Edit name'}
 								aria-label={editingBlockId === block.id ? 'Finish editing name' : 'Edit name'}
+								onmousedown={(event: MouseEvent) => {
+									// Keep focus on the input so this click can't trigger a blur-commit
+									// followed by the click handler re-opening the editor (two-click bug).
+									if (editingBlockId === block.id) event.preventDefault();
+								}}
 								onclick={(event) => {
 									event.stopPropagation();
 									if (editingBlockId === block.id) {
