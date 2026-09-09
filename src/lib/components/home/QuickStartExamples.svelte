@@ -13,7 +13,7 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import Card from '@/components/card/card.svelte';
 	import { Badge } from '@/components/ui/badge/index.js';
-	import { HOME_EXAMPLES, type HomeExample } from '@/data/home-examples';
+	import { homeExamples, type HomeExample } from '@/data/home-examples';
 	import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const PENDING_HINT = 'Work in progress';
@@ -34,7 +34,7 @@
 </div>
 
 <div class="examples">
-	{#each HOME_EXAMPLES as example (example.title)}
+	{#each $homeExamples as example (example.title)}
 		<Card class="example">
 			<img
 				class="shot"

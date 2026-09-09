@@ -29,45 +29,68 @@ export type HomeExample = {
 	shareQuery: string;
 };
 
-/** The examples, in the order that the home page shows them. */
-export const HOME_EXAMPLES: HomeExample[] = [
-	{
-		title: 'Trans-equatorial Atlantic transect',
-		description:
-			'Temperature, salinity and oxygen in a 500 km wide cross section at 24°W, from 32°S to 34°N.',
-		sourceName: 'World Ocean Database',
-		tableName: 'easy-wod',
-		image: 'HomeQueryExample1-small.jpg',
-		rows: 1_428_571,
-		seconds: 4.450,
-		format: 'Parquet',
-		shareQuery:
-			'?query=H4sIAAAAAAAAA5VUTW%2BjMBD9K5XPQP2BAee2%2F2APu6coirzETS0Zm5pBWxTlv69xCJsmFaU3y%2B%2FNvJl5Y5%2FQW6%2F8gDYn9OJdgzZIyW5I%2F7oDSi7QvpVeNgqU79Bme0K1M31jAxF0owJJGi0DYntjzskNbJw9augPixwJX1FANa3yEnq%2FxOoCYDUMCxT3PhyVXSAcVAuvd%2FguQS%2FazL3rbm8d7EcoTsz5%2Fd2MrnM5j6k%2Fx28H0%2BignDIcTvI9nAhdiPs%2FrLswFqPWFXczzoUaP049yl3FOF4tNruyoHTjXJSZm8rX60zWLqjM5n9oheH1GpftiBKzgV%2BYezVs2cujcuH28gRhaFVAfzozHN1Ybu2cP2grQY0LuN2mtMgKwSrCRU5JWRFSJCnhGedCiJIyzgnGgu6SwCwzzAnJWcmryCwTijNMSyaIYDSvhCAsEmkILxgNaVlFSVUVkVjSnLOyYDHjxCNCYEx4UUYev0iTXDCe43zMiKvIXFfkbrf0Su63%2FTHB5OJDsd95ep9MaXqKj%2B2Ov4Hroe1hWpNGhhMKAkEJxt1ANkiFq19e2i5Vb70E57U0Tz%2FASAu6foIRUTWEArTtQNpa%2FfZh7dArQNttnp%2F%2FKFk7O37AWSO97jJr0Pkfv3hREqYFAAA%3D'
-	},
-	{
-		title: 'Global temperature, summer 2025',
-		description:
-			'Daily maximum air temperature at 2 m across the whole grid, from 12 to 16 July 2025.',
-		sourceName: 'ERA5 reanalysis',
-		tableName: 'era5_daily_max_2m_temperature',
-		image: 'HomeQueryExample2-small.jpg',
-		rows: 2_000_000,
-		seconds: 1.477,
-		format: 'Parquet',
-		shareQuery:
-			'?query=H4sIAAAAAAAAA4WRTWrEMAyFrxK0TmbSwLSQC%2FQCnU1LMUritAbJThW5zBBy99pTKCGLKXgh9D7r6WeBr2jlCu0CowSGFqzgyQzo6GoYL6Zho5anlNUoFspf3kwoyFatzNC%2BLdAHiuzT728kNxh1nNEUY9J9JFrLDUSoTuNwFwn%2B4z9GG76j%2BsidlR3wXsLo6K%2FtMYjZzbOfgV0u1tTNqaqfqofmpa7b23vNIl624uNGzFYh6hT1ttsgjCmC5JMMFda1BJ8cU%2BqZQodUbLZcFnNktlLkysnG%2BVnR9%2FYslPhP1Wluj8fOYh98le91YBQ3HzzB%2BgOZZzjm0QEAAA%3D%3D'
-	},
-	{
-		title: 'Mediterranean Basin',
-		description:
-			'Temperature, salinity and oxygen inside a 14 point polygon that covers the whole basin.',
-		sourceName: 'World Ocean Database',
-		tableName: 'easy-wod',
-		image: 'HomeQueryExample3-small.jpg',
-		rows: 1_428_571,
-		seconds: 2.318,
-		format: 'Parquet',
-		shareQuery:
-			'?query=H4sIAAAAAAAAA41Uy27bMBD8lYJnmSG5fPqYe4FeejIMg7UZR4BEuhKFxjD8713KjypBqvgkgTO7M7sc6UR%2BD6E7kuWJvHSpJUsSfH9c%2FEk7Ul2gzcF3vg05dD1Zrk5km5qhjUjMdRuQ5JvaIxKHpjlXE7hJcV%2FnYTfL8fkrSg7tIXQ%2BD90cq0cg1vk4Q0lvx32IM4RdOOTXD%2Fi6Ii91c5%2B97jcx5U2Bxo2lbvNhR7e9nEvrx%2BiTAceqr2kVaWt0zPDp38hSsYfF7nuaUZrscpSBm458XOe67BmV%2B3W8GwXY4xqX%2Bxol7ln7hDbN4S1vn9H%2BRXEfEp5ePop8PAREf6TmuE%2FF7jalbldHn0OJxGq1UNRIzhxwpipQVDDBmJEg1tVqIankEqQSSlcgKRfSKQQNYopqK4yw1ulSpsEIpyUDhCw1VgpuNYMKgHKmuRNcO4Q4MrGBU1glHNWCceOksQgJTiVwyQQwWwErRrSSjBUMBRj6cJYLW%2BqsckoZbnTBDA5gtbXSoBNNtRIOW7oyAFKVs1pZBbaSnDKwxVpBAP3bAkpTSYGj8bIFJi8mwaKaAYNVmuIk3AqhxTibFALPOZgCMa2NFkbxUkZBMi25EWNHa0GhJ1U2gkvWRnDDlEWPhoJCQDrQF%2Bw%2FF7Bez%2BRvct9jAqfbvOV9Yn2m0SRfY6d3hq6xnuy4%2FFPSkA9Dvka79fhGsCX2ziXPJGJzPPoedjVqdD4GH789%2B74uAaxjn33chp8dfhvkNedDv3x6%2BhX8NsXy36at7%2Bqexoac%2FwKLNbwO3QUAAA%3D%3D'
+import { asset } from '$app/paths';
+import { readonly, writable, type Readable } from 'svelte/store';
+
+/**
+ * The examples file, under `static/home-examples.json`. Edit it there, in the
+ * order the cards should show, to change the Quick start examples: the file
+ * is fetched at runtime, not bundled, so no build or release is needed.
+ */
+const HOME_EXAMPLES_PATH = '/home-examples.json';
+
+const homeExamplesStore = writable<HomeExample[]>([]);
+
+/** The examples, in the order that the home page shows them. Use `$homeExamples` in a component. */
+export const homeExamples: Readable<HomeExample[]> = readonly(homeExamplesStore);
+
+/** True if the value has every field of a `HomeExample`, with the right type. */
+function isHomeExample(value: unknown): value is HomeExample {
+	if (typeof value !== 'object' || value === null) return false;
+
+	const entry = value as Record<string, unknown>;
+
+	return typeof entry.title === 'string'
+		&& typeof entry.description === 'string'
+		&& typeof entry.sourceName === 'string'
+		&& typeof entry.tableName === 'string'
+		&& typeof entry.image === 'string'
+		&& typeof entry.rows === 'number'
+		&& typeof entry.seconds === 'number'
+		&& typeof entry.format === 'string'
+		&& typeof entry.shareQuery === 'string';
+}
+
+/** Keeps the usable entries, in file order, and drops a malformed one. */
+function parseExamples(payload: unknown): HomeExample[] {
+	if (!Array.isArray(payload)) {
+		console.warn('home-examples.json is not an array. The home page shows no examples.');
+		return [];
 	}
-];
+
+	return payload.filter(isHomeExample);
+}
+
+/**
+ * Reads `home-examples.json` and fills the store. A failure is not fatal: it
+ * writes a warning to the console, and the home page then shows no cards.
+ */
+export async function loadHomeExamples(): Promise<HomeExample[]> {
+	try {
+		const response = await fetch(asset(HOME_EXAMPLES_PATH));
+
+		if (!response.ok) {
+			throw new Error(`The server answered ${response.status}.`);
+		}
+
+		const examples = parseExamples(await response.json());
+
+		homeExamplesStore.set(examples);
+
+		return examples;
+	} catch (error) {
+		console.warn('Could not read home-examples.json.', error);
+
+		return [];
+	}
+}
