@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { nodes } from '@/services/beacon-node';
 	import { ensureFresh, ensureHostNode } from '@/services/beacon-node-connect';
-	// These two imports use the casing on disk. A different casing adds a
-	// `svelte-check` error, and breaks a build on a case sensitive filesystem.
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
-	import Card from '@/components/card/card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import HeroNetwork from '@/components/HeroNetwork.svelte';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import HowItWorks from '@/components/home/HowItWorks.svelte';

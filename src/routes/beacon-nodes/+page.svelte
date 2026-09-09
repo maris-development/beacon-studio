@@ -5,10 +5,8 @@
 	import { FRESH_MS } from '@/services/beacon-node-health';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import Button from '@/components/buttons/Button.svelte';
-	// These two imports use the casing on disk. A different casing adds a
-	// `svelte-check` error, and breaks a build on a case sensitive filesystem.
-	import Card from '@/components/card/card.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import AddBeaconModal from '@/components/modals/AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';

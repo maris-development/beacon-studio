@@ -11,7 +11,7 @@
 	import GlobeIcon from '@lucide/svelte/icons/globe';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import Button from '@/components/buttons/Button.svelte';
-	import Card from '@/components/card/card.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import { Badge } from '@/components/ui/badge/index.js';
 	import { homeExamples, type HomeExample } from '@/data/home-examples';
 	import { SHARE_LINK_PATH } from '@/stores/stored-query';

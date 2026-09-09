@@ -8,7 +8,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
-	import Card from '@/components/card/card.svelte';
+	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 
 	const STORAGE_KEY = 'beacon-studio.home.guide-open';

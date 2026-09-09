@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
-	import Toasts from '@/components/toasts/toasts.svelte';
+	import Toasts from '@/components/toasts/Toasts.svelte';
 	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
 	import { loadOpenNodes } from '@/services/open-nodes';
 	import { loadHomeExamples } from '@/data/home-examples';
