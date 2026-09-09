@@ -3,6 +3,7 @@
 	import Toasts from '@/components/toasts/toasts.svelte';
 	import { checkAllInstances, startHealthMonitor } from '@/services/beacon-instance-connect';
 	import { loadOpenInstances } from '@/services/open-instances';
+	import { loadHomeExamples } from '@/data/home-examples';
 	import { FRESH_MS } from '@/services/beacon-instance-health';
 	import { importOpenInstances } from '@/services/open-instances-import';
 	import { onMount } from 'svelte';
@@ -16,6 +17,8 @@
 		void loadOpenInstances()
 			.then(importOpenInstances)
 			.then(() => checkAllInstances(FRESH_MS));
+
+		void loadHomeExamples();
 
 		return startHealthMonitor();
 	});
