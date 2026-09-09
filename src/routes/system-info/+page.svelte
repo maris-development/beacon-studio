@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { BeaconClient } from '@/beacon-api/client';
 
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { currentNode } from '@/services/beacon-node';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import { settings } from '@/stores/settings';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
@@ -9,19 +10,19 @@
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 
-	let currentBeaconInstanceValue: BeaconInstance | null = null;
+	let currentNodeValue: BeaconNode | null = null;
 	let client: BeaconClient;
 	let systemInfo: BeaconSystemInfo | undefined = $state(undefined);
 	let ready = $state(false);
 
 	onMount(() => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
+		currentNodeValue = $currentNode;
 
-		if (!currentBeaconInstanceValue) {
-			alert('No Beacon instance selected. Please select one before proceeding.');
+		if (!currentNodeValue) {
+			alert('No Beacon node selected. Please select one before proceeding.');
 		}
 
-		client = BeaconClient.new(currentBeaconInstanceValue);
+		client = BeaconClient.new(currentNodeValue);
 		ready = true;
 	});
 

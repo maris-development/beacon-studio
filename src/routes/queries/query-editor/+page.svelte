@@ -6,7 +6,8 @@
 	import QueryActionBar from '$lib/components/query-builder/QueryActionBar.svelte';
 	import { encodeSharedQuery } from '@/stores/stored-query';
 	import { goto } from '$app/navigation';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { currentNode } from '@/services/beacon-node';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { addToast } from '@/stores/toasts';
@@ -56,12 +57,12 @@
 
 	
 
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+	let currentNodeValue: BeaconNode | null = $state(null);
 	let client: BeaconClient;
 
 	onMount(async () => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
+		currentNodeValue = $currentNode;
+		client = BeaconClient.new(currentNodeValue);
 
 		// Load a query from a deep-link. `?q=<record id>` comes from a page such as
 		// the query history. `?query=<gzip>` comes from a share link.
@@ -114,7 +115,7 @@
 			return;
 		}
 
-		const gzippedQuery = encodeSharedQuery({ query, name: '', instanceUrl: '' });
+		const gzippedQuery = encodeSharedQuery({ query, name: '', nodeUrl: '' });
 		if (gzippedQuery) {
 			goto(`${resolvedPath}?query=${encodeURIComponent(gzippedQuery)}`);
 		}

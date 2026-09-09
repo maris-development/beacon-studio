@@ -14,7 +14,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import XIcon from '@lucide/svelte/icons/x';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
+	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import { addToast } from '@/stores/toasts';
 	// import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
@@ -189,12 +189,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			{@const columns = QueryWorkspace.getSelectedColumns(block)}
 			{@const run = workspace.getRunState(block)}
 			<!--
-				Each block runs on its own node, so every card names it. `instance` is
+				Each block runs on its own node, so every card names it. `node` is
 				null when the node is gone, and `missingUrl` then holds the address
 				that the block asks for.
 			-->
-			{@const instance = workspace.instanceFor(block)}
-			{@const missingUrl = workspace.missingInstanceUrlFor(block)}
+			{@const node = workspace.nodeFor(block)}
+			{@const missingUrl = workspace.missingNodeUrlFor(block)}
 			{@const blockReason = blockReasonFor(block)}
 			<div
 				data-block-id={block.id}
@@ -298,19 +298,19 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                         </div> -->
 
 						<div class="query-stats">
-							{#if instance}
-								<span class="query-stat instance-stat" title="Beacon instance: {instance.url}">
-									<BeaconInstanceStatus health={instance} variant="dot" />
-									{instance.name || instance.url}
+							{#if node}
+								<span class="query-stat node-stat" title="Beacon node: {node.url}">
+									<BeaconNodeStatus health={node} variant="dot" />
+									{node.name || node.url}
 								</span>
 							{:else if missingUrl}
-								<span class="query-stat instance-stat missing" title="This instance is not configured">
+								<span class="query-stat node-stat missing" title="This node is not configured">
 									<TriangleAlertIcon size="0.75rem" />
 									{missingUrl}
 								</span>
 							{:else}
-								<span class="query-stat instance-stat missing" title="Pick an instance for this query">
-									No instance
+								<span class="query-stat node-stat missing" title="Pick a node for this query">
+									No node
 								</span>
 							{/if}
 							<span class="query-stat" title="Selected table">
@@ -426,7 +426,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		}
 
 		// The node of the block. The dot and the icon sit on the text baseline.
-		.instance-stat {
+		.node-stat {
 			display: inline-flex;
 			align-items: center;
 			gap: 0.25rem;

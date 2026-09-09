@@ -58,7 +58,7 @@
 	 * node only, so the receiver needs it. The link never carries the token.
 	 */
 	async function copyShareLink(entry: StoredQuery): Promise<void> {
-		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH), entry.name, entry.instance);
+		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH), entry.name, entry.node);
 
 		if (!link) {
 			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
@@ -148,8 +148,8 @@
 										<div class="entry-name" title={entry.name}>{entry.name}</div>
 									{/if}
 									<div class="meta">
-										{#if entry.instance.name || entry.instance.url}
-											<span class="badge">{entry.instance.name || entry.instance.url}</span>
+										{#if entry.node.name || entry.node.url}
+											<span class="badge">{entry.node.name || entry.node.url}</span>
 										{/if}
 										<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
 										<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>

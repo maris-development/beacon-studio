@@ -13,13 +13,13 @@ import { queryHistory } from '@/stores/query-history';
 import { savedQueries } from '@/stores/saved-queries';
 import {
 	decodeSharedQuery,
-	instanceRefFromUrl,
-	type InstanceRef,
+	nodeRefFromUrl,
+	type NodeRef,
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
-import { resolveRef } from '@/services/beacon-instance';
+import { resolveRef } from '@/services/beacon-node';
 import { addToast } from "@/stores/toasts";
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
@@ -86,22 +86,22 @@ export interface ResolvedUrlQuery {
 	name: string | null;
 	/**
 	 * The value of `entry.id`, or undefined if there is no record. Send it to
-	 * `ensureQuery(query, instance, storedQueryId)`. The app then writes the run
+	 * `ensureQuery(query, node, storedQueryId)`. The app then writes the run
 	 * to the record. See `QueryStore.ensure` for the effects of this link.
 	 */
 	storedQueryId?: string;
 	/**
 	 * The node that must run the query. A `?q=` link takes it from the record. A
-	 * share link takes it from `?instance=`. It is null when the URL named none.
+	 * share link takes it from `?node=`. It is null when the URL named none.
 	 * The caller then falls back to its own default.
 	 */
-	instance: InstanceRef | null;
+	node: NodeRef | null;
 	/**
-	 * The URL of a node that the link named, but that the instance list does not
+	 * The URL of a node that the link named, but that the node list does not
 	 * hold. The page shows a toast, and asks the user to add that node. It is
 	 * null when the node resolves, and when the link named none.
 	 */
-	missingInstanceUrl: string | null;
+	missingNodeUrl: string | null;
 
 	/**
 	 * True if the URL had either `?q=` or `?query=`. A page uses this to decide
@@ -140,8 +140,8 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			query: entry.compiled,
 			name: entry.name,
 			storedQueryId: entry.id,
-			instance: entry.instance,
-			missingInstanceUrl: missingUrlOf(entry.instance),
+			node: entry.node,
+			missingNodeUrl: missingUrlOf(entry.node),
 			containsQueryParam
 		};
 	}
@@ -150,14 +150,14 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	if (shared) {
 		try {
 			const payload = decodeSharedQuery(shared);
-			const instance = sharedInstanceRef(payload.instanceUrl);
+			const node = sharedNodeRef(payload.nodeUrl);
 
 			return {
 				entry: null,
 				query: payload.query,
 				name: payload.name,
-				instance,
-				missingInstanceUrl: missingUrlOf(instance),
+				node,
+				missingNodeUrl: missingUrlOf(node),
 				containsQueryParam
 			};
 		} catch (error) {
@@ -168,31 +168,31 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				type: 'error'
 			});
 
-			return { entry: null, query: null, name: null, instance: null, missingInstanceUrl: null, containsQueryParam };
+			return { entry: null, query: null, name: null, node: null, missingNodeUrl: null, containsQueryParam };
 		}
 	}
 
-	return { entry: null, query: null, name: null, instance: null, missingInstanceUrl: null, containsQueryParam };
+	return { entry: null, query: null, name: null, node: null, missingNodeUrl: null, containsQueryParam };
 }
 
 /**
  * The node of a share link, or null. The payload holds an empty URL when the
  * sender named no node. The caller then uses its own default.
  */
-function sharedInstanceRef(instanceUrl: string): InstanceRef | null {
-	const shared = instanceUrl.trim();
+function sharedNodeRef(nodeUrl: string): NodeRef | null {
+	const shared = nodeUrl.trim();
 	if (!shared) return null;
 
 	// The list can already hold this node. Take the full ref then, so the record
 	// keeps the name that the user gave it.
-	const known = resolveRef(instanceRefFromUrl(shared));
+	const known = resolveRef(nodeRefFromUrl(shared));
 	if (known) return { id: known.id, name: known.name, url: known.url };
 
-	return instanceRefFromUrl(shared);
+	return nodeRefFromUrl(shared);
 }
 
-/** The URL of a ref that the instance list does not hold, else null. */
-function missingUrlOf(ref: InstanceRef | null): string | null {
+/** The URL of a ref that the node list does not hold, else null. */
+function missingUrlOf(ref: NodeRef | null): string | null {
 	if (!ref?.url) return null;
 	if (resolveRef(ref)) return null;
 	return ref.url;

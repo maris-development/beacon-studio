@@ -22,7 +22,7 @@ import type { QueryWarning } from '@/beacon-api/types';
 import { getSettings } from '@/stores/settings';
 
 /** Bump to invalidate all previously persisted entries on format changes. */
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 
 /**
  * The budgets of this cache. The user sets them on the settings page:

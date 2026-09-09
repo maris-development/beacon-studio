@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { instances } from '@/services/beacon-instance';
-	import { ensureFresh, ensureHostInstance } from '@/services/beacon-instance-connect';
+	import { nodes } from '@/services/beacon-node';
+	import { ensureFresh, ensureHostNode } from '@/services/beacon-node-connect';
 	// These two imports use the casing on disk. A different casing adds a
 	// `svelte-check` error, and breaks a build on a case sensitive filesystem.
 	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
 	import Card from '@/components/card/card.svelte';
 	import HeroNetwork from '@/components/HeroNetwork.svelte';
-	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
+	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import HowItWorks from '@/components/home/HowItWorks.svelte';
 	import QuickStartExamples from '@/components/home/QuickStartExamples.svelte';
 	import { onMount } from 'svelte';
@@ -15,26 +15,26 @@
 
 	import { asset, resolve } from '$app/paths';
 
-	// The Connected Instances card cycles through every configured instance, so
+	// The Connected Nodes card cycles through every configured node, so
 	// each one needs a true status dot. `ensureFresh` skips a check that is not due.
 	$effect(() => {
-		for (const instance of $instances) void ensureFresh(instance);
+		for (const node of $nodes) void ensureFresh(node);
 	});
 
 	const CYCLE_INTERVAL_MS = 5_000;
 
-	/** Advances every `CYCLE_INTERVAL_MS`. The Connected Instances card uses it to
-	 * step through `$instances`. */
+	/** Advances every `CYCLE_INTERVAL_MS`. The Connected Nodes card uses it to
+	 * step through `$nodes`. */
 	let cycleIndex = $state(0);
 
-	/** The instance the Connected Instances card shows now, or `null` if none is configured. */
-	let displayedInstance = $derived(
-		$instances.length > 0 ? $instances[cycleIndex % $instances.length] : null
+	/** The node the Connected Nodes card shows now, or `null` if none is configured. */
+	let displayedNode = $derived(
+		$nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null
 	);
 
 	onMount(() => {
 		// The app can run on the same host as a Beacon node. Add that node once.
-		void ensureHostInstance(window.location.origin);
+		void ensureHostNode(window.location.origin);
 
 		const timer = setInterval(() => (cycleIndex += 1), CYCLE_INTERVAL_MS);
 		return () => clearInterval(timer);
@@ -56,33 +56,33 @@
 	</div>
 
 	<section class="home-section">
-		<h2>Connected Instances ({$instances.length})</h2>
+		<h2>Connected Nodes ({$nodes.length})</h2>
 
-		<div class="connected-instances">
+		<div class="connected-nodes">
 			<Card>
 				<div class="current-node">
-					{#key displayedInstance?.id ?? 'none'}
+					{#key displayedNode?.id ?? 'none'}
 						<div class="cycle-content" transition:fade={{ duration: 500 }}>
-							{#if displayedInstance}
+							{#if displayedNode}
 								<div class="current-node-info">
 									<div class="name-url">
-										<p class="name">{displayedInstance.name}</p>
+										<p class="name">{displayedNode.name}</p>
 										<a
 											class="url"
-											href={displayedInstance.url}
+											href={displayedNode.url}
 											rel="noopener noreferrer"
-											target="_blank">{displayedInstance.url}</a
+											target="_blank">{displayedNode.url}</a
 										>
 									</div>
-									<BeaconInstanceStatus health={displayedInstance} />
+									<BeaconNodeStatus health={displayedNode} />
 								</div>
 							{:else}
-								<p class="no-instance">No Beacon instance is configured.</p>
+								<p class="no-node">No Beacon node is configured.</p>
 							{/if}
 						</div>
 					{/key}
 				</div>
-				<Button href={resolve('/beacon-instances')}>Manage Instances</Button>
+				<Button href={resolve('/beacon-nodes')}>Manage Nodes</Button>
 			</Card>
 		</div>
 	</section>
@@ -162,7 +162,7 @@
 			margin-top: 3rem;
 		}
 
-		.connected-instances {
+		.connected-nodes {
 			:global(.card-content) {
 				display: flex;
 				flex-direction: row;
@@ -183,7 +183,7 @@
 				grid-row: 1;
 			}
 
-			.no-instance {
+			.no-node {
 				color: var(--muted-foreground);
 			}
 

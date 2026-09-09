@@ -15,13 +15,13 @@
 import { createQueryCollection } from '@/stores/query-collection';
 import {
 	cloneStoredQuery,
-	snapshotInstance,
-	type InstanceRef,
+	snapshotNode,
+	type NodeRef,
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
-import { getCurrentInstance } from '@/services/beacon-instance';
+import { getCurrentNode } from '@/services/beacon-node';
 
 /** The persisted list of saved queries for the full app. The newest comes first. */
 export const savedQueries = createQueryCollection({
@@ -35,7 +35,7 @@ export interface SaveQueryInput {
 	name: string;
 	compiled: CompiledQuery;
 	draft?: QueryDraft | null;
-	instance?: InstanceRef;
+	node?: NodeRef;
 }
 
 /**
@@ -47,7 +47,7 @@ export function addSavedQuery(input: SaveQueryInput): StoredQuery {
 		name: input.name,
 		draft: input.draft ?? null,
 		compiled: input.compiled,
-		instance: input.instance ?? snapshotInstance(getCurrentInstance())
+		node: input.node ?? snapshotNode(getCurrentNode())
 	});
 }
 

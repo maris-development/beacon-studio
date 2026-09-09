@@ -54,6 +54,27 @@ function recencyOf(entry: StoredQuery): number {
 	return entry.lastExecutedAt ?? entry.updatedAt ?? entry.createdAt;
 }
 
+/**
+ * A record as an older app version wrote it: the node ref sat on `instance`.
+ * That name is a storage format, not a term. Never rename it.
+ */
+type LegacyRecord = StoredQuery & { instance?: StoredQuery['node'] };
+
+/**
+ * Moves the node ref of a stored record onto `node`. It returns null for a
+ * record that needs no change, so the caller writes only when something moved.
+ *
+ * The migration also clears `datasetKey`. The cache key format changed with the
+ * field, so an old key matches no entry of either cache tier.
+ */
+function migrateRecord(entry: LegacyRecord): StoredQuery | null {
+	if (!entry.instance) return null;
+
+	const { instance, ...rest } = entry;
+
+	return { ...rest, node: entry.node ?? instance, datasetKey: null };
+}
+
 export class QueryCollection implements Readable<StoredQuery[]> {
 	private readonly store: ReturnType<typeof persisted<StoredQuery[]>>;
 	private readonly options: QueryCollectionOptions;
@@ -65,6 +86,24 @@ export class QueryCollection implements Readable<StoredQuery[]> {
 		this.options = options;
 		this.store = persisted<StoredQuery[]>(options.storageKey, []);
 		this.subscribe = this.store.subscribe;
+		this.migrate();
+	}
+
+	/** Brings every stored record to the current shape. See {@link migrateRecord}. */
+	private migrate(): void {
+		const entries = get(this.store) as LegacyRecord[];
+		let changed = false;
+
+		const next = entries.map((entry) => {
+			const migrated = migrateRecord(entry);
+
+			if (!migrated) return entry as StoredQuery;
+
+			changed = true;
+			return migrated;
+		});
+
+		if (changed) this.store.set(next);
 	}
 
 	get role(): StoredQueryRole {

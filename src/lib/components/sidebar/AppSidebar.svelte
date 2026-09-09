@@ -1,7 +1,7 @@
 <script lang="ts">
-	// Instance service
-	import { currentInstance, instances, selectFirstIfNone } from '@/services/beacon-instance';
-	import { ensureFresh } from '@/services/beacon-instance-connect';
+	// Node service
+	import { currentNode, nodes, selectFirstIfNone } from '@/services/beacon-node';
+	import { ensureFresh } from '@/services/beacon-node-connect';
 	import logo from '$lib/assets/logo-gradient.svg';
 
 	// Svelte lifecycle and navigation
@@ -28,7 +28,7 @@
 	// Components
 	import ChooseBeaconModal from '../modals/ChooseBeaconModal.svelte';
 	import FeedbackModal from '../modals/FeedbackModal.svelte';
-	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
+	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
@@ -93,7 +93,7 @@
 		{
 			title: 'Beacon Studio',
 			items: [
-				{ title: 'Beacon Instances', url: resolve('/beacon-instances'), icon: LinkIcon },
+				{ title: 'Beacon Nodes', url: resolve('/beacon-nodes'), icon: LinkIcon },
 				{ title: 'Settings', url: resolve('/settings'), icon: Settings2Icon }
 			]
 		}
@@ -119,42 +119,42 @@
 	let showChooseBeaconModal: boolean = $state(false);
 	let showFeedbackModal: boolean = $state(false);
 
-	function openBeaconInstancePicker(): void {
+	function openBeaconNodePicker(): void {
 		showChooseBeaconModal = true;
 	}
 
 	// The sidebar shows the status of the selection on every page. Refresh a
 	// stale result. `ensureFresh` skips a check that is not due.
 	$effect(() => {
-		const instance = $currentInstance;
-		if (instance) void ensureFresh(instance);
+		const node = $currentNode;
+		if (node) void ensureFresh(node);
 	});
 
-	// The routes that work with an empty list. Both of them can add an instance.
-	const INSTANCE_FREE_ROUTES = new Set(['/', '/beacon-instances']);
+	// The routes that work with an empty list. Both of them can add a node.
+	const NODE_FREE_ROUTES = new Set(['/', '/beacon-nodes']);
 
 	// `page.route.id` carries no base path, so it needs no `resolve`.
-	function needsInstance(routeId: string | null | undefined): boolean {
-		return !INSTANCE_FREE_ROUTES.has(routeId ?? '');
+	function needsNode(routeId: string | null | undefined): boolean {
+		return !NODE_FREE_ROUTES.has(routeId ?? '');
 	}
 
-	function warnNoInstance(): void {
+	function warnNoNode(): void {
 		addToast({
 			type: 'error',
-			message: 'This page needs a Beacon instance. Add one on the Beacon Instances page.'
+			message: 'This page needs a Beacon node. Add one on the Beacon Nodes page.'
 		});
 	}
 
-	// The app needs at least one instance for every route but the two above: this
+	// The app needs at least one node for every route but the two above: this
 	// selection is the node of the browse pages and of a new query, and a query
 	// record holds its own node. Block the navigation instead of following it, so
 	// the user stays on the page they came from and sees why the target failed.
 	beforeNavigate((navigation) => {
-		if ($instances.length > 0) return;
-		if (!needsInstance(navigation.to?.route.id)) return;
+		if ($nodes.length > 0) return;
+		if (!needsNode(navigation.to?.route.id)) return;
 
 		navigation.cancel();
-		warnNoInstance();
+		warnNoNode();
 	});
 
 	onMount(() => {
@@ -175,8 +175,8 @@
 		// `beforeNavigate` never runs for the page a session opens on. A direct
 		// load of a blocked route (a bookmark, a refresh, a shared link) has no
 		// prior page to stay on, so send it home instead.
-		if ($instances.length === 0 && needsInstance(page.route.id)) {
-			warnNoInstance();
+		if ($nodes.length === 0 && needsNode(page.route.id)) {
+			warnNoNode();
 			goto(resolve('/'));
 		}
 
@@ -230,20 +230,20 @@
 		<!--
 			The node of the browse pages, and the node of a new query block. It is
 			not the node of an open query: a query record owns that one, and the
-			workbench shows it. See `QueryWorkspace.activeInstance`.
+			workbench shows it. See `QueryWorkspace.activeNode`.
 		-->
 		<!-- <button
-			class="current-instance"
-			title="The instance for browsing, and for a new query"
-			onclick={openBeaconInstancePicker}
+			class="current-node"
+			title="The node for browsing, and for a new query"
+			onclick={openBeaconNodePicker}
 		>
-			<span class="instance-icon"><LinkIcon /></span>
-			<div class="instance-text">
-				<span class="instance-name">{$currentInstance?.name ?? 'No instance picked'}</span>
-				<span class="instance-url">{$currentInstance?.url ?? ''}</span>
+			<span class="node-icon"><LinkIcon /></span>
+			<div class="node-text">
+				<span class="node-name">{$currentNode?.name ?? 'No node picked'}</span>
+				<span class="node-url">{$currentNode?.url ?? ''}</span>
 			</div>
-			{#if $currentInstance}
-				<BeaconInstanceStatus health={$currentInstance} variant="dot" />
+			{#if $currentNode}
+				<BeaconNodeStatus health={$currentNode} variant="dot" />
 			{/if}
 		</button> -->
 	</div>
@@ -364,7 +364,7 @@
 				}
 			}
 
-			.current-instance {
+			.current-node {
 				display: flex;
 				appearance: none;
 				width: 100%;
@@ -379,7 +379,7 @@
 
 				background-color: rgba(255, 255, 255, 0.25);
 
-				.instance-icon {
+				.node-icon {
 					display: flex;
 					flex-shrink: 0;
 
@@ -389,7 +389,7 @@
 					}
 				}
 
-				.instance-text {
+				.node-text {
 					display: grid;
 					flex: 1;
 					min-width: 0;
@@ -398,18 +398,18 @@
 					line-height: 1.25;
 				}
 
-				.instance-name {
+				.node-name {
 					font-weight: var(--sidebar-bold-font-weight);
 				}
 
-				.instance-name,
-				.instance-url {
+				.node-name,
+				.node-url {
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
 				}
 
-				.instance-url {
+				.node-url {
 					font-size: 0.75rem;
 				}
 
@@ -456,7 +456,7 @@
 
 			.sidebar-content,
 			.sidebar-footer,
-			.current-instance,
+			.current-node,
 			.logo-wrapper .header-link {
 				display: none;
 			}

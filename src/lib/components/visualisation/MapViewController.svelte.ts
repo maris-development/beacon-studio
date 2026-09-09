@@ -28,7 +28,7 @@ import * as ApacheArrow from 'apache-arrow';
 import { unmount } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 import { queryStore } from '@/stores/query-store.svelte';
-import type { BeaconInstance, CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery, Select as QuerySelect } from '@/beacon-api/types';
 import { ApacheArrowUtils } from '@/arrow-utils';
 import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
@@ -361,7 +361,7 @@ export class MapViewController {
 	 * block, for example after the user applied an area filter. The camera then
 	 * stays where the user left it.
 	 */
-	async runAndShowQuery(query: CompiledQuery, instance: BeaconInstance, blockId: string, keepCamera: boolean): Promise<void> {
+	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string, keepCamera: boolean): Promise<void> {
 		this.isLoading = true;
 		const token = this.beginRun(blockId);
 		this.latestRun = token;
@@ -369,7 +369,7 @@ export class MapViewController {
 		try {
 			this.deriveColumnNames(query);
 
-			this.entry = await BeaconClient.ensureQuery(query, instance, blockId);
+			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
 			this.markRun(blockId, this.entry.rowCount);
 
 			if (this.entry.rowCount === 0) {

@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
-	import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
+	import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { queryStore } from '@/stores/query-store.svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
@@ -60,12 +60,12 @@
 
 	// The node of the active block. A block owns its node, so a switch of block
 	// switches the node. The URL is a primitive, so the run effect below can track
-	// it. It is null while the block names no node, and while the instance list
+	// it. It is null while the block names no node, and while the node list
 	// holds no node for its ref. The effect then runs nothing.
 	//
 	// The URL also belongs in the run key. A user can add a node that a share link
 	// asked for. The query must then run, with no other change to the block.
-	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
+	const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
 	/**
@@ -87,9 +87,9 @@
 	$effect(() => {
 		const blockId = activeBlockId;
 		const key = queryKey;
-		const instanceUrl = activeInstanceUrl;
+		const nodeUrl = activeNodeUrl;
 
-		if (!blockId || !key || !instanceUrl) {
+		if (!blockId || !key || !nodeUrl) {
 			entry = null;
 			columns = [];
 			displayRows = [];
@@ -103,7 +103,7 @@
 		// The run key stays empty, so a revert of the edit runs the query again.
 		const blocked = runBlockReason(untrack(() => compiledQuery));
 		if (blocked) {
-			const blockedKey = `${blockId}:${instanceUrl}:${key}`;
+			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
 			if (blockedKey !== lastBlockedKey) {
 				lastBlockedKey = blockedKey;
 				addToast({ type: 'warning', message: blocked });
@@ -120,37 +120,37 @@
 
 		lastBlockedKey = null;
 
-		const runKey = `${blockId}:${instanceUrl}:${key}:${requireFilters}`;
+		const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
 		if (runKey === lastRunKey) return;
 		lastRunKey = runKey;
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
-		const { block, query, instance } = untrack(() => ({
+		const { block, query, node } = untrack(() => ({
 			block: workspace.activeBlock,
 			query: compiledQuery,
-			instance: workspace.activeInstance
+			node: workspace.activeNode
 		}));
-		if (!block || !query || !instance) return;
+		if (!block || !query || !node) return;
 
 		// Show a cached result at once if the block already has one.
 		entry = BeaconClient.peekQueryByKey(block.datasetKey) ?? null;
 		if (entry) prepareTableForDisplay();
 
-		executeAndDisplayQuery(block, query, instance);
+		executeAndDisplayQuery(block, query, node);
 	});
 
 	async function executeAndDisplayQuery(
 		block: StoredQuery,
 		query: CompiledQuery,
-		instance: BeaconInstance
+		node: BeaconNode
 	) {
 		const token = workspace.beginBlockRun(block.id);
 		latestRun = token;
 		isLoading = true;
 
 		try {
-			entry = await BeaconClient.ensureQuery(query, instance, block.id);
+			entry = await BeaconClient.ensureQuery(query, node, block.id);
 			workspace.markBlockRun(block.id, entry.rowCount);
 
 			if (entry.rowCount === 0) {

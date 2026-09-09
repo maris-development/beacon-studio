@@ -2,7 +2,7 @@
 	import { Utils } from '@/utils';
 	import { onMount } from 'svelte';
 
-	/** Parent passes these in to handle save/close; optionally an instance for editing */
+	/** Parent passes these in to handle save/close; optionally a record for editing */
 	export let onClose: () => void;
 	export let canCloseModal: boolean = true;
 	export let title: string = '';
