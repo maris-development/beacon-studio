@@ -52,7 +52,7 @@
 <div class="page-wrapper">
 	<div class="header">
 		<h1 class="title">Welcome to Beacon <span class="highlight">Studio</span></h1>
-		<p class="subtitle">Explore and analyse your Beacon node data</p>
+		<p class="subtitle">Explore and query a Beacon node in your browser. The node reads the files in place and returns rows and columns, not files.</p>
 	</div>
 
 	<section class="home-section">
