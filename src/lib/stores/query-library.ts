@@ -93,6 +93,7 @@ export interface ResolvedUrlQuery {
 	/**
 	 * The node that must run the query. A `?q=` link takes it from the record. A
 	 * share link takes it from `?node=`. It is null when the URL named none.
+	 * * Share link takes it from node in the sharedquery object, ?node= deprecated from url
 	 * The caller then falls back to its own default.
 	 */
 	node: NodeRef | null;
