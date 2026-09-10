@@ -10,8 +10,11 @@
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import Button from '@/components/buttons/Button.svelte';
+	import { addToast } from '@/stores/toasts';
 
 	import { asset, resolve } from '$app/paths';
+
+	const BETA_TOAST_STORAGE_KEY = 'beacon-studio.home.beta-toast-shown';
 
 	// The Connected Nodes card cycles through every configured node, so
 	// each one needs a true status dot. `ensureFresh` skips a check that is not due.
@@ -33,6 +36,16 @@
 	onMount(() => {
 		// The app can run on the same host as a Beacon node. Add that node once.
 		void ensureHostNode(window.location.origin);
+
+		if (!localStorage.getItem(BETA_TOAST_STORAGE_KEY)) {
+			addToast({
+				type: 'info',
+				timeout: 20000,
+				message:
+					'Beacon Studio is still in Beta stage, please provide any feedback by clicking "Feedback" in the bottom left corner.'
+			});
+			localStorage.setItem(BETA_TOAST_STORAGE_KEY, 'true');
+		}
 
 		const timer = setInterval(() => (cycleIndex += 1), CYCLE_INTERVAL_MS);
 		return () => clearInterval(timer);
