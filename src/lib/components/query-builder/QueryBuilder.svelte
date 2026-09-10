@@ -106,16 +106,28 @@
 		client = BeaconClient.new(node);
 
 		let tables: string[];
-		let default_table: string;
 
 		try {
 			tables = await client.getCachedTables();
-			default_table = await client.getCachedDefaultTable();
 		} catch (error) {
 			console.error('Could not read the tables of the Beacon node.', error);
 			loadError = (error as Error)?.message || 'The Beacon node did not answer.';
 			loaded = true;
 			return;
+		}
+
+		// A node can have no default table configured, so this is an offer, not a
+		// requirement. Fall back to the first table when it fails or is unusable.
+		let default_table: string | undefined;
+
+		try {
+			default_table = await client.getCachedDefaultTable();
+		} catch (error) {
+			console.warn('Could not read the default table of the Beacon node.', error);
+		}
+
+		if (!default_table || !tables.includes(default_table)) {
+			default_table = tables[0];
 		}
 
 		// By default, select the first table, or restore the table from the draft/seed.
