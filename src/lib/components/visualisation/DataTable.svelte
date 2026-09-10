@@ -169,14 +169,16 @@
 			min-height: 0;
 
 			table.dataset-table {
-				width: 100%;
+				min-width: 100%;
+				width: max-content;
 				border-collapse: collapse;
 
-				thead th, 
+				thead th,
 				tbody td {
 					padding: 0.5rem 0.75rem;
 					font-size: 0.875rem;
 					border-bottom: 1px solid #ddd;
+					white-space: nowrap;
 				}
 
 				&.small {
