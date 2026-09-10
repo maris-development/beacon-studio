@@ -16,7 +16,7 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { normalizeUrl } from './beacon-node-url';
 
 /** The address of the public list. MARIS owns the path, so the app keeps it. */
-export const OPEN_NODES_URL = 'https://beacon-datalake.org/open-instances.json';
+export const OPEN_NODES_URL = 'https://beacon-datalake.org/public-nodes.json';
 
 /** The time after which the fetch of the list counts as a failure. */
 const FETCH_TIMEOUT_MS = 10_000;
