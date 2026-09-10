@@ -5,10 +5,10 @@
 	import HammerIcon from '@lucide/svelte/icons/hammer';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import type { BeaconInstance } from '@/stores/config';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import * as Select from '$lib/components/ui/select/index.js';
 
-	let { onCancel = () => {}, instance }: { onCancel: (boolean) => void; instance: BeaconInstance } =
+	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
 		$props();
 	let username = $state('');
 	let password = $state('');
@@ -58,7 +58,7 @@
 		let json = JSON.stringify(table_config, null, 2);
 		// console.log('Creating table with config:', json);
 		try {
-			const res = await fetch(`${instance.url}/api/admin/create-table`, {
+			const res = await fetch(`${node.url}/api/admin/create-table`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Basic ${token}`,

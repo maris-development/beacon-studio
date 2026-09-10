@@ -5,9 +5,9 @@
 	import FilePlusIcon from '@lucide/svelte/icons/file-plus';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import type { BeaconInstance } from '@/stores/config';
+	import type { BeaconNode } from '@/beacon-api/types';
 
-	let { onCancel = () => {}, instance }: { onCancel: (boolean) => void; instance: BeaconInstance } =
+	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
 		$props();
 	let username = $state('');
 	let password = $state('');
@@ -34,7 +34,7 @@
 		const token = btoa(`${username}:${password}`);
 
 		try {
-			const res = await fetch(`${instance.url}/api/admin/upload-file`, {
+			const res = await fetch(`${node.url}/api/admin/upload-file`, {
 				method: 'POST',
 				headers: {
 					Authorization: `Basic ${token}`

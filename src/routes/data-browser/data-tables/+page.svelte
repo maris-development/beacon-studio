@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { instances } from '@/services/beacon-instance';
-	import { ensureFresh } from '@/services/beacon-instance-connect';
+	import { nodes } from '@/services/beacon-node';
+	import { ensureFresh } from '@/services/beacon-node-connect';
 	import { BeaconClient } from '@/beacon-api/client';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
@@ -12,12 +12,12 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
-	import { dataBrowserInstanceId } from '@/stores/data-browser-instance';
+	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import { dataBrowserNodeId } from '@/stores/data-browser-node';
 
-	let selectedInstanceId = dataBrowserInstanceId;
-	let selectedInstance = $derived(
-		$instances.find((instance) => instance.id === $selectedInstanceId) ?? $instances[0] ?? null
+	let selectedNodeId = dataBrowserNodeId;
+	let selectedNode = $derived(
+		$nodes.find((node) => node.id === $selectedNodeId) ?? $nodes[0] ?? null
 	);
 	let client: BeaconClient;
 
@@ -33,16 +33,16 @@
 	let firstLoad = true;
 	let create_table_modal_open: boolean = $state(false);
 
-	let loadedInstanceId: string | null = null;
+	let loadedNodeId: string | null = null;
 
 	$effect(() => {
-		if (!selectedInstance || selectedInstance.id === loadedInstanceId) return;
-		loadedInstanceId = selectedInstance.id;
+		if (!selectedNode || selectedNode.id === loadedNodeId) return;
+		loadedNodeId = selectedNode.id;
 
-		// Persist a fallback pick (e.g. first instance) the same as an explicit one.
-		if ($selectedInstanceId !== selectedInstance.id) selectedInstanceId.set(selectedInstance.id);
+		// Persist a fallback pick (e.g. first node) the same as an explicit one.
+		if ($selectedNodeId !== selectedNode.id) selectedNodeId.set(selectedNode.id);
 
-		client = BeaconClient.new(selectedInstance);
+		client = BeaconClient.new(selectedNode);
 		pageIndex = 1;
 
 		firstLoad = true; // let getTables() run again despite the isLoading guard
@@ -52,7 +52,7 @@
 	// Show a true status dot for the picker. `ensureFresh` skips a check that is
 	// not due, so this costs nothing on a second visit.
 	$effect(() => {
-		for (const instance of $instances) void ensureFresh(instance);
+		for (const node of $nodes) void ensureFresh(node);
 	});
 
 	async function onAsyncMount() {
@@ -132,35 +132,35 @@
 	<div class="page-container">
 		<h1>Data Tables</h1>
 
-		<p>Explore and manage the tables that are available in your Beacon instance.</p>
+		<p>Explore and manage the tables that are available in your Beacon node.</p>
 
-		<div class="mb-4 flex items-center gap-2 instance-picker">
+		<div class="mb-4 flex items-center gap-2 node-picker">
 			<Select.Root
 				type="single"
-				name="beaconInstance"
-				value={selectedInstance?.id ?? ''}
-				onValueChange={(id) => selectedInstanceId.set(id)}
+				name="beaconNode"
+				value={selectedNode?.id ?? ''}
+				onValueChange={(id) => selectedNodeId.set(id)}
 			>
-				<Select.Trigger class="instance-select-trigger">
-					{selectedInstance?.name ?? 'Select an instance'}
+				<Select.Trigger class="node-select-trigger">
+					{selectedNode?.name ?? 'Select a node'}
 				</Select.Trigger>
 				<Select.Content>
 					<Select.Group>
-						<Select.Label>Instances</Select.Label>
-						{#each $instances as instance (instance.id)}
-							<Select.Item value={instance.id} label={instance.name}>
-								{instance.name}
+						<Select.Label>Nodes</Select.Label>
+						{#each $nodes as node (node.id)}
+							<Select.Item value={node.id} label={node.name}>
+								{node.name}
 							</Select.Item>
 						{/each}
 					</Select.Group>
 				</Select.Content>
 			</Select.Root>
 
-			{#if selectedInstance}
-				<BeaconInstanceStatus health={selectedInstance} variant="dot" />
+			{#if selectedNode}
+				<BeaconNodeStatus health={selectedNode} variant="dot" />
 			{/if}
 
-			{#if $instances.length > 0}
+			{#if $nodes.length > 0}
 				<Button
 					class="ml-auto"
 					variant="outline"
@@ -169,8 +169,8 @@
 			{/if}
 		</div>
 
-		{#if $instances.length === 0}
-			<p>No saved Beacon instances yet. Please add a Beacon instance on the Beacon Instances page to browse data tables.</p>
+		{#if $nodes.length === 0}
+			<p>No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse data tables.</p>
 		{:else}
 			<DataTable
 				rowClass="arrow-row"
@@ -188,7 +188,7 @@
 			{#if create_table_modal_open}
 				<CreateTableModal
 					onCancel={() => (create_table_modal_open = false)}
-					instance={selectedInstance}
+					node={selectedNode}
 				/>
 			{/if}
 		{/if}

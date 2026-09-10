@@ -22,12 +22,12 @@
  * from the JSON editor. The builder fills the draft after the schema loads. See
  * {@link seedFor}. From that point the draft leads.
  *
- * Each block also holds its own Beacon node, in `instance`. The node is part of
+ * Each block also holds its own Beacon node, in `node`. The node is part of
  * the query, like the table. A switch of block therefore switches the node, and
- * two open blocks can read two nodes. {@link activeInstance} resolves the ref of
- * the active block against the instance list. It is null while the ref names no
+ * two open blocks can read two nodes. {@link activeNode} resolves the ref of
+ * the active block against the node list. It is null while the ref names no
  * node, and while the list holds no node for that ref. The builder then shows
- * the instance picker, and the user chooses.
+ * the node picker, and the user chooses.
  *
  * Data flow:
  *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
@@ -55,14 +55,14 @@ import {
 import type { ResolvedUrlQuery } from '@/stores/query-library';
 import {
 	cloneStoredQuery,
-	hasInstanceRef,
-	snapshotInstance,
-	type InstanceRef,
+	hasNodeRef,
+	snapshotNode,
+	type NodeRef,
 	type MapViewState,
 	type StoredQuery
 } from '@/stores/stored-query';
-import { getCurrentInstance, instances, matchRef } from '@/services/beacon-instance';
-import type { BeaconInstance } from '@/beacon-api/types';
+import { getCurrentNode, nodes, matchRef } from '@/services/beacon-node';
+import type { BeaconNode } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
@@ -103,22 +103,22 @@ export class QueryWorkspace {
 	private nextRunToken = 1;
 
 	/**
-	 * A reactive mirror of the configured instances. The workspace resolves the
-	 * ref of a block against this list, so a new instance, an edit of a URL or a
+	 * A reactive mirror of the configured nodes. The workspace resolves the
+	 * ref of a block against this list, so a new node, an edit of a URL or a
 	 * health check reaches the builder at once. Do not assign to this field.
 	 */
-	private instanceList = $state<BeaconInstance[]>([]);
+	private nodeList = $state<BeaconNode[]>([]);
 
 	/**
 	 * The blocks whose node the app guessed. A share link of an older app version
-	 * carries no `?instance=`, so the block falls back to the default node. That
+	 * carries no `?node=`, so the block falls back to the default node. That
 	 * node often has other tables, and the query then loads no columns.
 	 *
 	 * The record does not hold this flag. It is a fact about the link, not about
 	 * the query. The user sees the report once, and the block is theirs after
 	 * that. Therefore a reload must not report it again.
 	 */
-	private guessedInstance = $state<Record<string, boolean>>({});
+	private guessedNode = $state<Record<string, boolean>>({});
 
 	/** Releases the two store subscriptions. See {@link destroy}. */
 	private unsubscribe: () => void;
@@ -128,13 +128,13 @@ export class QueryWorkspace {
 			this.blocks = entries;
 		});
 
-		const stopInstances = instances.subscribe((list) => {
-			this.instanceList = list;
+		const stopNodes = nodes.subscribe((list) => {
+			this.nodeList = list;
 		});
 
 		this.unsubscribe = () => {
 			stopBlocks();
-			stopInstances();
+			stopNodes();
 		};
 
 		this.restoreSelection();
@@ -161,11 +161,11 @@ export class QueryWorkspace {
 			const alreadyOpen = this.blocks.find((block) => block.id === resolved.entry?.id);
 			if (alreadyOpen) {
 				this.select(alreadyOpen.id);
-				this.warnMissingInstance(resolved.missingInstanceUrl);
+				this.warnMissingNode(resolved.missingNodeUrl);
 				return;
 			}
 			this.addFromStoredQuery(resolved.entry);
-			this.warnMissingInstance(resolved.missingInstanceUrl);
+			this.warnMissingNode(resolved.missingNodeUrl);
 			return;
 		}
 
@@ -174,29 +174,29 @@ export class QueryWorkspace {
 			// the list holds no node for it. The builder then names the URL, and asks
 			// the user to add it. A link with no node lets the block fall back to the
 			// default. An empty name does the same for the name of the block.
-			const block = this.addFromQuery(resolved.query, resolved.name || undefined, resolved.instance);
+			const block = this.addFromQuery(resolved.query, resolved.name || undefined, resolved.node);
 
 			// Mark the guess. The default node often has other tables, and the
 			// builder then loads no columns. See {@link reportSeedMismatch}.
-			if (!hasInstanceRef(resolved.instance)) {
-				this.guessedInstance = { ...this.guessedInstance, [block.id]: true };
+			if (!hasNodeRef(resolved.node)) {
+				this.guessedNode = { ...this.guessedNode, [block.id]: true };
 			}
 
-			this.warnMissingInstance(resolved.missingInstanceUrl);
+			this.warnMissingNode(resolved.missingNodeUrl);
 		}
 	}
 
 	/**
 	 * Tell the user that a link names a node that the app does not have. The
-	 * builder shows the same URL on the instance picker, so this toast repeats it
+	 * builder shows the same URL on the node picker, so this toast repeats it
 	 * once. It writes nothing when every node resolves.
 	 */
-	private warnMissingInstance(url: string | null): void {
+	private warnMissingNode(url: string | null): void {
 		if (!url) return;
 
 		addToast({
 			type: 'warning',
-			message: `This query needs the Beacon instance ${url}. Add it to run the query.`
+			message: `This query needs the Beacon node ${url}. Add it to run the query.`
 		});
 	}
 
@@ -205,14 +205,14 @@ export class QueryWorkspace {
 	 * the sidebar selected. A new tab therefore stays on the node that the user
 	 * works on.
 	 */
-	private defaultInstanceRef(): InstanceRef {
+	private defaultNodeRef(): NodeRef {
 		const active = this.activeBlock;
 
-		if (hasInstanceRef(active?.instance)) {
-			return { ...active!.instance };
+		if (hasNodeRef(active?.node)) {
+			return { ...active!.node };
 		}
 
-		return snapshotInstance(getCurrentInstance());
+		return snapshotNode(getCurrentNode());
 	}
 
 	/** The active block, or null. */
@@ -222,32 +222,32 @@ export class QueryWorkspace {
 
 	/**
 	 * The node of a block, or null. The result is null in two cases: the block
-	 * names no node yet, and the instance list holds no node for its ref. The
+	 * names no node yet, and the node list holds no node for its ref. The
 	 * caller must handle both, and must not run a query without a node.
 	 */
-	instanceFor(block: StoredQuery | null): BeaconInstance | null {
-		return matchRef(this.instanceList, block?.instance);
+	nodeFor(block: StoredQuery | null): BeaconNode | null {
+		return matchRef(this.nodeList, block?.node);
 	}
 
-	/** The node of the active block, or null. See {@link instanceFor}. */
-	get activeInstance(): BeaconInstance | null {
-		return this.instanceFor(this.activeBlock);
+	/** The node of the active block, or null. See {@link nodeFor}. */
+	get activeNode(): BeaconNode | null {
+		return this.nodeFor(this.activeBlock);
 	}
 
 	/**
-	 * The URL of a node that a block names, but that the instance list does not
+	 * The URL of a node that a block names, but that the node list does not
 	 * hold. It is null while the node resolves, and while the block names none.
 	 * The builder shows this URL, and offers to add the node.
 	 */
-	missingInstanceUrlFor(block: StoredQuery | null): string | null {
-		if (!hasInstanceRef(block?.instance)) return null;
-		if (this.instanceFor(block)) return null;
-		return block?.instance.url || null;
+	missingNodeUrlFor(block: StoredQuery | null): string | null {
+		if (!hasNodeRef(block?.node)) return null;
+		if (this.nodeFor(block)) return null;
+		return block?.node.url || null;
 	}
 
-	/** {@link missingInstanceUrlFor} for the active block. */
-	get missingInstanceUrl(): string | null {
-		return this.missingInstanceUrlFor(this.activeBlock);
+	/** {@link missingNodeUrlFor} for the active block. */
+	get missingNodeUrl(): string | null {
+		return this.missingNodeUrlFor(this.activeBlock);
 	}
 
 	/**
@@ -268,27 +268,27 @@ export class QueryWorkspace {
 	 * The method returns false when the user refused the warning. It warns only
 	 * when the draft has columns to lose.
 	 */
-	setBlockInstance(id: string, instance: BeaconInstance): boolean {
+	setBlockNode(id: string, node: BeaconNode): boolean {
 		const block = this.blocks.find((candidate) => candidate.id === id);
 		if (!block) return false;
 
 		// Compare the node, not the ref. A share link gives a ref with no id, and
 		// `matchRef` resolves it by URL. Such a block already runs on this node, so
 		// a pick of the same node must change nothing.
-		if (this.instanceFor(block)?.id === instance.id) return true;
+		if (this.nodeFor(block)?.id === node.id) return true;
 
 		const columns = block.draft?.selectedFields.length ?? 0;
 
 		if (columns > 0) {
 			const shouldContinue = confirm(
-				'Changing the Beacon instance will reset your table and column selections. Continue?'
+				'Changing the Beacon node will reset your table and column selections. Continue?'
 			);
 			if (!shouldContinue) return false;
 		}
 
 		if (needsDraftSeed(block)) {
 			queryBlocks.update(id, {
-				instance: snapshotInstance(instance),
+				node: snapshotNode(node),
 				datasetKey: null,
 				rowCount: null
 			});
@@ -297,7 +297,7 @@ export class QueryWorkspace {
 			draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
 
 			queryBlocks.update(id, {
-				instance: snapshotInstance(instance),
+				node: snapshotNode(node),
 				draft,
 				compiled: null,
 				datasetKey: null,
@@ -306,20 +306,20 @@ export class QueryWorkspace {
 		}
 
 		// The user chose this node. It is no longer a guess of the app.
-		this.clearGuessedInstance(id);
+		this.clearGuessedNode(id);
 
 		return true;
 	}
 
-	/** {@link setBlockInstance} for the active block. */
-	setActiveInstance(instance: BeaconInstance): boolean {
+	/** {@link setBlockNode} for the active block. */
+	setActiveNode(node: BeaconNode): boolean {
 		if (!this.activeBlockId) return false;
-		return this.setBlockInstance(this.activeBlockId, instance);
+		return this.setBlockNode(this.activeBlockId, node);
 	}
 
-	/** True when the app guessed the node of this block. See {@link guessedInstance}. */
-	hasGuessedInstance(id: string | null | undefined): boolean {
-		return !!id && !!this.guessedInstance[id];
+	/** True when the app guessed the node of this block. See {@link guessedNode}. */
+	hasGuessedNode(id: string | null | undefined): boolean {
+		return !!id && !!this.guessedNode[id];
 	}
 
 	/**
@@ -333,24 +333,24 @@ export class QueryWorkspace {
 	 * table itself, or the columns inside it.
 	 */
 	reportSeedMismatch(blockId: string, table: string, part: 'table' | 'columns'): void {
-		const node = this.instanceFor(this.blocks.find((b) => b.id === blockId) ?? null);
-		const nodeName = node?.name || node?.url || 'this instance';
+		const node = this.nodeFor(this.blocks.find((b) => b.id === blockId) ?? null);
+		const nodeName = node?.name || node?.url || 'this node';
 
 		let missing = `has no table "${table}"`;
 		if (part === 'columns') {
 			missing = `has no columns of the query in "${table}"`;
 		}
 
-		if (this.hasGuessedInstance(blockId)) {
+		if (this.hasGuessedNode(blockId)) {
 			addToast({
 				type: 'error',
 				message:
-					`The link named no Beacon instance, and "${nodeName}" ${missing}. ` +
-					`The query is kept. Pick the instance of this query.`
+					`The link named no Beacon node, and "${nodeName}" ${missing}. ` +
+					`The query is kept. Pick the node of this query.`
 			});
 
 			// Report this one time. The user now picks a node, or edits the query.
-			this.clearGuessedInstance(blockId);
+			this.clearGuessedNode(blockId);
 			return;
 		}
 
@@ -358,17 +358,17 @@ export class QueryWorkspace {
 			type: 'warning',
 			message:
 				`"${nodeName}" ${missing}. The query is kept. ` +
-				`Pick another instance, or edit the query.`
+				`Pick another node, or edit the query.`
 		});
 	}
 
 	/** Forget the guess for a block. The user now owns the choice of node. */
-	private clearGuessedInstance(id: string): void {
-		if (!this.guessedInstance[id]) return;
+	private clearGuessedNode(id: string): void {
+		if (!this.guessedNode[id]) return;
 
-		const next = { ...this.guessedInstance };
+		const next = { ...this.guessedNode };
 		delete next[id];
-		this.guessedInstance = next;
+		this.guessedNode = next;
 	}
 
 	/** Add an empty block and select it. It inherits the node of the active block. */
@@ -376,7 +376,7 @@ export class QueryWorkspace {
 		const block = queryBlocks.append({
 			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: makeEmptyDraft(),
-			instance: this.defaultInstanceRef()
+			node: this.defaultNodeRef()
 		});
 		this.select(block.id);
 		return block;
@@ -399,20 +399,20 @@ export class QueryWorkspace {
 
 	/**
 	 * Open a query with no draft as a new block. Share links and the JSON editor
-	 * use this. Pass `instance` to name the node of the query. Without it the
-	 * block takes the default. See {@link defaultInstanceRef}.
+	 * use this. Pass `node` to name the node of the query. Without it the
+	 * block takes the default. See {@link defaultNodeRef}.
 	 */
-	addFromQuery(query: CompiledQuery, name?: string, instance?: InstanceRef | null): StoredQuery {
-		let ref = this.defaultInstanceRef();
-		if (hasInstanceRef(instance)) {
-			ref = { ...instance! };
+	addFromQuery(query: CompiledQuery, name?: string, node?: NodeRef | null): StoredQuery {
+		let ref = this.defaultNodeRef();
+		if (hasNodeRef(node)) {
+			ref = { ...node! };
 		}
 
 		const block = queryBlocks.append({
 			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: null,
 			compiled: Utils.cloneObject(query),
-			instance: ref
+			node: ref
 		});
 		this.select(block.id);
 		return block;

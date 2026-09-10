@@ -5,9 +5,9 @@
 	comes before the table step. A switch of query block switches the node too.
 
 	The component shows a value and reports a pick. It writes nothing. The parent
-	calls `workspace.setActiveInstance`, which empties the draft.
+	calls `workspace.setActiveNode`, which empties the draft.
 
-	`missingUrl` is the URL of a node that the query names, but that the instance
+	`missingUrl` is the URL of a node that the query names, but that the node
 	list does not hold. A share link gives this, and so does a node that the user
 	removed. The component then offers to add that node.
 -->
@@ -18,11 +18,11 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import * as Select from '$lib/components/ui/select/index.js';
-	import type { BeaconInstance } from '@/beacon-api/types';
-	import { instances } from '@/services/beacon-instance';
-	import { ensureFresh } from '@/services/beacon-instance-connect';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { nodes } from '@/services/beacon-node';
+	import { ensureFresh } from '@/services/beacon-node-connect';
 	import AddBeaconModal from '../modals/AddBeaconModal.svelte';
-	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
+	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import Button from '../buttons/Button.svelte';
 	import Card from '../card/Card.svelte';
 
@@ -32,11 +32,11 @@
 		onPick
 	}: {
 		/** The node of the query now, or null while it has none. */
-		selected?: BeaconInstance | null;
+		selected?: BeaconNode | null;
 		/** The URL of a node that the list does not hold, or null. */
 		missingUrl?: string | null;
 		/** Called with the node the user picked. */
-		onPick: (instance: BeaconInstance) => void;
+		onPick: (node: BeaconNode) => void;
 	} = $props();
 
 	type ViewMode = 'cards' | 'list';
@@ -50,22 +50,22 @@
 	$effect(() => {
 		if (viewModeInitialized) return;
 
-		viewMode = $instances.length < 10 ? 'cards' : 'list';
+		viewMode = $nodes.length < 10 ? 'cards' : 'list';
 		viewModeInitialized = true;
 	});
 
 	// Show a true status on every card. `ensureFresh` skips a check that is not
 	// due, so this costs nothing on a second visit.
 	$effect(() => {
-		for (const instance of $instances) void ensureFresh(instance);
+		for (const node of $nodes) void ensureFresh(node);
 	});
 
 	// The dropdown binds a string, so it reports an id.
 	let selectedId = $derived(selected?.id ?? '');
 
 	function pickById(id: string): void {
-		const instance = $instances.find((candidate) => candidate.id === id);
-		if (instance) onPick(instance);
+		const node = $nodes.find((candidate) => candidate.id === id);
+		if (node) onPick(node);
 	}
 </script>
 
@@ -77,11 +77,11 @@
 	/>
 {/if}
 
-<div class="instance-selector-header">
-	<h3>Select Beacon Instance</h3>
+<div class="node-selector-header">
+	<h3>Select Beacon Node</h3>
 
 	<div class="view-controls">
-		<p class="instance-count">{$instances.length} instances</p>
+		<p class="node-count">{$nodes.length} nodes</p>
 
 		<Button variant={viewMode === 'cards' ? 'default' : 'outline'} onclick={() => (viewMode = 'cards')}>
 			Cards
@@ -96,58 +96,58 @@
 </div>
 
 {#if missingUrl}
-	<div class="missing-instance">
+	<div class="missing-node">
 		<TriangleAlertIcon size="1rem" />
 		<p>
-			This query runs on <strong>{missingUrl}</strong>. The app has no instance for that
-			address. Add it, or pick another instance below.
+			This query runs on <strong>{missingUrl}</strong>. The app has no node for that
+			address. Add it, or pick another node below.
 		</p>
 		<Button onclick={() => (showAddModal = true)}>
-			Add instance
+			Add node
 			<PlusIcon />
 		</Button>
 	</div>
 {/if}
 
-<div class="instance-views">
+<div class="node-views">
 	{#if viewMode === 'cards'}
 		<div class="cards-view">
-			{#each $instances as instance (instance.id)}
+			{#each $nodes as node (node.id)}
 				<Card
-					class={selected?.id === instance.id ? 'selected' : ''}
-					onclick={() => onPick(instance)}
+					class={selected?.id === node.id ? 'selected' : ''}
+					onclick={() => onPick(node)}
 				>
-					<div class="instance-header">
-						<h4>{instance.name}</h4>
-						{#if selected?.id === instance.id}
+					<div class="node-header">
+						<h4>{node.name}</h4>
+						{#if selected?.id === node.id}
 							<CircleCheck class="check" size="1rem" />
 						{:else}
-							<BeaconInstanceStatus health={instance} variant="dot" />
+							<BeaconNodeStatus health={node} variant="dot" />
 						{/if}
 					</div>
-					<p class="instance-url">{instance.url}</p>
+					<p class="node-url">{node.url}</p>
 				</Card>
 			{/each}
 
 			<Card class="add-card" onclick={() => (showAddModal = true)}>
-				<div class="instance-header">
-					<h4>Add instance</h4>
+				<div class="node-header">
+					<h4>Add node</h4>
 					<PlusIcon size="1rem" />
 				</div>
-				<p class="instance-url">Connect to another Beacon node.</p>
+				<p class="node-url">Connect to another Beacon node.</p>
 			</Card>
 		</div>
 	{:else}
-		<Select.Root type="single" name="beaconInstance" value={selectedId} onValueChange={pickById}>
-			<Select.Trigger class="instance-select-trigger">
-				{selected?.name ?? 'Select an instance'}
+		<Select.Root type="single" name="beaconNode" value={selectedId} onValueChange={pickById}>
+			<Select.Trigger class="node-select-trigger">
+				{selected?.name ?? 'Select a node'}
 			</Select.Trigger>
 			<Select.Content>
 				<Select.Group>
-					<Select.Label>Instances</Select.Label>
-					{#each $instances as instance (instance.id)}
-						<Select.Item value={instance.id} label={instance.name}>
-							{instance.name}
+					<Select.Label>Nodes</Select.Label>
+					{#each $nodes as node (node.id)}
+						<Select.Item value={node.id} label={node.name}>
+							{node.name}
 						</Select.Item>
 					{/each}
 				</Select.Group>
@@ -157,7 +157,7 @@
 </div>
 
 <style lang="scss">
-	.instance-selector-header {
+	.node-selector-header {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
@@ -171,13 +171,13 @@
 			align-items: center;
 			gap: 0.5rem;
 
-			p.instance-count {
+			p.node-count {
 				margin: 0;
 			}
 		}
 	}
 
-	.missing-instance {
+	.missing-node {
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
@@ -194,7 +194,7 @@
 		}
 	}
 
-	.instance-views {
+	.node-views {
 		margin-top: 1rem;
 
 		.cards-view {
@@ -220,7 +220,7 @@
 				border-style: dashed;
 			}
 
-			div.instance-header {
+			div.node-header {
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
@@ -231,7 +231,7 @@
 				}
 			}
 
-			p.instance-url {
+			p.node-url {
 				margin: 0;
 				font-size: 0.875rem;
 				color: hsl(0, 0%, 50%);
@@ -241,7 +241,7 @@
 			}
 		}
 
-		:global(.instance-select-trigger) {
+		:global(.node-select-trigger) {
 			width: 180px;
 		}
 	}

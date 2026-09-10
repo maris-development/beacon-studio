@@ -23,7 +23,7 @@
  */
 import { untrack } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
-import type { BeaconInstance, CompiledQuery } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
 import type { SpatialSelection } from '@/geo/spatial-selection';
 import {
@@ -410,13 +410,13 @@ export class ChartExplorerController {
 	// ------------------------------------------------------------- query cycle
 
 	/** Run a query and show it. */
-	async runAndShowQuery(query: CompiledQuery, instance: BeaconInstance, blockId: string): Promise<void> {
+	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string): Promise<void> {
 		const token = this.beginRun(blockId);
 		this.latestRun = token;
 		this.isLoading = true;
 
 		try {
-			this.entry = await BeaconClient.ensureQuery(query, instance, blockId);
+			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
 			this.markRun(blockId, this.entry.rowCount);
 			this.isLoading = false;
 

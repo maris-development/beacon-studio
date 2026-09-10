@@ -1,8 +1,8 @@
 <!-- src/lib/components/ChooseBeaconModal.svelte -->
 <script lang="ts">
 	import Modal from '$lib/components/modals/Modal.svelte';
-	import type { BeaconInstance } from '@/beacon-api/types';
-	import { instances, currentInstance, selectInstance, selectFirstIfNone } from '@/services/beacon-instance';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { nodes, currentNode, selectNode, selectFirstIfNone } from '@/services/beacon-node';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import AddBeaconModal from './AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
@@ -12,24 +12,24 @@
 	import SquareCheckBigIcon from '@lucide/svelte/icons/square-check-big';
 	import ExternalLink from '../ExternalLink.svelte';
 	import Card from '../card/Card.svelte';
-	import BeaconInstanceStatus from '../BeaconInstanceStatus.svelte';
+	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 
 	import { BeaconClient } from '@/beacon-api/client';
-	import { checkAllInstances } from '@/services/beacon-instance-connect';
-	import { FRESH_MS } from '@/services/beacon-instance-health';
+	import { checkAllNodes } from '@/services/beacon-node-connect';
+	import { FRESH_MS } from '@/services/beacon-node-health';
 	import { onMount } from 'svelte';
 
 	export let onClose: () => void;
 
-	// The picker shows the health of every instance. Refresh the stale results.
+	// The picker shows the health of every node. Refresh the stale results.
 	onMount(() => {
-		void checkAllInstances(FRESH_MS);
+		void checkAllNodes(FRESH_MS);
 	});
 
-	let editingInstance: BeaconInstance | null = null;
+	let editingNode: BeaconNode | null = null;
 	let showFormModal = false;
 
-	// The picker must always show a selection when the list has one instance.
+	// The picker must always show a selection when the list has one node.
 	selectFirstIfNone();
 
 	/**
@@ -43,11 +43,11 @@
 	}
 
 	async function prefetchSchemas() {
-		const instance = $currentInstance;
-		if (!instance) return;
+		const node = $currentNode;
+		if (!node) return;
 
 		try {
-			const client = BeaconClient.new(instance);
+			const client = BeaconClient.new(node);
 			const tables = await client.getCachedTables();
 
 			await Promise.all(tables.map((table) => client.getCachedSchema(table)));
@@ -56,16 +56,16 @@
 		}
 	}
 
-	function pickInstance(instance: BeaconInstance, e: Event | null = null) {
+	function pickNode(node: BeaconNode, e: Event | null = null) {
 		if (e) e.stopPropagation(); // Prevent event bubbling if necessary
 
-		selectInstance(instance.id);
+		selectNode(node.id);
 	}
 
-	function openBeaconFormModal(instance: BeaconInstance | null = null, e: Event | null = null) {
+	function openBeaconFormModal(node: BeaconNode | null = null, e: Event | null = null) {
 		if (e) e.stopPropagation(); // Prevent event bubbling if necessary
 
-		editingInstance = instance;
+		editingNode = node;
 		showFormModal = true;
 	}
 
@@ -79,36 +79,36 @@
 	}
 </script>
 
-<Modal title="Choose Beacon instance" onClose={handleClose}>
-	<p>Here are the currently configured Beacon instances:</p>
+<Modal title="Choose Beacon node" onClose={handleClose}>
+	<p>Here are the currently configured Beacon nodes:</p>
 
-	<div class="beacon-instances-wrapper">
-	<div class="beacon-instances">
-		{#if $instances.length === 0}
+	<div class="beacon-nodes-wrapper">
+	<div class="beacon-nodes">
+		{#if $nodes.length === 0}
 			<Card>
-				<p>No Beacon instances configured. Please add one.</p>
+				<p>No Beacon nodes configured. Please add one.</p>
             </Card>
 		{/if}
-		{#each $instances as instance (instance.id)}
+		{#each $nodes as node (node.id)}
 
-			<Card onclick={pickInstance.bind(null, instance)} class={$currentInstance?.id === instance.id ? 'border-2 border-primary' : ''}>
-				<div class="instance-heading">
-					<h3>{instance.name}</h3>
-					<BeaconInstanceStatus health={instance} variant="compact" />
+			<Card onclick={pickNode.bind(null, node)} class={$currentNode?.id === node.id ? 'border-2 border-primary' : ''}>
+				<div class="node-heading">
+					<h3>{node.name}</h3>
+					<BeaconNodeStatus health={node} variant="compact" />
 				</div>
-				<p>URL: <ExternalLink href={instance.url}>{instance.url}</ExternalLink></p>
-				{#if instance.description && instance.description.length > 0}
-					<p>{instance.description}</p>
+				<p>URL: <ExternalLink href={node.url}>{node.url}</ExternalLink></p>
+				{#if node.description && node.description.length > 0}
+					<p>{node.description}</p>
 				{/if}
-				<p>Last update: {instance.updatedAt}</p>
-				<Button onclick={(e) => openBeaconFormModal(instance, e)}>
+				<p>Last update: {node.updatedAt}</p>
+				<Button onclick={(e) => openBeaconFormModal(node, e)}>
 					Edit
 					<SquarePenIcon />
 				</Button>
 				<Button
-					onclick={(e) => pickInstance(instance, e)}
-					disabled={$currentInstance?.id === instance.id}>
-					{#if $currentInstance?.id === instance.id}
+					onclick={(e) => pickNode(node, e)}
+					disabled={$currentNode?.id === node.id}>
+					{#if $currentNode?.id === node.id}
 						Selected
 						<SquareCheckBigIcon />
 					{:else}
@@ -123,7 +123,7 @@
 
 	<div slot="footer" class="footer-content">
 		<Button onclick={() => openBeaconFormModal(null)}>
-			Add instance
+			Add node
 			<PlusIcon />
 		</Button>
 
@@ -135,19 +135,19 @@
 </Modal>
 
 {#if showFormModal}
-	<AddBeaconModal onSave={handleFormSave} onClose={handleFormClose} instance={editingInstance} />
+	<AddBeaconModal onSave={handleFormSave} onClose={handleFormClose} node={editingNode} />
 {/if}
 
 <style lang="scss">
 	
-	.beacon-instances-wrapper {
+	.beacon-nodes-wrapper {
 		border-radius: 0.25rem;
 		position: relative;
 		margin-bottom: 1rem;
 		overflow: hidden;
 		height: 60vh;
 	
-		.beacon-instances {
+		.beacon-nodes {
 			position: absolute;
 			top: 0;
 			left: 0;
@@ -161,7 +161,7 @@
 
 		}
 
-		.instance-heading {
+		.node-heading {
 			display: flex;
 			flex-direction: row;
 			align-items: center;

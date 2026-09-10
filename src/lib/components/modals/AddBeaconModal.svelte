@@ -2,9 +2,9 @@
 <script lang="ts">
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import { onMount } from 'svelte';
-	import type { BeaconInstance } from '@/beacon-api/types';
-	import { addInstance, updateInstance, removeInstance } from '@/services/beacon-instance';
-	import { checkInstance, testInstance } from '@/services/beacon-instance-connect';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { addNode, updateNode, removeNode } from '@/services/beacon-node';
+	import { checkNode, testNode } from '@/services/beacon-node-connect';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { Utils } from '@/utils';
 	import SaveIcon from '@lucide/svelte/icons/save';
@@ -17,16 +17,16 @@
 	import { addToast } from '@/stores/toasts';
 
 	/**
-	 * The modal writes to the instance service itself. `onSave` tells the parent
-	 * to close the form. `instance` switches the form to edit mode.
+	 * The modal writes to the node service itself. `onSave` tells the parent
+	 * to close the form. `node` switches the form to edit mode.
 	 */
 	export let onSave: () => void;
 	export let onClose: () => void;
-	export let instance: BeaconInstance | null = null;
+	export let node: BeaconNode | null = null;
 	/**
 	 * The URL to put in the form of a new node. A share link names a node that the
 	 * app does not have. The user then adds it, and needs no copy and paste.
-	 * `instance` wins over this, because an edit keeps the URL of the record.
+	 * `node` wins over this, because an edit keeps the URL of the record.
 	 */
 	export let presetUrl: string | null = null;
 
@@ -41,11 +41,11 @@
 	onMount(() => {
 		document.addEventListener('keydown', handleKeydown);
 
-		if (instance) {
-			name = instance.name;
-			url = instance.url;
-			description = instance.description ?? '';
-			token = instance.token ?? '';
+		if (node) {
+			name = node.name;
+			url = node.url;
+			description = node.description ?? '';
+			token = node.token ?? '';
 		} else if (presetUrl) {
 			url = presetUrl;
 
@@ -89,32 +89,32 @@
 
 		const values = { name, url, description, token };
 
-		if (instance) {
-			updateInstance(instance.id, values);
+		if (node) {
+			updateNode(node.id, values);
 		} else {
-			addInstance(values);
+			addNode(values);
 		}
 
-		// The table shows this instance right away. Without this, its status stays
+		// The table shows this node right away. Without this, its status stays
 		// "unknown" until the next sweep or page reload.
-		void checkInstance({ url, token });
+		void checkNode({ url, token });
 
 		onSave();
 	}
 
 	function confirmRemove() {
-		if (!instance) return;
+		if (!node) return;
 
 		let confirmation = confirm(
-			`Are you sure you want to remove the instance "${instance.name}"? This action cannot be undone.`
+			`Are you sure you want to remove the node "${node.name}"? This action cannot be undone.`
 		);
 
 		if (!confirmation) return;
 
-		removeInstance(instance.id);
+		removeNode(node.id);
 
 		addToast({
-			message: `The Beacon instance "${instance.name}" has been deleted.`,
+			message: `The Beacon node "${node.name}" has been deleted.`,
 			type: 'info'
 		});
 
@@ -132,7 +132,7 @@
 
 		await Utils.sleep(330);
 
-		const couldConnect = await testInstance({ url, token });
+		const couldConnect = await testNode({ url, token });
 
 		if (couldConnect) {
 			connectionCheckState = 'valid';
@@ -146,7 +146,7 @@
 	}
 </script>
 
-<Modal title={instance ? 'Edit Beacon instance' : 'Add Beacon instance'} onClose={closeModal}>
+<Modal title={node ? 'Edit Beacon node' : 'Add Beacon node'} onClose={closeModal}>
 	<form on:submit|preventDefault={submitForm}>
 		<div class="form-row">
 			<label for="name" class="required">Name</label>
@@ -176,7 +176,7 @@
 				<CircleXIcon />
 			</Button>
 
-			<Button type="button" variant="destructive" onclick={confirmRemove} disabled={!instance}>
+			<Button type="button" variant="destructive" onclick={confirmRemove} disabled={!node}>
 				Delete
 				<Trash2Icon />
 			</Button>

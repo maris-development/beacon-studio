@@ -1,7 +1,7 @@
 /**
- * The URL helper of the Beacon instance services.
+ * The URL helper of the Beacon node services.
  *
- * It lives apart so that `beacon-instance.ts`, `beacon-instance-health.ts` and
+ * It lives apart so that `beacon-node.ts`, `beacon-node-health.ts` and
  * `BeaconClient` can all use it. The health store keys its records by a
  * normalized URL, and the state service reads that store. A shared file keeps
  * the two apart.
@@ -15,8 +15,8 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
 /** The schemes a Beacon node can answer on. */
 const KNOWN_SCHEMES = ['http:', 'https:'];
 
-/** The origin and the path of one node. See {@link splitInstanceUrl}. */
-export type InstanceUrlParts = {
+/** The origin and the path of one node. See {@link splitNodeUrl}. */
+export type NodeUrlParts = {
     /** Scheme and host, lower case, with no trailing slash. Example: `https://beacon.maris.nl`. */
     origin: string;
     /** The sub directory of the node, or `''`. Never a trailing slash. Example: `/beacon-api`. */
@@ -78,7 +78,7 @@ function stripTrailingSlash(path: string): string {
  * An unusable value gives the trimmed input as the origin and an empty path.
  * The caller then sees the value of the user, and the request fails as before.
  */
-export function splitInstanceUrl(url: string): InstanceUrlParts {
+export function splitNodeUrl(url: string): NodeUrlParts {
     const parsed = parse(url);
 
     if (!parsed) {
@@ -101,7 +101,7 @@ export function splitInstanceUrl(url: string): InstanceUrlParts {
  * and every request must build the same path.
  */
 export function normalizeUrl(url: string): string {
-    const { origin, pathPrefix } = splitInstanceUrl(url);
+    const { origin, pathPrefix } = splitNodeUrl(url);
 
     return origin + pathPrefix;
 }

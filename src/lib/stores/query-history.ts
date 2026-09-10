@@ -5,7 +5,7 @@
  * The query store writes these entries. Every visualiser runs its queries
  * through that one point. Entries use {@link StoredQuery.datasetKey} as their
  * identity. That key is the result-cache key, and it includes the Beacon
- * instance URL. Therefore one query against two instances gives two rows.
+ * node URL. Therefore one query against two nodes gives two rows.
  *
  * A second run of a known query sets a new timestamp and row count, and adds 1
  * to the execution count. It does not add a row.
@@ -16,10 +16,10 @@
  */
 
 import { createQueryCollection } from '@/stores/query-collection';
-import { snapshotInstance, type InstanceRef, type StoredQuery } from '@/stores/stored-query';
+import { snapshotNode, type NodeRef, type StoredQuery } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
-import { getCurrentInstance } from '@/services/beacon-instance';
+import { getCurrentNode } from '@/services/beacon-node';
 import { getSettings } from '@/stores/settings';
 
 /**
@@ -50,7 +50,7 @@ export interface RecordExecutionInput {
 	/** The builder state of the record that started the run, if it had one. */
 	draft?: QueryDraft | null;
 	name?: string;
-	instance?: InstanceRef;
+	node?: NodeRef;
 	rowCount?: number;
 	duration?: number;
 }
@@ -73,7 +73,7 @@ export function recordExecution(input: RecordExecutionInput): StoredQuery {
 			name: input.name ?? 'Query',
 			draft: input.draft ?? null,
 			compiled: input.compiled,
-			instance: input.instance ?? snapshotInstance(getCurrentInstance()),
+			node: input.node ?? snapshotNode(getCurrentNode()),
 			datasetKey: input.datasetKey,
 			rowCount: input.rowCount ?? null,
 			duration: input.duration ?? null

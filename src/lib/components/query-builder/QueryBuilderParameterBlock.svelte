@@ -200,7 +200,7 @@
 		selectionTable = initialDraft.tableName;
 	});
 
-	// Load the schema for the selected table (cached per instance). Needed for the
+	// Load the schema for the selected table (cached per node). Needed for the
 	// "Add Parameter" list and to parse a deep-link seed. Does NOT clear the current
 	// selection — that only happens on a real table change (below).
 	$effect(() => {

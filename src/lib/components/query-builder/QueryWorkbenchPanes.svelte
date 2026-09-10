@@ -21,7 +21,7 @@
 	import type { QueryDraft } from '@/query/draft';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
-	import type { BeaconInstance } from '@/beacon-api/types';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import * as QueryFunctions from '@/query/functions';
 
 	let { 
@@ -71,17 +71,17 @@
 	 * The node of the active block. The builder re-mounts on a change of this
 	 * value, so its client is built once per node. See the key below.
 	 */
-	const activeInstance = $derived(workspace.activeInstance);
+	const activeNode = $derived(workspace.activeNode);
 
 	/** Put a node on the active block. The workspace empties the draft. */
-	function handleInstanceChange(instance: BeaconInstance) {
-		workspace.setActiveInstance(instance);
+	function handleNodeChange(node: BeaconNode) {
+		workspace.setActiveNode(node);
 	}
 
 	/**
 	 * The node of the active block does not hold the query of a deep-link seed.
 	 * The workspace writes the message, because it knows whether the app guessed
-	 * that node. A share link of an older app version carries no `?instance=`.
+	 * that node. A share link of an older app version carries no `?node=`.
 	 */
 	function handleSeedMismatch(table: string, part: 'table' | 'columns') {
 		const blockId = workspace.activeBlockId;
@@ -122,11 +122,11 @@
 					node, so a slow load cannot write the tables of one node over the
 					tables of another.
 				-->
-				{#key `${workspace.activeBlockId}:${activeInstance?.url ?? ''}`}
+				{#key `${workspace.activeBlockId}:${activeNode?.url ?? ''}`}
 					<QueryBuilder
-						instance={activeInstance}
-						missingInstanceUrl={workspace.missingInstanceUrl}
-						onInstanceChange={handleInstanceChange}
+						node={activeNode}
+						missingNodeUrl={workspace.missingNodeUrl}
+						onNodeChange={handleNodeChange}
 						onSeedMismatch={handleSeedMismatch}
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}

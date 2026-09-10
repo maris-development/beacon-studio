@@ -1,22 +1,22 @@
 <!--
 	The health of one Beacon node.
 
-	The component takes a health value, not an instance, so a node of the public
-	list can use it too. A `BeaconInstance` still fits, because it extends
-	`BeaconInstanceHealth`.
+	The component takes a health value, not a node, so a node of the public
+	list can use it too. A `BeaconNode` still fits, because it extends
+	`BeaconNodeHealth`.
 
 	The component shows a value only. It starts no check. Call `ensureFresh` of
-	`@/services/beacon-instance-connect` where the app shows the node.
+	`@/services/beacon-node-connect` where the app shows the node.
 -->
 <script lang="ts">
-	import type { BeaconInstanceHealth } from '@/beacon-api/types';
+	import type { BeaconNodeHealth } from '@/beacon-api/types';
 
 	import GlobeCheckIcon from '@lucide/svelte/icons/globe-check';
 	import GlobeXIcon from '@lucide/svelte/icons/globe-x';
 	import GlobeIcon from '@lucide/svelte/icons/globe';
 
 	type Props = {
-		health: BeaconInstanceHealth;
+		health: BeaconNodeHealth;
 		/**
 		 * `full` shows a badge and a separate latency block. `compact` shows one
 		 * badge with the latency in it. `dot` shows a coloured dot only.
@@ -41,7 +41,7 @@
 {#if variant === 'dot'}
 	<span class="dot {health.status}" {title} aria-label="Status: {title}"></span>
 {:else}
-	<div class="instance-status" class:compact={variant === 'compact'}>
+	<div class="node-status" class:compact={variant === 'compact'}>
 		<span class="badge {health.status}">
 			<Icon size={variant === 'compact' ? 12 : 16} />
 			<span class="label">{health.status}</span>
@@ -77,7 +77,7 @@
 		}
 	}
 
-	.instance-status {
+	.node-status {
 		display: flex;
 		flex-direction: row;
 		align-items: center;

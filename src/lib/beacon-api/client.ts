@@ -1,10 +1,10 @@
 
 import { MemoryCache } from '@/cache';
-import type { BeaconInstance, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
+import type { BeaconNode, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
-import { normalizeUrl, splitInstanceUrl } from '@/services/beacon-instance-url';
+import { normalizeUrl, splitNodeUrl } from '@/services/beacon-node-url';
 
 import {
     isAbortError,
@@ -32,7 +32,7 @@ const schemaCache = new Map<string, Promise<Schema>>();
 
 /**
  * Unified Beacon client facade. This is the single entry point the app uses to talk
- * to a Beacon instance. It wraps three concerns:
+ * to a Beacon node. It wraps three concerns:
  *
  *  1. **Metadata + downloads** (this class' instance methods): datasets, tables,
  *     schemas, system info, and server-materialized downloads via
@@ -46,7 +46,7 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *     node of the query as an argument: a query record owns its node, and the URL
  *     of that node is part of the cache key.
  *
- * Prefer this facade for anything that talks to a Beacon instance; do not import
+ * Prefer this facade for anything that talks to a Beacon node; do not import
  * `@beacon/client` directly from app code.
  *
  * Transforms of a fetched result (sort, dedup, min/max, geometry) are *not* here.
@@ -67,12 +67,12 @@ export class BeaconClient {
      * The query history needs the node of a download, and only this client knows
      * it. Therefore the client carries it. See {@link queryToDownload}.
      */
-    instance: BeaconInstance | null = null;
+    node: BeaconNode | null = null;
     private memCache = new MemoryCache();
 
-    /** Takes the URL of a node. {@link splitInstanceUrl} normalizes it. */
+    /** Takes the URL of a node. {@link splitNodeUrl} normalizes it. */
     constructor(url: string, token: string | null = null) {
-        const parts = splitInstanceUrl(url);
+        const parts = splitNodeUrl(url);
 
         this.origin = parts.origin;
         this.pathPrefix = parts.pathPrefix;
@@ -120,16 +120,16 @@ export class BeaconClient {
         }
     }
 
-    static new(instance: BeaconInstance): BeaconClient {
-        const client = new BeaconClient(instance.url, instance.token);
-        client.instance = instance;
+    static new(node: BeaconNode): BeaconClient {
+        const client = new BeaconClient(node.url, node.token);
+        client.node = node;
         return client;
     }
 
     // -- Cached metadata --------------------------------------------------------
     // Host-keyed memoization of the (immutable-per-session) metadata endpoints.
     // Shared across every BeaconClient for the same node, so repeated builder
-    // mounts and instance re-selection don't refetch.
+    // mounts and node re-selection don't refetch.
     //
     // A cache holds a promise, so a failure would stay for the session. A node
     // that is down at the first contact would then never answer again, also after
@@ -206,8 +206,8 @@ export class BeaconClient {
         // The history keeps the node of every run. A client with no node writes no
         // history row. Only a health check builds such a client, and it downloads
         // nothing, so this drops no real download.
-        if (this.instance) {
-            BeaconClient.recordDownload(query, this.instance, performance.now() - started, storedQueryId);
+        if (this.node) {
+            BeaconClient.recordDownload(query, this.node, performance.now() - started, storedQueryId);
         }
 
         // Try to get the filename from the headers
@@ -407,26 +407,26 @@ export class BeaconClient {
     }
 
     /**
-     * Tests the connection to the Beacon instance by checking its health status.
+     * Tests the connection to the Beacon node by checking its health status.
      *
-     * @returns {Promise<boolean>} A promise that resolves to `true` if the connection is successful and the Beacon instance is healthy,
-     * or `false` if there is an error connecting or the instance is not healthy.
+     * @returns {Promise<boolean>} A promise that resolves to `true` if the connection is successful and the Beacon node is healthy,
+     * or `false` if there is an error connecting or the node is not healthy.
      *
-     * @throws {Error} Throws an error if the connection is successful but the Beacon instance is not healthy.
-     * @param {boolean} throwUnhealthy - If set to `true`, the method will throw an error when the Beacon instance is not healthy.
+     * @throws {Error} Throws an error if the connection is successful but the Beacon node is not healthy.
+     * @param {boolean} throwUnhealthy - If set to `true`, the method will throw an error when the Beacon node is not healthy.
      * Displays an error toast notification if the connection fails.
      */
     async testConnection(): Promise<boolean> {
         const result = await this.getHealth().then((isHealthy) => {
             // Connection successful
             if (!isHealthy) {
-                throw new Error('Connected succesfully, but Beacon instance is not healthy.');
+                throw new Error('Connected successfully, but Beacon node is not healthy.');
             }
 
             return true;
         }).catch(() => {
             addToast({
-                message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon instance.`,
+                message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon node.`,
                 type: 'error',
                 timeout: 0
             });
@@ -481,7 +481,7 @@ export class BeaconClient {
     // Static members
     //
     // Grouped here so the instance (per-node) methods above stay contiguous. The
-    // query result cache is app-wide and keyed by the live Beacon instance, so its
+    // query result cache is app-wide and keyed by the live Beacon node, so its
     // facade is static and independent of any single client's node.
     // ============================================================================
 
@@ -503,13 +503,13 @@ export class BeaconClient {
         }
     }
 
-    // -- Query execution + result cache (app-wide, per-query instance) -----------
+    // -- Query execution + result cache (app-wide, per query) --------------------
     // Static: the result cache is one app-wide store, so it must not be bound to
     // the node of one client. Every method takes the node of the query, because a
     // query record owns its node. The URL of that node is part of the cache key.
 
     /**
-     * Executes `query` on `instance` (or returns the cached result) and caches the
+     * Executes `query` on `node` (or returns the cached result) and caches the
      * resulting Arrow table across navigations.
      *
      * The app runs one query at a time. A call for another query aborts the run
@@ -519,15 +519,15 @@ export class BeaconClient {
      */
     static ensureQuery(
         query: CompiledQuery,
-        instance: BeaconInstance,
+        node: BeaconNode,
         storedQueryId?: string
     ): Promise<DatasetEntry> {
-        return queryStore.ensure(query, instance, storedQueryId);
+        return queryStore.ensure(query, node, storedQueryId);
     }
 
     /** Returns a cached result without executing, or `undefined` if absent. */
-    static peekQuery(query: CompiledQuery, instance: BeaconInstance | null): DatasetEntry | undefined {
-        return queryStore.peek(query, instance);
+    static peekQuery(query: CompiledQuery, node: BeaconNode | null): DatasetEntry | undefined {
+        return queryStore.peek(query, node);
     }
 
     /** Stops the query that runs, if there is one. */
@@ -552,8 +552,8 @@ export class BeaconClient {
      * Invalidates cached query results. With a `query`, removes just that entry
      * (memory + OPFS); with no argument, clears the whole result cache.
      */
-    static invalidateQueryCache(query?: CompiledQuery, instance?: BeaconInstance | null): void {
-        queryStore.invalidate(query, instance);
+    static invalidateQueryCache(query?: CompiledQuery, node?: BeaconNode | null): void {
+        queryStore.invalidate(query, node);
     }
 
     /** Snapshot of the in-memory result cache, for the cache-info UI. */
@@ -582,11 +582,11 @@ export class BeaconClient {
      */
     static recordDownload(
         query: CompiledQuery,
-        instance: BeaconInstance,
+        node: BeaconNode,
         duration: number,
         storedQueryId?: string
     ): void {
-        queryStore.recordDownload(query, instance, duration, storedQueryId);
+        queryStore.recordDownload(query, node, duration, storedQueryId);
     }
 
     static responseToTextOrError(response: Response): Promise<string> {
@@ -625,9 +625,9 @@ export class BeaconClient {
 
 
 /**
- * Builds a `@beacon/client` client for the given Beacon instance.
+ * Builds a `@beacon/client` client for the given Beacon node.
  *
- * - A bearer token (if configured on the instance) is sent via the `Authorization`
+ * - A bearer token (if configured on the node) is sent via the `Authorization`
  *   header on every request. The SDK's own `username`/`password` option is for
  *   HTTP Basic super-user auth and is intentionally not used here.
  * - `timeoutMs: 0` disables the SDK's default 60s per-request timeout so large
@@ -635,17 +635,17 @@ export class BeaconClient {
  * - The URL passes through {@link normalizeUrl}, so a trailing slash or a mixed
  *   case host never reaches the SDK.
  *
- * @throws if no instance (or no URL) is provided.
+ * @throws if no node (or no URL) is provided.
  */
-export function makeBeaconClient(instance: BeaconInstance | null): BeaconSdkClient {
-	if (!instance?.url) {
-		throw new Error('No Beacon instance selected');
+export function makeBeaconClient(node: BeaconNode | null): BeaconSdkClient {
+	if (!node?.url) {
+		throw new Error('No Beacon node selected');
 	}
 
-	const headers = instance.token ? { Authorization: 'Bearer ' + instance.token } : undefined;
+	const headers = node.token ? { Authorization: 'Bearer ' + node.token } : undefined;
 
 	return new BeaconSdkClient({
-		url: normalizeUrl(instance.url),
+		url: normalizeUrl(node.url),
 		headers,
 		timeoutMs: 0
 	});

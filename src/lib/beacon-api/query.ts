@@ -1,4 +1,4 @@
-import type { BeaconInstance, CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Select } from "./types";
+import type { BeaconNode, CompiledQuery, Filter, From, GeoParquetOutputFormat, Output, Select } from "./types";
 import { Utils } from "@/utils";
 // import type { ObjectEncodingOptions } from "node:fs";
 
@@ -92,30 +92,30 @@ export class QueryBuilder {
 export class PythonQueryBuilder  {
 
     /**
-     * The Python code for a query. `instance` is the node that the query runs on.
+     * The Python code for a query. `node` is the node that the query runs on.
      * A query record owns its node, so the caller supplies it.
      */
-    static toPythonCode(compiledQuery: CompiledQuery, instance: BeaconInstance | null): string {
-        if (!instance) {
-            throw new Error("Pick a Beacon instance for this query first.");
+    static toPythonCode(compiledQuery: CompiledQuery, node: BeaconNode | null): string {
+        if (!node) {
+            throw new Error("Pick a Beacon node for this query first.");
         }
 
         let code = "from beacon_api import Client\n";
         code += "from beacon_api.query import *\n";
 
-        const beaconInstance = instance;
+        const beaconNode = node;
 
         let tokenArg = "";
 
-        if(beaconInstance.token){
-            tokenArg = `, jwt_token="${beaconInstance.token}"`;
+        if(beaconNode.token){
+            tokenArg = `, jwt_token="${beaconNode.token}"`;
         }
 
         code += `\n# TODO: Add user agent to the client constructor if the Beacon API requires it.`;
         code += `\n# user_agent = [instert email adress]`;
         code += `\n`;
 
-        code += `\nclient = Client("${beaconInstance.url}"${tokenArg})`;
+        code += `\nclient = Client("${beaconNode.url}"${tokenArg})`;
         code += `\n`        
 
         code += `\ntables = client.list_tables()`;

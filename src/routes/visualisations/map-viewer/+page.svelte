@@ -73,12 +73,12 @@
 
 	// The node of the active block. A block owns its node, so a switch of block
 	// switches the node. The URL is a primitive, so the run effect below can track
-	// it. It is null while the block names no node, and while the instance list
+	// it. It is null while the block names no node, and while the node list
 	// holds no node for its ref. The effect then runs nothing.
 	//
 	// The URL also belongs in the run key. A user can add a node that a share link
 	// asked for. The query must then run, with no other change to the block.
-	const activeInstanceUrl = $derived(workspace.activeInstance?.url ?? null);
+	const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
 
 	let lastRunKey: string | null = $state(null);
 	/**
@@ -110,9 +110,9 @@
 	$effect(() => {
 		const blockId = activeBlockId;
 		const key = queryKey;
-		const instanceUrl = activeInstanceUrl;
+		const nodeUrl = activeNodeUrl;
 
-		if (!blockId || !key || !instanceUrl) {
+		if (!blockId || !key || !nodeUrl) {
 			map.clearQueryResult();
 			lastRunKey = null;
 			return;
@@ -122,7 +122,7 @@
 		// The run key stays empty, so a revert of the edit runs the query again.
 		const blocked = runBlockReason(untrack(() => compiledQuery));
 		if (blocked) {
-			const blockedKey = `${blockId}:${instanceUrl}:${key}`;
+			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
 			if (blockedKey !== lastBlockedKey) {
 				lastBlockedKey = blockedKey;
 				addToast({ type: 'warning', message: blocked });
@@ -135,7 +135,7 @@
 
 		lastBlockedKey = null;
 
-		const runKey = `${blockId}:${instanceUrl}:${key}:${requireFilters}`;
+		const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
 		if (runKey === lastRunKey) return;
 
 		const isSameBlock = blockId === lastRunBlockId;
@@ -144,12 +144,12 @@
 
 		// Read the live block/query untracked: we only want blockId+key above to
 		// drive re-runs, not every downstream write this triggers.
-		const { block, query, instance } = untrack(() => ({
+		const { block, query, node } = untrack(() => ({
 			block: workspace.activeBlock,
 			query: compiledQuery,
-			instance: workspace.activeInstance
+			node: workspace.activeNode
 		}));
-		if (!block || !query || !instance) return;
+		if (!block || !query || !node) return;
 
 		// The saved area and the saved map view of this block belong on the map
 		// again. A block with no saved view gets the defaults back.
@@ -162,7 +162,7 @@
 		map.showQueryFromCache(block.datasetKey);
 
 		// An edit of the same block keeps the camera where the user put it.
-		map.runAndShowQuery(query, instance, block.id, isSameBlock);
+		map.runAndShowQuery(query, node, block.id, isSameBlock);
 	});
 
 	// Keep the display state of the map with the block: the painted column, the

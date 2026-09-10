@@ -1,20 +1,21 @@
 <script lang="ts">
 	import { BeaconClient } from '@/beacon-api/client';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { currentNode } from '@/services/beacon-node';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { resolve } from '$app/paths';
 
-	let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+	let currentNodeValue: BeaconNode | null = $state(null);
 	let client: BeaconClient;
 
 	let datasetsTitle: string = $state('Datasets');
 	let dataTablesTitle: string = $state('Data Tables');
 
 	onMount(() => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
+		currentNodeValue = $currentNode;
+		client = BeaconClient.new(currentNodeValue);
 
 		countDatasets();
 		countDataTables();

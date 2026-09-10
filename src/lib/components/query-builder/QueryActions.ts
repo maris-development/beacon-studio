@@ -1,4 +1,4 @@
-import type { BeaconInstance, CompiledQuery, InstanceRef } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
 import { QueryWorkspace } from './QueryWorkspace.svelte';
 import { BeaconClient } from '@/beacon-api/client';
 import { addToast } from '@/stores/toasts';
@@ -22,16 +22,16 @@ export type QueryActions = {
      * The Beacon node of the active query, or null. The Python export needs the
      * URL and the token of that node. See `PythonQueryBuilder.toPythonCode`.
      *
-     * The value is the resolved node. It is null when the instance list holds no
-     * node for the query. Use {@link getInstanceRef} where a URL is enough.
+     * The value is the resolved node. It is null when the node list holds no
+     * node for the query. Use {@link getNodeRef} where a URL is enough.
      */
-    getInstance?: () => BeaconInstance | null;
+    getNode?: () => BeaconNode | null;
     /**
      * The node ref of the active query, or null. A ref keeps the URL of a node
      * that the app does not have. A share link therefore still names that node.
      * See `buildShareLink`.
      */
-    getInstanceRef?: () => InstanceRef | null;
+    getNodeRef?: () => NodeRef | null;
     /**
      * The name of the active query, or an empty string. A share link carries it,
      * so the receiver keeps the name of the sender. See `buildShareLink`.
@@ -51,7 +51,7 @@ export type QueryActions = {
  * Builds the workbench's query actions: compile, run, download and save the
  * active block, and navigate to a visualiser after a run.
  *
- * Every action reads the node from `workspace.activeInstance`. A query record
+ * Every action reads the node from `workspace.activeNode`. A query record
  * owns its node, so a switch of block switches the node with no extra work here.
  * The actions take no client: a client of the mount would go stale at the next
  * switch.
@@ -61,12 +61,12 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return QueryWorkspace.getQuery(workspace.activeBlock);
     }
 
-    function getInstance(): BeaconInstance | null {
-        return workspace.activeInstance;
+    function getNode(): BeaconNode | null {
+        return workspace.activeNode;
     }
 
-    function getInstanceRef(): InstanceRef | null {
-        return workspace.activeBlock?.instance ?? null;
+    function getNodeRef(): NodeRef | null {
+        return workspace.activeBlock?.node ?? null;
     }
 
     function getQueryName(): string {
@@ -95,19 +95,19 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
      * to a node starts here. A missing node is a normal state: the block can come
      * from a share link, or the user can have removed the node.
      */
-    function requireInstance(): BeaconInstance | null {
-        const instance = workspace.activeInstance;
-        if (instance) return instance;
+    function requireNode(): BeaconNode | null {
+        const node = workspace.activeNode;
+        if (node) return node;
 
-        const missing = workspace.missingInstanceUrl;
+        const missing = workspace.missingNodeUrl;
 
         if (missing) {
             addToast({
-                message: `Add the Beacon instance ${missing} to run this query.`,
+                message: `Add the Beacon node ${missing} to run this query.`,
                 type: 'warning'
             });
         } else {
-            addToast({ message: 'Pick a Beacon instance for this query first.', type: 'warning' });
+            addToast({ message: 'Pick a Beacon node for this query first.', type: 'warning' });
         }
 
         return null;
@@ -125,8 +125,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         if (isBlocked(query)) return null;
 
-        const instance = requireInstance();
-        if (!instance) return null;
+        const node = requireNode();
+        if (!node) return null;
 
         if (workspace.getRunState(block).isRunning) return null;
 
@@ -137,7 +137,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         try {
             // With `storedQueryId` the store writes the cache key of the result to
             // this block. The visualisation pages then link to that block.
-            const entry = await BeaconClient.ensureQuery(query, instance, block.id);
+            const entry = await BeaconClient.ensureQuery(query, node, block.id);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
             workspace.endBlockRun(block.id, token);
@@ -172,12 +172,12 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         if (isBlocked(query)) return;
 
-        const instance = requireInstance();
-        if (!instance) return;
+        const node = requireNode();
+        if (!node) return;
 
         // Built here, and not at the mount of the page. The node of the active
         // block can differ from the node of the block at the mount.
-        const client = BeaconClient.new(instance);
+        const client = BeaconClient.new(node);
 
         if (workspace.getRunState(block).isRunning) return;
 
@@ -245,8 +245,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         visualiseMap,
         resetQuery,
         saveQuery,
-        getInstance,
-        getInstanceRef,
+        getNode,
+        getNodeRef,
         getQueryName,
         runBlockReason: activeRunBlockReason
     };

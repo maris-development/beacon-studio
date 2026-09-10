@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { BeaconInstance } from '@/beacon-api/types';
+	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
-    import QueryBuilderInstanceSelector from './QueryBuilderInstanceSelector.svelte';
+    import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
     import type { QuerySelectionStatus } from '@/query/selection-status';
@@ -16,9 +16,9 @@
 		
 
     let {
-        instance,
-        missingInstanceUrl = null,
-        onInstanceChange,
+        node,
+        missingNodeUrl = null,
+        onNodeChange,
         onSeedMismatch,
         initialDraft = null,
         pendingSeed = null,
@@ -38,11 +38,11 @@
          * re-mounts the builder when this changes, so the client below is built
          * once and never goes stale.
          */
-        instance: BeaconInstance | null;
-        /** The URL of a node that the instance list does not hold, or null. */
-        missingInstanceUrl?: string | null;
+        node: BeaconNode | null;
+        /** The URL of a node that the node list does not hold, or null. */
+        missingNodeUrl?: string | null;
         /** Called with the node the user picked in the first step. */
-        onInstanceChange: (instance: BeaconInstance) => void;
+        onNodeChange: (node: BeaconNode) => void;
         /**
          * Called when the node does not hold the query of a deep-link seed. The
          * builder finds this, because only the builder reads the tables and the
@@ -99,11 +99,11 @@
 	async function loadTables(): Promise<void> {
 		// No node, no tables. The user picks a node in the first step, which
 		// re-mounts this component with a client.
-		if (!instance) return;
+		if (!node) return;
 
 		loadError = null;
 		loaded = false;
-		client = BeaconClient.new(instance);
+		client = BeaconClient.new(node);
 
 		let tables: string[];
 		let default_table: string;
@@ -112,8 +112,8 @@
 			tables = await client.getCachedTables();
 			default_table = await client.getCachedDefaultTable();
 		} catch (error) {
-			console.error('Could not read the tables of the Beacon instance.', error);
-			loadError = (error as Error)?.message || 'The Beacon instance did not answer.';
+			console.error('Could not read the tables of the Beacon node.', error);
+			loadError = (error as Error)?.message || 'The Beacon node did not answer.';
 			loaded = true;
 			return;
 		}
@@ -175,27 +175,27 @@
 
 </script>
 
-<QueryBuilderInstanceSelector
-	selected={instance}
-	missingUrl={missingInstanceUrl}
-	onPick={onInstanceChange}
+<QueryBuilderNodeSelector
+	selected={node}
+	missingUrl={missingNodeUrl}
+	onPick={onNodeChange}
 />
 
 <hr>
 
-{#if instance && loadError}
+{#if node && loadError}
 	<!--
 		The node gave no tables. Name the reason, and offer a retry. The picker
 		above stays, so the user can also pick another node.
 	-->
 	<div class="load-error" role="alert">
-		<p class="load-error-title">Could not read the tables of "{instance.name || instance.url}".</p>
+		<p class="load-error-title">Could not read the tables of "{node.name || node.url}".</p>
 		<p class="load-error-reason">{loadError}</p>
 		<Button variant="secondary" onclick={() => loadTables()}>Try again</Button>
 	</div>
 
 	<hr>
-{:else if instance && client}
+{:else if node && client}
 	<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
 
     <hr>

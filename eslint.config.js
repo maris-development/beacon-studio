@@ -41,7 +41,7 @@ export default ts.config(
 	// Without this guard the rule decays: a type gets declared in a .svelte file,
 	// and the domain layer reaches up into a component to import it.
 	{
-		// `beacon-api` is not listed. It imports `stores/config`, `stores/toasts` and
+		// `beacon-api` is not listed. It imports `stores/toasts` and
 		// `stores/query-store` today, so the rule would fail on existing code. Untangle
 		// that separately, then add it here.
 		files: ['src/lib/query/**', 'src/lib/geo/**', 'src/lib/stores/**'],

@@ -15,9 +15,9 @@
  * instead of re-executing the query. Heavy transforms (sort / dedup / min-max /
  * geometry) are delegated to a shared worker.
  *
- * Every method that touches a node takes the {@link BeaconInstance} as an
+ * Every method that touches a node takes the {@link BeaconNode} as an
  * argument. The store reads no app-wide selection. A query record owns its node,
- * so two open queries can run on two nodes. The instance URL is part of the
+ * so two open queries can run on two nodes. The node URL is part of the
  * cache key, so results of two nodes never mix.
  *
  * The store runs one query at a time. See {@link QueryStore.ensure}.
@@ -26,12 +26,12 @@
 import * as ApacheArrow from 'apache-arrow';
 import { getArrowDecoder, type QueryInput } from '@beacon/client';
 import { makeBeaconClient } from '@/beacon-api/client';
-import type { BeaconInstance, CompiledQuery, QueryWarning } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
 import { recordExecution } from '@/stores/query-history';
 import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
 import { getSettings } from '@/stores/settings';
-import { snapshotInstance } from '@/stores/stored-query';
+import { snapshotNode } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
@@ -113,7 +113,7 @@ class QueryStore {
 	/** True while at least one fetch is in flight. */
 	isLoading = $state(false);
 
-	/** Insertion-ordered LRU of cached datasets, keyed by `keyFor(query, instance)`. */
+	/** Insertion-ordered LRU of cached datasets, keyed by `keyFor(query, node)`. */
 	private cache = new Map<string, DatasetEntry>();
 	/** In-flight fetches, so concurrent `ensure()` calls for the same key share one request. */
 	private inFlight = new Map<string, Promise<DatasetEntry>>();
@@ -153,13 +153,13 @@ class QueryStore {
 	 * The URL of the node is part of the key: results persist across sessions
 	 * (OPFS tier), so the same query on another node must never share an entry.
 	 */
-	keyFor(query: CompiledQuery, instance: Pick<BeaconInstance, 'url'> | null): string {
-		return stableStringify({ instance: instance?.url ?? null, query });
+	keyFor(query: CompiledQuery, node: Pick<BeaconNode, 'url'> | null): string {
+		return stableStringify({ node: node?.url ?? null, query });
 	}
 
 	/** Returns a cached entry without fetching, or `undefined` if absent. */
-	peek(query: CompiledQuery, instance: Pick<BeaconInstance, 'url'> | null): DatasetEntry | undefined {
-		return this.cache.get(this.keyFor(query, instance));
+	peek(query: CompiledQuery, node: Pick<BeaconNode, 'url'> | null): DatasetEntry | undefined {
+		return this.cache.get(this.keyFor(query, node));
 	}
 
 	/**
@@ -177,7 +177,7 @@ class QueryStore {
 	/**
 	 * Returns the cached result for `query`: from memory, else rehydrated from the
 	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`) from
-	 * `instance`. On success the entry becomes {@link current}.
+	 * `node`. On success the entry becomes {@link current}.
 	 *
 	 * The store runs one query at a time. Two calls for the same key share one
 	 * request. A call for another key aborts the request that runs, and the old
@@ -207,17 +207,17 @@ class QueryStore {
 	 */
 	async ensure(
 		query: CompiledQuery,
-		instance: BeaconInstance,
+		node: BeaconNode,
 		storedQueryId?: string
 	): Promise<DatasetEntry> {
-		const key = this.keyFor(query, instance);
+		const key = this.keyFor(query, node);
 
 		if (this.cacheEnabled) {
 			const cached = this.cache.get(key);
 			if (cached) {
 				this.touch(key, cached);
 				this.current = cached;
-				this.recordHistory(cached, instance, storedQueryId);
+				this.recordHistory(cached, node, storedQueryId);
 				return cached;
 			}
 		}
@@ -233,11 +233,11 @@ class QueryStore {
 		this.activeRun = { key, controller };
 		this.isLoading = true;
 
-		const promise = this.load(query, key, instance, controller.signal)
+		const promise = this.load(query, key, node, controller.signal)
 			.then((entry) => {
 				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry, instance, storedQueryId);
+				this.recordHistory(entry, node, storedQueryId);
 				return entry;
 			})
 			.finally(() => {
@@ -273,7 +273,7 @@ class QueryStore {
 	 * argument. Pass the node of the query with `query`: the URL of the node is
 	 * part of the key, so a call without it matches no entry.
 	 */
-	invalidate(query?: CompiledQuery, instance?: Pick<BeaconInstance, 'url'> | null): void {
+	invalidate(query?: CompiledQuery, node?: Pick<BeaconNode, 'url'> | null): void {
 		if (!query) {
 			this.cache.clear();
 			this.mapTableCache.clear();
@@ -281,7 +281,7 @@ class QueryStore {
 			void opfsArrowCache.clear();
 			return;
 		}
-		const key = this.keyFor(query, instance ?? null);
+		const key = this.keyFor(query, node ?? null);
 		this.cache.delete(key);
 		this.purgeDerived(key);
 		if (this.current?.key === key) this.current = null;
@@ -297,7 +297,7 @@ class QueryStore {
 	 */
 	private recordHistory(
 		entry: DatasetEntry,
-		instance: BeaconInstance,
+		node: BeaconNode,
 		storedQueryId?: string
 	): void {
 		try {
@@ -307,7 +307,7 @@ class QueryStore {
 				compiled: entry.query,
 				draft: origin?.draft ?? null,
 				name: origin?.name,
-				instance: snapshotInstance(instance),
+				node: snapshotNode(node),
 				rowCount: entry.rowCount,
 				duration: entry.duration
 			});
@@ -330,18 +330,18 @@ class QueryStore {
 	 */
 	recordDownload(
 		query: CompiledQuery,
-		instance: BeaconInstance,
+		node: BeaconNode,
 		duration: number,
 		storedQueryId?: string
 	): void {
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
-				datasetKey: this.keyFor(query, instance),
+				datasetKey: this.keyFor(query, node),
 				compiled: query,
 				draft: origin?.draft ?? null,
 				name: origin?.name,
-				instance: snapshotInstance(instance),
+				node: snapshotNode(node),
 				duration
 			});
 		} catch (error) {
@@ -473,7 +473,7 @@ class QueryStore {
 	private async load(
 		query: CompiledQuery,
 		key: string,
-		instance: BeaconInstance,
+		node: BeaconNode,
 		signal: AbortSignal
 	): Promise<DatasetEntry> {
 		if (this.cacheEnabled) {
@@ -482,7 +482,7 @@ class QueryStore {
 		}
 		// The OPFS read can take a moment. A newer run can start in that time.
 		signal.throwIfAborted();
-		return this.fetch(query, key, instance, signal);
+		return this.fetch(query, key, node, signal);
 	}
 
 	/**
@@ -512,15 +512,15 @@ class QueryStore {
 		}
 	}
 
-	/** Executes the query arrow-native on `instance` and builds a {@link DatasetEntry}. */
+	/** Executes the query arrow-native on `node` and builds a {@link DatasetEntry}. */
 	private async fetch(
 		query: CompiledQuery,
 		key: string,
-		instance: BeaconInstance,
+		node: BeaconNode,
 		signal: AbortSignal
 	): Promise<DatasetEntry> {
 
-		const client = makeBeaconClient(instance);
+		const client = makeBeaconClient(node);
 
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;

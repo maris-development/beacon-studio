@@ -19,13 +19,13 @@
  * key. The OPFS tier uses the same key. It is null before the first run.
  */
 
-import type { BeaconInstance, CompiledQuery, InstanceRef } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
 import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';
 import { Utils } from '@/utils';
 
-export type { InstanceRef };
+export type { NodeRef };
 
 /** Which collection a record belongs to. */
 export type StoredQueryRole = 'block' | 'saved' | 'history';
@@ -86,9 +86,9 @@ export interface StoredQuery {
 	/**
 	 * The Beacon node that runs this query. It is the connection of the record,
 	 * not a label. Every run, download and cache key uses it. Resolve it with
-	 * `matchRef` or `resolveRef` in `@/services/beacon-instance`.
+	 * `matchRef` or `resolveRef` in `@/services/beacon-node`.
 	 */
-	instance: InstanceRef;
+	node: NodeRef;
 	/**
 	 * How the visualisation pages show this query. Null for a record that the
 	 * user never opened on the map. See {@link QueryViewState}.
@@ -112,26 +112,26 @@ export type StoredQueryInput = Partial<Omit<StoredQuery, 'id' | 'role'>> & {
 	role: StoredQueryRole;
 };
 
-/** Copies a config instance down to the fields a record needs. Never the token. */
-export function snapshotInstance(instance: BeaconInstance | null | undefined): InstanceRef {
+/** Copies a config node down to the fields a record needs. Never the token. */
+export function snapshotNode(node: BeaconNode | null | undefined): NodeRef {
 	return {
-		id: instance?.id ?? '',
-		name: instance?.name ?? '',
-		url: instance?.url ?? ''
+		id: node?.id ?? '',
+		name: node?.name ?? '',
+		url: node?.url ?? ''
 	};
 }
 
 /**
  * A ref for a node that the app knows by URL only. A share link gives this.
- * `matchRef` finds the instance if the list holds that URL. If it does not, the
+ * `matchRef` finds the node if the list holds that URL. If it does not, the
  * UI reads `url` and asks the user to add the node.
  */
-export function instanceRefFromUrl(url: string): InstanceRef {
+export function nodeRefFromUrl(url: string): NodeRef {
 	return { id: '', name: '', url: url.trim() };
 }
 
 /** True when a ref names a node at all. An empty ref names none. */
-export function hasInstanceRef(ref: InstanceRef | null | undefined): boolean {
+export function hasNodeRef(ref: NodeRef | null | undefined): boolean {
 	return !!ref && (!!ref.id || !!ref.url);
 }
 
@@ -167,7 +167,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 		name: input.name ?? 'Untitled',
 		draft,
 		compiled,
-		instance: input.instance ?? snapshotInstance(null),
+		node: input.node ?? snapshotNode(null),
 		view: input.view ?? null,
 		datasetKey: input.datasetKey ?? null,
 		createdAt: input.createdAt ?? now,
@@ -216,7 +216,7 @@ export function cloneStoredQuery(
 		draft,
 		compiled,
 		view,
-		instance: { ...source.instance },
+		node: { ...source.node },
 		datasetKey: null,
 		createdAt: now,
 		updatedAt: now,
@@ -253,8 +253,17 @@ export type SharedQuery = {
 	/** The name that the sender gave the query. */
 	name: string;
 	/** The node that runs the query. Empty when the sender named none. */
-	instanceUrl: string;
+	nodeUrl: string;
 };
+
+/**
+ * The payload as it can arrive. A link of an older app version carries the node
+ * URL under `instanceUrl`. {@link decodeSharedQuery} reads both spellings, so a
+ * link that is already in the wild keeps its node.
+ *
+ * `instanceUrl` is a wire format, not a term. Never rename it.
+ */
+type IncomingSharedQuery = Partial<SharedQuery> & { instanceUrl?: string };
 
 /** Gzip a payload for `?query=`. */
 export function encodeSharedQuery(shared: SharedQuery): string {
@@ -267,7 +276,7 @@ export function encodeSharedQuery(shared: SharedQuery): string {
  * The caller shows that message to the user.
  */
 export function decodeSharedQuery(value: string): SharedQuery {
-	const payload = Utils.gzipStringToObject<Partial<SharedQuery>>(value);
+	const payload = Utils.gzipStringToObject<IncomingSharedQuery>(value);
 	const hasQuery = !!payload && typeof payload === 'object' && !!payload.query;
 
 	if (!hasQuery || typeof payload.query !== 'object') {
@@ -277,7 +286,7 @@ export function decodeSharedQuery(value: string): SharedQuery {
 	return {
 		query: payload.query as CompiledQuery,
 		name: payload.name ?? '',
-		instanceUrl: payload.instanceUrl ?? ''
+		nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? ''
 	};
 }
 
@@ -293,14 +302,14 @@ export function buildShareLink(
 	query: CompiledQuery | null,
 	basePath: string,
 	name: string,
-	instance?: InstanceRef | null
+	node?: NodeRef | null
 ): string | null {
 	if (!query) return null;
 
 	const gzipped = encodeSharedQuery({
 		query,
 		name,
-		instanceUrl: instance?.url ?? ''
+		nodeUrl: node?.url ?? ''
 	});
 
 	if (!gzipped) return null;

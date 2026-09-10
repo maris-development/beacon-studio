@@ -3,7 +3,7 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { PythonQueryBuilder } from '@/beacon-api/query';
-	import { getCurrentInstance } from '@/services/beacon-instance';
+	import { getCurrentNode } from '@/services/beacon-node';
 	import Button from '@/components/buttons/Button.svelte';
 
 	const query: CompiledQuery = {
@@ -116,7 +116,7 @@
 
 	onMount(() => {
 
-        pythonCode = PythonQueryBuilder.toPythonCode(query, getCurrentInstance());
+        pythonCode = PythonQueryBuilder.toPythonCode(query, getCurrentNode());
 
 
 

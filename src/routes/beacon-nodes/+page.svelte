@@ -1,37 +1,35 @@
 <script lang="ts">
-	import type { BeaconInstance } from '@/beacon-api/types';
-	import { instances } from '@/services/beacon-instance';
-	import { checkAllInstances } from '@/services/beacon-instance-connect';
-	import { FRESH_MS } from '@/services/beacon-instance-health';
-	import BeaconInstanceStatus from '@/components/BeaconInstanceStatus.svelte';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { nodes } from '@/services/beacon-node';
+	import { checkAllNodes } from '@/services/beacon-node-connect';
+	import { FRESH_MS } from '@/services/beacon-node-health';
+	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import Button from '@/components/buttons/Button.svelte';
-	// These two imports use the casing on disk. A different casing adds a
-	// `svelte-check` error, and breaks a build on a case sensitive filesystem.
-	import Card from '@/components/card/card.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/cookiecrumb.svelte';
+	import Card from '@/components/card/Card.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import AddBeaconModal from '@/components/modals/AddBeaconModal.svelte';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 
-	let editingInstance: BeaconInstance | null = $state(null);
+	let editingNode: BeaconNode | null = $state(null);
 	let showFormModal = $state(false);
 
-	// The table shows the health of every instance. Refresh the stale results.
+	// The table shows the health of every node. Refresh the stale results.
 	onMount(() => {
-		void checkAllInstances(FRESH_MS);
+		void checkAllNodes(FRESH_MS);
 	});
 
-	// The newest instance first, so an addition lands at the top. `addInstance`
+	// The newest node first, so an addition lands at the top. `addNode`
 	// appends, so the reverse of the list is the order this page needs. A sort on
 	// `createdAt` cannot do this: the import writes several records in one
 	// millisecond, so their order would change on each start.
-	let rows = $derived([...$instances].reverse());
+	let rows = $derived([...$nodes].reverse());
 
 	/** Opens the form. Pass `null` for an empty form. */
-	function openForm(instance: BeaconInstance | null): void {
-		editingInstance = instance;
+	function openForm(node: BeaconNode | null): void {
+		editingNode = node;
 		showFormModal = true;
 	}
 
@@ -42,32 +40,32 @@
 </script>
 
 <svelte:head>
-	<title>Beacon Instances - Beacon Studio</title>
+	<title>Beacon Nodes - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Beacon Instances', href: resolve('/beacon-instances') }]} />
+<Cookiecrumb crumbs={[{ label: 'Beacon Nodes', href: resolve('/beacon-nodes') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Beacon Instances</h1>
+		<h1>Beacon Nodes</h1>
 
 		<p>
-			Use this page to manage your connected Beacon instances. Explore publicly available Beacon
-			instances at <a href="https://beacon-datalake.org/use-cases" rel="noopener noreferrer" target="_blank"
+			Use this page to manage your connected Beacon nodes. Explore publicly available Beacon
+			nodes at <a href="https://beacon-datalake.org/use-cases" rel="noopener noreferrer" target="_blank"
 				>Beacon datalake</a
 			>.
 		</p>
 
 		<div class="actions">
 			<Button onclick={() => openForm(null)}>
-				Add instance
+				Add node
 				<PlusIcon />
 			</Button>
 		</div>
 
-		<Card class="beacon-instances">
+		<Card class="beacon-nodes">
 			<div class="table-scroll">
-				<table class="beacon-instances-table">
+				<table class="beacon-nodes-table">
 					<thead>
 						<tr>
 							<th>Node name</th>
@@ -78,21 +76,21 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each rows as instance (instance.id)}
+						{#each rows as node (node.id)}
 							<tr>
-								<td class="node-name">{instance.name}</td>
-								<td class="node-description" title={instance.description}>
-									<span class="clamp">{instance.description}</span>
+								<td class="node-name">{node.name}</td>
+								<td class="node-description" title={node.description}>
+									<span class="clamp">{node.description}</span>
 								</td>
 								<td class="node-url">
-									<a href={instance.url} rel="noopener noreferrer" target="_blank">{instance.url}</a
+									<a href={node.url} rel="noopener noreferrer" target="_blank">{node.url}</a
 									>
 								</td>
 								<td class="node-status">
-									<BeaconInstanceStatus health={instance} variant="compact" />
+									<BeaconNodeStatus health={node} variant="compact" />
 								</td>
 								<td class="node-actions">
-									<Button variant="outline" onclick={() => openForm(instance)}>
+									<Button variant="outline" onclick={() => openForm(node)}>
 										Edit
 										<SquarePenIcon />
 									</Button>
@@ -100,7 +98,7 @@
 							</tr>
 						{:else}
 							<tr>
-								<td class="no-instances" colspan="5">No Beacon instances configured.</td>
+								<td class="no-nodes" colspan="5">No Beacon nodes configured.</td>
 							</tr>
 						{/each}
 					</tbody>
@@ -111,12 +109,12 @@
 </div>
 
 {#if showFormModal}
-	<AddBeaconModal onSave={closeForm} onClose={closeForm} instance={editingInstance} />
+	<AddBeaconModal onSave={closeForm} onClose={closeForm} node={editingNode} />
 {/if}
 
 <style lang="scss">
 	.page-container {
-		:global(.card.beacon-instances) {
+		:global(.card.beacon-nodes) {
 			padding: 0;
 			background-color: var(--background);
 		}
@@ -134,7 +132,7 @@
 		overflow-x: auto;
 	}
 
-	table.beacon-instances-table {
+	table.beacon-nodes-table {
 		width: 100%;
 		text-align: left;
 		border-collapse: collapse;
@@ -187,7 +185,7 @@
 			white-space: nowrap;
 		}
 
-		.no-instances {
+		.no-nodes {
 			color: var(--muted-foreground);
 			text-align: center;
 		}

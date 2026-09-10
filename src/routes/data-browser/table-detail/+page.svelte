@@ -2,7 +2,8 @@
 
     import { page } from '$app/state';
 	import { BeaconClient } from '@/beacon-api/client';
-	import { currentBeaconInstance, type BeaconInstance } from '$lib/stores/config';
+	import { currentNode } from '@/services/beacon-node';
+	import type { BeaconNode } from '@/beacon-api/types';
     import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
@@ -18,7 +19,7 @@
         throw error(400, 'Missing `table_name` query parameter');
     }
 
-    let currentBeaconInstanceValue: BeaconInstance | null = $state(null);
+    let currentNodeValue: BeaconNode | null = $state(null);
 	let client: BeaconClient;
 
     let columns: Column[] = $state([
@@ -40,8 +41,8 @@
 	let firstLoad = true;
     
 	onMount(() => {
-		currentBeaconInstanceValue = $currentBeaconInstance;
-		client = BeaconClient.new(currentBeaconInstanceValue);
+		currentNodeValue = $currentNode;
+		client = BeaconClient.new(currentNodeValue);
 
 		getTableSchemaData();
     });

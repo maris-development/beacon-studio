@@ -1,11 +1,11 @@
 <script lang="ts">
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
-	import Toasts from '@/components/toasts/toasts.svelte';
-	import { checkAllInstances, startHealthMonitor } from '@/services/beacon-instance-connect';
-	import { loadOpenInstances } from '@/services/open-instances';
+	import Toasts from '@/components/toasts/Toasts.svelte';
+	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
+	import { loadOpenNodes } from '@/services/open-nodes';
 	import { loadHomeExamples } from '@/data/home-examples';
-	import { FRESH_MS } from '@/services/beacon-instance-health';
-	import { importOpenInstances } from '@/services/open-instances-import';
+	import { FRESH_MS } from '@/services/beacon-node-health';
+	import { importOpenNodes } from '@/services/open-nodes-import';
 	import { onMount } from 'svelte';
 	import '../app.scss';
 	import '../tailwind.css';
@@ -14,9 +14,9 @@
 	onMount(() => {
 		// A failure leaves the list empty, so the import then adds nothing. The
 		// monitor sweeps before the fetch answers, so the new nodes need a check.
-		void loadOpenInstances()
-			.then(importOpenInstances)
-			.then(() => checkAllInstances(FRESH_MS));
+		void loadOpenNodes()
+			.then(importOpenNodes)
+			.then(() => checkAllNodes(FRESH_MS));
 
 		void loadHomeExamples();
 

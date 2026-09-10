@@ -1,4 +1,4 @@
-import type { BeaconInstance, CompiledQuery, InstanceRef } from "@/beacon-api/types";
+import type { BeaconNode, CompiledQuery, NodeRef } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
 import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter, SQLQueryBuilder, SQLQueryExporter } from "@/beacon-api/query";
@@ -127,7 +127,7 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
 
 export async function copyPython(
     compileQuery: () => CompiledQuery,
-    instance: BeaconInstance | null
+    node: BeaconNode | null
 ): Promise<void> {
     
     const compiledQuery = tryCompileQuery(compileQuery);
@@ -136,7 +136,7 @@ export async function copyPython(
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, node);
 
     } catch (error) {
         console.error('Error generating Python code:', error);
@@ -182,7 +182,7 @@ export async function copyPython(
 }
 export function downloadPython(
     compileQuery: () => CompiledQuery,
-    instance: BeaconInstance | null
+    node: BeaconNode | null
 ): void {
 
     const compiledQuery = tryCompileQuery(compileQuery);
@@ -191,7 +191,7 @@ export function downloadPython(
     let pythonCode: string;
 
     try {
-        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, instance);
+        pythonCode = PythonQueryBuilder.toPythonCode(compiledQuery, node);
 
     } catch (error) {
         console.error('Error generating Python code:', error);
@@ -329,7 +329,7 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
 /**
  * Copy a share link for a query to the clipboard.
  *
- * `instance` is the node ref of the query, and not the resolved node. A ref
+ * `node` is the node ref of the query, and not the resolved node. A ref
  * keeps the URL of a node that this app does not have, so the link still names
  * it. The link never carries a token. See `buildShareLink`.
  *
@@ -337,7 +337,7 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
  */
 export async function copyUrl(
     compileQuery: () => CompiledQuery,
-    instance: InstanceRef | null,
+    node: NodeRef | null,
     name: string
 ): Promise<void> {
 
@@ -348,7 +348,7 @@ export async function copyUrl(
     let link: string;
 
     try {
-        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), name, instance);
+        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), name, node);
     }
     catch (error) {
         console.error('Error building Query URL:', error);
