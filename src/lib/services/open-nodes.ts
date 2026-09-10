@@ -21,6 +21,21 @@ export const OPEN_NODES_URL = 'https://beacon-datalake.org/public-nodes.json';
 /** The time after which the fetch of the list counts as a failure. */
 const FETCH_TIMEOUT_MS = 10_000;
 
+/**
+ * Temporary fix: the tables to show for a public node, keyed by normalized URL.
+ * A public node can hold tables not meant for the demo, so the data-tables page
+ * shows only this set for these nodes. Remove once the public list carries its
+ * own table set.
+ */
+export const PUBLIC_NODE_TABLES: Record<string, string[]> = {
+	[normalizeUrl('https://beacon-wod.maris.nl/')]: ['easy-wod'],
+	[normalizeUrl('https://beacon-era5.maris.nl/')]: [
+		'era5_daily_total_precipitation',
+		'era5_daily_mean_2m_temperature',
+		'era5_daily_max_2m_temperature'
+	]
+};
+
 /** One node of the public list. */
 export type OpenNode = {
 	name: string;
