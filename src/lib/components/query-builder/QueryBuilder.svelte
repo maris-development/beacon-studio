@@ -109,7 +109,11 @@
 		// `tables` below still holds the *old* one. Compare against the node
 		// this call started for, and drop a stale answer instead of reporting
 		// a mismatch against the wrong node.
-		const requestedNode = node;
+		//
+		// Compare the URL, not the object. The node list re-emits on an edit or
+		// a health check, which gives the same node a new object. That is not a
+		// new node, and this call must survive it.
+		const requestedUrl = node.url;
 
 		loadError = null;
 		loaded = false;
@@ -120,14 +124,14 @@
 		try {
 			tables = await client.getCachedTables();
 		} catch (error) {
-			if (node !== requestedNode) return;
+			if (node?.url !== requestedUrl) return;
 			console.error('Could not read the tables of the Beacon node.', error);
 			loadError = (error as Error)?.message || 'The Beacon node did not answer.';
 			loaded = true;
 			return;
 		}
 
-		if (node !== requestedNode) return;
+		if (node?.url !== requestedUrl) return;
 
 		// A node can have no default table configured, so this is an offer, not a
 		// requirement. Fall back to the first table when it fails or is unusable.
@@ -139,7 +143,7 @@
 			console.warn('Could not read the default table of the Beacon node.', error);
 		}
 
-		if (node !== requestedNode) return;
+		if (node?.url !== requestedUrl) return;
 
 		if (!default_table || !tables.includes(default_table)) {
 			default_table = tables[0];
