@@ -315,6 +315,7 @@
 	.page-wrapper {
 		flex-grow: 1;
 		min-height: 0;
+		min-width: 0;
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
@@ -324,6 +325,7 @@
 	.vertical-tabs-wrapper {
 		flex-grow: 1;
 		min-height: 0;
+		min-width: 0;
 		display: flex;
 		flex-direction: row;
 		gap: 1rem;
@@ -331,6 +333,7 @@
 		.content.page-container {
 			flex-grow: 1;
 			min-height: 0;
+			min-width: 0;
 
 			display: flex;
 			flex-direction: column;

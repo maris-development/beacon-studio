@@ -159,14 +159,14 @@
 		flex-direction: column;
 		flex-grow: 1;
 		min-height: 0;
+		min-width: 0;
 		overflow: hidden;
-
-
 
 		.table-wrapper {
 			overflow: auto;
 			flex-grow: 1;
 			min-height: 0;
+			min-width: 0;
 
 			table.dataset-table {
 				min-width: 100%;
