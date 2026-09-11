@@ -101,21 +101,52 @@
 		// re-mounts this component with a client.
 		if (!node) return;
 
+		// A share link can swap the active block's node while this call is in
+		// flight: the workbench first paints the previously active block, then
+		// its `onMount` opens the link and points the block at the linked node.
+		// `{#key}` then remounts this component, but the old async call keeps
+		// running. `node` is read live, so it would see the *new* node while
+		// `tables` below still holds the *old* one. Compare against the node
+		// this call started for, and drop a stale answer instead of reporting
+		// a mismatch against the wrong node.
+		//
+		// Compare the URL, not the object. The node list re-emits on an edit or
+		// a health check, which gives the same node a new object. That is not a
+		// new node, and this call must survive it.
+		const requestedUrl = node.url;
+
 		loadError = null;
 		loaded = false;
 		client = BeaconClient.new(node);
 
 		let tables: string[];
-		let default_table: string;
 
 		try {
 			tables = await client.getCachedTables();
-			default_table = await client.getCachedDefaultTable();
 		} catch (error) {
+			if (node?.url !== requestedUrl) return;
 			console.error('Could not read the tables of the Beacon node.', error);
 			loadError = (error as Error)?.message || 'The Beacon node did not answer.';
 			loaded = true;
 			return;
+		}
+
+		if (node?.url !== requestedUrl) return;
+
+		// A node can have no default table configured, so this is an offer, not a
+		// requirement. Fall back to the first table when it fails or is unusable.
+		let default_table: string | undefined;
+
+		try {
+			default_table = await client.getCachedDefaultTable();
+		} catch (error) {
+			console.warn('Could not read the default table of the Beacon node.', error);
+		}
+
+		if (node?.url !== requestedUrl) return;
+
+		if (!default_table || !tables.includes(default_table)) {
+			default_table = tables[0];
 		}
 
 		// By default, select the first table, or restore the table from the draft/seed.

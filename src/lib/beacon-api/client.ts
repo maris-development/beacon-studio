@@ -5,6 +5,7 @@ import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
 import { BeaconClient as BeaconSdkClient } from '@beacon/client';
 import { normalizeUrl, splitNodeUrl } from '@/services/beacon-node-url';
+import { PUBLIC_NODE_TABLES } from '@/services/open-nodes';
 
 import {
     isAbortError,
@@ -300,6 +301,13 @@ export class BeaconClient {
     async getTables(): Promise<Array<string>> {
         const url = this.buildUrl('/api/tables');
         const response: Array<string> = await this.fetch(url);
+
+        // Temporary fix: a public demo node shows only its curated tables.
+        const allowedTables = PUBLIC_NODE_TABLES[this.baseUrl];
+        if (allowedTables) {
+            return response.filter((table) => allowedTables.includes(table));
+        }
+
         return response;
     }
 

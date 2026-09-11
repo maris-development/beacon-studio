@@ -51,6 +51,7 @@
 		type ColorScale
 	} from '@/plots/plot-config';
 	import { CROSS_SECTION_AXIS_LABEL, HISTOGRAM_AXIS_LABEL } from '@/plots/plot-data';
+	import { DEFAULT_SOLID_PALETTE_ID, getColormap } from '@/colors/palettes';
 	import { Utils } from '@/utils';
 
 	let { controller }: { controller: ChartExplorerController } = $props();
@@ -348,9 +349,26 @@
 		return summary;
 	});
 
-	const styleSummary = $derived(
-		`${draft?.style.palette ?? ''} · ${draft?.style.pointRadius ?? 0}px`
-	);
+	/**
+	 * The palette the points take with no colour column: the stored one while it
+	 * is a single colour, and solid blue otherwise. A gradient stays stored, so
+	 * binding the colour column again brings it back.
+	 */
+	const solidPalette = $derived.by(() => {
+		const palette = draft?.style.palette;
+		if (palette && getColormap(palette).solid) return palette;
+		return DEFAULT_SOLID_PALETTE_ID;
+	});
+
+	/** Names the palette that the plot paints with, which is solid without a Z column. */
+	const styleSummary = $derived.by(() => {
+		if (!draft) return '';
+
+		let palette = draft.style.palette;
+		if (usesZColumn(draft.type) && !draft.z?.column) palette = solidPalette;
+
+		return `${palette} · ${draft.style.pointRadius}px`;
+	});
 
 	const advancedAnalysisSummary = $derived.by(() => {
 		if (draft && !usesZColumn(draft.type)) return 'Not for this plot type';
@@ -781,8 +799,17 @@
 								A solid palette colours every bar the same. A range palette colours each bar by
 								its count.
 							</p>{/if}
-					{:else}<p class="hint">
-							Bind a column to the colour axis in step 2 to pick a palette.
+					{:else}<div class="field">
+							<Label for="plotPointColor">Point colour</Label><PalettePicker
+								id="plotPointColor"
+								value={solidPalette}
+								showGradients={false}
+								onSelect={(id) => patchStyle({ palette: id })}
+							/>
+						</div>
+						<p class="hint">
+							Every point takes this colour. Bind a column to the colour axis in step 2 to paint
+							the points by value.
 						</p>{/if}
 					{#if draft.z?.column}
 						<label class="checkbox-field"

@@ -55,7 +55,7 @@
 
 <div class="section-head">
 	<h2>How it works</h2>
-	<p class="lead">Three steps from an empty query to a downloaded file</p>
+	<p class="lead">Three steps from an empty query to your subset.</p>
 	<Button variant="link" onclick={toggle}>{open ? 'Hide guide' : 'Show guide'}</Button>
 </div>
 
@@ -115,6 +115,7 @@
 			flex-direction: row;
 			align-items: center;
 			gap: 0.75rem;
+			padding-bottom: 0.5rem;
 
 			h3 {
 				margin: 0;
