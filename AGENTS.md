@@ -148,6 +148,7 @@ Imports point one way only:
 - One shared worker keeps tables loaded by key across navigations. Don't `new ArrowProcessingWorkerManager()` per page or `terminate()` the shared instance.
 - Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
+- A canvas path holds about 150,000 arcs. Above that the browser drops the fill and reports no error, so the plot draws blank. `fillPointChunks` in `plots/uplot-render.ts` flushes the path every 10,000 arcs, and it also draws faster than one large path. Draw every point set through it. A palette bucket needs the same flush: the buckets divide the Z range, not the row count, so one bucket can hold every row.
 - `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including `markBlockRun`/`markBlockRunning` and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
 
 ## Editing Guidance for Agents

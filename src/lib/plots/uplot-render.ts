@@ -21,7 +21,8 @@ import {
 	getColorTable,
 	makePaletteScale,
 	paletteIndex,
-	samplePalette
+	samplePalette,
+	type PaletteId
 } from '@/colors/palettes';
 import { colorScalePosition, colorScaleValue } from '@/colors/color-scale';
 import type { ColorScale } from './plot-config';
@@ -31,6 +32,9 @@ import type { ContourResult } from './contour';
 import type { InterpolationResult } from './interpolation';
 
 const TAU = Math.PI * 2;
+
+/** Arcs per canvas path. Chrome drops the fill of a path above about 150,000 arcs. */
+const POINTS_PER_PATH = 10_000;
 
 /** The device pixel ratio the instance draws at. */
 function dprOf(u: uPlot): number {
@@ -148,13 +152,66 @@ export function groupColors(palette: string, count: number, reverse: boolean): s
 
 // -- points ------------------------------------------------------------------
 
+/** The colour of every point when the plot has no Z axis. */
+function pointColor(palette: PaletteId): string {
+	const colormap = getColormap(palette);
+	if (colormap.solid) return getColorTable(colormap.id)[0];
+	return DEFAULT_POINT_COLOR;
+}
+
+/**
+ * Draw a set of rows as circles, as several paths.
+ *
+ * Above about 150,000 arcs in one path the canvas drops the fill, and it reports
+ * no error. Therefore the path is flushed every {@link POINTS_PER_PATH} arcs. A
+ * set below that size still draws as one path, and the flush also runs faster.
+ *
+ * The caller sets the fill style and the alpha. `rows` lists the rows to draw;
+ * null draws `count` rows from `offset`.
+ */
+function fillPointChunks(
+	ctx: CanvasRenderingContext2D,
+	series: PlotSeries,
+	mapper: PixelMapper,
+	radius: number,
+	count: number,
+	rows: ArrayLike<number> | null,
+	offset = 0
+): void {
+	const { pixelX, pixelY } = mapper;
+	const xs = series.x;
+	const ys = series.y;
+
+	let inPath = 0;
+	ctx.beginPath();
+
+	for (let i = 0; i < count; i++) {
+		let row = offset + i;
+		if (rows) row = rows[i];
+
+		const px = pixelX(xs[row]);
+		const py = pixelY(ys[row]);
+		ctx.moveTo(px + radius, py);
+		ctx.arc(px, py, radius, 0, TAU);
+
+		inPath++;
+		if (inPath < POINTS_PER_PATH) continue;
+
+		ctx.fill();
+		ctx.beginPath();
+		inPath = 0;
+	}
+
+	ctx.fill();
+}
+
 /**
  * Draw every point of the series.
  *
  * The colours come from a fixed table of at most 256 strings. A point takes the
  * index of its Z value in that table. The points are then grouped by index and
  * drawn one colour at a time, so the canvas sets its fill style a few hundred
- * times, not once per row. Without a Z axis the whole set is one fill.
+ * times, not once per row. Without a Z axis the whole set takes one colour.
  *
  * The opacity is one value for the set, so it is a single `globalAlpha` and the
  * palette strings stay opaque.
@@ -167,28 +224,15 @@ export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void
 	const mapper = pixelMapper(u);
 	if (!mapper) return;
 
-	const { pixelX, pixelY } = mapper;
-
-	const xs = series.x;
-	const ys = series.y;
-	const count = xs.length;
+	const count = series.x.length;
 
 	ctx.save();
 	clipToPlot(u);
 	ctx.globalAlpha = plot.style.pointOpacity;
 
 	if (!series.z || !series.zRange) {
-		ctx.fillStyle = DEFAULT_POINT_COLOR;
-		ctx.beginPath();
-
-		for (let i = 0; i < count; i++) {
-			const px = pixelX(xs[i]);
-			const py = pixelY(ys[i]);
-			ctx.moveTo(px + radius, py);
-			ctx.arc(px, py, radius, 0, TAU);
-		}
-
-		ctx.fill();
+		ctx.fillStyle = pointColor(plot.style.palette);
+		fillPointChunks(ctx, series, mapper, radius, count, null);
 		ctx.restore();
 		return;
 	}
@@ -210,22 +254,14 @@ export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void
 		else buckets[step] = [i];
 	}
 
+	// A palette step can hold most of the rows, because the buckets divide the Z
+	// range and not the row count. Therefore a bucket chunks like the whole set.
 	for (let step = 0; step < buckets.length; step++) {
 		const bucket = buckets[step];
 		if (!bucket) continue;
 
 		ctx.fillStyle = table[step];
-		ctx.beginPath();
-
-		for (let j = 0; j < bucket.length; j++) {
-			const i = bucket[j];
-			const px = pixelX(xs[i]);
-			const py = pixelY(ys[i]);
-			ctx.moveTo(px + radius, py);
-			ctx.arc(px, py, radius, 0, TAU);
-		}
-
-		ctx.fill();
+		fillPointChunks(ctx, series, mapper, radius, bucket.length, bucket);
 	}
 
 	ctx.restore();
@@ -288,16 +324,7 @@ export function drawLines(u: uPlot, series: PlotSeries, plot: PlotConfig): void 
 			const { start, end } = groups[g];
 
 			ctx.fillStyle = colors[g % colors.length];
-			ctx.beginPath();
-
-			for (let i = start; i < end; i++) {
-				const px = pixelX(xs[i]);
-				const py = pixelY(ys[i]);
-				ctx.moveTo(px + radius, py);
-				ctx.arc(px, py, radius, 0, TAU);
-			}
-
-			ctx.fill();
+			fillPointChunks(ctx, series, mapper, radius, end - start, null, start);
 		}
 	}
 

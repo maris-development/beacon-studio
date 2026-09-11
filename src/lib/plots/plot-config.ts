@@ -261,8 +261,11 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
 	textColor: '#1f2937'
 };
 
-/** The colour of a point when the plot has no Z axis. */
-export const DEFAULT_POINT_COLOR = '#2563eb';
+/**
+ * Solid blue, the colour of a point when the plot has no Z axis. It matches the
+ * `solid_blue` palette, and it stands in for it before the colormaps load.
+ */
+export const DEFAULT_POINT_COLOR = '#4678c8';
 
 export function makeAxisConfig(overrides: Partial<PlotAxisConfig> = {}): PlotAxisConfig {
 	return {

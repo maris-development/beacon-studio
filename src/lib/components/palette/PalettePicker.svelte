@@ -25,6 +25,7 @@
 		onSelect,
 		reverse = false,
 		showSolids = true,
+		showGradients = true,
 		id = undefined
 	}: {
 		/** The id of the palette now in use. */
@@ -33,6 +34,8 @@
 		/** Preview the palette the way it is drawn, turned around or not. */
 		reverse?: boolean;
 		showSolids?: boolean;
+		/** False offers the single colours alone, for a plot that paints no value. */
+		showGradients?: boolean;
 		/** DOM id of the trigger, so a `<label for>` can point at it. */
 		id?: string;
 	} = $props();
@@ -89,18 +92,20 @@
 	</Select.Trigger>
 
 	<Select.Content>
-		<Select.Group>
-			<Select.Label>Gradients</Select.Label>
+		{#if showGradients && gradientMaps.length > 0}
+			<Select.Group>
+				<Select.Label>Gradients</Select.Label>
 
-			{#each gradientMaps as map (map.id)}
-				<Select.Item value={map.id} label={map.label}>
-					<span class="entry" title={map.description}>
-						<span class="swatch" style="background: {previewFor(map.id)};"></span>
-						<span class="name">{map.label}</span>
-					</span>
-				</Select.Item>
-			{/each}
-		</Select.Group>
+				{#each gradientMaps as map (map.id)}
+					<Select.Item value={map.id} label={map.label}>
+						<span class="entry" title={map.description}>
+							<span class="swatch" style="background: {previewFor(map.id)};"></span>
+							<span class="name">{map.label}</span>
+						</span>
+					</Select.Item>
+				{/each}
+			</Select.Group>
+		{/if}
 
 		{#if showSolids && solidMaps.length > 0}
 			<Select.Group>
