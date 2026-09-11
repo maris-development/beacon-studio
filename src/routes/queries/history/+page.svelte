@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
+	import WorkbenchIcon from '@lucide/svelte/icons/square-terminal';
 	import TableIcon from '@lucide/svelte/icons/table';
 	import MapIcon from '@lucide/svelte/icons/map';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
@@ -49,6 +50,10 @@
 	function openWith(resolvedPath: string, entry: StoredQuery): void {
 		if (!entry.compiled) return;
 		goto(`${resolvedPath}?q=${encodeURIComponent(entry.id)}`);
+	}
+
+	function openInWorkbench(entry: StoredQuery): void {
+		openWith(resolve('/queries/workbench'), entry);
 	}
 
 	/**
@@ -145,6 +150,15 @@
 								</div>
 
 								<div class="actions">
+									<Button
+										size="sm"
+										variant="outline"
+										onclick={() => openInWorkbench(entry)}
+										title="Open in Query Builder"
+									>
+										<WorkbenchIcon />
+										Query Builder
+									</Button>
 									<Button
 										size="sm"
 										variant="outline"
