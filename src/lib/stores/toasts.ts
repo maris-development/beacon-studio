@@ -2,7 +2,8 @@ import { writable } from "svelte/store";
 
 export const toasts = writable([]);
 
-export function addToast(toast: Partial<IToast>) {
+/** Adds a toast and returns its id, for a caller that dismisses its own toast. */
+export function addToast(toast: Partial<IToast>): number {
   // Create a unique ID so we can easily find/remove it
   // if it is dismissible/has a timeout.
   const id = Math.floor(Math.random() * 10000);
@@ -25,6 +26,8 @@ export function addToast(toast: Partial<IToast>) {
 
   // If toast is dismissible, dismiss it after "timeout" amount of time.
   if (toastData.timeout) setTimeout(() => dismissToast(id), toastData.timeout);
+
+  return id;
 };
 
 export const dismissToast = (id: number) => {

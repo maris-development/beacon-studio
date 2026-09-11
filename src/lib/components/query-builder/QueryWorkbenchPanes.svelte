@@ -126,6 +126,7 @@
 					<QueryBuilder
 						node={activeNode}
 						missingNodeUrl={workspace.missingNodeUrl}
+						nodesReady={workspace.nodesReady}
 						onNodeChange={handleNodeChange}
 						onSeedMismatch={handleSeedMismatch}
 						initialDraft={workspace.activeBlock?.draft ?? null}

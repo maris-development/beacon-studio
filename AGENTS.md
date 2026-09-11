@@ -73,6 +73,13 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/query-history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
+  - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
+    therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
+    there, so a first-ever visit has no node list when a page mounts. A page that names a
+    node by URL (a share link) must wait for `openNodesSettled` / `whenOpenNodesSettled()`
+    (`services/open-nodes-import.ts`) before it reports that node as missing. `AppSidebar`
+    blocks a route that needs a node, and waits for the same flag, so a first visit is not
+    sent home before the public nodes land.
   - `src/lib/stores/settings.ts` (persisted user settings; the `/settings` page builds its form from `SETTING_DEFINITIONS`. Read a value with `getSettings()` at the point of use, or `$settings` in a component. Never read it at module load.)
   - `src/lib/stores/toasts.ts` (global toasts)
 - Heavy data operations (off-main-thread, one shared worker via `getArrowWorker()`):
