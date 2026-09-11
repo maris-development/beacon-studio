@@ -111,41 +111,41 @@
 
 		<div class="launchpad-cards">
 			<Card class="query-workbench">
-				<div class="content">
-					<h2>Query Workbench</h2>
-					<p>Write queries, filter data and search millions of records.</p>
-					<Button href={resolve('/queries/workbench')}>New Query</Button>
-				</div>
-				<div class="image">
-					<img src={asset('/images/small-query-workbench.png')} alt="Query Workbench" />
+				<img class="shot" src={asset('/images/small-query-workbench.png')} alt="Query Workbench" />
+				<div class="body">
+					<h3>Query Workbench</h3>
+					<p class="description">Write queries, filter data and search millions of records.</p>
+					<div class="actions">
+						<Button href={resolve('/queries/workbench')}>New Query</Button>
+					</div>
 				</div>
 			</Card>
 
 			<!-- for later updates -->
 
 			<!-- <Card class="map-explorer">
-				<div class="content">
-					<h2>Map Explorer</h2>
-					<p>Visualize spatial distributions and point observations on an interactive map.</p>
-					<Button variant="outline" href={resolve('/visualisations/map-viewer')}
-						>Go to Map Viewer</Button
-					>
-				</div>
-				<div class="image">
-					<img src={asset('/images/small-map-viewer.png')} alt="Map Viewer" />
+				<img class="shot" src={asset('/images/small-map-viewer.png')} alt="Map Viewer" />
+				<div class="body">
+					<h3>Map Explorer</h3>
+					<p class="description">Visualize spatial distributions and point observations on an interactive map.</p>
+					<div class="actions">
+						<Button variant="outline" href={resolve('/visualisations/map-viewer')}
+							>Go to Map Viewer</Button
+						>
+					</div>
 				</div>
 			</Card>
 
 			<Card class="chart-explorer">
-				<div class="content">
-					<h2>Chart Explorer</h2>
-					<p>Write queries, filter data and search millions of records.</p>
-					<Button variant="outline" href={resolve('/visualisations/chart-explorer')}
-						>Build a chart</Button
-					>
-				</div>
-				<div class="image">
-					<img src={asset('/images/small-chart-explorer.png')} alt="Chart Explorer" />
+				<img class="shot" src={asset('/images/small-chart-explorer.png')} alt="Chart Explorer" />
+				<div class="body">
+					<h3>Chart Explorer</h3>
+					<p class="description">Write queries, filter data and search millions of records.</p>
+					<div class="actions">
+						<Button variant="outline" href={resolve('/visualisations/chart-explorer')}
+							>Build a chart</Button
+						>
+					</div>
 				</div>
 			</Card> -->
 		</div>
@@ -222,43 +222,63 @@
 		.launchpad-cards {
 			display: grid;
 			gap: 1rem;
-			grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 
+			// The screenshot reaches the card edge, so the card holds no padding of
+			// its own. The body below it supplies the padding instead.
 			:global(.card) {
 				padding: 0;
 				overflow: hidden;
+				height: 100%;
 				max-width: 32.7%;
 			}
 
+			// `Card` puts every child inside this wrapper. The wrapper must fill the
+			// card, else `flex` on the body below it has nothing to divide.
 			:global(.card-content) {
-				padding: 0;
-				flex-grow: 1;
+				display: flex;
+				flex-direction: column;
+				flex: 1;
+			}
+
+			:global(.shot) {
+				display: block;
+				width: 100%;
+				height: auto;
+				aspect-ratio: 16 / 9;
+				object-fit: cover;
+				object-position: center;
+				border-bottom: 1px solid var(--card-border);
+				background-color: var(--muted);
+			}
+
+			:global(.body) {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5rem;
+				padding: 1rem;
+				// The card stretches to the tallest of the row. This pushes the
+				// actions of every card to the same edge.
+				flex: 1;
+
+				:global(h3) {
+					margin: 0;
+				}
+
+				:global(.description) {
+					margin: 0;
+					// The descriptions differ in length. This keeps the action rows of
+					// the cards on one line.
+					flex: 1;
+				}
+			}
+
+			:global(.actions) {
 				display: flex;
 				flex-direction: row;
-
-				:global(.content) {
-					padding: 1rem;
-					flex: 0 0 50%;
-					display: flex;
-					flex-direction: column;
-
-					:global(p) {
-						flex-grow: 1;
-					}
-				}
-				:global(.image) {
-					padding-top: 3rem;
-					padding-bottom: 1rem;
-					:global(img) {
-						border-radius: 0.5rem 0 0 0.5rem;
-						border: 1px solid lightgray;
-						border-right: 0;
-						object-fit: cover;
-						object-position: left;
-						display: block;
-						aspect-ratio: 1/0.8;
-					}
-				}
+				gap: 0.5rem;
+				width: 100%;
+				margin-top: 0.25rem;
 			}
 		}
 	}
