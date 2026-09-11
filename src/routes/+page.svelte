@@ -7,6 +7,7 @@
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import HowItWorks from '@/components/home/HowItWorks.svelte';
 	import QuickStartExamples from '@/components/home/QuickStartExamples.svelte';
+	import BracesIcon from '@lucide/svelte/icons/braces';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import Button from '@/components/buttons/Button.svelte';
@@ -116,7 +117,10 @@
 					<h3>Query Workbench</h3>
 					<p class="description">Write queries, filter data and search millions of records.</p>
 					<div class="actions">
-						<Button href={resolve('/queries/workbench')}>New Query</Button>
+						<Button variant="outline" href={resolve('/queries/workbench')}>
+							<BracesIcon />
+							New Query
+						</Button>
 					</div>
 				</div>
 			</Card>
@@ -279,6 +283,10 @@
 				gap: 0.5rem;
 				width: 100%;
 				margin-top: 0.25rem;
+
+				> :global(.btn) {
+					flex: 1;
+				}
 			}
 		}
 	}
