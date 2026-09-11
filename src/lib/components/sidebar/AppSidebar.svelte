@@ -2,6 +2,7 @@
 	// Node service
 	import { currentNode, nodes, selectFirstIfNone } from '@/services/beacon-node';
 	import { ensureFresh } from '@/services/beacon-node-connect';
+	import { openNodesSettled } from '@/services/open-nodes-import';
 	import logo from '$lib/assets/logo-gradient.svg';
 
 	// Svelte lifecycle and navigation
@@ -9,7 +10,7 @@
 	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { addToast } from '@/stores/toasts';
+	import { addToast, dismissToast } from '@/stores/toasts';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -150,6 +151,8 @@
 	// record holds its own node. Block the navigation instead of following it, so
 	// the user stays on the page they came from and sees why the target failed.
 	beforeNavigate((navigation) => {
+		// The public list can still add a node. Let the move through until it lands.
+		if (!$openNodesSettled) return;
 		if ($nodes.length > 0) return;
 		if (!needsNode(navigation.to?.route.id)) return;
 
@@ -172,15 +175,46 @@
 		// and the builder asks for one where it is missing.
 		selectFirstIfNone();
 
-		// `beforeNavigate` never runs for the page a session opens on. A direct
-		// load of a blocked route (a bookmark, a refresh, a shared link) has no
-		// prior page to stay on, so send it home instead.
-		if ($nodes.length === 0 && needsNode(page.route.id)) {
-			warnNoNode();
-			goto(resolve('/'));
+		return () => mobileQuery.removeEventListener('change', onMobileChange);
+	});
+
+	// `beforeNavigate` never runs for the page a session opens on. A direct load of
+	// a blocked route (a bookmark, a refresh, a shared link) has no prior page to
+	// stay on, so send it home instead. A first visit has no saved node, so this
+	// waits for the public list before the app gives up on the page.
+	$effect(() => {
+		if (!$openNodesSettled) return;
+		if ($nodes.length > 0) return;
+		if (!needsNode(page.route.id)) return;
+
+		warnNoNode();
+		goto(resolve('/'));
+	});
+
+	// The id of the open "please wait" toast. A plain let, so the effect below
+	// does not re-run on its own write.
+	let waitToastId: number | null = null;
+
+	// Name the wait. The app reads the public node list on a first visit only.
+	$effect(() => {
+		if ($openNodesSettled) {
+			if (waitToastId !== null) {
+				dismissToast(waitToastId);
+				waitToastId = null;
+			}
+			return;
 		}
 
-		return () => mobileQuery.removeEventListener('change', onMobileChange);
+		if (waitToastId !== null) return;
+		if ($nodes.length > 0) return;
+		if (!needsNode(page.route.id)) return;
+
+		waitToastId = addToast({
+			type: 'info',
+			timeout: 0,
+			message:
+				'Beacon Studio reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive.'
+		});
 	});
 
 	// Close the overlay sidebar after navigating on mobile

@@ -56,12 +56,14 @@ import type { ResolvedUrlQuery } from '@/stores/query-library';
 import {
 	cloneStoredQuery,
 	hasNodeRef,
+	nodeRefFromUrl,
 	snapshotNode,
 	type NodeRef,
 	type MapViewState,
 	type StoredQuery
 } from '@/stores/stored-query';
-import { getCurrentNode, nodes, matchRef } from '@/services/beacon-node';
+import { getCurrentNode, nodes, matchRef, resolveRef } from '@/services/beacon-node';
+import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-import';
 import type { BeaconNode } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
@@ -109,6 +111,9 @@ export class QueryWorkspace {
 	 */
 	private nodeList = $state<BeaconNode[]>([]);
 
+	/** True after the public list settles. Both node warnings wait for it. */
+	private nodesSettled = $state(false);
+
 	/**
 	 * The blocks whose node the app guessed. A share link of an older app version
 	 * carries no `?node=`, so the block falls back to the default node. That
@@ -120,7 +125,7 @@ export class QueryWorkspace {
 	 */
 	private guessedNode = $state<Record<string, boolean>>({});
 
-	/** Releases the two store subscriptions. See {@link destroy}. */
+	/** Releases the store subscriptions. See {@link destroy}. */
 	private unsubscribe: () => void;
 
 	constructor() {
@@ -132,9 +137,14 @@ export class QueryWorkspace {
 			this.nodeList = list;
 		});
 
+		const stopSettled = openNodesSettled.subscribe((value) => {
+			this.nodesSettled = value;
+		});
+
 		this.unsubscribe = () => {
 			stopBlocks();
 			stopNodes();
+			stopSettled();
 		};
 
 		this.restoreSelection();
@@ -194,9 +204,14 @@ export class QueryWorkspace {
 	private warnMissingNode(url: string | null): void {
 		if (!url) return;
 
-		addToast({
-			type: 'warning',
-			message: `This query needs the Beacon node ${url}. Add it to run the query.`
+		// The public list can still add this node. Ask again after it settles.
+		void whenOpenNodesSettled().then(() => {
+			if (resolveRef(nodeRefFromUrl(url))) return;
+
+			addToast({
+				type: 'warning',
+				message: `This query needs the Beacon node ${url}. Add it to run the query.`
+			});
 		});
 	}
 
@@ -242,12 +257,21 @@ export class QueryWorkspace {
 	missingNodeUrlFor(block: StoredQuery | null): string | null {
 		if (!hasNodeRef(block?.node)) return null;
 		if (this.nodeFor(block)) return null;
+
+		// The public list can still add this node. Claim nothing until it settles.
+		if (!this.nodesSettled) return null;
+
 		return block?.node.url || null;
 	}
 
 	/** {@link missingNodeUrlFor} for the active block. */
 	get missingNodeUrl(): string | null {
 		return this.missingNodeUrlFor(this.activeBlock);
+	}
+
+	/** True after the public list settles. See {@link missingNodeUrlFor}. */
+	get nodesReady(): boolean {
+		return this.nodesSettled;
 	}
 
 	/**
