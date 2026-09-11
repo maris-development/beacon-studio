@@ -28,9 +28,9 @@
 <div class="section-head">
 	<h2>Quick start examples</h2>
 	<p class="lead">Three real queries. Open one to review the query in the query builder and plot it on the map.</p>
-	<span class="pending" title={PENDING_HINT}>
+	<!-- <span class="pending" title={PENDING_HINT}>
 		<Button variant="link" disabled>View all examples</Button>
-	</span>
+	</span> -->
 </div>
 
 <div class="examples">
@@ -68,12 +68,12 @@
 						Check query
 					</Button>
 
-					<span class="pending" title={PENDING_HINT}>
+					<!-- <span class="pending" title={PENDING_HINT}>
 						<Button variant="default" disabled>
 							<MapIcon />
 							Load map area
 						</Button>
-					</span>
+					</span> -->
 				</div>
 			</div>
 		</Card>
