@@ -69,6 +69,13 @@
 		const max = colorScaleMax ?? autoColorScaleMax;
 
 		const colors = samplePalette(palette, COLOR_SCALE_BLIPS, paletteReverse);
+
+		// A bound that is not a number labels no block. The strip still draws, so
+		// the user sees the palette and can type a range.
+		if (!Number.isFinite(min) || !Number.isFinite(max)) {
+			return colors.map((color) => ({ color, value: null }));
+		}
+
 		const span = max - min;
 		const step = span / (COLOR_SCALE_BLIPS - 1);
 
@@ -134,7 +141,7 @@
 
 		<div class="colors-hover">
 			{#each strip as block, index (index)}
-				<span class="color-hit" data-value={block.value}></span>
+				<span class="color-hit" data-value={block.value ?? ''}></span>
 			{/each}
 		</div>
 	</div>

@@ -58,10 +58,15 @@ function groupByDecimals(): number {
 	return getSettings().mapGroupByDecimals;
 }
 
-/** Drop the float noise from a value that goes into a number field. */
-function roundForDisplay(value: number): number {
-	if (!Number.isFinite(value)) return 0;
-	return Number(value.toPrecision(6));
+/**
+ * Drop the float noise from a value that goes into a number field. Returns null
+ * for a value that cannot fill the field, such as the NaN of an empty column.
+ */
+function roundForDisplay(value: number): number | null {
+	// Number() also converts the BigInt of an Int64 column, which isFinite rejects.
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) return null;
+	return Number(numeric.toPrecision(6));
 }
 
 export class MapViewController {
@@ -410,6 +415,17 @@ export class MapViewController {
 		this.isLoading = false;
 	}
 
+	/**
+	 * Take the points off the map and stop the spinner. The result of the query
+	 * before this one must not stay visible under a new query.
+	 */
+	private clearPoints(): void {
+		this.layer = null;
+		this.renderedColumn = undefined;
+		this.overlay?.setProps({ layers: [] });
+		this.isLoading = false;
+	}
+
 	private deriveColumnNames(query: CompiledQuery): void {
 		this.availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
 			return param.alias ?? param.column;
@@ -441,9 +457,22 @@ export class MapViewController {
 				groupByDecimals()
 			);
 		} catch (error) {
+			this.clearPoints();
+			this.table = null;
+
 			addToast({
 				type: 'error',
 				message: `Failed to group dataset by lat/lon: ${(error as Error).message}`
+			});
+			return;
+		}
+
+		// Every row of the result lacks a coordinate, so the map has nothing to draw.
+		if (this.table.numRows === 0) {
+			this.clearPoints();
+			addToast({
+				type: 'warning',
+				message: 'No row of this result has a latitude and a longitude to plot.'
 			});
 			return;
 		}
@@ -572,8 +601,20 @@ export class MapViewController {
 		// Round the range for the legend inputs. A float column gives values like
 		// 27.856000900268555, which fills the field and tells the user nothing.
 		// Six digits keep every range this app shows apart.
-		this.autoColorScaleMin = roundForDisplay(minMax.min);
-		this.autoColorScaleMax = roundForDisplay(minMax.max);
+		const min = roundForDisplay(minMax.min);
+		const max = roundForDisplay(minMax.max);
+
+		// A column of nulls has no range. Keep 0..1, so the legend stays readable.
+		// A constant column keeps its real value: colorScalePosition paints every
+		// point the middle colour for it.
+		if (min === null || max === null) {
+			this.autoColorScaleMin = 0;
+			this.autoColorScaleMax = 1;
+			return;
+		}
+
+		this.autoColorScaleMin = min;
+		this.autoColorScaleMax = max;
 	}
 
 	private createLayer() {

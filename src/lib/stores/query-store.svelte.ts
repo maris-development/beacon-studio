@@ -50,6 +50,16 @@ export function queryCellLimit(): number {
 	return getSettings().queryCellLimit;
 }
 
+/**
+ * The row limit that a query runs with: the cell limit divided over the selected
+ * columns. It is part of the cache key, so a change of the setting refetches
+ * instead of serving the rows of the old limit.
+ */
+function effectiveLimit(query: CompiledQuery): number {
+	const columnCount = Math.max(1, query.query_parameters?.length ?? 1);
+	return Math.round(queryCellLimit() / columnCount);
+}
+
 /** Max number of cached datasets kept in memory at once (`memoryCacheMaxEntries`). */
 function maxEntries(): number {
 	return getSettings().memoryCacheMaxEntries;
@@ -152,9 +162,11 @@ class QueryStore {
 	 * Computes a stable cache key for a query (object key order doesn't matter).
 	 * The URL of the node is part of the key: results persist across sessions
 	 * (OPFS tier), so the same query on another node must never share an entry.
+	 * The row limit is part of it too, so a raised cell limit fetches more rows
+	 * instead of reading the truncated result back.
 	 */
 	keyFor(query: CompiledQuery, node: Pick<BeaconNode, 'url'> | null): string {
-		return stableStringify({ node: node?.url ?? null, query });
+		return stableStringify({ node: node?.url ?? null, limit: effectiveLimit(query), query });
 	}
 
 	/** Returns a cached entry without fetching, or `undefined` if absent. */
@@ -458,13 +470,21 @@ class QueryStore {
 		const cached = this.mapTableCache.get(memoKey);
 		if (cached) return cached;
 
-		const promise = getArrowWorker().buildMapPointTable(
-			entry.key,
-			entry.table,
-			latitudeColumnName,
-			longitudeColumnName,
-			groupByDecimals
-		);
+		const promise = getArrowWorker()
+			.buildMapPointTable(
+				entry.key,
+				entry.table,
+				latitudeColumnName,
+				longitudeColumnName,
+				groupByDecimals
+			)
+			// A memoized rejection would fail every later attempt. Drop it, so a
+			// retry recomputes.
+			.catch((error) => {
+				this.mapTableCache.delete(memoKey);
+				throw error;
+			});
+
 		this.mapTableCache.set(memoKey, promise);
 		return promise;
 	}
@@ -524,9 +544,8 @@ class QueryStore {
 
 		// Clone so we never mutate the caller's query, then apply the cell-limit guard.
 		const payload = { ...Utils.cloneObject(query) } as Record<string, unknown>;
-		const columnCount = Math.max(1, query.query_parameters?.length ?? 1);
 		const cellLimit = queryCellLimit();
-		const limit = Math.round(cellLimit / columnCount);
+		const limit = effectiveLimit(query);
 		payload.limit = limit;
 
 		// Request the server's default (zstd) Arrow IPC stream by omitting `output`

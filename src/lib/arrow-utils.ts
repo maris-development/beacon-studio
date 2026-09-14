@@ -84,8 +84,11 @@ export class ApacheArrowUtils {
         const amounfOfFields = table.schema.fields.filter(f => f.name !== 'geometry').length;
 
         for (let i = 0; i < rows; i++) {
-            const rowLat = latCol.get(i);
-            const rowLon = lonCol.get(i);
+            // A null coordinate has no key. It also matches no point on the map.
+            const rowLat = Number(latCol.get(i) ?? NaN);
+            const rowLon = Number(lonCol.get(i) ?? NaN);
+            if (!Number.isFinite(rowLat) || !Number.isFinite(rowLon)) continue;
+
             const rowKey = toKey(rowLat, rowLon);
 
             if (rowKey === searchKey) {
@@ -236,9 +239,8 @@ export class ApacheArrowUtils {
      * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
      *
      * Supports columns of type Timestamp, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
-     * Skips null and undefined values during calculation.
+     * Skips null and non-finite values. A column with no usable value also returns `{min: NaN, max: NaN}`.
      *
-     * 
      * @template T - The Apache Arrow TypeMap for the table.
      * @param table - The Apache Arrow table containing the data.
      * @param column - The name of the column to compute min and max for.
@@ -272,11 +274,24 @@ export class ApacheArrowUtils {
         let min = Number.POSITIVE_INFINITY;
         let max = Number.NEGATIVE_INFINITY;
 
-        for (const value of colArray) {
-            if (value === null || value === undefined) continue; // Skip null/undefined values
+        // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
+        // a column with nulls needs the slower reader that reports them.
+        const hasNulls = colVec.nullCount > 0;
+        const rows = Math.min(colArray.length, colVec.length);
+
+        for (let i = 0; i < rows; i++) {
+            if (hasNulls && colVec.get(i) == null) continue;
+
+            // Number() also converts the BigInt of an Int64 or a Timestamp column.
+            const value = Number(colArray[i]);
+            if (!Number.isFinite(value)) continue;
+
             if (value < min) min = value;
             if (value > max) max = value;
         }
+
+        // No row carries a usable value. The caller must not paint with this range.
+        if (min > max) return { min: NaN, max: NaN };
 
         return { min, max };
     }
@@ -418,7 +433,10 @@ export class ApacheArrowUtils {
      * 
      * This method scans the specified number of rows (or all rows if not specified) and removes duplicates
      * where the latitude and longitude values (rounded to two decimal places) are the same.
-     * The resulting table preserves the original schema and contains only the first occurrence of each unique coordinate pair.
+     * The resulting table preserves the original schema and holds one row per unique coordinate pair.
+     * That row is the one with the fewest null values, so a station row with no measurement does not
+     * hide a point that another row at the same coordinate can paint.
+     * A row without a finite latitude and longitude is dropped: the map cannot draw it.
      *
      * @typeParam T - The Apache Arrow TypeMap for the table.
      * @param table - The Apache Arrow Table to deduplicate.
@@ -443,21 +461,64 @@ export class ApacheArrowUtils {
         const latCol = table.getChild(latitudeColumnName);
         const lonCol = table.getChild(longitudeColumnName);
 
-        const seen = new Set<string>();
-        const keepIndexes: number[] = [];
+        if (!latCol || !lonCol) {
+            throw new Error(
+                `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to group by coordinate.`
+            );
+        }
+
+        // The columns that decide which row represents a coordinate. A dataset
+        // often holds a station row with no measurement, followed by the rows
+        // that carry one. The row with the most values represents the point.
+        const valueColumns = table.schema.fields
+            .map((field) => field.name)
+            .filter((name) => name !== latitudeColumnName && name !== longitudeColumnName)
+            .map((name) => table.getChild(name))
+            .filter((column): column is NonNullable<typeof column> => !!column);
+
+        const countNulls = (rowIndex: number): number => {
+            let nulls = 0;
+            for (const column of valueColumns) {
+                if (column.get(rowIndex) == null) nulls++;
+            }
+            return nulls;
+        };
+
+        // Key -> the best row for that coordinate. A Map keeps the order of the
+        // first key, so the output rows stay in the order of the input.
+        const best = new Map<string, { index: number; nulls: number }>();
 
         // Efficiently iterate column-wise
         for (let i = 0; i < amountOfRows; i++) {
-            const lat: number = latCol?.get(i);
-            const lon: number = lonCol?.get(i);
+            const lat = Number(latCol.get(i) ?? NaN);
+            const lon = Number(lonCol.get(i) ?? NaN);
+
+            // The map draws no point for this row, so it needs no group.
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
 
             // Optional: round coordinates to avoid floating-point noise
             const key = `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
 
-            if (!seen.has(key)) {
-                seen.add(key);
-                keepIndexes.push(i);
+            const current = best.get(key);
+
+            if (!current) {
+                best.set(key, { index: i, nulls: countNulls(i) });
+                continue;
             }
+
+            // A row with every value cannot be improved on.
+            if (current.nulls === 0) continue;
+
+            const nulls = countNulls(i);
+            if (nulls < current.nulls) best.set(key, { index: i, nulls });
+        }
+
+        const keepIndexes: number[] = [];
+        for (const { index } of best.values()) keepIndexes.push(index);
+
+        // tableFromArrays cannot build a table from empty columns.
+        if (keepIndexes.length === 0) {
+            return new ApacheArrow.Table(table.schema) as unknown as ApacheArrow.Table<T>;
         }
 
         // console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
