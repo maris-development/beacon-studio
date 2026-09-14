@@ -16,6 +16,7 @@
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import TextSearchIcon from '@lucide/svelte/icons/text-search';
 	import BookOpenIcon from '@lucide/svelte/icons/book-open';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import Table2Icon from '@lucide/svelte/icons/table-2';
 	import LinkIcon from '@lucide/svelte/icons/link-2';
 	import CpuIcon from '@lucide/svelte/icons/cpu';
@@ -101,6 +102,12 @@
 	];
 
 	const footer: MenuItem[] = [
+		{
+			title: 'More about Studio',
+			url: 'https://beacon-datalake.org/ecosystem/beacon-studio',
+			icon: InfoIcon,
+			target: '_blank'
+		},
 		{
 			title: 'Documentation',
 			url: 'https://maris-development.github.io/beacon/',
