@@ -106,6 +106,9 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
                 message: `Add the Beacon node ${missing} to run this query.`,
                 type: 'warning'
             });
+        } else if (!workspace.nodesReady) {
+            // The public list is still on its way, so the node can still arrive.
+            addToast({ message: 'Wait for the Beacon nodes to load.', type: 'warning' });
         } else {
             addToast({ message: 'Pick a Beacon node for this query first.', type: 'warning' });
         }

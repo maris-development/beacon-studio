@@ -13,16 +13,17 @@
  */
 
 import { persisted } from 'svelte-local-storage-store';
-import { get } from 'svelte/store';
+import { get, readonly, writable, type Readable } from 'svelte/store';
 import {
 	addNode,
 	findByUrl,
 	getCurrentNode,
+	getNodes,
 	migrateKey,
 	normalizeUrl,
 	selectNode
 } from './beacon-node';
-import { getOpenNodes, type OpenNode } from './open-nodes';
+import { getOpenNodes, loadOpenNodes, type OpenNode } from './open-nodes';
 
 /** The key of the normalized URLs that the app imported. */
 const IMPORTED_KEY = 'imported-open-node-urls';
@@ -31,6 +32,46 @@ const IMPORTED_KEY = 'imported-open-node-urls';
 migrateKey('imported-open-instance-urls', IMPORTED_KEY);
 
 const importedUrlsStore = persisted<string[]>(IMPORTED_KEY, []);
+
+// A saved node list means the first visit is over. Nothing to wait for.
+const hasNodes = getNodes().length > 0;
+
+const settledStore = writable(hasNodes);
+
+/**
+ * True after the public list lands, or after its fetch fails.
+ *
+ * A share link names its node by URL. On a first visit the saved list is empty,
+ * so that name resolves to nothing until the public list lands. A page reads
+ * this store to hold back a "node not found" message until the app can tell.
+ */
+export const openNodesSettled: Readable<boolean> = readonly(settledStore);
+
+let settle: () => void = () => {};
+
+const settledPromise = hasNodes
+	? Promise.resolve()
+	: new Promise<void>((done) => {
+			settle = done;
+		});
+
+/** {@link openNodesSettled} for a one-shot caller, such as a toast. */
+export function whenOpenNodesSettled(): Promise<void> {
+	return settledPromise;
+}
+
+/**
+ * Reads the public list, imports it, and reports the list as settled. A failed
+ * fetch also settles the list, so a caller never waits forever.
+ */
+export async function syncOpenNodes(): Promise<number> {
+	try {
+		return importOpenNodes(await loadOpenNodes());
+	} finally {
+		settledStore.set(true);
+		settle();
+	}
+}
 
 /**
  * Adds every public node that the app did not import before. The function

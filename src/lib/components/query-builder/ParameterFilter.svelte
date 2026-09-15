@@ -51,7 +51,7 @@
 	{:else if filter.type === 'greater_than_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-greater-than-numeric`} class="input-label">Greater than</label>
-			<Input id={`${uid}-greater-than-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-greater-than-numeric`} type="number" bind:value={filter.value} />
 		</div>
 		
 	{:else if filter.type === 'greater_than_string'}
@@ -69,7 +69,7 @@
 	{:else if filter.type === 'greater_than_or_equals_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-greater-than-or-equals-numeric`} class="input-label">Greater or Equal than</label>
-			<Input id={`${uid}-greater-than-or-equals-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-greater-than-or-equals-numeric`} type="number" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'greater_than_or_equals_string'}
@@ -87,7 +87,7 @@
 	{:else if filter.type === 'equals_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-equals-numeric`} class="input-label">Equals</label>
-			<Input id={`${uid}-equals-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-equals-numeric`} type="number" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'equals_string'}
@@ -105,7 +105,7 @@
 	{:else if filter.type === 'not_equals_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-not-equals-numeric`} class="input-label">Does NOT Equal</label>
-			<Input id={`${uid}-not-equals-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-not-equals-numeric`} type="number" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'not_equals_string'}
@@ -123,7 +123,7 @@
 	{:else if filter.type === 'less_than_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-less-than-numeric`} class="input-label">Less than</label>
-			<Input id={`${uid}-less-than-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-less-than-numeric`} type="number" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_string'}
@@ -142,7 +142,7 @@
 	{:else if filter.type === 'less_than_or_equals_numeric'}
 		<div class="advanced-parameter-row">
 			<label for={`${uid}-less-than-or-equals-numeric`} class="input-label">Less or Equal than</label>
-			<Input id={`${uid}-less-than-or-equals-numeric`} type="text" bind:value={filter.value} />
+			<Input id={`${uid}-less-than-or-equals-numeric`} type="number" bind:value={filter.value} />
 		</div>
 
 	{:else if filter.type === 'less_than_or_equals_string'}

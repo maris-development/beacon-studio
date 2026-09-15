@@ -18,6 +18,7 @@
     let {
         node,
         missingNodeUrl = null,
+        nodesReady = true,
         onNodeChange,
         onSeedMismatch,
         initialDraft = null,
@@ -41,6 +42,8 @@
         node: BeaconNode | null;
         /** The URL of a node that the node list does not hold, or null. */
         missingNodeUrl?: string | null;
+        /** False while the app still reads the public node list. */
+        nodesReady?: boolean;
         /** Called with the node the user picked in the first step. */
         onNodeChange: (node: BeaconNode) => void;
         /**
@@ -209,6 +212,7 @@
 <QueryBuilderNodeSelector
 	selected={node}
 	missingUrl={missingNodeUrl}
+	{nodesReady}
 	onPick={onNodeChange}
 />
 

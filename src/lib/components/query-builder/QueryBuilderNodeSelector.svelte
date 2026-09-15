@@ -29,12 +29,15 @@
 	let {
 		selected = null,
 		missingUrl = null,
+		nodesReady = true,
 		onPick
 	}: {
 		/** The node of the query now, or null while it has none. */
 		selected?: BeaconNode | null;
 		/** The URL of a node that the list does not hold, or null. */
 		missingUrl?: string | null;
+		/** False while the app still reads the public node list. */
+		nodesReady?: boolean;
 		/** Called with the node the user picked. */
 		onPick: (node: BeaconNode) => void;
 	} = $props();
@@ -94,6 +97,10 @@
 		</Button>
 	</div>
 </div>
+
+{#if !nodesReady && $nodes.length === 0}
+	<p class="node-loading">Load Beacon nodes...</p>
+{/if}
 
 {#if missingUrl}
 	<div class="missing-node">
@@ -175,6 +182,12 @@
 				margin: 0;
 			}
 		}
+	}
+
+	p.node-loading {
+		margin: 1rem 0 0;
+		font-size: 0.875rem;
+		color: var(--muted-foreground);
 	}
 
 	.missing-node {
