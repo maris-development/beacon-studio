@@ -28,9 +28,7 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 
 	// Components
-	import ChooseBeaconModal from '../modals/ChooseBeaconModal.svelte';
 	import FeedbackModal from '../modals/FeedbackModal.svelte';
-	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
