@@ -13,6 +13,7 @@
 	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import { Label } from '@/components/ui/label';
 	import { dataBrowserNodeId } from '@/stores/data-browser-node';
 
 	let selectedNodeId = dataBrowserNodeId;
@@ -108,11 +109,14 @@
 	}
 
 	function onCellClick(row: Record<string, string|AffixString>, column: Column) {
+		if (!selectedNode) return;
+
 		const filename = row[column.key] as AffixString;
 
-		const url = new URL(resolve('/data-browser/table-detail'), window.location.origin);
+		const url = new URL(resolve('/data-browser/data-tables/detail'), window.location.origin);
 
 		url.searchParams.set('table_name', filename.main);
+		url.searchParams.set('node', selectedNode.url);
 
 		goto(url.toString());
 	}
@@ -134,39 +138,43 @@
 
 		<p>Explore and manage the tables that are available in your Beacon node.</p>
 
-		<div class="mb-4 flex items-center gap-2 node-picker">
-			<Select.Root
-				type="single"
-				name="beaconNode"
-				value={selectedNode?.id ?? ''}
-				onValueChange={(id) => selectedNodeId.set(id)}
-			>
-				<Select.Trigger class="node-select-trigger">
-					{selectedNode?.name ?? 'Select a node'}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Group>
-						<Select.Label>Nodes</Select.Label>
-						{#each $nodes as node (node.id)}
-							<Select.Item value={node.id} label={node.name}>
-								{node.name}
-							</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-			</Select.Root>
+		<div class="mb-4 node-picker">
+			<Label size="sm" for="beacon-node-select">Beacon Node</Label>
 
-			{#if selectedNode}
-				<BeaconNodeStatus health={selectedNode} variant="dot" />
-			{/if}
-
-			{#if $nodes.length > 0}
-				<Button
-					class="ml-auto"
-					variant="outline"
-					onclick={() => (create_table_modal_open = true)}>Create Table</Button
+			<div class="flex items-center gap-2">
+				<Select.Root
+					type="single"
+					name="beaconNode"
+					value={selectedNode?.id ?? ''}
+					onValueChange={(id) => selectedNodeId.set(id)}
 				>
-			{/if}
+					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
+						{selectedNode?.name ?? 'Select a node'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Nodes</Select.Label>
+							{#each $nodes as node (node.id)}
+								<Select.Item value={node.id} label={node.name}>
+									{node.name}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
+
+				{#if selectedNode}
+					<BeaconNodeStatus health={selectedNode} variant="dot" />
+				{/if}
+
+				{#if $nodes.length > 0}
+					<Button
+						class="ml-auto"
+						variant="outline"
+						onclick={() => (create_table_modal_open = true)}>Create Table</Button
+					>
+				{/if}
+			</div>
 		</div>
 
 		{#if $nodes.length === 0}
@@ -196,6 +204,12 @@
 </div>
 
 <style lang="scss">
+	div.node-picker {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+	}
+
 	div.page-container :global(tr.arrow-row) {
 		position: relative;
 

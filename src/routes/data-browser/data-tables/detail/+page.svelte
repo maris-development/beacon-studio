@@ -2,8 +2,7 @@
 
     import { page } from '$app/state';
 	import { BeaconClient } from '@/beacon-api/client';
-	import { currentNode } from '@/services/beacon-node';
-	import type { BeaconNode } from '@/beacon-api/types';
+	import { findByUrl } from '@/services/beacon-node';
     import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
@@ -12,6 +11,7 @@
 	import type { SchemaField, Schema } from '@/beacon-api/types';
 	import type { Column, SortDirection } from '@/util-types';
     import { resolve } from '$app/paths';
+	import { Input } from '@/components/ui/input';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
@@ -19,7 +19,14 @@
         throw error(400, 'Missing `table_name` query parameter');
     }
 
-    let currentNodeValue: BeaconNode | null = $state(null);
+    // The node URL, and not its id. An id exists in one browser only, so a
+    // shared link must name the node itself.
+    const nodeUrl = page.url.searchParams.get('node') || '';
+
+    if (!nodeUrl) {
+        throw error(400, 'Missing `node` query parameter');
+    }
+
 	let client: BeaconClient;
 
     let columns: Column[] = $state([
@@ -41,8 +48,14 @@
 	let firstLoad = true;
     
 	onMount(() => {
-		currentNodeValue = $currentNode;
-		client = BeaconClient.new(currentNodeValue);
+		// A receiver without this node still reads it, over a client with no token.
+		const saved = findByUrl(nodeUrl);
+
+		if (saved) {
+			client = BeaconClient.new(saved);
+		} else {
+			client = new BeaconClient(nodeUrl);
+		}
 
 		getTableSchemaData();
     });
@@ -134,7 +147,9 @@
     <div class="page-container">
         <h1>Table '{tableName}' ({totalRows} fields)</h1>
 
-        <input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+        <p class="node-line">Node: {nodeUrl}</p>
+
+        <Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
 
         <DataTable
             {onPageChange}
@@ -150,5 +165,12 @@
 </div>
 
 <style lang="scss">
-    
+    :global(.search-input) {
+        margin-bottom: 0.5rem;
+    }
+    p.node-line {
+        margin-bottom: 1rem;
+
+        color: var(--muted-foreground);
+    }
 </style>
