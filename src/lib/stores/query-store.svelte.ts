@@ -33,6 +33,7 @@ import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
 import { getSettings } from '@/stores/settings';
 import { snapshotNode } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
+import { track } from '@/telemetry';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
 import { Utils } from '@/utils';
@@ -217,7 +218,7 @@ class QueryStore {
 			if (cached) {
 				this.touch(key, cached);
 				this.current = cached;
-				this.recordHistory(cached, node, storedQueryId);
+				this.recordHistory(cached, node, storedQueryId, true);
 				return cached;
 			}
 		}
@@ -237,8 +238,19 @@ class QueryStore {
 			.then((entry) => {
 				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry, node, storedQueryId);
+				this.recordHistory(entry, node, storedQueryId, false);
 				return entry;
+			})
+			.catch((error: unknown) => {
+				// A cancel is a user action, not a fault. Report the rest.
+				if (!isAbortError(error)) {
+					track('query.error', {
+						nodeHost: node.url,
+						message: error instanceof Error ? error.message : String(error)
+					});
+				}
+
+				throw error;
 			})
 			.finally(() => {
 				this.inFlight.delete(key);
@@ -298,8 +310,21 @@ class QueryStore {
 	private recordHistory(
 		entry: DatasetEntry,
 		node: BeaconNode,
-		storedQueryId?: string
+		storedQueryId: string | undefined,
+		cacheHit: boolean
 	): void {
+		track('query.execute', {
+			nodeHost: node.url,
+			queryId: entry.queryId,
+			rowCount: entry.rowCount,
+			durationMs: entry.duration,
+			props: {
+				cacheHit,
+				columns: entry.query.query_parameters?.length ?? 0,
+				filters: entry.query.filters?.length ?? 0
+			}
+		});
+
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
@@ -334,6 +359,16 @@ class QueryStore {
 		duration: number,
 		storedQueryId?: string
 	): void {
+		track('query.download', {
+			nodeHost: node.url,
+			durationMs: duration,
+			props: {
+				format: downloadFormat(query),
+				columns: query.query_parameters?.length ?? 0,
+				filters: query.filters?.length ?? 0
+			}
+		});
+
 		try {
 			const origin = resolveStoredQuery(storedQueryId);
 			recordExecution({
@@ -545,7 +580,7 @@ class QueryStore {
 
 		// console.log('headers', [...response.headers.entries()]);
 
-		const queryId = response.headers.get('x-beacon-query-id') ?? uuidv4(); // generate a UUID if the server didn't provide one, or is blocked by CORS
+		const queryId = response.headers.get('x-beacon-query-id') ?? Utils.randomUUID(); // generate a UUID if the server didn't provide one, or is blocked by CORS
 
 		const bytes = new Uint8Array(await response.arrayBuffer());
 
@@ -645,6 +680,16 @@ export function isAbortError(error: unknown): boolean {
 	if (!error || typeof error !== 'object') return false;
 
 	return (error as { name?: unknown }).name === 'AbortError';
+}
+
+/** The output format of a query, as one word for telemetry. */
+function downloadFormat(query: CompiledQuery): string | null {
+	const format = query.output?.format;
+
+	if (typeof format === 'string') return format;
+	if (format) return 'geoparquet';
+
+	return null;
 }
 
 /** Estimated in-memory footprint of an Arrow table (sum of its batch buffers). */

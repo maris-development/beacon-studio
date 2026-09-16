@@ -5,6 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
+	import { track } from '@/telemetry';
 	import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { queryStore } from '@/stores/query-store.svelte';
@@ -152,6 +153,12 @@
 		try {
 			entry = await BeaconClient.ensureQuery(query, node, block.id);
 			workspace.markBlockRun(block.id, entry.rowCount);
+
+			track('query.visualise', {
+				nodeHost: node.url,
+				rowCount: entry.rowCount,
+				props: { kind: 'table' }
+			});
 
 			if (entry.rowCount === 0) {
 				isLoading = false;

@@ -75,14 +75,18 @@ export class Utils {
 
     /**
      * Generates a random UUID (version 4) string.
-     * 
-     * **This implementation does not use the crypto API and is not suitable for cryptographic purposes.**
-     * The generated UUID follows the format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx,
-     * where 'x' is replaced with a random hexadecimal digit and 'y' is replaced with a random hexadecimal digit from 8, 9, A, or B.
      *
+     * Tries to use the `crypto.randomUUID` method if available, falling back to a random-like UUID generation otherwise.
+     * 
+     * ***Warning: The fallback method does not use the crypto API and is not suitable for cryptographic purposes.***
+     * 
      * @returns {string} A randomly generated UUID v4 string.
      */
     static randomUUID() {
+        if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+            return crypto.randomUUID();
+        }
+
         // Generate a random-like UUID (version 4) without using crypto API
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);

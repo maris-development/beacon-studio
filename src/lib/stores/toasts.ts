@@ -1,4 +1,5 @@
 import { writable } from "svelte/store";
+import { track } from "@/telemetry";
 
 export const toasts = writable([]);
 
@@ -23,6 +24,11 @@ export function addToast(toast: Partial<IToast>): number {
 
   // Push the toast to the top of the list of toasts
   toasts.update((all) => [toastData, ...all]);
+
+  track(`toast.${toastData.type}`, {
+    level: toastData.type,
+    message: toastData.message,
+  });
 
   // If toast is dismissible, dismiss it after "timeout" amount of time.
   if (toastData.timeout) setTimeout(() => dismissToast(id), toastData.timeout);

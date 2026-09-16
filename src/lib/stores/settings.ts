@@ -67,6 +67,12 @@ export interface BeaconStudioSettings {
 	// -- system ---------------------------------------------------------------
 	/** The refresh period of the system info page, in milliseconds. */
 	systemInfoUpdateIntervalMs: number;
+
+	// -- telemetry ------------------------------------------------------------
+	/** Sends anonymous usage events to beacon-datalake.org. */
+	telemetryEnabled: boolean;
+	/** Adds `console.log` to the reported console output. Off by default: it is noisy, and a log line can hold a query. */
+	telemetryConsoleLog: boolean;
 }
 
 export const DEFAULT_SETTINGS: BeaconStudioSettings = {
@@ -87,7 +93,10 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 
 	sampleAfterRows: 500_000,
 
-	systemInfoUpdateIntervalMs: 1000
+	systemInfoUpdateIntervalMs: 1000,
+
+	telemetryEnabled: true,
+	telemetryConsoleLog: false
 };
 
 /** The keys of one settings object. */
@@ -294,6 +303,22 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 		step: 0.5,
 		unit: 'seconds',
 		scale: 1000
+	},
+	{
+		key: 'telemetryEnabled',
+		group: 'System',
+		type: 'boolean',
+		label: 'Send usage statistics',
+		description:
+			'Sends anonymous usage events to beacon-datalake.org: page visits, query runs, downloads, warnings and errors. It sends no query content and no account.'
+	},
+	{
+		key: 'telemetryConsoleLog',
+		group: 'System',
+		type: 'boolean',
+		label: 'Include console.log output',
+		description:
+			'Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold query content.'
 	}
 ];
 

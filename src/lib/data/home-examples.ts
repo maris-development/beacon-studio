@@ -13,7 +13,7 @@ import { persisted } from 'svelte-local-storage-store';
 import bundledExamples from './home-examples.default.json';
 
 /** The address of the examples list. */
-export const HOME_EXAMPLES_URL = 'https://beacon-datalake.org/home-examples.json';
+export const HOME_EXAMPLES_URL = 'https://beacon-datalake.org/api/studio/examples';
 
 /** The localStorage key of the cached list. */
 const STORAGE_KEY = 'beacon-studio.home-examples';

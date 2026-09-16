@@ -104,7 +104,7 @@
 	const footer: MenuItem[] = [
 		{
 			title: 'More about Studio',
-			url: 'https://beacon-datalake.org/ecosystem/beacon-studio',
+			url: 'https://beacon-datalake.org/ecosystem/studio',
 			icon: InfoIcon,
 			target: '_blank'
 		},
