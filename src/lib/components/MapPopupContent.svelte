@@ -58,8 +58,9 @@
 			1000
 		);
 
+		// `findSimilar` scans the full result, so it already returns the clicked row.
 		otherData.then((data) => {
-			const newData = [rowData, ...data] as number[][];
+			const newData = data as number[][];
 			virtualSchemaData.setData(newData);
 			totalRows = newData.length;
 			getPage();

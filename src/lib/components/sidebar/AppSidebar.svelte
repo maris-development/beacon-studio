@@ -11,6 +11,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { addToast, dismissToast } from '@/stores/toasts';
+	import { openFeedback } from '$lib/feedback';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -28,7 +29,6 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 
 	// Components
-	import FeedbackModal from '../modals/FeedbackModal.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
@@ -37,6 +37,8 @@
 	type MenuItem = {
 		title: string;
 		url: string;
+		/** Section root the item highlights on. Defaults to `url`. */
+		match?: string;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon: any;
 		children?: SubItem[];
@@ -51,6 +53,7 @@
 				{
 					title: 'Queries',
 					url: resolve('/queries/workbench'),
+					match: resolve('/queries'),
 					icon: TextSearchIcon,
 					children: [
 						{ title: 'Query Builder', url: resolve('/queries/workbench') },
@@ -66,6 +69,7 @@
 				{
 					title: 'Workspace',
 					url: resolve('/visualisations/map-viewer'),
+					match: resolve('/visualisations'),
 					icon: EyeIcon,
 					children: [
 						{ title: 'Map Viewer', url: resolve('/visualisations/map-viewer') },
@@ -122,7 +126,6 @@
 
 	let collapsed = $state(false);
 	let isMobile = $state(false);
-	let showFeedbackModal: boolean = $state(false);
 
 	// The sidebar shows the status of the selection on every page. Refresh a
 	// stale result. `ensureFresh` skips a check that is not due.
@@ -223,10 +226,6 @@
 	});
 </script>
 
-{#if showFeedbackModal}
-	<FeedbackModal onClose={() => (showFeedbackModal = false)} />
-{/if}
-
 {#if isMobile && !collapsed}
 	<button class="sidebar-backdrop" 
 			aria-label="Close menu" 
@@ -268,6 +267,7 @@
 						<SidebarCollapsibleMenu
 							title={item.title}
 							url={item.url}
+							match={item.match}
 							icon={item.icon}
 							items={item.children}
 						/>
@@ -287,7 +287,7 @@
 			<SidebarMenuItem
 				title="Feedback"
 				icon={SendIcon}
-				onclick={() => (showFeedbackModal = true)}
+				onclick={() => openFeedback(page.route.id)}
 			/>
 		</div>
 	</div>
