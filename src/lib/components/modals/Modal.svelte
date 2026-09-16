@@ -8,7 +8,7 @@
 	export let title: string = '';
 	export let width: string = '500px';
 
-	let shortRandomString = Utils.uuidv4().slice(0, 8);
+	let shortRandomString = Utils.randomUUID().slice(0, 8);
 
 	function closeModalOnEscape(event: KeyboardEvent) {
 		// The test reads the value of now. A caller can block the close while a

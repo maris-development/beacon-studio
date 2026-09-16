@@ -23,6 +23,7 @@ import { derived, get, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
 import type { BeaconNode, BeaconNodeHealth, NodeRef, StoredBeaconNode } from '@/beacon-api/types';
 import { Utils } from '@/utils';
+import { track } from '@/telemetry';
 import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-node-health';
 import { normalizeUrl } from './beacon-node-url';
 
@@ -222,7 +223,7 @@ export function addNode(input: BeaconNodeInput): BeaconNode {
 	const now = new Date();
 
 	const stored: StoredBeaconNode = {
-		id: Utils.uuidv4(),
+		id: Utils.randomUUID(),
 		name: input.name.trim(),
 		url: normalizeUrl(input.url),
 		description: input.description?.trim() ?? '',
@@ -305,6 +306,9 @@ export function selectNode(id: string | null): void {
 	}
 
 	selectedIdStore.set(id);
+
+	const selected = id === null ? null : findById(id);
+	track('node.select', { nodeHost: selected?.url });
 }
 
 /**

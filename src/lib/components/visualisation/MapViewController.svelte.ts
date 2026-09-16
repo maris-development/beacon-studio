@@ -32,6 +32,7 @@ import type { BeaconNode, CompiledQuery, Select as QuerySelect } from '@/beacon-
 import { ApacheArrowUtils } from '@/arrow-utils';
 import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
+import { track } from '@/telemetry';
 import { Utils } from '@/utils';
 import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
@@ -371,6 +372,12 @@ export class MapViewController {
 
 			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
 			this.markRun(blockId, this.entry.rowCount);
+
+			track('query.visualise', {
+				nodeHost: node.url,
+				rowCount: this.entry.rowCount,
+				props: { kind: 'map' }
+			});
 
 			if (this.entry.rowCount === 0) {
 				this.isLoading = false;

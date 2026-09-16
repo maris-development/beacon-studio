@@ -5,6 +5,8 @@
 	import { loadHomeExamples } from '@/data/home-examples';
 	import { FRESH_MS } from '@/services/beacon-node-health';
 	import { syncOpenNodes } from '@/services/open-nodes-import';
+	import { initTelemetry, setRoute, track } from '@/telemetry';
+	import { afterNavigate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import '../app.scss';
 	import '../tailwind.css';
@@ -17,7 +19,19 @@
 
 		void loadHomeExamples();
 
-		return startHealthMonitor();
+		const stopTelemetry = initTelemetry();
+		const stopHealthMonitor = startHealthMonitor();
+
+		return () => {
+			stopTelemetry();
+			stopHealthMonitor();
+		};
+	});
+
+	// Runs on the first page as well, so it reports the entry page too.
+	afterNavigate((navigation) => {
+		setRoute(navigation.to?.route.id ?? null);
+		track('page.view', { props: { from: navigation.from?.route.id ?? null } });
 	});
 </script>
 

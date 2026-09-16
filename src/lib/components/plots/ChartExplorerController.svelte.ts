@@ -53,6 +53,7 @@ import { buildContours, type ContourResult } from '@/plots/contour';
 import { buildInterpolationSurface, type InterpolationResult } from '@/plots/interpolation';
 import { samplePlotSeries } from '@/plots/sampling';
 import { getSettings } from '@/stores/settings';
+import { track } from '@/telemetry';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -419,6 +420,12 @@ export class ChartExplorerController {
 			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
 			this.markRun(blockId, this.entry.rowCount);
 			this.isLoading = false;
+
+			track('query.visualise', {
+				nodeHost: node.url,
+				rowCount: this.entry.rowCount,
+				props: { kind: 'chart' }
+			});
 
 			if (this.entry.rowCount === 0) {
 				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
