@@ -8,11 +8,14 @@
 	let {
 		title,
 		url,
+		match = undefined,
 		icon: Icon,
 		items,
 	}: {
 		title: string;
 		url: string;
+		/** Section root the header highlights on. Defaults to `url`. */
+		match?: string;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon: any;
 		items: { title: string; url: string }[];
@@ -22,7 +25,7 @@
 		return page.url.pathname === itemUrl || page.url.pathname.startsWith(itemUrl + '/');
 	}
 
-	const isHeaderActive = $derived(isActive(url));
+	const isHeaderActive = $derived(isActive(match ?? url));
 	const storageKey = $derived(`beacon-studio.sidebar-menu.${url}.open`);
 
 	let open = $state(true);
