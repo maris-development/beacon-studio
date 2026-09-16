@@ -124,7 +124,6 @@
 
 	let collapsed = $state(false);
 	let isMobile = $state(false);
-	let showChooseBeaconModal: boolean = $state(false);
 	let showFeedbackModal: boolean = $state(false);
 
 	// The sidebar shows the status of the selection on every page. Refresh a
@@ -225,10 +224,6 @@
 		if (isMobile) collapsed = true;
 	});
 </script>
-
-{#if showChooseBeaconModal}
-	<ChooseBeaconModal onClose={() => (showChooseBeaconModal = false)} />
-{/if}
 
 {#if showFeedbackModal}
 	<FeedbackModal onClose={() => (showFeedbackModal = false)} />

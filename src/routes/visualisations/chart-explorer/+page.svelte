@@ -2,7 +2,6 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
-	import { Utils } from '@/utils';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
