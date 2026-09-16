@@ -108,10 +108,10 @@
 		}
 	}
 
-	function onCellClick(row: Record<string, string|AffixString>, column: Column) {
+	function onCellClick(row: { table: AffixString }) {
 		if (!selectedNode) return;
 
-		const filename = row[column.key] as AffixString;
+		const filename = row.table;
 
 		const url = new URL(resolve('/data-browser/data-tables/detail'), window.location.origin);
 

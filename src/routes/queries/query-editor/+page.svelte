@@ -93,13 +93,6 @@
 		}
 	}
 
-	async function handleInfo() {
-		alert('Info action triggered (not implemented yet)');
-	}
-
-	async function handleAnalyze() {
-		alert('Analyze action triggered (not implemented yet)');
-	}
 
 	/**
 	 * Send the query to a visualiser. This page is the only source of a query with
@@ -179,12 +172,12 @@
 
 	<div class="page-container">
 		<QueryActionBar
-			onQueryPlan={handleInfo}
-			onAnalyze={handleAnalyze}
-			onExecute={handleExecute}
-			onViewTable={handleTableVisualise}
-			onViewMap={handleMapVisualise}
-			onViewChart={handleChartVisualise}
+			queryActions={{
+				downloadData: handleExecute,
+				visualiseTable: handleTableVisualise,
+				visualiseMap: handleMapVisualise,
+				visualiseChart: handleChartVisualise
+			}}
 		/>
 
 		<div class="editor">

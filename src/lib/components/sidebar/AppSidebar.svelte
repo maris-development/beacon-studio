@@ -127,10 +127,6 @@
 	let showChooseBeaconModal: boolean = $state(false);
 	let showFeedbackModal: boolean = $state(false);
 
-	function openBeaconNodePicker(): void {
-		showChooseBeaconModal = true;
-	}
-
 	// The sidebar shows the status of the selection on every page. Refresh a
 	// stale result. `ensureFresh` skips a check that is not due.
 	$effect(() => {
@@ -268,25 +264,6 @@
 			</button>
 		</div>
 
-		<!--
-			The node of the browse pages, and the node of a new query block. It is
-			not the node of an open query: a query record owns that one, and the
-			workbench shows it. See `QueryWorkspace.activeNode`.
-		-->
-		<!-- <button
-			class="current-node"
-			title="The node for browsing, and for a new query"
-			onclick={openBeaconNodePicker}
-		>
-			<span class="node-icon"><LinkIcon /></span>
-			<div class="node-text">
-				<span class="node-name">{$currentNode?.name ?? 'No node picked'}</span>
-				<span class="node-url">{$currentNode?.url ?? ''}</span>
-			</div>
-			{#if $currentNode}
-				<BeaconNodeStatus health={$currentNode} variant="dot" />
-			{/if}
-		</button> -->
 	</div>
 
 	<div class="sidebar-content">
@@ -404,60 +381,6 @@
 					}
 				}
 			}
-
-			.current-node {
-				display: flex;
-				appearance: none;
-				width: 100%;
-				align-items: center;
-				margin-top: 1rem;
-				gap: 0.5rem;
-				padding: 0.5rem;
-				border-radius: 0.5rem;
-				background-color: var(--background);
-				border: none;
-				cursor: pointer;
-
-				background-color: rgba(255, 255, 255, 0.25);
-
-				.node-icon {
-					display: flex;
-					flex-shrink: 0;
-
-					:global(svg) {
-						width: 1rem;
-						height: 1rem;
-					}
-				}
-
-				.node-text {
-					display: grid;
-					flex: 1;
-					min-width: 0;
-					text-align: left;
-					font-size: 0.875rem;
-					line-height: 1.25;
-				}
-
-				.node-name {
-					font-weight: var(--sidebar-bold-font-weight);
-				}
-
-				.node-name,
-				.node-url {
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-				}
-
-				.node-url {
-					font-size: 0.75rem;
-				}
-
-				&:hover {
-					background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
-				}
-			}
 		}
 
 		.sidebar-content {
@@ -497,7 +420,6 @@
 
 			.sidebar-content,
 			.sidebar-footer,
-			.current-node,
 			.logo-wrapper .header-link {
 				display: none;
 			}

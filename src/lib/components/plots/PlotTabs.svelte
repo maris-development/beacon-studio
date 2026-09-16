@@ -40,6 +40,12 @@
 		editingName = name;
 	}
 
+	// The native `autofocus` attribute is unreliable for inputs mounted after
+	// initial page load, so this action focuses the input when it is created.
+	function focusInput(node: HTMLInputElement): void {
+		node.focus();
+	}
+
 	function cancelRename(): void {
 		editingPlotId = null;
 		editingName = '';
@@ -93,8 +99,8 @@
 				{#if editingPlotId === plot.id}
 					<input
 						class="name-input"
+						use:focusInput
 						value={editingName}
-						autofocus
 						title="Edit plot name"
 						aria-label="Edit plot name"
 						oninput={(event) => (editingName = event.currentTarget.value)}

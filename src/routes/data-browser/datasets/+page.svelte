@@ -124,10 +124,10 @@
 		getPage();
 	}
 
-	function onCellClick(row: Record<string, string>, column: Column) {
+	function onCellClick(row: { dataset: string }) {
 		if (!selectedNode) return;
 
-		const filename = row[column.key];
+		const filename = row.dataset;
 
 		const url = new URL(resolve('/data-browser/datasets/detail'), window.location.origin);
 

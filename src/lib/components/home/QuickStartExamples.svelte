@@ -9,14 +9,12 @@
 	import { asset, resolve } from '$app/paths';
 	import BracesIcon from '@lucide/svelte/icons/braces';
 	import GlobeIcon from '@lucide/svelte/icons/globe';
-	import MapIcon from '@lucide/svelte/icons/map';
 	import Button from '@/components/buttons/Button.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { Badge } from '@/components/ui/badge/index.js';
 	import { homeExamples, type HomeExample } from '@/data/home-examples';
 	import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
-	const PENDING_HINT = 'Work in progress';
 	const METRIC_HINT = 'Measured on a reference run. Your run can differ.';
 
 	/** The share link of one example. */
@@ -68,12 +66,6 @@
 						Check query
 					</Button>
 
-					<!-- <span class="pending" title={PENDING_HINT}>
-						<Button variant="default" disabled>
-							<MapIcon />
-							Load map area
-						</Button>
-					</span> -->
 				</div>
 			</div>
 		</Card>
@@ -99,11 +91,6 @@
 		}
 	}
 
-	// A disabled button drops its pointer events, so a title on the button
-	// itself never shows. The wrapper keeps the hover, and therefore the hint.
-	.pending {
-		display: inline-flex;
-	}
 
 	.examples {
 		display: grid;
@@ -200,14 +187,10 @@
 
 			// Both actions share the width. The wrapper must grow the same way
 			// the sibling button does.
-			> :global(.btn),
-			.pending {
+			> :global(.btn) {
 				flex: 1;
 			}
 
-			.pending :global(.btn) {
-				width: 100%;
-			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="Row">
 	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
@@ -6,14 +6,12 @@
 	import type { Column, SortDirection } from '@/util-types';
 	import { Utils } from '@/utils';
 
-	type RowDataType = Record<string, string> | Record<string, number> | Record<number, number>;
-
 	type Props = {
 		onChangeSort?: (column: string, direction: SortDirection) => void;
 		onPageChange?: (page: number) => void;
-		onCellClick?: (row: RowDataType, column: Column) => void;
+		onCellClick?: (row: Row, column: Column) => void;
 		columns: Column[];
-		rows: RowDataType[];
+		rows: Row[];
 		pageSize?: number;
 		pageIndex?: number;
 		totalRows?: number;
@@ -59,6 +57,11 @@
 		}
 
 		onChangeSort(column.key, column.sortDirection);
+	}
+
+	// `Row` is unconstrained, so it carries no index signature.
+	function cell(row: Row, column: Column): unknown {
+		return (row as Record<string, unknown>)[column.key];
 	}
 
 	
@@ -117,9 +120,9 @@
 							{#each columns as column (column.key)}
 								{#if column.rawHtml === true}
 									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(row[column.key])}</td>
+									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>
 								{:else}
-									<td onclick={() => onCellClick(row, column)}>{Utils.toString(row[column.key])}</td>
+									<td onclick={() => onCellClick(row, column)}>{Utils.toString(cell(row, column))}</td>
 								{/if}
 							{/each}
 						</tr>

@@ -11,6 +11,7 @@ export type ActionCallback = (() => void | Promise<void>) | undefined;
 
 export type QueryActions = {
     compileQuery?: (() => CompiledQuery) | undefined;   // returns function compile query
+    onQueryPlan?: ActionCallback;   // returns function download data
     downloadData?: ActionCallback;   // returns function download data
     visualiseTable?: ActionCallback; // links to visualise data in table page
     visualiseChart?: ActionCallback; // links to visualise data in chart page

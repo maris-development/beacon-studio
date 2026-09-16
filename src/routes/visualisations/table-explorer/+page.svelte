@@ -344,9 +344,6 @@
 				align-items: center;
 				margin-bottom: 0.5rem;
 
-				.page-size-input {
-					// width: 4rem;
-				}
 			}
 		}
 	}
