@@ -12,8 +12,9 @@
  */
 
 import { dev } from '$app/environment';
-import { getSettings } from '@/stores/settings';
-import { installId, platform, sessionId, studioVersion } from './identity';
+import { splitNodeUrl } from '@/services/beacon-node-url';
+import { getSettings, settings } from '@/stores/settings';
+import { forgetIdentity, installId, platform, sessionId, studioVersion } from './identity';
 import { clearQueue, enqueue, flush, startQueue } from './queue';
 import { categoryOf, type TelemetryEvent, type TelemetryFields, type TelemetryName } from './types';
 import { Utils } from '@/utils';
@@ -23,7 +24,7 @@ export { flush } from './queue';
 export { forgetIdentity } from './identity';
 
 /** Set this to true to send telemetry from a dev session, and to patch the console there. */
-const DEV_OVERRIDE = true;
+const DEV_OVERRIDE = false;
 
 /**
  * True while telemetry must stay silent.
@@ -39,6 +40,7 @@ function isDisabled(): boolean {
 let started = false;
 let stopQueue: (() => void) | null = null;
 let stopConsole: (() => void) | null = null;
+let stopWatch: (() => void) | null = null;
 
 /** The SvelteKit route id of the open page. The layout writes it on every navigation. */
 let routeId: string | null = null;
@@ -51,6 +53,18 @@ let routeId: string | null = null;
  */
 export function setRoute(route: string | null): void {
 	routeId = route;
+}
+
+/**
+ * The node of one event: a lower case origin, with no path.
+ *
+ * A node can run under a sub directory, and that path can name a customer.
+ * The origin also keys the health store, so both sides count the same node once.
+ */
+function nodeHost(url: string | undefined): string | null {
+	if (!url) return null;
+
+	return splitNodeUrl(url).origin || null;
 }
 
 /**
@@ -76,7 +90,7 @@ export function track(name: TelemetryName, fields: TelemetryFields = {}): void {
 			name,
 			level: fields.level ?? null,
 			route: fields.route ?? routeId,
-			node_host: fields.nodeHost ?? null,
+			node_host: nodeHost(fields.nodeHost),
 			query_id: fields.queryId ?? null,
 			message: fields.message ?? null,
 			duration_ms: Math.round(fields.durationMs ?? 0) || null,
@@ -119,6 +133,24 @@ export function diagnostics(): Record<string, string> {
 }
 
 /**
+ * Reacts to an opt-out, from any write path.
+ *
+ * The settings store sits below this module, so it cannot call telemetry itself.
+ * A watcher here also covers a reset of one key and a reset of every key.
+ */
+function watchOptOut(): () => void {
+	let enabled = getSettings().telemetryEnabled;
+
+	return settings.subscribe((value) => {
+		const next = value.telemetryEnabled;
+
+		if (enabled && !next) stopTelemetry();
+
+		enabled = next;
+	});
+}
+
+/**
  * Starts telemetry. Call this once, from the layout `onMount`.
  * Returns the stop function, so the layout can return it from `onMount`.
  *
@@ -132,6 +164,7 @@ export function initTelemetry(): () => void {
 
 	try {
 		stopQueue = startQueue();
+		stopWatch = watchOptOut();
 
 		// The console patch imports this module, so load it here and not at the top.
 		void import('./console').then((module) => {
@@ -146,15 +179,23 @@ export function initTelemetry(): () => void {
 	return () => {
 		stopConsole?.();
 		stopQueue?.();
+		stopWatch?.();
 		stopConsole = null;
 		stopQueue = null;
+		stopWatch = null;
 		started = false;
 	};
 }
 
-/** Drops the buffer and sends nothing more. The settings page calls this on an opt-out. */
+/**
+ * Drops the buffer, and drops the ids of this client.
+ *
+ * The watcher calls this on an opt-out. The buffer goes first, so a live flush
+ * cannot send an event that carries the old install id.
+ */
 export function stopTelemetry(): void {
 	clearQueue();
+	forgetIdentity();
 }
 
 /** Sends the buffer now. Use it before a navigation that leaves the app. */

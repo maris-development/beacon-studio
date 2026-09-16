@@ -69,7 +69,7 @@ export interface BeaconStudioSettings {
 	systemInfoUpdateIntervalMs: number;
 
 	// -- telemetry ------------------------------------------------------------
-	/** Sends anonymous usage events to beacon-datalake.org. */
+	/** Sends pseudonymous usage events to beacon-datalake.org. A random install id groups them. */
 	telemetryEnabled: boolean;
 	/** Adds `console.log` to the reported console output. Off by default: it is noisy, and a log line can hold a query. */
 	telemetryConsoleLog: boolean;
@@ -310,7 +310,7 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 		type: 'boolean',
 		label: 'Send usage statistics',
 		description:
-			'Sends anonymous usage events to beacon-datalake.org: page visits, query runs, downloads, warnings and errors. It sends no query content and no account.'
+			'Sends usage events to beacon-datalake.org: page visits, query runs, downloads, warnings and errors. A random id groups the events of this browser. It sends no query content and no account.'
 	},
 	{
 		key: 'telemetryConsoleLog',

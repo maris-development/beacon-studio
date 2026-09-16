@@ -78,7 +78,7 @@ export class Utils {
      *
      * Tries to use the `crypto.randomUUID` method if available, falling back to a random-like UUID generation otherwise.
      * 
-     * ***Warning: The fallback method does not use the crypto API and is not suitable for cryptographic purposes.***
+     * ***Warning: The fallback method is not suitable for cryptographic purposes.***
      * 
      * @returns {string} A randomly generated UUID v4 string.
      */
@@ -87,11 +87,7 @@ export class Utils {
             return crypto.randomUUID();
         }
 
-        // Generate a random-like UUID (version 4) without using crypto API
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
+        return uuidv4();
     }
 
 
@@ -173,10 +169,6 @@ export class Utils {
         url.searchParams.set(parameterName, String(pageIndex));
 
         Navigation.replaceState(url, {});
-    }
-
-    static uuidv4() {
-        return uuidv4();
     }
 
     static isNumericDataType(datatype: DataType): boolean {

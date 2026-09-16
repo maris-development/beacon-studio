@@ -223,7 +223,7 @@ export function addNode(input: BeaconNodeInput): BeaconNode {
 	const now = new Date();
 
 	const stored: StoredBeaconNode = {
-		id: Utils.uuidv4(),
+		id: Utils.randomUUID(),
 		name: input.name.trim(),
 		url: normalizeUrl(input.url),
 		description: input.description?.trim() ?? '',

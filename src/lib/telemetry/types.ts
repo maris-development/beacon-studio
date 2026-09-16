@@ -37,7 +37,7 @@ export interface TelemetryFields {
 	level?: TelemetryLevel;
 	/** The route path, without the query string. */
 	route?: string;
-	/** The host of the Beacon node. The queue strips any path. */
+	/** The URL of the Beacon node. The event keeps the origin, and drops the path. */
 	nodeHost?: string;
 	/** The server-assigned query id, from the `x-beacon-query-id` response header. */
 	queryId?: string | null;

@@ -37,7 +37,6 @@ import { track } from '@/telemetry';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
 import { Utils } from '@/utils';
-import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Protective cap on result size (cells = rows × columns) to keep the browser

@@ -28,6 +28,9 @@ const MAX_BUFFER = 200;
 const RATE_LIMIT_PAUSE_MS = 300_000;
 
 let buffer: TelemetryEvent[] = [];
+
+/** Counts the clears. A flush that started before a clear must not restore its batch. */
+let epoch = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let pausedUntil = 0;
 let sending = false;
@@ -52,11 +55,13 @@ export async function flush(): Promise<void> {
 	sending = true;
 
 	try {
+		const startEpoch = epoch;
 		const events = buffer.splice(0, MAX_EVENTS_PER_BATCH);
 		const sent = await post(events);
 
 		// A refused batch goes back to the front, so the next flush tries again.
-		if (!sent) {
+		// An opt-out during the send drops it instead.
+		if (!sent && epoch === startEpoch) {
 			buffer = [...events, ...buffer].slice(-MAX_BUFFER);
 		}
 	} finally {
@@ -101,6 +106,7 @@ export function startQueue(): () => void {
 /** Drops every buffered event. The settings page calls this when a user switches telemetry off. */
 export function clearQueue(): void {
 	buffer = [];
+	epoch += 1;
 }
 
 /** Posts one batch. Returns true when the server accepted it, or when it is not worth a retry. */
