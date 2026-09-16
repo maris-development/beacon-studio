@@ -13,7 +13,9 @@
 	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import { Label } from '@/components/ui/label';
 	import { dataBrowserNodeId } from '@/stores/data-browser-node';
+	import { Input } from '@/components/ui/input';
 
 	type Dataset = {
 		dataset: string;
@@ -122,12 +124,15 @@
 		getPage();
 	}
 
-	function onCellClick(row: Record<string, string>, column: Column) {
-		const filename = row[column.key];
+	function onCellClick(row: { dataset: string }) {
+		if (!selectedNode) return;
 
-		const url = new URL(resolve('/data-browser/dataset-detail'), window.location.origin);
+		const filename = row.dataset;
+
+		const url = new URL(resolve('/data-browser/datasets/detail'), window.location.origin);
 
 		url.searchParams.set('file', filename);
+		url.searchParams.set('node', selectedNode.url);
 
 		goto(url.toString());
 	}
@@ -154,44 +159,43 @@
 
 		<p>Explore and manage the datasets that are available in your Beacon node.</p>
 
-		<div class="mb-4 flex items-center gap-2 node-picker">
-			<Select.Root
-				type="single"
-				name="beaconNode"
-				value={selectedNode?.id ?? ''}
-				onValueChange={(id) => selectedNodeId.set(id)}
-			>
-				<Select.Trigger class="node-select-trigger">
-					{selectedNode?.name ?? 'Select a node'}
-				</Select.Trigger>
-				<Select.Content>
-					<Select.Group>
-						<Select.Label>Nodes</Select.Label>
-						{#each $nodes as node (node.id)}
-							<Select.Item value={node.id} label={node.name}>
-								{node.name}
-							</Select.Item>
-						{/each}
-					</Select.Group>
-				</Select.Content>
-			</Select.Root>
+		<div class="mb-4 node-picker">
+			<Label size="sm" for="beacon-node-select">Beacon Node</Label>
 
-			{#if selectedNode}
-				<BeaconNodeStatus health={selectedNode} variant="dot" />
-			{/if}
+			<div class="flex items-center gap-2">
+				<Select.Root
+					type="single"
+					name="beaconNode"
+					value={selectedNode?.id ?? ''}
+					onValueChange={(id) => selectedNodeId.set(id)}
+				>
+					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
+						{selectedNode?.name ?? 'Select a node'}
+					</Select.Trigger>
+					<Select.Content>
+						<Select.Group>
+							<Select.Label>Nodes</Select.Label>
+							{#each $nodes as node (node.id)}
+								<Select.Item value={node.id} label={node.name}>
+									{node.name}
+								</Select.Item>
+							{/each}
+						</Select.Group>
+					</Select.Content>
+				</Select.Root>
+
+				{#if selectedNode}
+					<BeaconNodeStatus health={selectedNode} variant="dot" />
+				{/if}
+			</div>
 		</div>
 
 		{#if $nodes.length === 0}
 			<p>No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse datasets.</p>
 		{:else}
-			<div class="mb-4 flex items-center justify-between">
-				<input
-					type="search"
-					id="search"
-					placeholder="Search..."
-					class="search-input"
-					onchange={onSearchBoxChange}
-				/>
+			<div class="table-header-row">
+				<Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+
 				<Button
 					onclick={() => {
 						upload_files_modal_open = true;
@@ -224,6 +228,20 @@
 </div>
 
 <style lang="scss">
+	div.table-header-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+	}
+
+	div.node-picker {
+		display: flex;
+		flex-direction: column;
+		gap: 0.375rem;
+	}
+
 	div.page-container :global(tr.arrow-row) {
 		position: relative;
 
