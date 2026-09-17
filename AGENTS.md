@@ -129,11 +129,38 @@ Imports point one way only:
   up into a component to get them.
 - `src/lib/stores/*` must never import from `src/lib/components/*`. The persisted shape of a query
   (`QueryDraft`) is domain, not view.
+- `src/lib/telemetry/*` sits beside `stores/` and reads `stores/settings`. Therefore
+  `stores/settings.ts` must never import telemetry. `watchSettings` in `telemetry/index.ts` diffs the
+  store and reports a change from there.
 - `src/lib/components/*` holds `.svelte` files, plus the `.svelte.ts` runes classes and the barrel
   `index.ts` files that belong to one component folder. Anything with no Svelte dependency and more
   than one consumer belongs below, in `query/` or `geo/`.
 - New non-component files under `src/lib/query/*` and `src/lib/geo/*` use kebab-case, matching
   `stores/` and `beacon-api/`. Components keep PascalCase.
+
+## Telemetry (Important)
+Read `src/lib/telemetry/README.md` before you add an event.
+
+- Event names are a **closed list on both sides**: `ActionName` in `telemetry/types.ts`, and
+  `TelemetryValidator::NAMES` on `beacon-datalake.org`. The server drops an unknown name with no
+  error and no log line. Land the server list first, then Studio.
+- **The `studio_telemetry` table takes no new columns**, unless absolutely required. Discuss that with
+  the user first. Every new field goes in the `props` JSON object. A new column needs a change in
+  three places plus a migration, and that is a separate job.
+- The server **drops a whole `props` object** above its cap; it does not cut it. `track` routes every
+  object through `fitProps`, which degrades in steps. Never build an event that bypasses `track`.
+- Add `describeQuery(query)` to the props of every query event. Query content is open data
+  (ERA5, WOD), so the filter values go out as well, and the time range is the most used field.
+
+### The two files outside this repo
+| Part | Path |
+|---|---|
+| Receiver (the endpoint that Studio posts to) | `S:\www\beacon-datalake.org\src\Controller\Api\TelemetryController.php` |
+| Dashboard (the page that reads the events) | `S:\application\beacon-datalake.org\management\src\Controller\StudioTelemetryController.php` |
+
+Edit either file **only when the task needs it**. Both live in another repository, on a slow share.
+**Always tell the user which of the two you changed.** The user deploys them by hand. Without that
+message the change never reaches production.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
