@@ -11,6 +11,7 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { addToast, dismissToast } from '@/stores/toasts';
+	import { openFeedback } from '$lib/feedback';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -28,9 +29,6 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 
 	// Components
-	import ChooseBeaconModal from '../modals/ChooseBeaconModal.svelte';
-	import FeedbackModal from '../modals/FeedbackModal.svelte';
-	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
@@ -39,6 +37,8 @@
 	type MenuItem = {
 		title: string;
 		url: string;
+		/** Section root the item highlights on. Defaults to `url`. */
+		match?: string;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon: any;
 		children?: SubItem[];
@@ -53,6 +53,7 @@
 				{
 					title: 'Queries',
 					url: resolve('/queries/workbench'),
+					match: resolve('/queries'),
 					icon: TextSearchIcon,
 					children: [
 						{ title: 'Query Builder', url: resolve('/queries/workbench') },
@@ -68,6 +69,7 @@
 				{
 					title: 'Workspace',
 					url: resolve('/visualisations/map-viewer'),
+					match: resolve('/visualisations'),
 					icon: EyeIcon,
 					children: [
 						{ title: 'Map Viewer', url: resolve('/visualisations/map-viewer') },
@@ -104,7 +106,7 @@
 	const footer: MenuItem[] = [
 		{
 			title: 'More about Studio',
-			url: 'https://beacon-datalake.org/ecosystem/beacon-studio',
+			url: 'https://beacon-datalake.org/ecosystem/studio',
 			icon: InfoIcon,
 			target: '_blank'
 		},
@@ -124,12 +126,6 @@
 
 	let collapsed = $state(false);
 	let isMobile = $state(false);
-	let showChooseBeaconModal: boolean = $state(false);
-	let showFeedbackModal: boolean = $state(false);
-
-	function openBeaconNodePicker(): void {
-		showChooseBeaconModal = true;
-	}
 
 	// The sidebar shows the status of the selection on every page. Refresh a
 	// stale result. `ensureFresh` skips a check that is not due.
@@ -230,14 +226,6 @@
 	});
 </script>
 
-{#if showChooseBeaconModal}
-	<ChooseBeaconModal onClose={() => (showChooseBeaconModal = false)} />
-{/if}
-
-{#if showFeedbackModal}
-	<FeedbackModal onClose={() => (showFeedbackModal = false)} />
-{/if}
-
 {#if isMobile && !collapsed}
 	<button class="sidebar-backdrop" 
 			aria-label="Close menu" 
@@ -268,25 +256,6 @@
 			</button>
 		</div>
 
-		<!--
-			The node of the browse pages, and the node of a new query block. It is
-			not the node of an open query: a query record owns that one, and the
-			workbench shows it. See `QueryWorkspace.activeNode`.
-		-->
-		<!-- <button
-			class="current-node"
-			title="The node for browsing, and for a new query"
-			onclick={openBeaconNodePicker}
-		>
-			<span class="node-icon"><LinkIcon /></span>
-			<div class="node-text">
-				<span class="node-name">{$currentNode?.name ?? 'No node picked'}</span>
-				<span class="node-url">{$currentNode?.url ?? ''}</span>
-			</div>
-			{#if $currentNode}
-				<BeaconNodeStatus health={$currentNode} variant="dot" />
-			{/if}
-		</button> -->
 	</div>
 
 	<div class="sidebar-content">
@@ -298,6 +267,7 @@
 						<SidebarCollapsibleMenu
 							title={item.title}
 							url={item.url}
+							match={item.match}
 							icon={item.icon}
 							items={item.children}
 						/>
@@ -317,7 +287,7 @@
 			<SidebarMenuItem
 				title="Feedback"
 				icon={SendIcon}
-				onclick={() => (showFeedbackModal = true)}
+				onclick={() => openFeedback(page.route.id)}
 			/>
 		</div>
 	</div>
@@ -404,60 +374,6 @@
 					}
 				}
 			}
-
-			.current-node {
-				display: flex;
-				appearance: none;
-				width: 100%;
-				align-items: center;
-				margin-top: 1rem;
-				gap: 0.5rem;
-				padding: 0.5rem;
-				border-radius: 0.5rem;
-				background-color: var(--background);
-				border: none;
-				cursor: pointer;
-
-				background-color: rgba(255, 255, 255, 0.25);
-
-				.node-icon {
-					display: flex;
-					flex-shrink: 0;
-
-					:global(svg) {
-						width: 1rem;
-						height: 1rem;
-					}
-				}
-
-				.node-text {
-					display: grid;
-					flex: 1;
-					min-width: 0;
-					text-align: left;
-					font-size: 0.875rem;
-					line-height: 1.25;
-				}
-
-				.node-name {
-					font-weight: var(--sidebar-bold-font-weight);
-				}
-
-				.node-name,
-				.node-url {
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-				}
-
-				.node-url {
-					font-size: 0.75rem;
-				}
-
-				&:hover {
-					background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
-				}
-			}
 		}
 
 		.sidebar-content {
@@ -497,7 +413,6 @@
 
 			.sidebar-content,
 			.sidebar-footer,
-			.current-node,
 			.logo-wrapper .header-link {
 				display: none;
 			}

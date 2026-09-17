@@ -2,7 +2,6 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { onDestroy, onMount, untrack } from 'svelte';
 	import { page } from '$app/state';
-	import { Utils } from '@/utils';
 	import type { CompiledQuery } from '@/beacon-api/types';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
@@ -225,17 +224,6 @@
 			{#if !compiledQuery}
 				<p>Select a valid query above to see it on a chart.</p>
 			{:else}
-				<!-- <p class="result-summary">
-					{#if charts.isLoading && !charts.entry}
-						Loading rows…
-					{:else}
-						{charts.rowCount} rows selected in {Utils.formatSecondsToReadableTime(
-							charts.durationMs / 1000
-						)}{#if charts.series?.skippedRows}, {charts.series.skippedRows} without a value on every
-							axis{/if}{#if charts.displaySeries?.sampledFrom}, drawing a random sample of
-							{charts.displaySeries.x.length} of {charts.displaySeries.sampledFrom} points{/if}.
-					{/if}
-				</p> -->
 
 				<PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
 
@@ -301,10 +289,6 @@
 		.content {
 			flex-grow: 1;
 		}
-	}
-
-	.result-summary {
-		font-size: 0.875rem;
 	}
 
 	.plot-layout {

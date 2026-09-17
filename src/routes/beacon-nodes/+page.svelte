@@ -65,7 +65,7 @@
 
 		<p>
 			Use this page to manage your connected Beacon nodes. Explore publicly available Beacon
-			nodes at <a href="https://beacon-datalake.org/public-node" rel="noopener noreferrer" target="_blank"
+			nodes at <a href="https://beacon-datalake.org/public-nodes" rel="noopener noreferrer" target="_blank"
 				>Beacon datalake</a
 			>.
 		</p>

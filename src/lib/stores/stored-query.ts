@@ -136,10 +136,7 @@ export function hasNodeRef(ref: NodeRef | null | undefined): boolean {
 }
 
 export function createId(): string {
-	if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-		return crypto.randomUUID();
-	}
-	return `sq-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+	return `sq-${Utils.randomUUID()}` ;
 }
 
 /**
