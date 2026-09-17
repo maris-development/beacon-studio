@@ -19,8 +19,11 @@ const MAX_STACK = 300;
 /** The reported part of a file name, in characters. */
 const MAX_SOURCE = 120;
 
+/** The test reads `name`, so it also holds for an error of another realm. */
 function isAbort(value: unknown): boolean {
-	return value instanceof Error && value.name === 'AbortError';
+	if (!value || typeof value !== 'object') return false;
+
+	return (value as { name?: unknown }).name === 'AbortError';
 }
 
 function messageOf(value: unknown): string {

@@ -11,12 +11,14 @@
         table_names = [],
         loaded = false,
         selected_table_name = $bindable(''),
-        status
+        status,
+        onPick
     }: {
         table_names?: string[];
         loaded?: boolean;
         selected_table_name?: string;
         status?: QuerySelectionStatus;
+        onPick?: (table_name: string) => void;
     } = $props();
 
     type ViewMode = 'cards' | 'list';
@@ -38,6 +40,7 @@
             }
         }
         selected_table_name = table_name;
+        onPick?.(table_name);
     }
 </script>
 
@@ -86,7 +89,17 @@
         </div>
         
     {:else if viewMode === 'list'}
-        <Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
+        <!--
+            The value is a prop and not a binding. Therefore `onValueChange` runs
+            for a choice of the user only, and not for a table that the loader
+            selects. `pickTable` writes the new value.
+        -->
+        <Select.Root
+            type="single"
+            name="dataCollection"
+            value={selected_table_name}
+            onValueChange={(value) => pickTable(value)}
+        >
             <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
             </Select.Trigger>

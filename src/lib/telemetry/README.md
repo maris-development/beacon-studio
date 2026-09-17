@@ -229,6 +229,7 @@ A large props object loses fields. These flags say which.
 |---|---|---|
 | Props, encoded | 7000 bytes client, 8000 server | `props.ts`, `TelemetryValidator` |
 | Request body | 200000 bytes client, 262144 server | `queue.ts`, `TelemetryValidator` |
+| Request body on unload | 50000 bytes | `queue.ts`, browser keepalive quota |
 | Events per batch | 50 | both sides |
 | Message | 500 characters | server |
 | Requests per IP | 120 per minute | `TelemetryController` |

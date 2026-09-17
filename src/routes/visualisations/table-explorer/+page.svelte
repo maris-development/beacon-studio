@@ -151,16 +151,34 @@
 		isLoading = true;
 
 		try {
-			entry = await BeaconClient.ensureQuery(query, node, block.id);
-			workspace.markBlockRun(block.id, entry.rowCount);
+			const result = await BeaconClient.ensureQuery(query, node, block.id);
+
+			entry = result;
+			workspace.markBlockRun(block.id, result.rowCount);
 
 			const readyAt = performance.now();
 
-			if (entry.rowCount === 0) {
+			// An empty result is a view as well. The map and the chart report it too,
+			// so the counts of the three stay comparable.
+			const reportVisualise = () =>
+				track('query.visualise', {
+					nodeHost: node.url,
+					rowCount: result.rowCount,
+					queryId: result.queryId,
+					props: {
+						...describeQuery(query),
+						kind: 'table',
+						tier: result.stats?.tier,
+						renderMs: Math.round(performance.now() - readyAt)
+					}
+				});
+
+			if (result.rowCount === 0) {
 				isLoading = false;
 				columns = [];
 				displayRows = [];
 				totalRows = 0;
+				reportVisualise();
 				addToast({
 					type: 'info',
 					message: `Query executed successfully but returned no data.`
@@ -169,18 +187,7 @@
 			}
 
 			prepareTableForDisplay();
-
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: entry.rowCount,
-				queryId: entry.queryId,
-				props: {
-					...describeQuery(query),
-					kind: 'table',
-					tier: entry.stats?.tier,
-					renderMs: Math.round(performance.now() - readyAt)
-				}
-			});
+			reportVisualise();
 		} catch (error) {
 			workspace.endBlockRun(block.id, token);
 			if (latestRun === token) isLoading = false;

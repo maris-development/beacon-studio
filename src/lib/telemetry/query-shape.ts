@@ -167,12 +167,28 @@ function describeFilter(filter: Filter): FilterShape | null {
 	return null;
 }
 
-/** The drawn area of a query, if it holds one. */
+/**
+ * The drawn area of a query, if it holds one.
+ *
+ * The scan goes through `or` and `and` groups. An area that crosses the
+ * antimeridian gives one group per world copy, so its geometry sits two levels
+ * down. See `toSpatialFilters` in `geo/spatial-selection.ts`.
+ */
 function spatialBbox(filters: Filter[]): [number, number, number, number] | undefined {
 	for (const filter of filters) {
-		const geometry = (filter as { geometry?: GeoJsonPolygon }).geometry;
+		if (!filter || typeof filter !== 'object') continue;
 
-		if (geometry) return bboxOf(geometry);
+		const raw = filter as { geometry?: GeoJsonPolygon; or?: Filter[]; and?: Filter[] };
+
+		if (raw.geometry) return bboxOf(raw.geometry);
+
+		const group = raw.or ?? raw.and;
+
+		if (!Array.isArray(group)) continue;
+
+		const nested = spatialBbox(group);
+
+		if (nested) return nested;
 	}
 
 	return undefined;

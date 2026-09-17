@@ -72,7 +72,7 @@ export interface TelemetryFields {
 	message?: string;
 	durationMs?: number;
 	rowCount?: number;
-	/** Small, non-personal extras. The server drops the object above 2000 bytes. */
+	/** Small, non-personal extras. The server drops the object above 8000 bytes. */
 	props?: Record<string, unknown>;
 }
 

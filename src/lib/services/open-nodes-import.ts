@@ -96,11 +96,14 @@ export function importOpenNodes(list: OpenNode[] = getOpenNodes()): number {
 
 		if (findByUrl(node.url) !== null) continue;
 
-		addNode({
-			name: node.name,
-			url: node.url,
-			description: node.description
-		});
+		addNode(
+			{
+				name: node.name,
+				url: node.url,
+				description: node.description
+			},
+			'import'
+		);
 
 		added += 1;
 	}
@@ -121,7 +124,7 @@ function selectFirstOf(list: OpenNode[]): void {
 		const saved = findByUrl(node.url);
 
 		if (saved) {
-			selectNode(saved.id);
+			selectNode(saved.id, 'import');
 			return;
 		}
 	}

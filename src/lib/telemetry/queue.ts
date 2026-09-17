@@ -31,6 +31,13 @@ const MAX_BUFFER = 200;
  */
 const MAX_BODY_BYTES = 200_000;
 
+/**
+ * The size of one body on unload, in bytes. A browser refuses a `keepalive`
+ * request above its own quota, which the Fetch standard sets at 65536 bytes for
+ * every keepalive request together. This budget stays below it.
+ */
+const MAX_KEEPALIVE_BYTES = 50_000;
+
 /** Stop for this long after a 429, in milliseconds. */
 const RATE_LIMIT_PAUSE_MS = 300_000;
 
@@ -74,6 +81,33 @@ function takeBatch(): TelemetryEvent[] {
 	}
 
 	return buffer.splice(0, count);
+}
+
+/**
+ * Takes the last events of the buffer, inside the unload budget.
+ *
+ * The unload budget holds fewer events than the buffer can. The newest events
+ * therefore go first, so `session.end` is always in the batch. The rest stays in
+ * the buffer: a hidden tab that comes back sends it later, and the server orders
+ * every row on `occurred_at`.
+ */
+function takeTail(budget: number): TelemetryEvent[] {
+	let bytes = 0;
+	let count = 0;
+
+	// The body holds the events plus the wrapper, so start above zero.
+	const overhead = 16;
+
+	while (count < buffer.length && count < MAX_EVENTS_PER_BATCH) {
+		const size = byteSize(buffer[buffer.length - 1 - count]) + 1;
+
+		if (count > 0 && bytes + size + overhead > budget) break;
+
+		bytes += size;
+		count += 1;
+	}
+
+	return buffer.splice(buffer.length - count, count);
 }
 
 /** Adds one event to the buffer, and flushes when the buffer is full. */
@@ -120,7 +154,7 @@ export async function flush(): Promise<void> {
 export function flushOnHide(): void {
 	if (buffer.length === 0 || Date.now() < pausedUntil) return;
 
-	const events = takeBatch();
+	const events = takeTail(MAX_KEEPALIVE_BYTES);
 
 	void post(events, true);
 }

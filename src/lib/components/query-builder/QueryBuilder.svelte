@@ -203,21 +203,22 @@
 		return pendingSeed;
 	});
 
-	/** The table of the last reported choice. It stops a repeat on every re-render. */
-	let reportedTable = '';
-
 	$effect(() => {
 		status.dataTable = selected_table_name;
         onTableChange?.(selected_table_name);
-
-		if (selected_table_name && selected_table_name !== reportedTable) {
-			reportedTable = selected_table_name;
-			track('builder.table.select', {
-				nodeHost: node?.url,
-				props: { table: selected_table_name, tables: table_names.length }
-			});
-		}
 	});
+
+	/**
+	 * Reports a table that the user picks. The loader also writes
+	 * `selected_table_name`, for a draft, a seed or the default table. Those are
+	 * no choice of the user, so the selector calls this and an effect does not.
+	 */
+	function handleTablePick(table_name: string): void {
+		track('builder.table.select', {
+			nodeHost: node?.url,
+			props: { table: table_name, tables: table_names.length }
+		});
+	}
 
 </script>
 
@@ -243,7 +244,7 @@
 
 	<hr>
 {:else if node && client}
-	<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
+	<QueryBuilderTableSelector {table_names} {loaded} {status} onPick={handleTablePick} bind:selected_table_name />
 
     <hr>
 

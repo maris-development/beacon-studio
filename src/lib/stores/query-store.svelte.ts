@@ -232,9 +232,14 @@ class QueryStore {
 			const cached = this.cache.get(key);
 			if (cached) {
 				this.touch(key, cached);
-				this.current = cached;
-				this.recordHistory({ ...cached, stats: { tier: 'memory' } }, node, storedQueryId);
-				return cached;
+
+				// The cached entry holds the stats of its own run. This hit read no
+				// node and no disk, so the copy that every caller sees says `memory`.
+				const hit: DatasetEntry = { ...cached, stats: { ...cached.stats, tier: 'memory' } };
+
+				this.current = hit;
+				this.recordHistory(hit, node, storedQueryId);
+				return hit;
 			}
 		}
 
