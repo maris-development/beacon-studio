@@ -2,8 +2,8 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
-	import Modal from '@/components/modals/Modal.svelte';
 	import SettingField from '@/components/settings/SettingField.svelte';
+	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import {
 		resetSettings,
@@ -28,11 +28,18 @@
 		return result;
 	})();
 
-	/** True while the confirmation of the reset is open. */
-	let isConfirmOpen = $state(false);
+	async function onResetAll(): Promise<void> {
+		const goAhead = await askConfirm({
+			title: 'Reset all settings',
+			message:
+				'This puts every setting of this browser back to its default. The app loses your query limits, your cache size, your map defaults and your telemetry choice.',
+			note: 'You cannot undo this.',
+			confirmLabel: 'Reset all settings',
+			destructive: true
+		});
 
-	function onResetAll(): void {
-		isConfirmOpen = false;
+		if (!goAhead) return;
+
 		resetSettings();
 		addToast({ type: 'success', message: 'All settings are back to their defaults.' });
 	}
@@ -67,25 +74,10 @@
 		</div>
 
 		<div class="actions">
-			<Button variant="outline" onclick={() => (isConfirmOpen = true)}>Reset all settings</Button>
+			<Button variant="outline" onclick={onResetAll}>Reset all settings</Button>
 		</div>
 	</div>
 </div>
-
-{#if isConfirmOpen}
-	<Modal title="Reset all settings" onClose={() => (isConfirmOpen = false)} width="440px">
-		<p>
-			This puts every setting of this browser back to its default. The app loses your query limits,
-			your cache size, your map defaults and your telemetry choice.
-		</p>
-		<p>You cannot undo this.</p>
-
-		<div slot="footer" class="confirm-actions">
-			<Button variant="outline" onclick={() => (isConfirmOpen = false)}>Cancel</Button>
-			<Button variant="destructive" onclick={onResetAll}>Reset all settings</Button>
-		</div>
-	</Modal>
-{/if}
 
 <style lang="scss">
 	.page-container {
@@ -115,11 +107,5 @@
 			justify-content: flex-end;
 			margin: 1rem 0 2rem;
 		}
-	}
-
-	.confirm-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 0.5rem;
 	}
 </style>

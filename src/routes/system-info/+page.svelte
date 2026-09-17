@@ -9,6 +9,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
+	import { askAlert } from '@/stores/confirm';
 
 	let currentNodeValue: BeaconNode | null = null;
 	let client: BeaconClient;
@@ -19,7 +20,10 @@
 		currentNodeValue = $currentNode;
 
 		if (!currentNodeValue) {
-			alert('No Beacon node selected. Please select one before proceeding.');
+			void askAlert({
+				title: 'No Beacon node',
+				message: 'This page reads one node. Select a node first.'
+			});
 		}
 
 		client = BeaconClient.new(currentNodeValue);
