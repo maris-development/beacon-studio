@@ -3,7 +3,8 @@
 	import { nodes, normalizeUrl } from '@/services/beacon-node';
 	import { checkAllNodes } from '@/services/beacon-node-connect';
 	import { FRESH_MS } from '@/services/beacon-node-health';
-	import { openNodes, type OpenNode } from '@/services/open-nodes';
+	import { openNodeInfoUrl, openNodes, type OpenNode } from '@/services/open-nodes';
+	import { htmlToText, sanitizeHtml } from '@/util/sanitize-html';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import Card from '@/components/card/Card.svelte';
@@ -44,12 +45,6 @@
 	function findPublicNode(url: string): OpenNode | null {
 		const target = normalizeUrl(url);
 		return $openNodes.find((n) => normalizeUrl(n.url) === target) ?? null;
-	}
-
-	/** The public info page of a node, keyed by its catalog id and a name slug. */
-	function publicNodeInfoUrl(publicNode: OpenNode): string {
-		const slug = publicNode.name.toLowerCase().replaceAll(' ', '-');
-		return `http://beacon-datalake/public-nodes/${publicNode.n_code}/${slug}`;
 	}
 </script>
 
@@ -94,14 +89,16 @@
 							{@const publicNode = findPublicNode(node.url)}
 							<tr>
 								<td class="node-name">{node.name}</td>
-								<td class="node-description" title={node.description}>
+								<td class="node-description" title={htmlToText(node.description)}>
 									<div class="description-cell">
-										<span class="clamp">{node.description}</span>
+										<!-- The public list writes the description as HTML. -->
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitizeHtml removes the unsafe tags and attributes -->
+										<span class="clamp">{@html sanitizeHtml(node.description)}</span>
 										{#if typeof publicNode?.n_code === 'number'}
 											<Button
 												variant="ghost"
 												size="xs"
-												href={publicNodeInfoUrl(publicNode)}
+												href={openNodeInfoUrl(publicNode)}
 												target="_blank"
 												rel="noopener noreferrer"
 												title="Public node information"
@@ -215,6 +212,16 @@
 			-webkit-box-orient: vertical;
 			overflow: hidden;
 			min-width: 0;
+
+			// The description carries its own markup. A margin or a bullet of that
+			// markup would push the text out of the clamped box.
+			:global(p),
+			:global(ul),
+			:global(ol) {
+				margin: 0;
+				padding: 0;
+				list-style-position: inside;
+			}
 		}
 
 		// These columns hold one line each. They must not break a URL in two.

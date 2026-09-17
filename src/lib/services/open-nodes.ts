@@ -13,7 +13,7 @@
  */
 
 import { get, readonly, writable, type Readable } from 'svelte/store';
-import { normalizeUrl } from './beacon-node-url';
+import { normalizeUrl, splitNodeUrl } from './beacon-node-url';
 
 /** The address of the public list. MARIS owns the path, so the app keeps it. */
 export const OPEN_NODES_URL = 'https://beacon-datalake.org/api/studio/public-nodes';
@@ -53,6 +53,18 @@ export const openNodes: Readable<OpenNode[]> = readonly(openNodesStore);
 /** A snapshot of the list, for plain modules. Call it at the point of use. */
 export function getOpenNodes(): OpenNode[] {
 	return get(openNodesStore);
+}
+
+/**
+ * The page of a node on the site of the public list. The host comes from
+ * {@link OPEN_NODES_URL}, so the link follows a move of the list. The path takes
+ * the catalog id and the name, in lower case and with a dash for each space.
+ */
+export function openNodeInfoUrl(node: OpenNode): string {
+	const { origin } = splitNodeUrl(OPEN_NODES_URL);
+	const slug = node.name.toLowerCase().replaceAll(' ', '-');
+
+	return `${origin}/public-nodes/${node.n_code}/${slug}`;
 }
 
 /** True if the value has a usable name and URL. */
