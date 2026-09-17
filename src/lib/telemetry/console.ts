@@ -20,8 +20,43 @@ import type { ConsoleName, TelemetryLevel } from './types';
 /** The length of one reported message. The server cuts at 500 characters. */
 const MAX_MESSAGE = 500;
 
+/** One message reports once inside this window, in milliseconds. */
+const DEDUPE_WINDOW_MS = 60_000;
+
+/** The number of tracked messages. A map that grows without a bound leaks. */
+const MAX_TRACKED = 200;
+
 /** Stops a loop when the telemetry code itself logs. */
 let inside = false;
+
+/** The last report of one message, and the calls that it hid after that. */
+const seen = new Map<string, { at: number; hidden: number }>();
+
+/**
+ * Decides whether one message goes out now.
+ *
+ * A render loop writes the same warning on every frame. The first call of a
+ * window reports, and the rest only raise a counter. The next window reports
+ * that counter as `repeat`, so the volume stays visible.
+ *
+ * Returns the hidden count, or null when the call must stay silent.
+ */
+function admit(key: string): number | null {
+	const now = Date.now();
+	const entry = seen.get(key);
+
+	if (entry && now - entry.at < DEDUPE_WINDOW_MS) {
+		entry.hidden += 1;
+
+		return null;
+	}
+
+	if (seen.size >= MAX_TRACKED) seen.clear();
+
+	seen.set(key, { at: now, hidden: 0 });
+
+	return entry?.hidden ?? 0;
+}
 
 type ConsoleMethod = 'log' | 'warn' | 'error';
 
@@ -63,7 +98,12 @@ function patch(method: ConsoleMethod, name: ConsoleName, level: TelemetryLevel):
 		inside = true;
 
 		try {
-			track(name, { level, message: toMessage(args) });
+			const message = toMessage(args);
+			const hidden = admit(`${name}|${message}`);
+
+			if (hidden === null) return;
+
+			track(name, { level, message, props: hidden > 0 ? { repeat: hidden } : undefined });
 		} catch {
 			// Telemetry must never break a log call.
 		} finally {

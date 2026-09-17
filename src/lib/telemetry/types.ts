@@ -11,17 +11,44 @@ export type TelemetryCategory = 'action' | 'console' | 'toast';
 /** A user action, or a lifecycle moment of the app. */
 export type ActionName =
 	| 'app.start'
+	| 'app.error'
+	| 'session.end'
 	| 'page.view'
 	| 'query.execute'
 	| 'query.error'
+	| 'query.cancel'
 	| 'query.visualise'
 	| 'query.download'
 	| 'query.share'
+	| 'query.open'
 	| 'query.save'
 	| 'node.select'
-	| 'node.add';
+	| 'node.add'
+	| 'node.remove'
+	| 'node.update'
+	| 'node.health'
+	| 'browser.table.open'
+	| 'browser.dataset.open'
+	| 'browser.search'
+	| 'builder.table.select'
+	| 'builder.column.add'
+	| 'builder.filter.add'
+	| 'workbench.block.add'
+	| 'settings.change'
+	| 'example.start';
 
 export type ConsoleName = 'console.log' | 'console.warn' | 'console.error';
+
+/** What started a query run. It goes in `props.source`. */
+export type QuerySource =
+	| 'workbench'
+	| 'history'
+	| 'saved'
+	| 'share'
+	| 'example'
+	| 'map'
+	| 'chart'
+	| 'table';
 
 export type ToastName = 'toast.info' | 'toast.success' | 'toast.warning' | 'toast.error';
 

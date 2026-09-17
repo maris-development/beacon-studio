@@ -24,6 +24,13 @@ const MAX_EVENTS_PER_BATCH = 50;
 /** Drop the oldest events above this size. A stuck server must not fill memory. */
 const MAX_BUFFER = 200;
 
+/**
+ * The size of one request body, in bytes. It stays below the server cap of
+ * 262144. A query shape makes one event large, so an event count alone is not
+ * enough: 50 rich events pass the cap, and the server then answers 413.
+ */
+const MAX_BODY_BYTES = 200_000;
+
 /** Stop for this long after a 429, in milliseconds. */
 const RATE_LIMIT_PAUSE_MS = 300_000;
 
@@ -34,6 +41,40 @@ let epoch = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let pausedUntil = 0;
 let sending = false;
+
+/** The encoded size of one event, in bytes. */
+function byteSize(event: TelemetryEvent): number {
+	try {
+		return new TextEncoder().encode(JSON.stringify(event)).length;
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * Takes the next batch off the front of the buffer.
+ *
+ * The batch stops at the event count and at the byte budget. It always holds at
+ * least one event, so a single large event can never block the queue.
+ */
+function takeBatch(): TelemetryEvent[] {
+	let bytes = 0;
+	let count = 0;
+
+	// The body holds the events plus the wrapper, so start above zero.
+	const overhead = 16;
+
+	while (count < buffer.length && count < MAX_EVENTS_PER_BATCH) {
+		const size = byteSize(buffer[count]) + 1;
+
+		if (count > 0 && bytes + size + overhead > MAX_BODY_BYTES) break;
+
+		bytes += size;
+		count += 1;
+	}
+
+	return buffer.splice(0, count);
+}
 
 /** Adds one event to the buffer, and flushes when the buffer is full. */
 export function enqueue(event: TelemetryEvent): void {
@@ -56,7 +97,7 @@ export async function flush(): Promise<void> {
 
 	try {
 		const startEpoch = epoch;
-		const events = buffer.splice(0, MAX_EVENTS_PER_BATCH);
+		const events = takeBatch();
 		const sent = await post(events);
 
 		// A refused batch goes back to the front, so the next flush tries again.
@@ -79,7 +120,7 @@ export async function flush(): Promise<void> {
 export function flushOnHide(): void {
 	if (buffer.length === 0 || Date.now() < pausedUntil) return;
 
-	const events = buffer.splice(0, MAX_EVENTS_PER_BATCH);
+	const events = takeBatch();
 
 	void post(events, true);
 }
