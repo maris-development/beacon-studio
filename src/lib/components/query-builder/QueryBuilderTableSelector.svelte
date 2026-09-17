@@ -32,7 +32,9 @@
     });
 
     async function pickTable(table_name: string) {
-        if(status.columns > 0) {
+        if (table_name === selected_table_name) return;
+
+        if (status && status.columns > 0) {
             const goAhead = await askConfirm({
                 title: 'Change the data table',
                 message: 'Another table needs other columns, so this empties your column selection.',
@@ -90,7 +92,12 @@
         </div>
         
     {:else if viewMode === 'list'}
-        <Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
+        <Select.Root
+            type="single"
+            name="dataCollection"
+            value={selected_table_name}
+            onValueChange={(table_name) => pickTable(table_name)}
+        >
             <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
             </Select.Trigger>

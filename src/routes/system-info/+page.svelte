@@ -24,6 +24,8 @@
 				title: 'No Beacon node',
 				message: 'This page reads one node. Select a node first.'
 			});
+
+			return;
 		}
 
 		client = BeaconClient.new(currentNodeValue);
