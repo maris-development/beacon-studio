@@ -238,6 +238,8 @@ export function addNode(input: BeaconNodeInput): BeaconNode {
 		selectedIdStore.set(stored.id);
 	}
 
+	track('node.add', { nodeHost: stored.url, props: { hasToken: stored.token !== '' } });
+
 	return { ...stored, ...UNKNOWN_HEALTH };
 }
 
@@ -263,6 +265,14 @@ export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconN
 			return updated;
 		})
 	);
+
+	track('node.update', {
+		nodeHost: updated.url,
+		props: {
+			urlChanged: updated.url !== previous.url,
+			tokenChanged: updated.token !== previous.token
+		}
+	});
 
 	if (updated.token !== previous.token) {
 		dropHealth(updated.url);
@@ -295,6 +305,8 @@ export function removeNode(id: string): BeaconNode | null {
 		selectFirstIfNone();
 	}
 
+	track('node.remove', { nodeHost: removed.url, props: { wasSelected } });
+
 	return removed;
 }
 
@@ -308,7 +320,11 @@ export function selectNode(id: string | null): void {
 	selectedIdStore.set(id);
 
 	const selected = id === null ? null : findById(id);
-	track('node.select', { nodeHost: selected?.url });
+
+	track('node.select', {
+		nodeHost: selected?.url,
+		props: { status: selected ? getHealthOf(selected.url).status : 'none' }
+	});
 }
 
 /**

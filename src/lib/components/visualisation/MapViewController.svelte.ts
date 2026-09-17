@@ -32,7 +32,7 @@ import type { BeaconNode, CompiledQuery, Select as QuerySelect } from '@/beacon-
 import { ApacheArrowUtils } from '@/arrow-utils';
 import { getSettings } from '@/stores/settings';
 import { addToast } from '@/stores/toasts';
-import { track } from '@/telemetry';
+import { describeQuery, track } from '@/telemetry';
 import { Utils } from '@/utils';
 import type { Rendered } from '@/util-types';
 import MapPopupContent from '@/components/MapPopupContent.svelte';
@@ -362,6 +362,24 @@ export class MapViewController {
 	 * block, for example after the user applied an area filter. The camera then
 	 * stays where the user left it.
 	 */
+	/**
+	 * Reports one map view. The call comes after the render, so `renderMs` holds
+	 * the time that the map itself took: the dedup pass and the geometry build.
+	 */
+	private reportVisualise(query: CompiledQuery, node: BeaconNode, readyAt: number): void {
+		track('query.visualise', {
+			nodeHost: node.url,
+			rowCount: this.entry?.rowCount,
+			queryId: this.entry?.queryId,
+			props: {
+				...describeQuery(query),
+				kind: 'map',
+				tier: this.entry?.stats?.tier,
+				renderMs: Math.round(performance.now() - readyAt)
+			}
+		});
+	}
+
 	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string, keepCamera: boolean): Promise<void> {
 		this.isLoading = true;
 		const token = this.beginRun(blockId);
@@ -373,19 +391,17 @@ export class MapViewController {
 			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
 			this.markRun(blockId, this.entry.rowCount);
 
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: this.entry.rowCount,
-				props: { kind: 'map' }
-			});
+			const readyAt = performance.now();
 
 			if (this.entry.rowCount === 0) {
 				this.isLoading = false;
+				this.reportVisualise(query, node, readyAt);
 				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
 				return;
 			}
 
 			await this.prepareTable(keepCamera);
+			this.reportVisualise(query, node, readyAt);
 		} catch (error) {
 			this.endRun(blockId, token);
 			if (this.latestRun === token) this.isLoading = false;

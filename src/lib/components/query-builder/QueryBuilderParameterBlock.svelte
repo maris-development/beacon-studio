@@ -16,6 +16,7 @@
 	import Parameter from './Parameter.svelte';
 	import type { SelectedFilterType } from '@/query/filter-types';
 	import { addToast } from '@/stores/toasts';
+	import { track } from '@/telemetry';
 	import type { QuerySelectionStatus } from '@/query/selection-status';
 	import type { QueryActions } from './QueryActions';
 	import { compileDraft, defaultOutputFormat, type QueryDraft } from '@/query/draft';
@@ -322,6 +323,14 @@
 					name: fields[index].name,
 					type: fields[index].type,
 					selected_filters: []
+				});
+
+				track('builder.column.add', {
+					props: {
+						column: fields[index].name,
+						dataType: typeof fields[index].type === 'string' ? fields[index].type : 'Timestamp',
+						columns: selectedFields.length
+					}
 				});
 			} else {
 				selectedFields.splice(selectedIndex, 1);

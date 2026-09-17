@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
+	import { track } from '@/telemetry';
     import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
@@ -202,9 +203,20 @@
 		return pendingSeed;
 	});
 
+	/** The table of the last reported choice. It stops a repeat on every re-render. */
+	let reportedTable = '';
+
 	$effect(() => {
 		status.dataTable = selected_table_name;
         onTableChange?.(selected_table_name);
+
+		if (selected_table_name && selected_table_name !== reportedTable) {
+			reportedTable = selected_table_name;
+			track('builder.table.select', {
+				nodeHost: node?.url,
+				props: { table: selected_table_name, tables: table_names.length }
+			});
+		}
 	});
 
 </script>

@@ -33,7 +33,7 @@ import { recordRunResult, resolveStoredQuery } from '@/stores/query-library';
 import { getSettings } from '@/stores/settings';
 import { snapshotNode } from '@/stores/stored-query';
 import { addToast } from '@/stores/toasts';
-import { track } from '@/telemetry';
+import { describeQuery, track } from '@/telemetry';
 import { getArrowWorker } from '@/workers/ArrowProcessingWorkerManager';
 import type { SortDirection } from '@/util-types';
 import { Utils } from '@/utils';
@@ -102,6 +102,22 @@ export interface DatasetEntry {
 	queryId: string | null;
 	/** Non-fatal warnings raised during execution (e.g. `limit_reached`). */
 	warnings: QueryWarning[];
+	/** Where the result came from, and how the time was spent. For telemetry only. */
+	stats?: RunStats;
+}
+
+/** Where one result came from, and how long each step took. */
+export interface RunStats {
+	/** `memory` and `opfs` are cache tiers. `network` is a run on the node. */
+	tier: 'memory' | 'opfs' | 'network';
+	/** Time until the node answered with its headers. */
+	serverMs?: number;
+	/** Time to read the body. */
+	transferMs?: number;
+	/** Time to decode the Arrow stream. */
+	decodeMs?: number;
+	/** The size of the body, in bytes. */
+	bytes?: number;
 }
 
 class QueryStore {
@@ -217,7 +233,7 @@ class QueryStore {
 			if (cached) {
 				this.touch(key, cached);
 				this.current = cached;
-				this.recordHistory(cached, node, storedQueryId, true);
+				this.recordHistory({ ...cached, stats: { tier: 'memory' } }, node, storedQueryId);
 				return cached;
 			}
 		}
@@ -232,20 +248,31 @@ class QueryStore {
 		const controller = new AbortController();
 		this.activeRun = { key, controller };
 		this.isLoading = true;
+		const startedAt = performance.now();
 
 		const promise = this.load(query, key, node, controller.signal)
 			.then((entry) => {
 				if (this.cacheEnabled) this.insert(entry);
 				this.current = entry;
-				this.recordHistory(entry, node, storedQueryId, false);
+				this.recordHistory(entry, node, storedQueryId);
 				return entry;
 			})
 			.catch((error: unknown) => {
-				// A cancel is a user action, not a fault. Report the rest.
-				if (!isAbortError(error)) {
+				// A cancel is a user action, not a fault. It gets its own event, so a
+				// long run that a user gives up on stays visible.
+				if (isAbortError(error)) {
+					track('query.cancel', {
+						level: 'info',
+						nodeHost: node.url,
+						durationMs: performance.now() - startedAt,
+						props: { ...describeQuery(query) }
+					});
+				} else {
 					track('query.error', {
 						nodeHost: node.url,
-						message: error instanceof Error ? error.message : String(error)
+						durationMs: performance.now() - startedAt,
+						message: error instanceof Error ? error.message : String(error),
+						props: { ...errorProps(error), ...describeQuery(query) }
 					});
 				}
 
@@ -309,8 +336,7 @@ class QueryStore {
 	private recordHistory(
 		entry: DatasetEntry,
 		node: BeaconNode,
-		storedQueryId: string | undefined,
-		cacheHit: boolean
+		storedQueryId: string | undefined
 	): void {
 		track('query.execute', {
 			nodeHost: node.url,
@@ -318,9 +344,8 @@ class QueryStore {
 			rowCount: entry.rowCount,
 			durationMs: entry.duration,
 			props: {
-				cacheHit,
-				columns: entry.query.query_parameters?.length ?? 0,
-				filters: entry.query.filters?.length ?? 0
+				...entry.stats,
+				...describeQuery(entry.query)
 			}
 		});
 
@@ -362,9 +387,8 @@ class QueryStore {
 			nodeHost: node.url,
 			durationMs: duration,
 			props: {
-				format: downloadFormat(query),
-				columns: query.query_parameters?.length ?? 0,
-				filters: query.filters?.length ?? 0
+				...describeQuery(query),
+				format: downloadFormat(query)
 			}
 		});
 
@@ -528,6 +552,7 @@ class QueryStore {
 		const hit = await opfsArrowCache.get(key);
 		if (!hit) return undefined;
 		try {
+			const start = performance.now();
 			const decoder = await getArrowDecoder();
 			const table = decoder.tableFromIPC(hit.bytes) as ApacheArrow.Table;
 			return {
@@ -537,7 +562,12 @@ class QueryStore {
 				rowCount: table.numRows,
 				duration: hit.meta.duration,
 				queryId: hit.meta.queryId,
-				warnings: hit.meta.warnings
+				warnings: hit.meta.warnings,
+				stats: {
+					tier: 'opfs',
+					decodeMs: Math.round(performance.now() - start),
+					bytes: hit.bytes.byteLength
+				}
 			};
 		} catch (error) {
 			console.warn('Failed to decode OPFS-cached result; refetching.', error);
@@ -579,15 +609,19 @@ class QueryStore {
 
 		// console.log('headers', [...response.headers.entries()]);
 
+		const answered = performance.now();
+
 		const queryId = response.headers.get('x-beacon-query-id') ?? Utils.randomUUID(); // generate a UUID if the server didn't provide one, or is blocked by CORS
 
 		const bytes = new Uint8Array(await response.arrayBuffer());
+
+		const transferred = performance.now();
 
 		const decoder = await getArrowDecoder();
 
 		const table = decoder.tableFromIPC(bytes) as ApacheArrow.Table;
 
-		
+		const decoded = performance.now();
 
 		const rowCount = table.numRows;
 		const warnings: QueryWarning[] = [];
@@ -617,7 +651,14 @@ class QueryStore {
 			rowCount,
 			duration,
 			queryId,
-			warnings
+			warnings,
+			stats: {
+				tier: 'network',
+				serverMs: Math.round(answered - start),
+				transferMs: Math.round(transferred - answered),
+				decodeMs: Math.round(decoded - transferred),
+				bytes: bytes.byteLength
+			}
 		};
 	}
 
@@ -679,6 +720,24 @@ export function isAbortError(error: unknown): boolean {
 	if (!error || typeof error !== 'object') return false;
 
 	return (error as { name?: unknown }).name === 'AbortError';
+}
+
+/**
+ * The class of one failure, for telemetry.
+ *
+ * A node answers a fault with a status code, and the client wraps that code in
+ * its error. The status separates a bad query from a node that is down.
+ */
+function errorProps(error: unknown): Record<string, unknown> {
+	if (!error || typeof error !== 'object') return { errorKind: 'unknown' };
+
+	const raw = error as { name?: unknown; status?: unknown; response?: { status?: unknown } };
+	const status = typeof raw.status === 'number' ? raw.status : raw.response?.status;
+
+	return {
+		errorKind: typeof raw.name === 'string' ? raw.name : 'unknown',
+		status: typeof status === 'number' ? status : undefined
+	};
 }
 
 /** The output format of a query, as one word for telemetry. */

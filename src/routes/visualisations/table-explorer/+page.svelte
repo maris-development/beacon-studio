@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
-	import { track } from '@/telemetry';
+	import { describeQuery, track } from '@/telemetry';
 	import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { queryStore } from '@/stores/query-store.svelte';
@@ -154,11 +154,7 @@
 			entry = await BeaconClient.ensureQuery(query, node, block.id);
 			workspace.markBlockRun(block.id, entry.rowCount);
 
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: entry.rowCount,
-				props: { kind: 'table' }
-			});
+			const readyAt = performance.now();
 
 			if (entry.rowCount === 0) {
 				isLoading = false;
@@ -173,6 +169,18 @@
 			}
 
 			prepareTableForDisplay();
+
+			track('query.visualise', {
+				nodeHost: node.url,
+				rowCount: entry.rowCount,
+				queryId: entry.queryId,
+				props: {
+					...describeQuery(query),
+					kind: 'table',
+					tier: entry.stats?.tier,
+					renderMs: Math.round(performance.now() - readyAt)
+				}
+			});
 		} catch (error) {
 			workspace.endBlockRun(block.id, token);
 			if (latestRun === token) isLoading = false;
