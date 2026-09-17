@@ -41,6 +41,8 @@ export type OpenNode = {
 	name: string;
 	url: string;
 	description: string;
+	/** The node's id in the public catalog. Absent on an older list. */
+	n_code?: number;
 };
 
 const openNodesStore = writable<OpenNode[]>([]);
@@ -85,7 +87,8 @@ function parseList(payload: unknown): OpenNode[] {
 		result.push({
 			name: value.name.trim(),
 			url,
-			description: typeof value.description === 'string' ? value.description.trim() : ''
+			description: typeof value.description === 'string' ? value.description.trim() : '',
+			n_code: typeof value.n_code === 'number' ? value.n_code : undefined
 		});
 	}
 
