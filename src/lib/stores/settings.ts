@@ -71,6 +71,8 @@ export interface BeaconStudioSettings {
 	// -- telemetry ------------------------------------------------------------
 	/** Sends pseudonymous usage events to beacon-datalake.org. A random install id groups them. */
 	telemetryEnabled: boolean;
+	/** Adds the content of a query to its events: the table, the columns and the filters. */
+	telemetryQueryDetails: boolean;
 	/** Adds `console.log` to the reported console output. Off by default: it is noisy, and a log line can hold a query. */
 	telemetryConsoleLog: boolean;
 }
@@ -96,13 +98,14 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	systemInfoUpdateIntervalMs: 1000,
 
 	telemetryEnabled: true,
+	telemetryQueryDetails: true,
 	telemetryConsoleLog: false
 };
 
 /** The keys of one settings object. */
 export type SettingKey = keyof BeaconStudioSettings;
 
-export type SettingGroup = 'Queries' | 'Result cache' | 'Map' | 'System' | 'Plot';
+export type SettingGroup = 'Queries' | 'Result cache' | 'Map' | 'System' | 'Plot' | 'Telemetry';
 
 interface BaseDefinition {
 	key: SettingKey;
@@ -306,19 +309,27 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 	},
 	{
 		key: 'telemetryEnabled',
-		group: 'System',
+		group: 'Telemetry',
 		type: 'boolean',
 		label: 'Send usage statistics',
 		description:
-			'Sends usage events to beacon-datalake.org: page visits, query runs, downloads, warnings and errors. A random id groups the events of this browser. It sends no query content and no account.'
+			'The main switch. It sends usage events to beacon-datalake.org: page visits, query runs, downloads, searches, warnings and errors. A random id groups the events of this browser. It sends no account, no password and no result data. Switch this off to send nothing at all.'
+	},
+	{
+		key: 'telemetryQueryDetails',
+		group: 'Telemetry',
+		type: 'boolean',
+		label: 'Send query telemetry',
+		description:
+			'Adds the content of a query to its events: the table, the columns, the filters with their values, and the drawn area. It also covers a data browser search term. Switch this off to keep the usage statistics, but without that content. The app then reports that a query ran, with its time, its row count, its node and its number of columns and filters. It does not report which table or which values you asked for. An error message can still name a table. This switch does nothing while "Send usage statistics" is off.'
 	},
 	{
 		key: 'telemetryConsoleLog',
-		group: 'System',
+		group: 'Telemetry',
 		type: 'boolean',
 		label: 'Include console.log output',
 		description:
-			'Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold query content.'
+			'Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold a file path or a result value. This switch does nothing while "Send usage statistics" is off.'
 	}
 ];
 
