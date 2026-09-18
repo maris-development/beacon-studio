@@ -175,7 +175,12 @@
 
 		{#if showRight}
 			<div class="pane-body">
-				<QueryTextEditor sourceCode={activeQueryJson} height="100%" readOnly />
+				<!-- Stacked panes have no height to fill, so the editor sets its own. -->
+				<QueryTextEditor
+					sourceCode={activeQueryJson}
+					height={isNarrow ? '50dvh' : '100%'}
+					readOnly
+				/>
 			</div>
 		{/if}
 	</section>
