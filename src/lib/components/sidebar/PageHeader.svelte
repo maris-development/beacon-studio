@@ -3,11 +3,18 @@
 	import { resolve } from '$app/paths';
 	import logo from '$lib/assets/logo-gradient.svg';
 
-	let { onToggle }: { onToggle: () => void } = $props();
+	let { open, onToggle }: { open: boolean; onToggle: () => void } = $props();
+
+	const label = $derived.by(() => {
+		if (open) {
+			return 'Close menu';
+		}
+		return 'Open menu';
+	});
 </script>
 
 <header class="page-header">
-	<button class="menu-toggle" aria-label="Open menu" onclick={onToggle}>
+	<button class="menu-toggle" aria-label={label} aria-expanded={open} onclick={onToggle}>
 		<MenuIcon class="toggle-icon" />
 	</button>
 	<a class="header-link" href={resolve('/')}>

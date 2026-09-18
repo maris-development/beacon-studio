@@ -62,7 +62,7 @@
 <div class="app-wrapper">
 	<AppSidebar bind:collapsed {isMobile} />
 	<div class="app-body">
-		<PageHeader onToggle={() => (collapsed = !collapsed)} />
+		<PageHeader open={!collapsed} onToggle={() => (collapsed = !collapsed)} />
 		<main class="main-content">
 			{@render children?.()}
 		</main>
