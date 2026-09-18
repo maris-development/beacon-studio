@@ -13,7 +13,7 @@
  */
 
 import { get, readonly, writable, type Readable } from 'svelte/store';
-import { normalizeUrl, splitNodeUrl } from './beacon-node-url';
+import { normalizeUrl } from './beacon-node-url';
 
 /** The address of the public list. MARIS owns the path, so the app keeps it. */
 export const OPEN_NODES_URL = 'https://beacon-datalake.org/api/studio/public-nodes';
@@ -41,8 +41,8 @@ export type OpenNode = {
 	name: string;
 	url: string;
 	description: string;
-	/** The node's id in the public catalog. Absent on an older list. */
-	n_code?: number;
+	n_code: number;
+	info_url: string;
 };
 
 const openNodesStore = writable<OpenNode[]>([]);
@@ -55,17 +55,7 @@ export function getOpenNodes(): OpenNode[] {
 	return get(openNodesStore);
 }
 
-/**
- * The page of a node on the site of the public list. The host comes from
- * {@link OPEN_NODES_URL}, so the link follows a move of the list. The path takes
- * the catalog id and the name, in lower case and with a dash for each space.
- */
-export function openNodeInfoUrl(node: OpenNode): string {
-	const { origin } = splitNodeUrl(OPEN_NODES_URL);
-	const slug = node.name.toLowerCase().replaceAll(' ', '-');
 
-	return `${origin}/public-nodes/${node.n_code}/${slug}`;
-}
 
 /** True if the value has a usable name and URL. */
 function isOpenNode(value: unknown): value is Partial<OpenNode> & { name: string; url: string } {
@@ -100,7 +90,8 @@ function parseList(payload: unknown): OpenNode[] {
 			name: value.name.trim(),
 			url,
 			description: typeof value.description === 'string' ? value.description.trim() : '',
-			n_code: typeof value.n_code === 'number' ? value.n_code : undefined
+			n_code: value.n_code,
+			info_url: value.info_url
 		});
 	}
 

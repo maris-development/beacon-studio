@@ -3,7 +3,7 @@
 	import { nodes, normalizeUrl } from '@/services/beacon-node';
 	import { checkAllNodes } from '@/services/beacon-node-connect';
 	import { FRESH_MS } from '@/services/beacon-node-health';
-	import { openNodeInfoUrl, openNodes, type OpenNode } from '@/services/open-nodes';
+	import { openNodes, type OpenNode } from '@/services/open-nodes';
 	import { htmlToText, sanitizeHtml } from '@/util/sanitize-html';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import Button from '@/components/buttons/Button.svelte';
@@ -98,7 +98,7 @@
 											<Button
 												variant="ghost"
 												size="xs"
-												href={openNodeInfoUrl(publicNode)}
+												href={publicNode.info_url}
 												target="_blank"
 												rel="noopener noreferrer"
 												title="Public node information"
