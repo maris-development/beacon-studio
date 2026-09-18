@@ -6,6 +6,7 @@
     import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import Card from '../card/Card.svelte';
 	import type { QuerySelectionStatus } from '@/query/selection-status';
+    import { askConfirm } from '@/stores/confirm';
 
     let {
         table_names = [],
@@ -30,12 +31,17 @@
         }
     });
 
-    function pickTable(table_name: string) {
-        if(status.columns > 0) {
-            const confirmChange = confirm('Changing the table will reset your column selections. Continue?');
-            if (!confirmChange) {
-                return;
-            }
+    async function pickTable(table_name: string) {
+        if (table_name === selected_table_name) return;
+
+        if (status && status.columns > 0) {
+            const goAhead = await askConfirm({
+                title: 'Change the data table',
+                message: 'Another table needs other columns, so this empties your column selection.',
+                confirmLabel: 'Change table'
+            });
+
+            if (!goAhead) return;
         }
         selected_table_name = table_name;
     }
@@ -86,7 +92,12 @@
         </div>
         
     {:else if viewMode === 'list'}
-        <Select.Root type="single" name="dataCollection" bind:value={selected_table_name}>
+        <Select.Root
+            type="single"
+            name="dataCollection"
+            value={selected_table_name}
+            onValueChange={(table_name) => pickTable(table_name)}
+        >
             <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
             </Select.Trigger>

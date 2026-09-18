@@ -3,6 +3,7 @@
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import SettingField from '@/components/settings/SettingField.svelte';
+	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import {
 		resetSettings,
@@ -27,7 +28,18 @@
 		return result;
 	})();
 
-	function onResetAll(): void {
+	async function onResetAll(): Promise<void> {
+		const goAhead = await askConfirm({
+			title: 'Reset all settings',
+			message:
+				'This puts every setting of this browser back to its default. The app loses your query limits, your cache size, your map defaults and your telemetry choice.',
+			note: 'You cannot undo this.',
+			confirmLabel: 'Reset all settings',
+			destructive: true
+		});
+
+		if (!goAhead) return;
+
 		resetSettings();
 		addToast({ type: 'success', message: 'All settings are back to their defaults.' });
 	}

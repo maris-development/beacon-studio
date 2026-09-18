@@ -281,7 +281,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								disabled={workspace.blocks.length === 1}
 								onclick={(event) => {
 									event.stopPropagation();
-									workspace.closeBlock(block.id);
+									void workspace.closeBlock(block.id);
 								}}
 							>
 								<XIcon />

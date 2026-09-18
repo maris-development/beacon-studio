@@ -14,6 +14,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 
 	/**
@@ -60,13 +61,18 @@
 		return () => document.removeEventListener('keydown', handleKeydown);
 	});
 
-	function closeModal() {
+	async function closeModal() {
 		// Reset form fields
 		if (input) {
-			let confirmation = confirm('You have unsaved changes. Are you sure you want to close?');
-			if (!confirmation) {
-				return;
-			}
+			const goAhead = await askConfirm({
+				title: 'Close without saving',
+				message: 'This form holds changes that the app did not save yet.',
+				note: 'The changes go away.',
+				confirmLabel: 'Close',
+				destructive: true
+			});
+
+			if (!goAhead) return;
 		}
 
 		onClose();
@@ -102,14 +108,18 @@
 		onSave();
 	}
 
-	function confirmRemove() {
+	async function confirmRemove() {
 		if (!node) return;
 
-		let confirmation = confirm(
-			`Are you sure you want to remove the node "${node.name}"? This action cannot be undone.`
-		);
+		const goAhead = await askConfirm({
+			title: 'Delete Beacon node',
+			message: `This removes the node "${node.name}" from this browser.`,
+			note: 'You cannot undo this.',
+			confirmLabel: 'Delete',
+			destructive: true
+		});
 
-		if (!confirmation) return;
+		if (!goAhead) return;
 
 		removeNode(node.id);
 

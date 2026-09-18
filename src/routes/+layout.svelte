@@ -1,5 +1,6 @@
 <script lang="ts">
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
+	import Confirm from '@/components/modals/Confirm.svelte';
 	import Toasts from '@/components/toasts/Toasts.svelte';
 	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
 	import { loadHomeExamples } from '@/data/home-examples';
@@ -43,6 +44,9 @@
 		<slot />
 	</main>
 </div>
+
+<!-- Last in the tree, so the question paints above a modal that asked it. -->
+<Confirm />
 
 <style global lang="scss">
 	div.app-wrapper {
