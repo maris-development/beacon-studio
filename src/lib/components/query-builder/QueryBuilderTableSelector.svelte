@@ -105,7 +105,6 @@
             name="dataCollection"
             value={selected_table_name}
             onValueChange={(value) => pickTable(value)}
-            onValueChange={(table_name) => pickTable(table_name)}
         >
             <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
