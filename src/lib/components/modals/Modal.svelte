@@ -27,11 +27,11 @@
 	});
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
 	id="modal-backdrop-{shortRandomString}"
 	class="backdrop"
 	role="presentation"
-	aria-hidden="true"
 	on:click={() => (canCloseModal ? onClose() : undefined)}
 >
 	<!-- svelte-ignore a11y_click_events_have_key_events -->

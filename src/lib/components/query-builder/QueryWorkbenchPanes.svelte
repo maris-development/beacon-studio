@@ -75,7 +75,8 @@
 
 	/** Put a node on the active block. The workspace empties the draft. */
 	function handleNodeChange(node: BeaconNode) {
-		workspace.setActiveNode(node);
+		// The workspace asks the user first, so the call answers later.
+		void workspace.setActiveNode(node);
 	}
 
 	/**

@@ -65,6 +65,7 @@ import {
 import { getCurrentNode, nodes, matchRef, resolveRef } from '@/services/beacon-node';
 import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-import';
 import type { BeaconNode } from '@/beacon-api/types';
+import { askConfirm } from '@/stores/confirm';
 import { addToast } from '@/stores/toasts';
 import { track } from '@/telemetry';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
@@ -293,7 +294,7 @@ export class QueryWorkspace {
 	 * The method returns false when the user refused the warning. It warns only
 	 * when the draft has columns to lose.
 	 */
-	setBlockNode(id: string, node: BeaconNode): boolean {
+	async setBlockNode(id: string, node: BeaconNode): Promise<boolean> {
 		const block = this.blocks.find((candidate) => candidate.id === id);
 		if (!block) return false;
 
@@ -305,10 +306,13 @@ export class QueryWorkspace {
 		const columns = block.draft?.selectedFields.length ?? 0;
 
 		if (columns > 0) {
-			const shouldContinue = confirm(
-				'Changing the Beacon node will reset your table and column selections. Continue?'
-			);
-			if (!shouldContinue) return false;
+			const goAhead = await askConfirm({
+				title: 'Change the Beacon node',
+				message: 'Another node holds other tables, so this empties your table and column selection.',
+				confirmLabel: 'Change node'
+			});
+
+			if (!goAhead) return false;
 		}
 
 		if (needsDraftSeed(block)) {
@@ -337,8 +341,8 @@ export class QueryWorkspace {
 	}
 
 	/** {@link setBlockNode} for the active block. */
-	setActiveNode(node: BeaconNode): boolean {
-		if (!this.activeBlockId) return false;
+	setActiveNode(node: BeaconNode): Promise<boolean> {
+		if (!this.activeBlockId) return Promise.resolve(false);
 		return this.setBlockNode(this.activeBlockId, node);
 	}
 
@@ -471,15 +475,22 @@ export class QueryWorkspace {
 	}
 
 	/** Remove a block. Keep one block, and correct the active selection. */
-	closeBlock(id: string): void {
+	async closeBlock(id: string): Promise<void> {
 		if (this.blocks.length === 1) return;
 
 		const index = this.blocks.findIndex((b) => b.id === id);
 		if (index === -1) return;
 
 		if ((this.blocks[index].draft?.selectedFields.length ?? 0) > 0) {
-			const shouldContinue = confirm('Are you sure you want to close this query?');
-			if (!shouldContinue) return;
+			const goAhead = await askConfirm({
+				title: 'Close this query',
+				message: 'This query holds columns that you picked.',
+				note: 'The block goes away.',
+				confirmLabel: 'Close query',
+				destructive: true
+			});
+
+			if (!goAhead) return;
 		}
 
 		queryBlocks.remove(id);
