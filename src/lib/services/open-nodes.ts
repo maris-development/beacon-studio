@@ -41,6 +41,8 @@ export type OpenNode = {
 	name: string;
 	url: string;
 	description: string;
+	n_code: number;
+	info_url: string;
 };
 
 const openNodesStore = writable<OpenNode[]>([]);
@@ -52,6 +54,8 @@ export const openNodes: Readable<OpenNode[]> = readonly(openNodesStore);
 export function getOpenNodes(): OpenNode[] {
 	return get(openNodesStore);
 }
+
+
 
 /** True if the value has a usable name and URL. */
 function isOpenNode(value: unknown): value is Partial<OpenNode> & { name: string; url: string } {
@@ -85,7 +89,9 @@ function parseList(payload: unknown): OpenNode[] {
 		result.push({
 			name: value.name.trim(),
 			url,
-			description: typeof value.description === 'string' ? value.description.trim() : ''
+			description: typeof value.description === 'string' ? value.description.trim() : '',
+			n_code: value.n_code,
+			info_url: value.info_url
 		});
 	}
 

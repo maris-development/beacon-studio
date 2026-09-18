@@ -1,13 +1,16 @@
 <script lang="ts">
 	import type { BeaconNode } from '@/beacon-api/types';
-	import { nodes } from '@/services/beacon-node';
+	import { nodes, normalizeUrl } from '@/services/beacon-node';
 	import { checkAllNodes } from '@/services/beacon-node-connect';
 	import { FRESH_MS } from '@/services/beacon-node-health';
+	import { openNodes, type OpenNode } from '@/services/open-nodes';
+	import { htmlToText, sanitizeHtml } from '@/util/sanitize-html';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import AddBeaconModal from '@/components/modals/AddBeaconModal.svelte';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
 	import { resolve } from '$app/paths';
@@ -36,6 +39,12 @@
 	/** The form writes to the service. This closes it and shows the new list. */
 	function closeForm(): void {
 		showFormModal = false;
+	}
+
+	/** The public list entry for this URL, or `null` if the node is not public. */
+	function findPublicNode(url: string): OpenNode | null {
+		const target = normalizeUrl(url);
+		return $openNodes.find((n) => normalizeUrl(n.url) === target) ?? null;
 	}
 </script>
 
@@ -77,10 +86,28 @@
 					</thead>
 					<tbody>
 						{#each rows as node (node.id)}
+							{@const publicNode = findPublicNode(node.url)}
 							<tr>
 								<td class="node-name">{node.name}</td>
-								<td class="node-description" title={node.description}>
-									<span class="clamp">{node.description}</span>
+								<td class="node-description" title={htmlToText(node.description)}>
+									<div class="description-cell">
+										<!-- The public list writes the description as HTML. -->
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitizeHtml removes the unsafe tags and attributes -->
+										<span class="clamp">{@html sanitizeHtml(node.description)}</span>
+										{#if typeof publicNode?.n_code === 'number'}
+											<Button
+												variant="ghost"
+												size="xs"
+												href={publicNode.info_url}
+												target="_blank"
+												rel="noopener noreferrer"
+												title="Public node information"
+												aria-label="Public node information"
+											>
+												<InfoIcon />
+											</Button>
+										{/if}
+									</div>
 								</td>
 								<td class="node-url">
 									<a href={node.url} rel="noopener noreferrer" target="_blank">{node.url}</a
@@ -168,14 +195,33 @@
 			width: 100%;
 		}
 
+		// The info link follows the text, so it stays out of the clamped box.
+		.description-cell {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+		}
+
 		// The clamp needs a box of its own. A cell stretches to the height of the
-		// row, so a clamp on the cell never cuts the text.
+		// row, so a clamp on the cell never cuts the text. The `min-width` lets the
+		// box shrink, because a flex item stops at the width of its content.
 		.clamp {
 			display: -webkit-box;
 			-webkit-line-clamp: 2;
 			line-clamp: 2;
 			-webkit-box-orient: vertical;
 			overflow: hidden;
+			min-width: 0;
+
+			// The description carries its own markup. A margin or a bullet of that
+			// markup would push the text out of the clamped box.
+			:global(p),
+			:global(ul),
+			:global(ol) {
+				margin: 0;
+				padding: 0;
+				list-style-position: inside;
+			}
 		}
 
 		// These columns hold one line each. They must not break a URL in two.
