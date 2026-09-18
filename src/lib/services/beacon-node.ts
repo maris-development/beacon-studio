@@ -30,6 +30,13 @@ import { normalizeUrl } from './beacon-node-url';
 export type { BeaconNode, NodeRef, StoredBeaconNode };
 export { normalizeUrl };
 
+/**
+ * What added a node, or what selected one. Only `user` is an action of the user:
+ * `import` is the public list at startup, and `host` is the node of the current
+ * host root. The value goes into the telemetry event.
+ */
+export type NodeActionSource = 'user' | 'import' | 'host';
+
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
 export type BeaconNodeInput = {
 	name: string;
@@ -219,7 +226,7 @@ function applyInput(node: StoredBeaconNode, input: Partial<BeaconNodeInput>): St
  * Adds a node to the end of the list. The function selects the new node when
  * the app has no selection. It never replaces a selection.
  */
-export function addNode(input: BeaconNodeInput): BeaconNode {
+export function addNode(input: BeaconNodeInput, source: NodeActionSource = 'user'): BeaconNode {
 	const now = new Date();
 
 	const stored: StoredBeaconNode = {
@@ -237,6 +244,8 @@ export function addNode(input: BeaconNodeInput): BeaconNode {
 	if (getCurrentNode() === null) {
 		selectedIdStore.set(stored.id);
 	}
+
+	track('node.add', { nodeHost: stored.url, props: { hasToken: stored.token !== '', source } });
 
 	return { ...stored, ...UNKNOWN_HEALTH };
 }
@@ -263,6 +272,14 @@ export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconN
 			return updated;
 		})
 	);
+
+	track('node.update', {
+		nodeHost: updated.url,
+		props: {
+			urlChanged: updated.url !== previous.url,
+			tokenChanged: updated.token !== previous.token
+		}
+	});
 
 	if (updated.token !== previous.token) {
 		dropHealth(updated.url);
@@ -295,11 +312,13 @@ export function removeNode(id: string): BeaconNode | null {
 		selectFirstIfNone();
 	}
 
+	track('node.remove', { nodeHost: removed.url, props: { wasSelected } });
+
 	return removed;
 }
 
 /** Selects a node. Pass `null` to clear the selection. */
-export function selectNode(id: string | null): void {
+export function selectNode(id: string | null, source: NodeActionSource = 'user'): void {
 	if (id !== null && findById(id) === null) {
 		console.warn(`No Beacon node has the id "${id}". The app keeps the selection.`);
 		return;
@@ -308,7 +327,11 @@ export function selectNode(id: string | null): void {
 	selectedIdStore.set(id);
 
 	const selected = id === null ? null : findById(id);
-	track('node.select', { nodeHost: selected?.url });
+
+	track('node.select', {
+		nodeHost: selected?.url,
+		props: { status: selected ? getHealthOf(selected.url).status : 'none', source }
+	});
 }
 
 /**

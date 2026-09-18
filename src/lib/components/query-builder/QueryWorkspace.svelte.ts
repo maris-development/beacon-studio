@@ -67,6 +67,7 @@ import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-im
 import type { BeaconNode } from '@/beacon-api/types';
 import { askConfirm } from '@/stores/confirm';
 import { addToast } from '@/stores/toasts';
+import { track } from '@/telemetry';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
 import { isPlotRenderable, type ChartViewState } from '@/plots/plot-config';
@@ -407,6 +408,7 @@ export class QueryWorkspace {
 			node: this.defaultNodeRef()
 		});
 		this.select(block.id);
+		track('workbench.block.add', { props: { origin: 'empty', blocks: this.blocks.length } });
 		return block;
 	}
 
@@ -422,6 +424,7 @@ export class QueryWorkspace {
 		});
 		queryBlocks.insertAt(this.blocks.length, block);
 		this.select(block.id);
+		track('workbench.block.add', { props: { origin: source.role, blocks: this.blocks.length } });
 		return block;
 	}
 
@@ -443,6 +446,7 @@ export class QueryWorkspace {
 			node: ref
 		});
 		this.select(block.id);
+		track('workbench.block.add', { props: { origin: 'query', blocks: this.blocks.length } });
 		return block;
 	}
 
@@ -457,6 +461,7 @@ export class QueryWorkspace {
 		});
 		queryBlocks.insertAt(index + 1, copy);
 		this.select(copy.id);
+		track('workbench.block.add', { props: { origin: 'duplicate', blocks: this.blocks.length } });
 	}
 
 	/** Give a block a new name. */

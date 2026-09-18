@@ -7,6 +7,7 @@
 	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import type { SelectedFilterType } from '@/query/filter-types';
+	import { track } from '@/telemetry';
 
 	let {
 		data_type,
@@ -166,6 +167,9 @@
 							value={filter.label}
 							onSelect={() => {
 								selected_filters.push(filter);
+								track('builder.filter.add', {
+									props: { kind: filter.filter_value.type, dataType: typeof data_type === 'string' ? data_type : 'Timestamp' }
+								});
 								open = false;
 							}}
 						>

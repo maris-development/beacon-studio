@@ -23,6 +23,7 @@ import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
 import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';
+import { describeQuery, track } from '@/telemetry';
 import { Utils } from '@/utils';
 
 export type { NodeRef };
@@ -280,11 +281,19 @@ export function decodeSharedQuery(value: string): SharedQuery {
 		throw new Error('This link does not hold a shared query of this app version.');
 	}
 
-	return {
+	const shared: SharedQuery = {
 		query: payload.query as CompiledQuery,
 		name: payload.name ?? '',
 		nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? ''
 	};
+
+	// The receiver of a link, not the sender. It counts the reach of a share.
+	track('query.open', {
+		nodeHost: shared.nodeUrl || undefined,
+		props: { ...describeQuery(shared.query), legacy: payload.instanceUrl !== undefined }
+	});
+
+	return shared;
 }
 
 /**
@@ -310,6 +319,11 @@ export function buildShareLink(
 	});
 
 	if (!gzipped) return null;
+
+	track('query.share', {
+		nodeHost: node?.url,
+		props: { ...describeQuery(query), linkChars: gzipped.length }
+	});
 
 	let origin = 'http://localhost';
 	if (typeof window !== 'undefined') {

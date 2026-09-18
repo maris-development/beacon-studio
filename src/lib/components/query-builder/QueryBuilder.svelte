@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
+	import { track } from '@/telemetry';
     import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
@@ -207,6 +208,18 @@
         onTableChange?.(selected_table_name);
 	});
 
+	/**
+	 * Reports a table that the user picks. The loader also writes
+	 * `selected_table_name`, for a draft, a seed or the default table. Those are
+	 * no choice of the user, so the selector calls this and an effect does not.
+	 */
+	function handleTablePick(table_name: string): void {
+		track('builder.table.select', {
+			nodeHost: node?.url,
+			props: { table: table_name, tables: table_names.length }
+		});
+	}
+
 </script>
 
 <QueryBuilderNodeSelector
@@ -231,7 +244,7 @@
 
 	<hr>
 {:else if node && client}
-	<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
+	<QueryBuilderTableSelector {table_names} {loaded} {status} onPick={handleTablePick} bind:selected_table_name />
 
     <hr>
 

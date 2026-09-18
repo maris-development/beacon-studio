@@ -53,7 +53,7 @@ import { buildContours, type ContourResult } from '@/plots/contour';
 import { buildInterpolationSurface, type InterpolationResult } from '@/plots/interpolation';
 import { samplePlotSeries } from '@/plots/sampling';
 import { getSettings } from '@/stores/settings';
-import { track } from '@/telemetry';
+import { describeQuery, track } from '@/telemetry';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -411,6 +411,24 @@ export class ChartExplorerController {
 	// ------------------------------------------------------------- query cycle
 
 	/** Run a query and show it. */
+	/**
+	 * Reports one chart view. The call comes after the plot setup, so `renderMs`
+	 * holds the time that the chart itself took.
+	 */
+	private reportVisualise(query: CompiledQuery, node: BeaconNode, readyAt: number): void {
+		track('query.visualise', {
+			nodeHost: node.url,
+			rowCount: this.entry?.rowCount,
+			queryId: this.entry?.queryId,
+			props: {
+				...describeQuery(query),
+				kind: 'chart',
+				tier: this.entry?.stats?.tier,
+				renderMs: Math.round(performance.now() - readyAt)
+			}
+		});
+	}
+
 	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string): Promise<void> {
 		const token = this.beginRun(blockId);
 		this.latestRun = token;
@@ -421,18 +439,16 @@ export class ChartExplorerController {
 			this.markRun(blockId, this.entry.rowCount);
 			this.isLoading = false;
 
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: this.entry.rowCount,
-				props: { kind: 'chart' }
-			});
+			const readyAt = performance.now();
 
 			if (this.entry.rowCount === 0) {
+				this.reportVisualise(query, node, readyAt);
 				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
 				return;
 			}
 
 			this.syncPlotToColumns();
+			this.reportVisualise(query, node, readyAt);
 		} catch (error) {
 			this.endRun(blockId, token);
 			if (this.latestRun === token) this.isLoading = false;

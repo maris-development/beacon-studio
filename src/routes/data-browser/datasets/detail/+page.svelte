@@ -4,6 +4,7 @@
 	import { findByUrl } from '@/services/beacon-node';
 	import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
+	import { track } from '@/telemetry';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { Utils, VirtualPaginationData } from '@/utils';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
@@ -56,6 +57,8 @@
 		} else {
 			client = new BeaconClient(nodeUrl);
 		}
+
+		track('browser.dataset.open', { nodeHost: nodeUrl, props: { file } });
 
 		getDatasetSchema();
 	});
@@ -115,6 +118,8 @@
 
 			return false;
 		});
+
+		track('browser.search', { props: { scope: 'dataset-fields', term: searchTerm.slice(0, 60), results: totalRows } });
 
 		getPage();
 	}
