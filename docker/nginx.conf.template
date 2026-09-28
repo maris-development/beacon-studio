@@ -1,0 +1,24 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json application/wasm image/svg+xml;
+
+    # Hashed file names, so a long cache is safe.
+    location ${BASE_PATH}/_app/immutable/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # SPA fallback, same as the rewrite rule in static/web.config.
+    location ${BASE_PATH}/ {
+        try_files $uri $uri/ ${BASE_PATH}/index.html;
+    }
+
+    location = ${BASE_PATH}/index.html {
+        add_header Cache-Control "no-cache";
+    }
+}

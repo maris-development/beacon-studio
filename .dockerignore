@@ -1,0 +1,13 @@
+node_modules
+build
+dist
+.svelte-kit
+.git
+.claude
+src-tauri/target
+src-tauri/gen
+.env
+.env.*
+!.env.example
+Dockerfile
+.dockerignore
