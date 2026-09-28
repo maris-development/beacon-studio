@@ -22,6 +22,7 @@
 
 import { derived, get, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
+import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
 
 /** The localStorage key of the settings object. */
 const STORAGE_KEY = 'beacon-studio.settings';
@@ -332,6 +333,11 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 			'Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold a file path or a result value. This switch does nothing while "Send usage statistics" is off.'
 	}
 ];
+
+/** The definitions that the settings page shows. A build without telemetry hides that group. */
+export const VISIBLE_SETTING_DEFINITIONS: SettingDefinition[] = SETTING_DEFINITIONS.filter(
+	(definition) => TELEMETRY_BUILD_ENABLED || definition.group !== 'Telemetry'
+);
 
 /** The definition of one key, or undefined for an unknown key. */
 export function definitionOf(key: SettingKey): SettingDefinition | undefined {

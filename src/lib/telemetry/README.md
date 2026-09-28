@@ -234,6 +234,13 @@ A large props object loses fields. These flags say which.
 | Message | 500 characters | server |
 | Requests per IP | 120 per minute | `TelemetryController` |
 
+## Off at build time
+
+Telemetry is off unless the build sets `STUDIO_TELEMETRY=on`. `vite.config.ts` turns
+the variable into `TELEMETRY_BUILD_ENABLED` in `build-info.ts`. When it is false,
+`isDisabled()` stops everything, `diagnostics()` sends no ids, and the settings page
+hides the Telemetry group. The build log prints the mode.
+
 ## Off by default in development
 
 `isDisabled()` in `index.ts` stops everything in a dev session. Set `DEV_OVERRIDE`

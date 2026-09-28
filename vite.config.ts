@@ -48,9 +48,16 @@ function buildInfo() {
 	};
 }
 
+// A self-hosted build sends nothing. Set STUDIO_TELEMETRY=on to send usage events.
+function telemetryFlag() {
+	const enabled = (process.env.STUDIO_TELEMETRY ?? '').trim().toLowerCase() === 'on';
+	console.log(`[beacon-studio] telemetry: ${enabled ? 'on' : 'off'}`);
+	return { __TELEMETRY__: JSON.stringify(enabled) };
+}
+
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
-	define: buildInfo(),
+	define: { ...buildInfo(), ...telemetryFlag() },
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
 		dedupe: ['apache-arrow']
