@@ -195,7 +195,7 @@ export class ApacheArrowUtils {
      * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
      *
      * @remarks
-     * - For `Utf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
+     * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
      * - For unsupported types, logs a warning and returns the stringified value.
@@ -208,6 +208,7 @@ export class ApacheArrowUtils {
 
         switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 return String(value);
 
             case ApacheArrow.Type.Int:
@@ -300,7 +301,7 @@ export class ApacheArrowUtils {
      * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
      *
      * @remarks
-     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 (string), and Bool.
+     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
      * - Null values are sorted to the end of the table.
      * - If the column does not exist or its type is unsupported, the original table is returned.
      * - The schema of the original table is preserved in the sorted table.
@@ -370,6 +371,7 @@ export class ApacheArrowUtils {
                 break;
 
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 // String sorting
                 sortedIndices = indexedArray.sort((a, b) => {
                     const valA = a.value as string;
