@@ -121,17 +121,17 @@ const NAME_RULES: ReadonlyArray<{ axis: Axis; pattern: RegExp; score: number; wh
 	{ axis: 'lat', pattern: /(^|[^a-z])latitude([^a-z]|$)/, score: 0.9, why: 'contains "latitude"' },
 	{ axis: 'lon', pattern: /(^|[^a-z])longitude([^a-z]|$)/, score: 0.9, why: 'contains "longitude"' },
 
-	{ axis: 'lat', pattern: /(^|[_\- ])lat([_\- ]|$)/, score: 0.85, why: 'has a "lat" token' },
-	{ axis: 'lon', pattern: /(^|[_\- ])(lon|lng|long)([_\- ]|$)/, score: 0.85, why: 'has a "lon" token' },
+	{ axis: 'lat', pattern: /(^|[_\-. ])lat([_\-. ]|$)/, score: 0.85, why: 'has a "lat" token' },
+	{ axis: 'lon', pattern: /(^|[_\-. ])(lon|lng|long)([_\-. ]|$)/, score: 0.85, why: 'has a "lon" token' },
 
-	{ axis: 'lat', pattern: /^lat[_\- ]?(dd|deg|degs|degrees|d|n)$/, score: 0.85, why: 'lat with a degree suffix' },
-	{ axis: 'lon', pattern: /^(lon|lng|long)[_\- ]?(dd|deg|degs|degrees|d|e)$/, score: 0.85, why: 'lon with a degree suffix' },
+	{ axis: 'lat', pattern: /^lat[_\-. ]?(dd|deg|degs|degrees|d|n)$/, score: 0.85, why: 'lat with a degree suffix' },
+	{ axis: 'lon', pattern: /^(lon|lng|long)[_\-. ]?(dd|deg|degs|degrees|d|e)$/, score: 0.85, why: 'lon with a degree suffix' },
 
 	{ axis: 'lat', pattern: /northing/, score: 0.55, why: 'named "northing", usually projected' },
 	{ axis: 'lon', pattern: /easting/, score: 0.55, why: 'named "easting", usually projected' },
 
-	{ axis: 'lat', pattern: /^y([_\- ].*)?$|[_\- ]y$/, score: 0.35, why: 'y axis by convention' },
-	{ axis: 'lon', pattern: /^x([_\- ].*)?$|[_\- ]x$/, score: 0.35, why: 'x axis by convention' }
+	{ axis: 'lat', pattern: /^y([_\-. ].*)?$|[_\-. ]y$/, score: 0.35, why: 'y axis by convention' },
+	{ axis: 'lon', pattern: /^x([_\-. ].*)?$|[_\-. ]x$/, score: 0.35, why: 'x axis by convention' }
 ];
 
 /** CF metadata is authoritative. Nothing else comes close. */
@@ -158,7 +158,7 @@ function stem(name: string): string {
 	return name
 		.toLowerCase()
 		.replace(/latitude|longitude|lat|lng|lon|long|northing|easting/g, '')
-		.replace(/[_\- ]+/g, '');
+		.replace(/[_\-. ]+/g, '');
 }
 
 function scoreName(name: string, axis: Axis): { score: number; evidence: string[] } {
