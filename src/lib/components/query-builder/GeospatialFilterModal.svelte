@@ -12,6 +12,8 @@
 	 *
 	 * The modal edits a copy. Only Apply writes the area and the pair back.
 	 */
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import Button from '@/components/buttons/Button.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
 	import CoordinateColumnsDialog from '@/components/visualisation/CoordinateColumnsDialog.svelte';
@@ -160,17 +162,34 @@
 					first.
 				</p>
 			{:else}
+				<!-- The fields show the pair only. A click opens the dialog that changes it. -->
 				<div class="geo-filter-columns">
-					{#if columns}
-						<span>
-							Latitude <code>{columns.latitude}</code>, longitude <code>{columns.longitude}</code>
-						</span>
-					{:else}
-						<span class="geo-filter-missing">No latitude and longitude columns found.</span>
-					{/if}
+					<div class="field">
+						<Label size="sm" for="geoFilterLatitude">Latitude column</Label>
+						<Input
+							id="geoFilterLatitude"
+							readonly
+							value={columns?.latitude ?? ''}
+							placeholder="Not found"
+							title="Pick the coordinate columns"
+							onclick={() => (isColumnsOpen = true)}
+						/>
+					</div>
+
+					<div class="field">
+						<Label size="sm" for="geoFilterLongitude">Longitude column</Label>
+						<Input
+							id="geoFilterLongitude"
+							readonly
+							value={columns?.longitude ?? ''}
+							placeholder="Not found"
+							title="Pick the coordinate columns"
+							onclick={() => (isColumnsOpen = true)}
+						/>
+					</div>
 
 					<Button
-						variant="ghost"
+						variant="outline"
 						size="icon"
 						title="Pick the coordinate columns"
 						aria-label="Pick the coordinate columns"
@@ -249,16 +268,20 @@
 		display: flex;
 		flex-direction: row;
 		flex-shrink: 0;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.85rem;
+		align-items: flex-end;
+		gap: 0.75rem;
 
-		code {
-			font-size: 0.8rem;
-		}
+		.field {
+			display: flex;
+			flex-direction: column;
+			gap: 0.1875rem;
+			flex: 1 1 0;
+			min-width: 0;
 
-		.geo-filter-missing {
-			color: var(--destructive);
+			:global(input[readonly]) {
+				cursor: pointer;
+				background-color: var(--muted);
+			}
 		}
 	}
 
