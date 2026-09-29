@@ -209,6 +209,7 @@ export class MapViewController {
 	private readonly firstNumericColumnName = $derived.by(() => {
 		if (!this.entry) return undefined;
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const numericColumnNames = new Set(
 			plottableColumns(this.entry.table)
 				.filter((column) => column.kind === 'number')
