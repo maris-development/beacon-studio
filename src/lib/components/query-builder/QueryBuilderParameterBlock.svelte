@@ -43,7 +43,6 @@
 		pendingSeed = null,
 		coordinateColumns = null,
 		onDraftChange,
-		onCoordinateColumnsChange,
 		onSeedMismatch,
 		// The output format control lives in the parent, next to the other
 		// query wide settings. This block still reads and writes the value.
@@ -68,10 +67,12 @@
 		pendingSeed?: CompiledQuery | null;
 		/** The stored coordinate pair of the block, or null to detect it. */
 		coordinateColumns?: CoordinatePair | null;
-		/** Emitted on every builder edit with the current draft. */
-		onDraftChange?: (draft: QueryDraft) => void;
-		/** Emitted when the user picks another coordinate pair. */
-		onCoordinateColumnsChange?: (pair: CoordinatePair | null) => void;
+		/**
+		 * Emitted on every builder edit with the current draft. The geospatial
+		 * filter modal also passes the pair, so the area and the pair reach the
+		 * block in one write.
+		 */
+		onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
 		/**
 		 * Called when the schema of the node holds no column of a deep-link seed.
 		 * The parent writes the message: it knows whether the app guessed the node.
@@ -295,12 +296,7 @@
 		if (pendingSeed && !hasHydratedSeed) {
 			return;
 		}
-		const draft = {
-			tableName: table_name,
-			selectedFields: Utils.cloneObject(selectedFields),
-			outputFormat: selected_output_format,
-			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
-		};
+		const draft = buildDraft();
 		const draftKey = JSON.stringify(draft);
 		if (draftKey === lastEmittedDraftKey) {
 			return;
@@ -308,6 +304,16 @@
 		lastEmittedDraftKey = draftKey;
 		onDraftChange?.(draft);
 	});
+
+	/** The draft of the current controls. */
+	function buildDraft(): QueryDraft {
+		return {
+			tableName: table_name,
+			selectedFields: Utils.cloneObject(selectedFields),
+			outputFormat: selected_output_format,
+			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
+		};
+	}
 
 	let open = $state(false);
 
@@ -416,11 +422,13 @@
 
 	/** Take the area and the pair of the geospatial filter modal. */
 	function applyGeoFilter(next: SpatialSelection | null, pair: CoordinatePair | null): void {
-		if (JSON.stringify(pair) !== JSON.stringify(coordinateColumns ?? null)) {
-			onCoordinateColumnsChange?.(pair);
-		}
-
 		spatialFilter = next;
+		if (!table_name || (pendingSeed && !hasHydratedSeed)) return;
+
+		// Emit here, with the pair. The emit effect then finds the same draft key.
+		const draft = buildDraft();
+		lastEmittedDraftKey = JSON.stringify(draft);
+		onDraftChange?.(draft, pair);
 	}
 
 	function hydrateFromSeed(table: string) {

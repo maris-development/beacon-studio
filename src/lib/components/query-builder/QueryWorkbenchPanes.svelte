@@ -64,13 +64,8 @@
 	});
 
 	/** Builder edits flow into the active block's draft. */
-	function handleDraftChange(draft: QueryDraft) {
-		workspace.updateActiveDraft(draft);
-	}
-
-	/** The geospatial filter modal picked another coordinate pair. */
-	function handleCoordinateColumnsChange(pair: CoordinatePair | null) {
-		workspace.updateActiveCoordinateColumns(pair);
+	function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null) {
+		workspace.updateActiveDraft(draft, pair);
 	}
 
 	/**
@@ -88,7 +83,7 @@
 	/**
 	 * The node of the active block does not hold the query of a deep-link seed.
 	 * The workspace writes the message, because it knows whether the app guessed
-	 * that node. A share link of an older app version carries no `?node=`.
+	 * that node. A share link can name no node.
 	 */
 	function handleSeedMismatch(table: string, part: 'table' | 'columns') {
 		const blockId = workspace.activeBlockId;
@@ -140,7 +135,6 @@
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
 						coordinateColumns={workspace.activeBlock?.coordinateColumns ?? null}
 						onDraftChange={handleDraftChange}
-						onCoordinateColumnsChange={handleCoordinateColumnsChange}
 						workbenchActions={queryActions}
 					/>
 				{/key}

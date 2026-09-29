@@ -27,7 +27,6 @@
         pendingSeed = null,
         coordinateColumns = null,
         onDraftChange,
-        onCoordinateColumnsChange,
         onTableChange,
         status = $bindable<QuerySelectionStatus>({
             dataTable: '',
@@ -60,9 +59,8 @@
         pendingSeed?: CompiledQuery | null;
         /** The stored coordinate pair of the block, or null to detect it. */
         coordinateColumns?: CoordinatePair | null;
-        onDraftChange?: (draft: QueryDraft) => void;
-        /** Called when the user picks another coordinate pair. */
-        onCoordinateColumnsChange?: (pair: CoordinatePair | null) => void;
+        /** Called on every draft edit. The pair comes with an edit that changes it. */
+        onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
         onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
         /** Bound to the parent. The builder puts `compileQuery` here. */
@@ -192,13 +190,13 @@
 	 * blocked. The first real edit of the user has columns, and that edit takes
 	 * the block over.
 	 */
-	function handleDraftChange(draft: QueryDraft): void {
+	function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
 		if (seedBlocked) {
 			if (draft.selectedFields.length === 0) return;
 			seedBlocked = false;
 		}
 
-		onDraftChange?.(draft);
+		onDraftChange?.(draft, pair);
 	}
 
 	/**
@@ -259,7 +257,7 @@
 		`pendingSeed` is null while the seed is blocked. This node does not hold the
 		table of that seed, so a hydration finds no column. See `loadTables`.
 	-->
-	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onCoordinateColumnsChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
+	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
 
 	<hr>
 

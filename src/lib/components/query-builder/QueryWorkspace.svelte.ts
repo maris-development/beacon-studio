@@ -119,9 +119,9 @@ export class QueryWorkspace {
 	private nodesSettled = $state(false);
 
 	/**
-	 * The blocks whose node the app guessed. A share link of an older app version
-	 * carries no `?node=`, so the block falls back to the default node. That
-	 * node often has other tables, and the query then loads no columns.
+	 * The blocks whose node the app guessed. A share link can name no node, so
+	 * the block falls back to the default node. That node often has other
+	 * tables, and the query then loads no columns.
 	 *
 	 * The record does not hold this flag. It is a fact about the link, not about
 	 * the query. The user sees the report once, and the block is theirs after
@@ -536,19 +536,29 @@ export class QueryWorkspace {
 	 * and the write would destroy the query of a share link. Therefore the method
 	 * drops it. A draft with content is a real edit of the user, and that edit
 	 * takes the block over.
+	 *
+	 * Pass `pair` to store a new coordinate pair in the same write. Undefined
+	 * keeps the stored pair. See {@link updateActiveCoordinateColumns}.
 	 */
-	updateActiveDraft(draft: QueryDraft): void {
+	updateActiveDraft(draft: QueryDraft, pair?: CoordinatePair | null): void {
 		const block = this.activeBlock;
 		if (!block) return;
 
-		if (JSON.stringify(block.draft) === JSON.stringify(draft)) return;
+		if (JSON.stringify(block.draft) === JSON.stringify(draft)) {
+			if (pair !== undefined) this.updateActiveCoordinateColumns(pair);
+			return;
+		}
 
-		const compiled = compileDraft(draft, block.coordinateColumns ?? null);
+		let coordinateColumns = block.coordinateColumns ?? null;
+		if (pair !== undefined) coordinateColumns = pair && { ...pair };
+
+		const compiled = compileDraft(draft, coordinateColumns);
 		if (!compiled && needsDraftSeed(block)) return;
 
 		queryBlocks.update(block.id, {
 			draft: Utils.cloneObject(draft),
 			compiled,
+			coordinateColumns,
 			datasetKey: null,
 			rowCount: null
 		});
