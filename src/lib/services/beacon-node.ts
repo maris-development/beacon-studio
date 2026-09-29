@@ -48,15 +48,12 @@ export type BeaconNodeInput = {
 const LIST_KEY = 'beacon-nodes';
 const SELECTED_KEY = 'current-beacon-node-id';
 
-/** The key of the app version that persisted the full selected object. */
-const LEGACY_SELECTED_KEY = 'current-beacon-instance';
-
 /**
  * Moves the raw value of a renamed local storage key. The function writes only
  * when the new key is absent, and then removes the old key. Call it before a
  * `persisted()` store reads the new key.
  */
-export function migrateKey(oldKey: string, newKey: string): void {
+function migrateKey(oldKey: string, newKey: string): void {
 	if (!browser) return;
 
 	const value = window.localStorage.getItem(oldKey);
@@ -76,52 +73,6 @@ migrateKey('current-beacon-instance-id', SELECTED_KEY);
 
 const listStore = persisted<StoredBeaconNode[]>(LIST_KEY, []);
 const selectedIdStore = persisted<string | null>(SELECTED_KEY, null);
-
-/**
- * Moves an old selection to the new key. The app kept a full copy of the
- * selected node. It now keeps the id only. The function runs once, because it
- * deletes the old key.
- */
-function migrateLegacySelection(): void {
-	if (!browser) return;
-
-	const raw = window.localStorage.getItem(LEGACY_SELECTED_KEY);
-	if (raw === null) return;
-
-	try {
-		const legacy = JSON.parse(raw) as BeaconNode | null;
-
-		if (legacy?.id && get(selectedIdStore) === null) {
-			selectedIdStore.set(legacy.id);
-		}
-	} catch (error) {
-		console.warn('Could not read the old Beacon node selection.', error);
-	}
-
-	window.localStorage.removeItem(LEGACY_SELECTED_KEY);
-}
-
-migrateLegacySelection();
-
-/**
- * Puts every stored URL in the form of {@link normalizeUrl}. An older app
- * version stored the value of the user, so a record can hold a trailing slash
- * or a mixed case host.
- *
- * The function writes only when a URL changes. It is therefore safe to run on
- * every start, and a list that needs no change writes nothing.
- */
-function migrateNodeUrls(): void {
-	if (!browser) return;
-
-	const list = get(listStore);
-
-	if (list.every((node) => node.url === normalizeUrl(node.url))) return;
-
-	listStore.set(list.map((node) => ({ ...node, url: normalizeUrl(node.url) })));
-}
-
-migrateNodeUrls();
 
 // -- Reads ------------------------------------------------------------------
 

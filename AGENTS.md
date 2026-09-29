@@ -121,6 +121,24 @@ This file is a quick operational guide for coding agents working in this reposit
 - `CoordinateColumnsDialog` is the one picker for the pair. The map viewer and `GeospatialFilterModal` both open it. `Modal` boxes are transformed, so render the dialog as a sibling of another modal, never inside it.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
 
+## Persisted Data and Migrations (Important)
+Sort each persisted value into one class. The class decides whether a change needs a migration.
+
+| Class | Examples | Rule |
+|---|---|---|
+| Cache | OPFS Arrow cache, `datasetKey`, query history | Never migrate. Bump a version and discard. |
+| Preference or UI state | settings, selected node, data-browser node, blocks-state, `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
+| User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
+| External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
+
+- Never break a share link, also before 1.0. Keep each old field in the read, for example `instanceUrl` in `decodeSharedQuery`.
+- The `legacy` prop of `query.open` counts old links. Remove an old field only when that count stays at zero.
+- Before 1.0, a preference and a UI state can break with no migration.
+- A user-data migration stays until 1.0. At 1.0, delete the migrations of before 1.0.
+- From 1.0, keep every user-data migration.
+- A safe read with defaults is not a migration. Keep it.
+- Current user-data migrations: `migrateKey` in `services/beacon-node.ts`, and `migrateRecord` in `stores/query-collection.ts`.
+
 ## Layer Rule (Important)
 Imports point one way only:
 

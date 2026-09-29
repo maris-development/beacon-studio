@@ -25,7 +25,7 @@ import {
 	type StoredQueryInput,
 	type StoredQueryRole
 } from '@/stores/stored-query';
-import { coordinateColumnsOf, type CoordinatePair } from '@/geo/spatial-selection';
+import { coordinateColumnsOf } from '@/geo/spatial-selection';
 
 /** What makes two records the same entry within one collection. */
 export type CollectionIdentity = 'id' | 'datasetKey';
@@ -57,15 +57,13 @@ function recencyOf(entry: StoredQuery): number {
 
 /**
  * A record as an older app version wrote it. The node ref sat on `instance`,
- * and the area held the coordinate pair. Those names are a storage format, not
- * terms. Never rename them.
+ * and the record had no coordinate pair. `instance` is a storage format, not a
+ * term. Never rename it.
  */
 type LegacyRecord = Omit<StoredQuery, 'coordinateColumns'> & {
 	instance?: StoredQuery['node'];
-	coordinateColumns?: CoordinatePair | null;
+	coordinateColumns?: StoredQuery['coordinateColumns'];
 };
-
-type LegacyArea = { latitudeColumn?: string; longitudeColumn?: string };
 
 /**
  * Brings a stored record to the current shape. It returns null for a record
@@ -81,40 +79,14 @@ function migrateRecord(entry: LegacyRecord): StoredQuery | null {
 		migrated = { ...rest, node: entry.node ?? instance, datasetKey: null };
 	}
 
-	// The coordinate pair moves from the area onto the record. The query does
-	// not change, so the cache key stays.
+	// The geo filter of the stored query names the pair. The query does not
+	// change, so the cache key stays.
 	if (entry.coordinateColumns === undefined) {
 		const source = migrated ?? entry;
-		migrated = {
-			...source,
-			draft: withoutAreaColumns(source.draft),
-			coordinateColumns: legacyCoordinateColumns(source)
-		};
+		migrated = { ...source, coordinateColumns: coordinateColumnsOf(source.compiled?.filters) };
 	}
 
 	return migrated as StoredQuery | null;
-}
-
-/** A copy of a draft whose area no longer holds the pair. */
-function withoutAreaColumns(draft: StoredQuery['draft']): StoredQuery['draft'] {
-	if (!draft?.spatialFilter) return draft;
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const { latitudeColumn, longitudeColumn, ...area } = draft.spatialFilter as LegacyArea &
-		NonNullable<typeof draft.spatialFilter>;
-
-	return { ...draft, spatialFilter: area };
-}
-
-/** The pair of an old record: from the area of its draft, else from its query. */
-function legacyCoordinateColumns(entry: LegacyRecord): CoordinatePair | null {
-	const area = entry.draft?.spatialFilter as (LegacyArea & object) | null | undefined;
-
-	if (area?.latitudeColumn && area.longitudeColumn) {
-		return { latitude: area.latitudeColumn, longitude: area.longitudeColumn };
-	}
-
-	return coordinateColumnsOf(entry.compiled?.filters);
 }
 
 export class QueryCollection implements Readable<StoredQuery[]> {
