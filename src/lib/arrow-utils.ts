@@ -178,6 +178,15 @@ export class ApacheArrowUtils {
         ];
     }
 
+    // A Dictionary vector decodes to its value type, so switch on that type.
+    private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
+        if (ApacheArrow.DataType.isDictionary(type)) {
+            return type.dictionary.typeId;
+        }
+
+        return type.typeId;
+    }
+
     /**
      * Converts a typed value to its string representation based on the provided Apache Arrow type.
      * 
@@ -197,8 +206,7 @@ export class ApacheArrowUtils {
             return '';
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
             case ApacheArrow.Type.Utf8:
                 return String(value);
 
@@ -323,8 +331,7 @@ export class ApacheArrowUtils {
 
         let sortedIndices: number[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((sortColumn.type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(sortColumn.type)) {
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Time:
             case ApacheArrow.Type.Timestamp:

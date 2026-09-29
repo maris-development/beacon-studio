@@ -5,6 +5,7 @@ import pako from "pako";
 import { twMerge } from "tailwind-merge";
 import { v4 as uuidv4 } from 'uuid';
 import type { DataType, Filter } from "./beacon-api/types";
+import * as DataTypes from "./beacon-api/data-type";
 import type { ParameterFilterType } from "./query/filter-types";
 import * as Navigation from "$app/navigation";
 import { mount, type Component } from 'svelte';
@@ -56,13 +57,7 @@ export class Utils {
 	}
 
     static dataTypeToString(datatype: DataType): string {
-        if(typeof datatype ==='string'){
-            return datatype;
-        }
-
-        const type = datatype.Timestamp.filter(x => !!x).join(', ');
-
-        return `Timestamp(${type})`;
+        return DataTypes.dataTypeToString(datatype);
     }
 
     static isNumber(value?: string|number): value is number {
@@ -180,7 +175,11 @@ export class Utils {
     }
 
     static isTimestampDataType(datatype: DataType): boolean {
-        return typeof datatype === 'object' && 'Timestamp' in datatype;
+        return DataTypes.isTimestampDataType(datatype);
+    }
+
+    static isDictionaryOfStrings(datatype: DataType): boolean {
+        return DataTypes.isDictionaryOfStrings(datatype);
     }
 
     static parameterFilterTypeToFilter(filter: ParameterFilterType, column: string): Filter {
@@ -256,6 +255,7 @@ export class Utils {
         const isNumeric = Utils.isNumericDataType(dataType);
         const isString = Utils.isStringDataType(dataType);
         const isTimestamp = Utils.isTimestampDataType(dataType);
+        const isDictionaryString = Utils.isDictionaryOfStrings(dataType);
 
         if ('min' in filter && 'max' in filter) {
             if (isNumeric) {
@@ -278,7 +278,7 @@ export class Utils {
                 return { type: 'equals_numeric', value: Number(filter.eq) };
             }
 
-            if (isString) {
+            if (isString || isDictionaryString) {
                 return { type: 'equals_string', value: String(filter.eq) };
             }
 
@@ -294,7 +294,7 @@ export class Utils {
                 return { type: 'not_equals_numeric', value: Number(filter.neq) };
             }
 
-            if (isString) {
+            if (isString || isDictionaryString) {
                 return { type: 'not_equals_string', value: String(filter.neq) };
             }
 

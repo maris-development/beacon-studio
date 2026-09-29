@@ -94,6 +94,17 @@
 				}
 			];
 			
+		} else if (Utils.isDictionaryOfStrings(data_type)) {
+			return [
+				{
+					label: 'Equals',
+					filter_value: { type: 'equals_string', value: null }
+				},
+				{
+					label: 'Not Equals',
+					filter_value: { type: 'not_equals_string', value: null }
+				}
+			];
 		} else if (Utils.isTimestampDataType(data_type)) {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity
 			const d = new Date();
@@ -131,7 +142,7 @@
 				}
 			];
 		} else {
-			console.warn(`Unsupported data type for filters: ${data_type}`);
+			console.warn(`Unsupported data type for filters: ${Utils.dataTypeToString(data_type)}`);
 			return [];
 		}
 	}
@@ -168,7 +179,7 @@
 							onSelect={() => {
 								selected_filters.push(filter);
 								track('builder.filter.add', {
-									props: { kind: filter.filter_value.type, dataType: typeof data_type === 'string' ? data_type : 'Timestamp' }
+									props: { kind: filter.filter_value.type, dataType: Utils.dataTypeToString(data_type) }
 								});
 								open = false;
 							}}

@@ -328,7 +328,7 @@
 				track('builder.column.add', {
 					props: {
 						column: fields[index].name,
-						dataType: typeof fields[index].type === 'string' ? fields[index].type : 'Timestamp',
+						dataType: Utils.dataTypeToString(fields[index].type),
 						columns: selectedFields.length
 					}
 				});
