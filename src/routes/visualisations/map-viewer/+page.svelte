@@ -15,12 +15,11 @@
 	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
 	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
 	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
+	import CoordinateColumnsDialog from '@/components/visualisation/CoordinateColumnsDialog.svelte';
 	import { MapViewController } from '@/components/visualisation/MapViewController.svelte';
-	import {
-		selectionColumns,
-		withColumns,
-		type SpatialSelection
-	} from '@/geo/spatial-selection';
+	import Button from '@/components/buttons/Button.svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import type { CoordinatePair, SpatialSelection } from '@/geo/spatial-selection';
 	import { addToast } from '@/stores/toasts';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
@@ -41,6 +40,9 @@
 
 	/** The area drawn on the map. Applied to the query by the Apply filter button. */
 	let selection: SpatialSelection | null = $state(null);
+
+	/** True while the coordinate columns dialog is open. */
+	let isColumnsOpen = $state(false);
 
 	onMount(() => {
 		// A deep-link opens one more block. `?q=` comes from "open in workbench"
@@ -70,6 +72,9 @@
 		QueryWorkspace.getQuery(workspace.activeBlock)
 	);
 	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+
+	// The stored coordinate pair, as a primitive for the same reason as `queryKey`.
+	const coordinateKey = $derived(JSON.stringify(workspace.activeBlock?.coordinateColumns ?? null));
 
 	// The node of the active block. A block owns its node, so a switch of block
 	// switches the node. The URL is a primitive, so the run effect below can track
@@ -162,7 +167,22 @@
 		map.showQueryFromCache(block.datasetKey);
 
 		// An edit of the same block keeps the camera where the user put it.
-		map.runAndShowQuery(query, node, block.id, isSameBlock);
+		map.runAndShowQuery(query, node, block.id, isSameBlock, block.coordinateColumns ?? null);
+	});
+
+	// A new pair with no area filter keeps the query, so the effect above does
+	// not run. This effect redraws the result on the new pair. It comes after
+	// the run effect, so a run in flight already holds the pair.
+	$effect(() => {
+		const pair = JSON.parse(coordinateKey) as CoordinatePair | null;
+		untrack(() => map.setCoordinateColumns(pair));
+	});
+
+	// A result with no coordinate columns asks the user for them.
+	$effect(() => {
+		if (map.needsCoordinateColumns) {
+			isColumnsOpen = true;
+		}
 	});
 
 	// Keep the display state of the map with the block: the painted column, the
@@ -179,22 +199,16 @@
 	});
 
 	/**
-	 * Write the drawn area into the query. The effect above then re-runs it.
-	 *
-	 * The area names the two columns it tests. The builder can pick another pair
-	 * than the detection finds, for example `x` and `y`. A redraw here must keep
-	 * that pair, so the columns come from the area of the block.
+	 * Write the drawn area into the query. The effect above then re-runs it. The
+	 * filter tests the stored pair of the block, which the map also plots.
 	 */
 	function applyAreaFilter() {
-		if (!selection) {
-			workspace.updateActiveSpatialFilter(null);
-			return;
-		}
+		workspace.updateActiveSpatialFilter(selection);
+	}
 
-		const stored = workspace.activeBlock?.draft?.spatialFilter ?? selection;
-		const columns = selectionColumns(stored, map.availableColumnNames);
-
-		workspace.updateActiveSpatialFilter(withColumns(selection, columns));
+	/** Store the pair of the dialog on the block. The effects above redraw the map. */
+	function applyCoordinateColumns(pair: CoordinatePair | null) {
+		workspace.updateActiveCoordinateColumns(pair);
 	}
 </script>
 
@@ -228,8 +242,27 @@
 								)}.
 							</p>
 
+							{#if map.needsCoordinateColumns}
+								<p class="coordinates-missing" role="alert">
+									Pick the latitude and longitude columns to show the rows on the map.
+								</p>
+							{/if}
+
 							<div class="field">
-								<Label size="sm" for="dataColumn">Data column</Label>
+								<div class="label-row">
+									<Label size="sm" for="dataColumn">Data column</Label>
+
+									<Button
+										class="coordinates-button"
+										variant="ghost"
+										size="icon"
+										title="Pick the latitude and longitude columns"
+										aria-label="Pick the latitude and longitude columns"
+										onclick={() => (isColumnsOpen = true)}
+									>
+										<SettingsIcon />
+									</Button>
+								</div>
 
 								<Select.Root
 									type="single"
@@ -291,6 +324,13 @@
 		</div>
 	</div>
 </div>
+
+<CoordinateColumnsDialog
+	bind:open={isColumnsOpen}
+	candidates={map.coordinateCandidates}
+	pair={map.coordinateColumns}
+	onApply={applyCoordinateColumns}
+/>
 
 <style lang="scss">
 	.page-wrapper {
@@ -370,6 +410,24 @@
 						flex-direction: column;
 						gap: 0.1875rem;
 						min-width: 0;
+					}
+
+					.label-row {
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+						justify-content: space-between;
+
+						:global(.coordinates-button) {
+							width: 1.5rem;
+							height: 1.5rem;
+						}
+					}
+
+					.coordinates-missing {
+						margin: 0;
+						font-size: 0.8125rem;
+						color: var(--destructive);
 					}
 
 					// The select trigger sizes to its content by default, which leaves

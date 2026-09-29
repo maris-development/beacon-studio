@@ -25,6 +25,7 @@ import {
 	type StoredQueryInput,
 	type StoredQueryRole
 } from '@/stores/stored-query';
+import { coordinateColumnsOf, type CoordinatePair } from '@/geo/spatial-selection';
 
 /** What makes two records the same entry within one collection. */
 export type CollectionIdentity = 'id' | 'datasetKey';
@@ -55,24 +56,65 @@ function recencyOf(entry: StoredQuery): number {
 }
 
 /**
- * A record as an older app version wrote it: the node ref sat on `instance`.
- * That name is a storage format, not a term. Never rename it.
+ * A record as an older app version wrote it. The node ref sat on `instance`,
+ * and the area held the coordinate pair. Those names are a storage format, not
+ * terms. Never rename them.
  */
-type LegacyRecord = StoredQuery & { instance?: StoredQuery['node'] };
+type LegacyRecord = Omit<StoredQuery, 'coordinateColumns'> & {
+	instance?: StoredQuery['node'];
+	coordinateColumns?: CoordinatePair | null;
+};
+
+type LegacyArea = { latitudeColumn?: string; longitudeColumn?: string };
 
 /**
- * Moves the node ref of a stored record onto `node`. It returns null for a
- * record that needs no change, so the caller writes only when something moved.
- *
- * The migration also clears `datasetKey`. The cache key format changed with the
- * field, so an old key matches no entry of either cache tier.
+ * Brings a stored record to the current shape. It returns null for a record
+ * that needs no change, so the caller writes only when something moved.
  */
 function migrateRecord(entry: LegacyRecord): StoredQuery | null {
-	if (!entry.instance) return null;
+	let migrated: LegacyRecord | null = null;
 
-	const { instance, ...rest } = entry;
+	// The node ref moves onto `node`. The cache key format changed with the
+	// field, so an old key matches no entry of either cache tier.
+	if (entry.instance) {
+		const { instance, ...rest } = entry;
+		migrated = { ...rest, node: entry.node ?? instance, datasetKey: null };
+	}
 
-	return { ...rest, node: entry.node ?? instance, datasetKey: null };
+	// The coordinate pair moves from the area onto the record. The query does
+	// not change, so the cache key stays.
+	if (entry.coordinateColumns === undefined) {
+		const source = migrated ?? entry;
+		migrated = {
+			...source,
+			draft: withoutAreaColumns(source.draft),
+			coordinateColumns: legacyCoordinateColumns(source)
+		};
+	}
+
+	return migrated as StoredQuery | null;
+}
+
+/** A copy of a draft whose area no longer holds the pair. */
+function withoutAreaColumns(draft: StoredQuery['draft']): StoredQuery['draft'] {
+	if (!draft?.spatialFilter) return draft;
+
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const { latitudeColumn, longitudeColumn, ...area } = draft.spatialFilter as LegacyArea &
+		NonNullable<typeof draft.spatialFilter>;
+
+	return { ...draft, spatialFilter: area };
+}
+
+/** The pair of an old record: from the area of its draft, else from its query. */
+function legacyCoordinateColumns(entry: LegacyRecord): CoordinatePair | null {
+	const area = entry.draft?.spatialFilter as (LegacyArea & object) | null | undefined;
+
+	if (area?.latitudeColumn && area.longitudeColumn) {
+		return { latitude: area.latitudeColumn, longitude: area.longitudeColumn };
+	}
+
+	return coordinateColumnsOf(entry.compiled?.filters);
 }
 
 export class QueryCollection implements Readable<StoredQuery[]> {

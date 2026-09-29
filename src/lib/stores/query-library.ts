@@ -19,6 +19,7 @@ import {
 } from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
+import type { CoordinatePair } from '@/geo/spatial-selection';
 import { resolveRef } from '@/services/beacon-node';
 import { addToast } from "@/stores/toasts";
 
@@ -103,6 +104,11 @@ export interface ResolvedUrlQuery {
 	 * null when the node resolves, and when the link named none.
 	 */
 	missingNodeUrl: string | null;
+	/**
+	 * The coordinate pair that a share link carried, or null. A link of an older
+	 * app version carries none. The new block then takes the pair of its query.
+	 */
+	coordinateColumns?: CoordinatePair | null;
 
 	/**
 	 * True if the URL had either `?q=` or `?query=`. A page uses this to decide
@@ -159,6 +165,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				name: payload.name,
 				node,
 				missingNodeUrl: missingUrlOf(node),
+				coordinateColumns: payload.coordinateColumns ?? null,
 				containsQueryParam
 			};
 		} catch (error) {

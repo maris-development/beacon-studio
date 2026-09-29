@@ -6,18 +6,18 @@
 	 * See `SpatialFilterMap`. The map viewer keeps its own tools, and refines the
 	 * same area over the result.
 	 *
-	 * The filter tests two columns of the query, so the modal also picks them.
-	 * `detectCoordinateColumns` seeds the pair. The user corrects it, which a
-	 * table with `x` and `y` columns needs.
+	 * The filter tests the coordinate pair of the block. The modal shows that
+	 * pair, and {@link CoordinateColumnsDialog} changes it, which a table with
+	 * `x` and `y` columns needs.
 	 *
-	 * The modal edits a copy. Only Apply writes the area back to the builder.
+	 * The modal edits a copy. Only Apply writes the area and the pair back.
 	 */
-	import * as Select from '$lib/components/ui/select/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
 	import Button from '@/components/buttons/Button.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
+	import CoordinateColumnsDialog from '@/components/visualisation/CoordinateColumnsDialog.svelte';
 	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
 	import SpatialFilterMap from '@/components/visualisation/SpatialFilterMap.svelte';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import maplibregl from 'maplibre-gl';
 	import { untrack } from 'svelte';
@@ -25,9 +25,9 @@
 	import type { SelectedField } from '@/query/draft';
 	import {
 		isUsableSelection,
+		resolveCoordinateColumns,
 		ringBounds,
-		selectionColumns,
-		withColumns,
+		type CoordinatePair,
 		type SpatialSelection
 	} from '@/geo/spatial-selection';
 
@@ -35,6 +35,7 @@
 		open = $bindable(false),
 		selectedFields,
 		selection = null,
+		coordinateColumns = null,
 		onApply
 	}: {
 		open?: boolean;
@@ -42,14 +43,21 @@
 		selectedFields: SelectedField[];
 		/** The area of the query, or null. The modal edits a copy of it. */
 		selection?: SpatialSelection | null;
-		/** Called with the new area, or with null to remove it. */
-		onApply: (selection: SpatialSelection | null) => void;
+		/** The stored coordinate pair of the block, or null to detect it. */
+		coordinateColumns?: CoordinatePair | null;
+		/**
+		 * Called with the new area, or with null to remove it, and with the pair
+		 * to store.
+		 */
+		onApply: (selection: SpatialSelection | null, pair: CoordinatePair | null) => void;
 	} = $props();
 
 	/** The area the user edits. It reaches the builder on Apply. */
 	let draft: SpatialSelection | null = $state(null);
-	let latitudeColumn = $state('');
-	let longitudeColumn = $state('');
+	/** The pair from the dialog. Undefined while the user picked none. */
+	let pickedPair: CoordinatePair | null | undefined = $state(undefined);
+	/** True while the coordinate columns dialog is open. */
+	let isColumnsOpen = $state(false);
 	let map: maplibregl.Map | null = $state(null);
 	/** True while a draw tool is armed. See {@link MapDrawTools}. */
 	let isDrawing = $state(false);
@@ -57,6 +65,17 @@
 	/** The columns the filter can test. The server tests query columns only. */
 	const candidates = $derived(
 		selectedFields.filter((field) => Utils.isNumericDataType(field.type)).map((field) => field.name)
+	);
+
+	/** The pair that Apply stores. */
+	const storedPair = $derived(pickedPair === undefined ? coordinateColumns : pickedPair);
+
+	/** The two columns the filter tests. The compile resolves the same pair. */
+	const columns = $derived(
+		resolveCoordinateColumns(
+			storedPair,
+			selectedFields.map((field) => field.name)
+		)
 	);
 
 	/**
@@ -68,8 +87,8 @@
 	 */
 	const initialBounds = $derived(selection ? ringBounds(selection.ring) : null);
 
-	// Fill the copy and the two pickers at every open. The modal keeps no state
-	// between two visits, so a cancel loses the edit.
+	// Fill the copy at every open. The modal keeps no state between two visits,
+	// so a cancel loses the edit.
 	$effect(() => {
 		if (!open) return;
 
@@ -83,14 +102,9 @@
 			draft = null;
 		}
 
-		// The names on the area win. Without them the detection answers.
-		const columns = selectionColumns(selection, candidates);
-		latitudeColumn = columns?.latitude ?? '';
-		longitudeColumn = columns?.longitude ?? '';
+		pickedPair = undefined;
 	}
 
-	const hasColumns = $derived(!!latitudeColumn && !!longitudeColumn);
-	const sameColumn = $derived(hasColumns && latitudeColumn === longitudeColumn);
 	const hasArea = $derived(isUsableSelection(draft));
 
 	/** The reason that Apply must stay off, or null. */
@@ -99,12 +113,8 @@
 			return 'The query must select a latitude and a longitude column.';
 		}
 
-		if (!hasColumns) {
+		if (!columns) {
 			return 'Pick the latitude and the longitude column.';
-		}
-
-		if (sameColumn) {
-			return 'The latitude and the longitude column must differ.';
 		}
 
 		if (!hasArea) {
@@ -117,12 +127,12 @@
 	function apply(): void {
 		if (applyReason || !draft) return;
 
-		onApply(withColumns(draft, { latitude: latitudeColumn, longitude: longitudeColumn }));
+		onApply(draft, storedPair ?? null);
 		open = false;
 	}
 
 	function remove(): void {
-		onApply(null);
+		onApply(null, storedPair ?? null);
 		open = false;
 	}
 </script>
@@ -135,7 +145,7 @@
 	<Modal
 		title="Geospatial filter"
 		width="90vw"
-		canCloseModal={!isDrawing}
+		canCloseModal={!isDrawing && !isColumnsOpen}
 		onClose={() => (open = false)}
 	>
 		<div class="geo-filter-content">
@@ -151,49 +161,24 @@
 				</p>
 			{:else}
 				<div class="geo-filter-columns">
-					<div class="field">
-						<Label size="sm" for="geoFilterLatitude">Latitude column</Label>
+					{#if columns}
+						<span>
+							Latitude <code>{columns.latitude}</code>, longitude <code>{columns.longitude}</code>
+						</span>
+					{:else}
+						<span class="geo-filter-missing">No latitude and longitude columns found.</span>
+					{/if}
 
-						<Select.Root type="single" name="geoFilterLatitude" bind:value={latitudeColumn}>
-							<Select.Trigger id="geoFilterLatitude" class="full-width">
-								{latitudeColumn || 'Select a column'}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									<Select.Label>Query columns</Select.Label>
-									{#each candidates as column (column)}
-										<Select.Item value={column} label={column}>{column}</Select.Item>
-									{/each}
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
-					</div>
-
-					<div class="field">
-						<Label size="sm" for="geoFilterLongitude">Longitude column</Label>
-
-						<Select.Root type="single" name="geoFilterLongitude" bind:value={longitudeColumn}>
-							<Select.Trigger id="geoFilterLongitude" class="full-width">
-								{longitudeColumn || 'Select a column'}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									<Select.Label>Query columns</Select.Label>
-									{#each candidates as column (column)}
-										<Select.Item value={column} label={column}>{column}</Select.Item>
-									{/each}
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
-					</div>
+					<Button
+						variant="ghost"
+						size="icon"
+						title="Pick the coordinate columns"
+						aria-label="Pick the coordinate columns"
+						onclick={() => (isColumnsOpen = true)}
+					>
+						<SettingsIcon />
+					</Button>
 				</div>
-
-				{#if sameColumn}
-					<p class="geo-filter-warning" role="alert">
-						<TriangleAlertIcon size={16} />
-						The latitude and the longitude column must differ.
-					</p>
-				{/if}
 			{/if}
 
 			<!--
@@ -234,6 +219,14 @@
 			</Button>
 		</div>
 	</Modal>
+
+	<!-- A sibling of the modal: the modal box is transformed, so it would clip a fixed child. -->
+	<CoordinateColumnsDialog
+		bind:open={isColumnsOpen}
+		{candidates}
+		pair={columns}
+		onApply={(next) => (pickedPair = next)}
+	/>
 {/if}
 
 <style lang="scss">
@@ -256,18 +249,16 @@
 		display: flex;
 		flex-direction: row;
 		flex-shrink: 0;
-		gap: 1rem;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.85rem;
 
-		.field {
-			display: flex;
-			flex-direction: column;
-			gap: 0.1875rem;
-			flex: 1 1 0;
-			min-width: 0;
+		code {
+			font-size: 0.8rem;
 		}
 
-		:global(.full-width) {
-			width: 100%;
+		.geo-filter-missing {
+			color: var(--destructive);
 		}
 	}
 

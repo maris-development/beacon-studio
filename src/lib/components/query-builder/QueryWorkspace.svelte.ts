@@ -37,11 +37,13 @@ import type { CompiledQuery, MinMaxFilter } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import {
 	findGeoJsonFilter,
+	fromGeoJsonFilter,
 	holdsGeoJsonFilter,
 	isGeoJsonFilter,
 	isUsableSelection,
-	selectionColumns,
+	resolveCoordinateColumns,
 	toSpatialFilters,
+	type CoordinatePair,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 import {
@@ -186,7 +188,12 @@ export class QueryWorkspace {
 			// the list holds no node for it. The builder then names the URL, and asks
 			// the user to add it. A link with no node lets the block fall back to the
 			// default. An empty name does the same for the name of the block.
-			const block = this.addFromQuery(resolved.query, resolved.name || undefined, resolved.node);
+			const block = this.addFromQuery(
+				resolved.query,
+				resolved.name || undefined,
+				resolved.node,
+				resolved.coordinateColumns
+			);
 
 			// Mark the guess. The default node often has other tables, and the
 			// builder then loads no columns. See {@link reportSeedMismatch}.
@@ -329,6 +336,8 @@ export class QueryWorkspace {
 				node: snapshotNode(node),
 				draft,
 				compiled: null,
+				// The pair names columns of the old tables.
+				coordinateColumns: null,
 				datasetKey: null,
 				rowCount: null
 			});
@@ -432,8 +441,16 @@ export class QueryWorkspace {
 	 * Open a query with no draft as a new block. Share links and the JSON editor
 	 * use this. Pass `node` to name the node of the query. Without it the
 	 * block takes the default. See {@link defaultNodeRef}.
+	 *
+	 * Without `coordinateColumns` the block takes the pair of the area filter in
+	 * the query. See `makeStoredQuery`.
 	 */
-	addFromQuery(query: CompiledQuery, name?: string, node?: NodeRef | null): StoredQuery {
+	addFromQuery(
+		query: CompiledQuery,
+		name?: string,
+		node?: NodeRef | null,
+		coordinateColumns?: CoordinatePair | null
+	): StoredQuery {
 		let ref = this.defaultNodeRef();
 		if (hasNodeRef(node)) {
 			ref = { ...node! };
@@ -443,6 +460,7 @@ export class QueryWorkspace {
 			name: name ?? `Untitled (${nextBlockNumber()})`,
 			draft: null,
 			compiled: Utils.cloneObject(query),
+			coordinateColumns: coordinateColumns ?? null,
 			node: ref
 		});
 		this.select(block.id);
@@ -525,7 +543,7 @@ export class QueryWorkspace {
 
 		if (JSON.stringify(block.draft) === JSON.stringify(draft)) return;
 
-		const compiled = compileDraft(draft);
+		const compiled = compileDraft(draft, block.coordinateColumns ?? null);
 		if (!compiled && needsDraftSeed(block)) return;
 
 		queryBlocks.update(block.id, {
@@ -561,9 +579,71 @@ export class QueryWorkspace {
 
 		if (!block.compiled) return;
 
-		const compiled = Utils.cloneObject(block.compiled) as CompiledQuery;
+		const compiled = QueryWorkspace.withAreaFilters(
+			block.compiled,
+			selection,
+			block.coordinateColumns ?? null
+		);
+		if (!compiled) return;
+
+		queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
+	}
+
+	/**
+	 * Store the coordinate pair of the active block. The map plots this pair, and
+	 * the area filter tests it. Null means: detect the pair.
+	 *
+	 * A block with an area filter gets a new query, so the method drops the link
+	 * to the last result. A block with no area keeps that link, because only the
+	 * display changes.
+	 *
+	 * Call this from an event handler, for the reason of
+	 * {@link updateActiveSpatialFilter}.
+	 */
+	updateActiveCoordinateColumns(pair: CoordinatePair | null): void {
+		const block = this.activeBlock;
+		if (!block) return;
+
+		const next = pair ? { latitude: pair.latitude, longitude: pair.longitude } : null;
+		if (JSON.stringify(block.coordinateColumns ?? null) === JSON.stringify(next)) return;
+
+		let compiled: CompiledQuery | null = null;
+
+		if (block.draft) {
+			compiled = compileDraft(block.draft, next);
+		} else if (block.compiled) {
+			// A block with no draft holds its area in the query only.
+			const area = findGeoJsonFilter(block.compiled.filters ?? []);
+			const selection = area ? fromGeoJsonFilter(area) : null;
+			compiled = QueryWorkspace.withAreaFilters(block.compiled, selection, next);
+		}
+
+		if (compiled && JSON.stringify(compiled) !== JSON.stringify(block.compiled)) {
+			queryBlocks.update(block.id, {
+				coordinateColumns: next,
+				compiled,
+				datasetKey: null,
+				rowCount: null
+			});
+			return;
+		}
+
+		queryBlocks.update(block.id, { coordinateColumns: next });
+	}
+
+	/**
+	 * A copy of a query with the area filters of `selection` on the resolved
+	 * pair, in place of the area filters it holds. Returns null when the filters
+	 * do not change.
+	 */
+	private static withAreaFilters(
+		query: CompiledQuery,
+		selection: SpatialSelection | null,
+		pair: CoordinatePair | null
+	): CompiledQuery | null {
+		const compiled = Utils.cloneObject(query) as CompiledQuery;
 		const names = compiled.query_parameters.map((param) => param.alias ?? param.column);
-		const columns = selectionColumns(selection, names);
+		const columns = resolveCoordinateColumns(pair, names);
 
 		// The area already on the query names its own two columns. Its box goes
 		// with it, also when the new area tests another pair.
@@ -590,11 +670,10 @@ export class QueryWorkspace {
 		}
 
 		// A query with no area, and no pair of columns, keeps its filters.
-		if (JSON.stringify(compiled.filters ?? []) === JSON.stringify(filters)) return;
+		if (JSON.stringify(compiled.filters ?? []) === JSON.stringify(filters)) return null;
 
 		compiled.filters = filters;
-
-		queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
+		return compiled;
 	}
 
 	/**
@@ -656,7 +735,7 @@ export class QueryWorkspace {
 
 	/** Compile the draft of a block. Returns null if the draft is incomplete. */
 	static getQuery(block: StoredQuery | null): CompiledQuery | null {
-		return block?.compiled ?? compileDraft(block?.draft);
+		return block?.compiled ?? compileDraft(block?.draft, block?.coordinateColumns ?? null);
 	}
 
 	/**

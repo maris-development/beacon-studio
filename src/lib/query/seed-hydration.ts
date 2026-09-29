@@ -15,11 +15,13 @@ import { Utils } from '@/utils';
 import type { SelectedFilterType } from '@/query/filter-types';
 import type { SelectedField } from '@/query/draft';
 import {
+	coordinateColumnsOf,
 	findGeoJsonFilter,
 	fromGeoJsonFilter,
 	holdsGeoJsonFilter,
 	isGeoJsonFilter,
 	ringBounds,
+	type CoordinatePair,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 
@@ -130,10 +132,10 @@ function flattenFilters(filters: Filter[] | undefined, onDrop: () => void): Filt
  */
 function isDerivedBoxFilter(
 	filter: Filter,
-	selection: SpatialSelection | null,
+	columns: CoordinatePair | null,
 	bounds: ReturnType<typeof ringBounds> | null
 ): boolean {
-	if (!selection || !bounds) {
+	if (!columns || !bounds) {
 		return false;
 	}
 
@@ -148,11 +150,11 @@ function isDerivedBoxFilter(
 
 	// The geo filter names its own two columns, so an area on `x` and `y` also
 	// matches. A name test for "latitude" holds only for the default pair.
-	if (name === selection.latitudeColumn) {
+	if (name === columns.latitude) {
 		return matches(bounds.minLat, bounds.maxLat);
 	}
 
-	if (name === selection.longitudeColumn) {
+	if (name === columns.longitude) {
 		return matches(bounds.minLon, bounds.maxLon);
 	}
 
@@ -241,6 +243,7 @@ export function hydrateDraftFromQuery(
 	const areaFilter = findGeoJsonFilter(query.filters ?? []);
 	const spatialFilter = areaFilter ? fromGeoJsonFilter(areaFilter) : null;
 	const selectionBounds = spatialFilter ? ringBounds(spatialFilter.ring) : null;
+	const areaColumns = coordinateColumnsOf(query.filters);
 
 	const seedFilters = flattenFilters(
 		(query.filters ?? []).filter((filter) => !holdsGeoJsonFilter(filter)),
@@ -248,7 +251,7 @@ export function hydrateDraftFromQuery(
 	);
 
 	for (const filter of seedFilters) {
-		if (isGeoJsonFilter(filter) || isDerivedBoxFilter(filter, spatialFilter, selectionBounds)) {
+		if (isGeoJsonFilter(filter) || isDerivedBoxFilter(filter, areaColumns, selectionBounds)) {
 			continue;
 		}
 

@@ -19,6 +19,7 @@ import { createQueryCollection } from '@/stores/query-collection';
 import { snapshotNode, type NodeRef, type StoredQuery } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
+import type { CoordinatePair } from '@/geo/spatial-selection';
 import { getCurrentNode } from '@/services/beacon-node';
 import { getSettings } from '@/stores/settings';
 
@@ -49,6 +50,8 @@ export interface RecordExecutionInput {
 	compiled: CompiledQuery;
 	/** The builder state of the record that started the run, if it had one. */
 	draft?: QueryDraft | null;
+	/** The coordinate pair of the record that started the run, if it had one. */
+	coordinateColumns?: CoordinatePair | null;
 	name?: string;
 	node?: NodeRef;
 	rowCount?: number;
@@ -73,6 +76,7 @@ export function recordExecution(input: RecordExecutionInput): StoredQuery {
 			name: input.name ?? 'Query',
 			draft: input.draft ?? null,
 			compiled: input.compiled,
+			coordinateColumns: input.coordinateColumns ?? null,
 			node: input.node ?? snapshotNode(getCurrentNode()),
 			datasetKey: input.datasetKey,
 			rowCount: input.rowCount ?? null,
@@ -84,6 +88,7 @@ export function recordExecution(input: RecordExecutionInput): StoredQuery {
 			// A share link and the JSON editor have no draft. A run from such a
 			// source must not delete the builder state from an earlier run.
 			draft: incoming.draft ?? existing?.draft ?? null,
+			coordinateColumns: incoming.coordinateColumns ?? existing?.coordinateColumns ?? null,
 			name: input.name ?? existing?.name ?? incoming.name,
 			createdAt: existing?.createdAt ?? incoming.createdAt,
 			updatedAt: now,

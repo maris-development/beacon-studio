@@ -1,9 +1,8 @@
-import type { BeaconNode, CompiledQuery, NodeRef } from "@/beacon-api/types";
+import type { BeaconNode, CompiledQuery } from "@/beacon-api/types";
 import { addToast } from "@/stores/toasts";
 import { Utils } from "@/utils";
 import { PythonQueryBuilder, PythonQueryExporter, JSONQueryExporter, SQLQueryBuilder, SQLQueryExporter } from "@/beacon-api/query";
-import { resolve } from '$app/paths';
-import { buildShareLink, SHARE_LINK_PATH } from "@/stores/stored-query";
+import { buildShareLink, type ShareableQuery } from "@/stores/stored-query";
 
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
@@ -327,28 +326,25 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
 
 
 /**
- * Copy a share link for a query to the clipboard.
+ * Copy a share link for a record to the clipboard. See `buildShareLink`.
  *
- * `node` is the node ref of the query, and not the resolved node. A ref
- * keeps the URL of a node that this app does not have, so the link still names
- * it. The link never carries a token. See `buildShareLink`.
- *
- * `name` is the name of the query. The receiver names their new block after it.
+ * The node of the record is a ref, not the resolved node. A ref keeps the URL
+ * of a node that this app does not have, so the link still names it.
  */
-export async function copyUrl(
-    compileQuery: () => CompiledQuery,
-    node: NodeRef | null,
-    name: string
-): Promise<void> {
+export async function copyUrl(record: ShareableQuery | null): Promise<void> {
 
-    const compiledQuery = tryCompileQuery(compileQuery);
-
-    if (!compiledQuery) return;
+    if (!record?.compiled) {
+        addToast({
+            message: 'Cannot share an empty query. Please select a table and atleast one column.',
+            type: 'error'
+        });
+        return;
+    }
 
     let link: string;
 
     try {
-        link = buildShareLink(compiledQuery, resolve(SHARE_LINK_PATH), name, node);
+        link = buildShareLink(record);
     }
     catch (error) {
         console.error('Error building Query URL:', error);

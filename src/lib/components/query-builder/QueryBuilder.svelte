@@ -10,6 +10,7 @@
     import type { QueryActions } from './QueryActions';
     import type { CompiledQuery } from '@/beacon-api/types';
     import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
+    import type { CoordinatePair } from '@/geo/spatial-selection';
     import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
 	import Button from '../buttons/Button.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
@@ -24,7 +25,9 @@
         onSeedMismatch,
         initialDraft = null,
         pendingSeed = null,
+        coordinateColumns = null,
         onDraftChange,
+        onCoordinateColumnsChange,
         onTableChange,
         status = $bindable<QuerySelectionStatus>({
             dataTable: '',
@@ -55,7 +58,11 @@
         onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
+        /** The stored coordinate pair of the block, or null to detect it. */
+        coordinateColumns?: CoordinatePair | null;
         onDraftChange?: (draft: QueryDraft) => void;
+        /** Called when the user picks another coordinate pair. */
+        onCoordinateColumnsChange?: (pair: CoordinatePair | null) => void;
         onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
         /** Bound to the parent. The builder puts `compileQuery` here. */
@@ -252,7 +259,7 @@
 		`pendingSeed` is null while the seed is blocked. This node does not hold the
 		table of that seed, so a hydration finds no column. See `loadTables`.
 	-->
-	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
+	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onCoordinateColumnsChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
 
 	<hr>
 

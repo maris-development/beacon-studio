@@ -360,6 +360,7 @@ class QueryStore {
 				datasetKey: entry.key,
 				compiled: entry.query,
 				draft: origin?.draft ?? null,
+				coordinateColumns: origin?.coordinateColumns ?? null,
 				name: origin?.name,
 				node: snapshotNode(node),
 				rowCount: entry.rowCount,
@@ -403,6 +404,7 @@ class QueryStore {
 				datasetKey: this.keyFor(query, node),
 				compiled: query,
 				draft: origin?.draft ?? null,
+				coordinateColumns: origin?.coordinateColumns ?? null,
 				name: origin?.name,
 				node: snapshotNode(node),
 				duration

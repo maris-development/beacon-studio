@@ -19,6 +19,7 @@
 	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from '@/query/draft';
+	import type { CoordinatePair } from '@/geo/spatial-selection';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
 	import type { BeaconNode } from '@/beacon-api/types';
@@ -65,6 +66,11 @@
 	/** Builder edits flow into the active block's draft. */
 	function handleDraftChange(draft: QueryDraft) {
 		workspace.updateActiveDraft(draft);
+	}
+
+	/** The geospatial filter modal picked another coordinate pair. */
+	function handleCoordinateColumnsChange(pair: CoordinatePair | null) {
+		workspace.updateActiveCoordinateColumns(pair);
 	}
 
 	/**
@@ -132,7 +138,9 @@
 						onSeedMismatch={handleSeedMismatch}
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
+						coordinateColumns={workspace.activeBlock?.coordinateColumns ?? null}
 						onDraftChange={handleDraftChange}
+						onCoordinateColumnsChange={handleCoordinateColumnsChange}
 						workbenchActions={queryActions}
 					/>
 				{/key}
