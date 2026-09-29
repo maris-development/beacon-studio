@@ -12,6 +12,7 @@
  */
 
 import { dev } from '$app/environment';
+import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
 import { splitNodeUrl } from '@/services/beacon-node-url';
 import { getSettings, settings, type SettingKey } from '@/stores/settings';
 import { sessionContext } from './context';
@@ -32,12 +33,13 @@ const DEV_OVERRIDE = false;
 /**
  * True while telemetry must stay silent.
  *
+ * A build with `STUDIO_TELEMETRY` other than `on` sends nothing at all.
  * A dev session sends the events of one developer, so it pollutes the table.
  * The console patch also hides the true source line of every log in the browser
  * console, which makes a debug session harder.
  */
 function isDisabled(): boolean {
-	return dev && !DEV_OVERRIDE;
+	return !TELEMETRY_BUILD_ENABLED || (dev && !DEV_OVERRIDE);
 }
 
 let started = false;
@@ -175,7 +177,7 @@ export function track(name: TelemetryName, fields: TelemetryFields = {}): void {
  */
 export function diagnostics(): Record<string, string> {
 	try {
-		const enabled = getSettings().telemetryEnabled;
+		const enabled = TELEMETRY_BUILD_ENABLED && getSettings().telemetryEnabled;
 
 		const fields: Record<string, string> = {
 			version: studioVersion(),
@@ -304,11 +306,15 @@ function watchExit(): () => void {
  * cannot send an event that carries the old install id.
  */
 export function stopTelemetry(): void {
+	if (isDisabled()) return;
+
 	clearQueue();
 	forgetIdentity();
 }
 
 /** Sends the buffer now. Use it before a navigation that leaves the app. */
 export function flushTelemetry(): void {
+	if (isDisabled()) return;
+
 	void flush();
 }

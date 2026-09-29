@@ -150,6 +150,9 @@ Read `src/lib/telemetry/README.md` before you add an event.
   three places plus a migration, and that is a separate job.
 - The server **drops a whole `props` object** above its cap; it does not cut it. `track` routes every
   object through `fitProps`, which degrades in steps. Never build an event that bypasses `track`.
+- A build sends telemetry only with `STUDIO_TELEMETRY=on` (`TELEMETRY_BUILD_ENABLED` in `build-info.ts`).
+  Without it, `isDisabled()` stops everything and the settings page hides the Telemetry group.
+  Code must not expect the telemetry settings to appear on the page.
 - Add `describeQuery(query)` to the props of every query event. Query content is open data
   (ERA5, WOD), so the filter values go out as well, and the time range is the most used field.
 

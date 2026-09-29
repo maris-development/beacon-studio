@@ -3,11 +3,12 @@
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import SettingField from '@/components/settings/SettingField.svelte';
+	import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import {
 		resetSettings,
-		SETTING_DEFINITIONS,
+		VISIBLE_SETTING_DEFINITIONS,
 		type SettingDefinition,
 		type SettingGroup
 	} from '@/stores/settings';
@@ -16,7 +17,7 @@
 	const groups: Array<{ name: SettingGroup; fields: SettingDefinition[] }> = (() => {
 		const result: Array<{ name: SettingGroup; fields: SettingDefinition[] }> = [];
 
-		for (const definition of SETTING_DEFINITIONS) {
+		for (const definition of VISIBLE_SETTING_DEFINITIONS) {
 			let group = result.find((entry) => entry.name === definition.group);
 			if (!group) {
 				group = { name: definition.group, fields: [] };
@@ -29,10 +30,14 @@
 	})();
 
 	async function onResetAll(): Promise<void> {
+		let lost = 'your query limits, your cache size and your map defaults';
+		if (TELEMETRY_BUILD_ENABLED) {
+			lost = 'your query limits, your cache size, your map defaults and your telemetry choice';
+		}
+
 		const goAhead = await askConfirm({
 			title: 'Reset all settings',
-			message:
-				'This puts every setting of this browser back to its default. The app loses your query limits, your cache size, your map defaults and your telemetry choice.',
+			message: `This puts every setting of this browser back to its default. The app loses ${lost}.`,
 			note: 'You cannot undo this.',
 			confirmLabel: 'Reset all settings',
 			destructive: true
@@ -76,6 +81,12 @@
 		<div class="actions">
 			<Button variant="outline" onclick={onResetAll}>Reset all settings</Button>
 		</div>
+
+		{#if !TELEMETRY_BUILD_ENABLED}
+			<p class="build-note">
+				This version of Beacon Studio is built with telemetry disabled. It sends no usage data.
+			</p>
+		{/if}
 	</div>
 </div>
 
@@ -106,6 +117,13 @@
 			display: flex;
 			justify-content: flex-end;
 			margin: 1rem 0 2rem;
+		}
+
+		.build-note {
+			margin: 0 0 2rem;
+			font-size: 0.875rem;
+			color: var(--muted-foreground);
+			text-align: center;
 		}
 	}
 </style>
