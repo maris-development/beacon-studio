@@ -299,16 +299,35 @@ export function encodeSharedQuery(shared: SharedQuery): string {
 }
 
 /**
- * Read a `?query=` payload. The function throws for every other input. A link of
- * an older app version holds a bare `CompiledQuery`, and therefore fails here.
- * The caller shows that message to the user.
+ * The search parameter that carries the node of a link that holds a bare
+ * `CompiledQuery`. It is a wire format, not a term. Never rename it.
  */
-export function decodeSharedQuery(value: string): SharedQuery {
-	const payload = Utils.gzipStringToObject<IncomingSharedQuery>(value);
-	const hasQuery = !!payload && typeof payload === 'object' && !!payload.query;
+export const LEGACY_NODE_PARAM = 'instance';
 
-	if (!hasQuery || typeof payload.query !== 'object') {
-		throw new Error('This link does not hold a shared query of this app version.');
+/**
+ * Read a `?query=` payload. The function throws for an input that holds no
+ * query. The caller shows that message to the user.
+ *
+ * An old link holds a bare `CompiledQuery`, sometimes as a JSON string. Its node
+ * is in the search parameter {@link LEGACY_NODE_PARAM}: pass that value as
+ * `legacyNodeUrl`.
+ */
+export function decodeSharedQuery(value: string, legacyNodeUrl?: string | null): SharedQuery {
+	let raw = Utils.gzipStringToObject<unknown>(value);
+	if (typeof raw === 'string') raw = JSON.parse(raw);
+
+	if (!raw || typeof raw !== 'object') {
+		throw new Error('This link does not hold a shared query.');
+	}
+
+	let payload = raw as IncomingSharedQuery;
+	const isBareQuery = 'query_parameters' in raw;
+	if (isBareQuery) {
+		payload = { query: raw as CompiledQuery, nodeUrl: legacyNodeUrl ?? '' };
+	}
+
+	if (!payload.query || typeof payload.query !== 'object') {
+		throw new Error('This link does not hold a shared query.');
 	}
 
 	const shared: SharedQuery = {
@@ -321,7 +340,10 @@ export function decodeSharedQuery(value: string): SharedQuery {
 	// The receiver of a link, not the sender. It counts the reach of a share.
 	track('query.open', {
 		nodeHost: shared.nodeUrl || undefined,
-		props: { ...describeQuery(shared.query), legacy: payload.instanceUrl !== undefined }
+		props: {
+			...describeQuery(shared.query),
+			legacy: isBareQuery || payload.instanceUrl !== undefined
+		}
 	});
 
 	return shared;

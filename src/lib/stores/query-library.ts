@@ -13,6 +13,7 @@ import { queryHistory } from '@/stores/query-history';
 import { savedQueries } from '@/stores/saved-queries';
 import {
 	decodeSharedQuery,
+	LEGACY_NODE_PARAM,
 	nodeRefFromUrl,
 	type NodeRef,
 	type StoredQuery
@@ -93,9 +94,8 @@ export interface ResolvedUrlQuery {
 	storedQueryId?: string;
 	/**
 	 * The node that must run the query. A `?q=` link takes it from the record. A
-	 * share link takes it from `?node=`. It is null when the URL named none.
-	 * * Share link takes it from node in the sharedquery object, ?node= deprecated from url
-	 * The caller then falls back to its own default.
+	 * share link takes it from `nodeUrl` in its payload. It is null when the link
+	 * named none. The caller then falls back to its own default.
 	 */
 	node: NodeRef | null;
 	/**
@@ -156,7 +156,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const shared = url.searchParams.get('query');
 	if (shared) {
 		try {
-			const payload = decodeSharedQuery(shared);
+			const payload = decodeSharedQuery(shared, url.searchParams.get(LEGACY_NODE_PARAM));
 			const node = sharedNodeRef(payload.nodeUrl);
 
 			return {
