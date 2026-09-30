@@ -105,12 +105,18 @@
 					filter_value: { type: 'not_equals_string', value: null }
 				}
 			];
-		} else if (Utils.isTimestampDataType(data_type)) {
+		} else if (Utils.isTemporalDataType(data_type)) {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity
 			const d = new Date();
 			d.setUTCFullYear(d.getUTCFullYear() - 1);
-			const minDefaultDateValue = d.toISOString().slice(0, 10) + 'T00:00:00Z';
-			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + 'T00:00:00Z';
+			let minTimeSuffix = 'T00:00:00Z';
+			let maxTimeSuffix = 'T23:59:59Z';
+			if (Utils.isDateDataType(data_type)) {
+				minTimeSuffix = '';
+				maxTimeSuffix = '';
+			}
+			const minDefaultDateValue = d.toISOString().slice(0, 10) + minTimeSuffix;
+			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + maxTimeSuffix;
 			return [
 				{
 					label: 'Between',

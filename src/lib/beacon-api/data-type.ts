@@ -1,6 +1,29 @@
 import type { DictionaryDataType, TimestampDataType } from './types';
 
 const STRING_VALUE_TYPES = ['Utf8', 'LargeUtf8', 'Utf8View'];
+const NUMERIC_TYPES = [
+    'Int8', 'Int16', 'Int32', 'Int64',
+    'UInt8', 'UInt16', 'UInt32', 'UInt64',
+    'Float16', 'Float32', 'Float64'
+];
+const DATE_TYPES = ['Date32', 'Date64'];
+
+export function isNumericDataType(dataType: unknown): boolean {
+    return typeof dataType === 'string' && NUMERIC_TYPES.includes(dataType);
+}
+
+export function isStringDataType(dataType: unknown): boolean {
+    return typeof dataType === 'string' && STRING_VALUE_TYPES.includes(dataType);
+}
+
+export function isDateDataType(dataType: unknown): boolean {
+    return typeof dataType === 'string' && DATE_TYPES.includes(dataType);
+}
+
+// The server compares a date column with the same ISO strings as a timestamp column.
+export function isTemporalDataType(dataType: unknown): boolean {
+    return isTimestampDataType(dataType) || isDateDataType(dataType);
+}
 
 export function isTimestampDataType(dataType: unknown): dataType is TimestampDataType {
     return (

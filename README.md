@@ -85,13 +85,6 @@ npm run lint
 
 ## Beacon client dependency:
 
-Currently @beacon/client is not in NPM but its contained in: 
+The Beacon SDK comes from npm as [`@maris-development/beacon-client`](https://www.npmjs.com/package/@maris-development/beacon-client). `npm install` installs it with the other dependencies.
 
-```https://github.com/maris-development/beacon/tree/main/beacon-clients/beacon-ts```
-
-So what we do is as follows:
-- Clone beacon git repo next to where you cloned beacon-studio
-- go to <beacon dir>/beacon-clients/beacon-ts
-- run `npm install` and `npm run build`
-
-After that this project can also be built by running `npm install` and `npm run build`, and develop with the commands described in this document.
+Its source is in the `beacon` repository, in [`beacon-clients/beacon-ts`](https://github.com/maris-development/beacon/tree/main/beacon-clients/beacon-ts).

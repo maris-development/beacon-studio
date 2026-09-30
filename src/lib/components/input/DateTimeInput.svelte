@@ -17,7 +17,9 @@
 		min = undefined,
 		max = undefined,
 		disabled = false,
-		placeholder ='YYYY-MM-DDTHH:mm:ssZ' ,
+		/** Pick a date with no time. `value` is then a plain "YYYY-MM-DD", with no "Z". */
+		dateOnly = false,
+		placeholder = undefined,
 		id = undefined,
 		/** Escape hatch: any extra flatpickr options, merged last (can override defaults). */
 		options = {},
@@ -39,7 +41,8 @@
 	let pollId;
 
 	// Locale-independent ISO entry format. \T escapes the literal "T".
-	const entryFormat = 'Y-m-d\\TH:i:S';
+	const dateTimeFormat = 'Y-m-d\\TH:i:S';
+	const dateFormat = 'Y-m-d';
 	const smallestUnit = 'second';
 
 	// How often to re-read the field. flatpickr rewrites input.value programmatically
@@ -52,6 +55,8 @@
 	function toUTCISO(wall) {
 		if (!wall) return '';
 		try {
+			if (dateOnly) return Temporal.PlainDate.from(wall).toString();
+
 			let result = Temporal.PlainDateTime.from(wall)
 				.toString({ smallestUnit });
 
@@ -71,6 +76,8 @@
 		if (!iso) return '';
 		try {
 			const plain = iso.replace(/Z$|[+-]\d{2}:\d{2}$/, '');
+			// A stored date-time shows as its date part.
+			if (dateOnly) return Temporal.PlainDate.from(plain).toString();
 			return Temporal.PlainDateTime.from(plain).toString({ smallestUnit });
 		} catch {
 			return '';
@@ -117,10 +124,15 @@
 	}
 
 	onMount(() => {
+		let entryFormat = dateTimeFormat;
+		if (dateOnly) {
+			entryFormat = dateFormat;
+		}
+
 		fp = flatpickr(inputEl, {
-			enableTime: true,
+			enableTime: !dateOnly,
 			time_24hr: true,
-			enableSeconds: true,
+			enableSeconds: !dateOnly,
 			allowInput: true, // users can type ISO directly, not just pick
 			dateFormat: entryFormat,
 			defaultDate: fromUTCISO(value),
@@ -175,7 +187,7 @@
 <input
 	bind:this={inputEl}
 	{id}
-	{placeholder}
+	placeholder={placeholder ?? (dateOnly ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm:ssZ')}
 	{disabled}
 	type="text"
 	inputmode="numeric"

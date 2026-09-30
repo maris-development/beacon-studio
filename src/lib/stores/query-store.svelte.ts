@@ -24,7 +24,7 @@
  */
 
 import * as ApacheArrow from 'apache-arrow';
-import { getArrowDecoder, type QueryInput } from '@beacon/client';
+import { getArrowDecoder, type QueryInput } from '@maris-development/beacon-client';
 import { makeBeaconClient } from '@/beacon-api/client';
 import type { BeaconNode, CompiledQuery, QueryWarning } from '@/beacon-api/types';
 import { opfsArrowCache } from '@/stores/opfs-arrow-cache';
@@ -192,7 +192,7 @@ class QueryStore {
 
 	/**
 	 * Returns the cached result for `query`: from memory, else rehydrated from the
-	 * OPFS tier, else fetched once (arrow-native, via `@beacon/client`) from
+	 * OPFS tier, else fetched once (arrow-native, via `@maris-development/beacon-client`) from
 	 * `node`. On success the entry becomes {@link current}.
 	 *
 	 * The store runs one query at a time. Two calls for the same key share one
@@ -601,7 +601,7 @@ class QueryStore {
 		payload.limit = limit;
 
 		// Request the server's default (zstd) Arrow IPC stream by omitting `output`
-		// entirely — any `output` here would be forwarded by @beacon/client and could
+		// entirely — any `output` here would be forwarded by @maris-development/beacon-client and could
 		// yield a non-Arrow body. The local CompiledQuery shape is accepted server-side
 		// via serde aliases (query_parameters→select, for_query_parameter→column, filters).
 		delete payload.output;

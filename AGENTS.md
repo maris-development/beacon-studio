@@ -25,11 +25,11 @@ This file is a quick operational guide for coding agents working in this reposit
   or graceful fallback.
 
 ## API Client Strategy (Important)
-- **Migrate to `@beacon/client`** (installed via `package.json` as
-  `"@beacon/client": "file:../beacon/clients/beacon-ts"`). It is the isomorphic
+- **Migrate to `@maris-development/beacon-client`** (the npm package, source in the
+  `beacon` repo under `beacon-clients/beacon-ts`). It is the isomorphic
   TypeScript SDK for querying Beacon (browser + Node), with a fluent query builder,
   Arrow/CSV result decoding, and admin endpoints. See its README for the full API.
-- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@beacon/client` for
+- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@maris-development/beacon-client` for
   new code, and migrate existing usage toward it instead of extending the local
   client. Reuse the SDK's query builder and result handling rather than
   reimplementing them locally.
@@ -57,7 +57,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/routes/visualisations/*`
   - `src/routes/data-browser/*`
 - API client and query model:
-  - `@beacon/client` — preferred SDK; built via `makeBeaconClient` in `src/lib/beacon-api/client.ts`
+  - `@maris-development/beacon-client` — preferred SDK; built via `makeBeaconClient` in `src/lib/beacon-api/client.ts`
   - `src/lib/beacon-api/client.ts` — legacy client, now metadata/download only
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
@@ -90,15 +90,16 @@ This file is a quick operational guide for coding agents working in this reposit
 1. User configures a query via easy/advanced builder or raw editor.
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
 3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
-4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@beacon/client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
-5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@beacon/client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
+4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
+5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
 7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. The `queries/query-history` page lists them and re-runs each by navigating to a visualiser with `?q=<record id>`, and shares each as a `SharedQuery` in `?query=`; `query-editor` preloads a query supplied via either form.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
 - Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Use it; do not repeat the match.
-- `beacon-api/data-type.ts` holds the checks on an object schema `DataType` (Timestamp, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
+- `beacon-api/data-type.ts` holds the checks on a schema `DataType` (number, string, Timestamp, Date, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
+- A `Date32` / `Date64` column takes the same ISO filter strings as a Timestamp column (`2020-01-01T00:00:00Z`), so the builder gives both the timestamp filters (`isTemporalDataType`). The server drops the time from the literal (`gt 2020-06-16T12:00:00Z` excludes the whole 16th), so a date column gets a date-only input (`DateTimeInput` `dateOnly`) and stores `YYYY-MM-DD`. Arrow JS returns a date value as epoch milliseconds.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
 - The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info), plus the `static` execution and cache-control facade (`ensureQuery`, `peekQuery*`, `invalidateQueryCache`, cache stats/toggle). Its Parquet query path and `parquet-wasm` have been removed.
 - `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
@@ -218,7 +219,7 @@ message the change never reaches production.
   - builders (`query-builder/*`)
   - editor (`query-editor/*`)
   - visualizers (`visualisations/*`)
-  - API client (`@beacon/client`; legacy `beacon-api/client.ts` where still used)
+  - API client (`@maris-development/beacon-client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 
