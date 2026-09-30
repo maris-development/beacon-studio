@@ -30,16 +30,13 @@ export type SpatialSelection = {
     line?: LngLat[];
     /** Cross section only: the full width of the band, in kilometres. */
     widthKm?: number;
-    /**
-     * The columns the filter tests. The user picks them in the query builder.
-     * Both are absent on an area of an older record, and {@link selectionColumns}
-     * then falls back to {@link detectCoordinateColumns}.
-     */
-    latitudeColumn?: string;
-    longitudeColumn?: string;
 };
 
-/** The pair of columns a spatial filter tests. */
+/**
+ * The pair of columns that hold the position. A query block stores one pair, and
+ * the map, the area filter and the chart explorer all read it. See
+ * {@link resolveCoordinateColumns}.
+ */
 export type CoordinatePair = {
     latitude: string;
     longitude: string;
@@ -241,34 +238,19 @@ export function makeCrossSectionSelection(line: LngLat[], widthKm: number): Spat
     };
 }
 
-/** Put the two column names on a selection. The draw tools drop them. */
-export function withColumns(
-    selection: SpatialSelection,
-    columns: CoordinatePair | null
-): SpatialSelection {
-    if (!columns) return selection;
-
-    return {
-        ...selection,
-        latitudeColumn: columns.latitude,
-        longitudeColumn: columns.longitude
-    };
-}
-
 /**
- * The two columns a spatial filter must test, or null.
+ * The two columns that hold the position, or null.
  *
- * The names on the selection win, because the user picked them. They only win
- * while the query still selects both: a filter on a column that the query does
- * not select is invalid. Detection then answers, which also serves an area of
- * an older record, and an area that the map viewer drew.
+ * The stored pair wins, because the user picked it. It only wins while the query
+ * still selects both: a filter on a column that the query does not select is
+ * invalid. Detection then answers, which also serves a block with no stored pair.
  */
-export function selectionColumns(
-    selection: SpatialSelection | null | undefined,
+export function resolveCoordinateColumns(
+    pair: CoordinatePair | null | undefined,
     availableNames: string[]
 ): CoordinatePair | null {
-    const latitude = selection?.latitudeColumn;
-    const longitude = selection?.longitudeColumn;
+    const latitude = pair?.latitude;
+    const longitude = pair?.longitude;
 
     if (
         latitude &&
@@ -286,18 +268,16 @@ export function selectionColumns(
 }
 
 /**
- * The column of a selection that the query does not select, or null.
+ * The column of a stored pair that the query does not select, or null.
  *
- * The builder reports this. The area stays on the draft, so the user can pick
+ * The builder reports this. The pair stays on the block, so the user can pick
  * the column again, or select it in the query.
  */
-export function missingSelectionColumn(
-    selection: SpatialSelection | null | undefined,
+export function missingCoordinateColumn(
+    pair: CoordinatePair | null | undefined,
     availableNames: string[]
 ): string | null {
-    const wanted = [selection?.latitudeColumn, selection?.longitudeColumn].filter(
-        Boolean
-    ) as string[];
+    const wanted = [pair?.latitude, pair?.longitude].filter(Boolean) as string[];
 
     return wanted.find((name) => !availableNames.includes(name)) ?? null;
 }
@@ -476,9 +456,18 @@ export function fromGeoJsonFilter(filter: GeoJsonFilter): SpatialSelection | nul
 
     return {
         mode: 'polygon',
-        ring: shiftRing(ring, alignLongitude(centre, 0) - centre),
-        latitudeColumn: filter.latitude_query_parameter,
-        longitudeColumn: filter.longitude_query_parameter
+        ring: shiftRing(ring, alignLongitude(centre, 0) - centre)
+    };
+}
+
+/** The pair of columns that the area filter of a query tests, or null. */
+export function coordinateColumnsOf(filters: Filter[] | null | undefined): CoordinatePair | null {
+    const filter = findGeoJsonFilter(filters ?? []);
+    if (!filter?.latitude_query_parameter || !filter.longitude_query_parameter) return null;
+
+    return {
+        latitude: filter.latitude_query_parameter,
+        longitude: filter.longitude_query_parameter
     };
 }
 

@@ -27,8 +27,9 @@
 	import { settings } from '@/stores/settings';
 	import {
 		describeSelection,
-		missingSelectionColumn,
-		selectionColumns,
+		missingCoordinateColumn,
+		resolveCoordinateColumns,
+		type CoordinatePair,
 		type SpatialSelection
 	} from '@/geo/spatial-selection';
 	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
@@ -40,6 +41,7 @@
 		client,
 		initialDraft = null,
 		pendingSeed = null,
+		coordinateColumns = null,
 		onDraftChange,
 		onSeedMismatch,
 		// The output format control lives in the parent, next to the other
@@ -63,8 +65,14 @@
 		client: BeaconClient;
 		initialDraft?: QueryDraft | null;
 		pendingSeed?: CompiledQuery | null;
-		/** Emitted on every builder edit with the current draft. */
-		onDraftChange?: (draft: QueryDraft) => void;
+		/** The stored coordinate pair of the block, or null to detect it. */
+		coordinateColumns?: CoordinatePair | null;
+		/**
+		 * Emitted on every builder edit with the current draft. The geospatial
+		 * filter modal also passes the pair, so the area and the pair reach the
+		 * block in one write.
+		 */
+		onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
 		/**
 		 * Called when the schema of the node holds no column of a deep-link seed.
 		 * The parent writes the message: it knows whether the app guessed the node.
@@ -114,12 +122,15 @@
 		if (!$settings.requireQueryFilters) return null;
 
 		return runBlockReason(
-			compileDraft({
-				tableName: table_name,
-				selectedFields,
-				outputFormat: selected_output_format,
-				spatialFilter
-			})
+			compileDraft(
+				{
+					tableName: table_name,
+					selectedFields,
+					outputFormat: selected_output_format,
+					spatialFilter
+				},
+				coordinateColumns
+			)
 		);
 	});
 
@@ -138,22 +149,22 @@
 	});
 
 	/**
-	 * The column of the area that the query no longer selects, or null.
+	 * The column of the stored pair that the query no longer selects, or null.
 	 *
-	 * The compile drops such a filter, so the user must know. The area stays on
-	 * the draft, and the modal offers the pickers again.
+	 * The user must know. The pair stays on the block, and the modal offers the
+	 * dialog again.
 	 */
 	const missingAreaColumn = $derived(
-		missingSelectionColumn(
-			spatialFilter,
+		missingCoordinateColumn(
+			coordinateColumns,
 			selectedFields.map((field) => field.name)
 		)
 	);
 
 	/** The two columns the area tests. The compile resolves the same pair. */
 	const areaColumns = $derived(
-		selectionColumns(
-			spatialFilter,
+		resolveCoordinateColumns(
+			coordinateColumns,
 			selectedFields.map((field) => field.name)
 		)
 	);
@@ -285,12 +296,7 @@
 		if (pendingSeed && !hasHydratedSeed) {
 			return;
 		}
-		const draft = {
-			tableName: table_name,
-			selectedFields: Utils.cloneObject(selectedFields),
-			outputFormat: selected_output_format,
-			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
-		};
+		const draft = buildDraft();
 		const draftKey = JSON.stringify(draft);
 		if (draftKey === lastEmittedDraftKey) {
 			return;
@@ -298,6 +304,16 @@
 		lastEmittedDraftKey = draftKey;
 		onDraftChange?.(draft);
 	});
+
+	/** The draft of the current controls. */
+	function buildDraft(): QueryDraft {
+		return {
+			tableName: table_name,
+			selectedFields: Utils.cloneObject(selectedFields),
+			outputFormat: selected_output_format,
+			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
+		};
+	}
 
 	let open = $state(false);
 
@@ -357,12 +373,15 @@
 	 * a download from here also carries the area filter.
 	 */
 	function compileQuery(): CompiledQuery {
-		const compiled = compileDraft({
-			tableName: table_name,
-			selectedFields,
-			outputFormat: selected_output_format,
-			spatialFilter
-		});
+		const compiled = compileDraft(
+			{
+				tableName: table_name,
+				selectedFields,
+				outputFormat: selected_output_format,
+				spatialFilter
+			},
+			coordinateColumns
+		);
 
 		if (!compiled) {
 			throw new Error('Pick a table and at least one column.');
@@ -400,6 +419,17 @@
 	// that id as `?q=`. A handler here must put the full query on the URL instead.
 	// The parent binds `actions`, so such a handler also replaces the one of the
 	// workbench without a warning.
+
+	/** Take the area and the pair of the geospatial filter modal. */
+	function applyGeoFilter(next: SpatialSelection | null, pair: CoordinatePair | null): void {
+		spatialFilter = next;
+		if (!table_name || (pendingSeed && !hasHydratedSeed)) return;
+
+		// Emit here, with the pair. The emit effect then finds the same draft key.
+		const draft = buildDraft();
+		lastEmittedDraftKey = JSON.stringify(draft);
+		onDraftChange?.(draft, pair);
+	}
 
 	function hydrateFromSeed(table: string) {
 		const seed = hydrateDraftFromQuery(pendingSeed, fields);
@@ -457,7 +487,8 @@
 		bind:open={isGeoFilterOpen}
 		{selectedFields}
 		selection={spatialFilter}
-		onApply={(next) => (spatialFilter = next)}
+		{coordinateColumns}
+		onApply={applyGeoFilter}
 	/>
 
 	<Dialog.Root bind:open>

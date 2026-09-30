@@ -25,7 +25,7 @@ import { untrack } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
-import type { SpatialSelection } from '@/geo/spatial-selection';
+import type { CoordinatePair, SpatialSelection } from '@/geo/spatial-selection';
 import {
 	clonePlotConfig,
 	makeChartViewState,
@@ -73,6 +73,8 @@ export class ChartExplorerController {
 
 	/** The area drawn on the map. A cross section plot reads its line. */
 	private selection = $state.raw<SpatialSelection | null>(null);
+	/** The stored coordinate pair of the block. A cross section plot reads it. */
+	private coordinateColumns = $state.raw<CoordinatePair | null>(null);
 
 	readonly table = $derived(this.entry?.table ?? null);
 	readonly rowCount = $derived(this.entry?.rowCount ?? 0);
@@ -124,7 +126,8 @@ export class ChartExplorerController {
 			plot.line.groupColumn,
 			plot.line.sortBy,
 			this.binningKey(plot),
-			JSON.stringify(this.selection?.line ?? null)
+			JSON.stringify(this.selection?.line ?? null),
+			JSON.stringify(this.coordinateColumns)
 		].join('|');
 	});
 
@@ -304,7 +307,10 @@ export class ChartExplorerController {
 			return;
 		}
 
-		this.data = buildPlotSeries(table, plot, { selection: this.selection });
+		this.data = buildPlotSeries(table, plot, {
+			selection: this.selection,
+			coordinateColumns: this.coordinateColumns
+		});
 
 		let series: PlotSeries | null = null;
 		if (this.data.ok) series = this.data.series;
@@ -358,7 +364,8 @@ export class ChartExplorerController {
 	// --------------------------------------------------------------- view state
 
 	/**
-	 * Restore the plots of a block, and the area that its query filters on.
+	 * Restore the plots of a block, the area that its query filters on, and its
+	 * coordinate pair.
 	 *
 	 * Call this method at every change of block, also for a block with no stored
 	 * plots. That block gets one default plot, and does not keep the plots of the
@@ -367,10 +374,12 @@ export class ChartExplorerController {
 	applyViewState(
 		blockId: string | null,
 		view: ChartViewState | null | undefined,
-		selection: SpatialSelection | null
+		selection: SpatialSelection | null,
+		coordinateColumns: CoordinatePair | null
 	): void {
 		this.viewBlockId = blockId;
 		this.selection = selection;
+		this.coordinateColumns = coordinateColumns;
 		this.view = normaliseChartView(view) ?? makeChartViewState([makePlotConfig()]);
 
 		// Do not sync against columns here: `entry` still holds the previous
@@ -385,7 +394,11 @@ export class ChartExplorerController {
 	 * can apply a new cross section to the same block, and the X values of a cross
 	 * section plot come from that line.
 	 */
-	setSelection(selection: SpatialSelection | null): void {
+	setSelection(selection: SpatialSelection | null, coordinateColumns: CoordinatePair | null): void {
+		if (JSON.stringify(this.coordinateColumns) !== JSON.stringify(coordinateColumns)) {
+			this.coordinateColumns = coordinateColumns;
+		}
+
 		if (JSON.stringify(this.selection) === JSON.stringify(selection)) return;
 		this.selection = selection;
 	}

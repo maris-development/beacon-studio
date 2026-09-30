@@ -15,8 +15,9 @@ import { getSettings } from '@/stores/settings';
 import { Utils } from '@/utils';
 import {
 	isUsableSelection,
-	selectionColumns,
+	resolveCoordinateColumns,
 	toSpatialFilters,
+	type CoordinatePair,
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 
@@ -63,8 +64,13 @@ export function isDraftComplete(draft: QueryDraft | null | undefined): boolean {
 /**
  * Compiles a draft into a CompiledQuery, or returns null while the draft is
  * incomplete (no table or no selected columns). Never throws.
+ *
+ * `coordinateColumns` is the stored pair of the block. The area filter tests it.
  */
-export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuery | null {
+export function compileDraft(
+	draft: QueryDraft | null | undefined,
+	coordinateColumns: CoordinatePair | null = null
+): CompiledQuery | null {
 	if (!isDraftComplete(draft)) {
 		return null;
 	}
@@ -82,7 +88,7 @@ export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuer
 			}
 		}
 
-		addSpatialFilters(builder, draft!);
+		addSpatialFilters(builder, draft!, coordinateColumns);
 
 		builder.setFrom(draft!.tableName);
 		builder.setOutput({ format: draft!.outputFormat as OutputFormat });
@@ -100,16 +106,20 @@ export function compileDraft(draft: QueryDraft | null | undefined): CompiledQuer
  * The box is always derived here, and is never stored on a field. So one delete
  * of `spatialFilter` removes every part of the area again.
  *
- * The two columns come from the area itself, because the user picks them in the
- * builder. See {@link selectionColumns}. The query keeps no filter while it
- * selects neither pair.
+ * The two columns come from the stored pair of the block. See
+ * {@link resolveCoordinateColumns}. The query keeps no filter while it selects
+ * no pair.
  */
-function addSpatialFilters(builder: QueryBuilder, draft: QueryDraft): void {
+function addSpatialFilters(
+	builder: QueryBuilder,
+	draft: QueryDraft,
+	coordinateColumns: CoordinatePair | null
+): void {
 	const selection = draft.spatialFilter;
 	if (!isUsableSelection(selection)) return;
 
 	const names = draft.selectedFields.map((field) => field.name);
-	const columns = selectionColumns(selection, names);
+	const columns = resolveCoordinateColumns(coordinateColumns, names);
 	if (!columns) return;
 
 	for (const filter of toSpatialFilters(selection!, columns.latitude, columns.longitude)) {

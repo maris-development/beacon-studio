@@ -4,7 +4,7 @@
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import { savedQueries, removeSavedQuery, clearSavedQueries, renameSavedQuery } from '@/stores/saved-queries';
-	import { buildShareLink, SHARE_LINK_PATH, type StoredQuery } from '@/stores/stored-query';
+	import { buildShareLink, type StoredQuery } from '@/stores/stored-query';
 	import { addToast } from '@/stores/toasts';
 	import { Utils } from '@/utils';
 	import { goto } from '$app/navigation';
@@ -58,7 +58,7 @@
 	 * node only, so the receiver needs it. The link never carries the token.
 	 */
 	async function copyShareLink(entry: StoredQuery): Promise<void> {
-		const link = buildShareLink(entry.compiled, resolve(SHARE_LINK_PATH), entry.name, entry.node);
+		const link = buildShareLink(entry);
 
 		if (!link) {
 			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
