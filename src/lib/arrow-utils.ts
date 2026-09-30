@@ -178,6 +178,15 @@ export class ApacheArrowUtils {
         ];
     }
 
+    // A Dictionary vector decodes to its value type, so switch on that type.
+    private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
+        if (ApacheArrow.DataType.isDictionary(type)) {
+            return type.dictionary.typeId;
+        }
+
+        return type.typeId;
+    }
+
     /**
      * Converts a typed value to its string representation based on the provided Apache Arrow type.
      * 
@@ -186,7 +195,7 @@ export class ApacheArrowUtils {
      * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
      *
      * @remarks
-     * - For `Utf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
+     * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
      * - For unsupported types, logs a warning and returns the stringified value.
@@ -197,9 +206,9 @@ export class ApacheArrowUtils {
             return '';
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 return String(value);
 
             case ApacheArrow.Type.Int:
@@ -292,7 +301,7 @@ export class ApacheArrowUtils {
      * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
      *
      * @remarks
-     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 (string), and Bool.
+     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
      * - Null values are sorted to the end of the table.
      * - If the column does not exist or its type is unsupported, the original table is returned.
      * - The schema of the original table is preserved in the sorted table.
@@ -323,8 +332,7 @@ export class ApacheArrowUtils {
 
         let sortedIndices: number[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((sortColumn.type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(sortColumn.type)) {
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Time:
             case ApacheArrow.Type.Timestamp:
@@ -363,6 +371,7 @@ export class ApacheArrowUtils {
                 break;
 
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 // String sorting
                 sortedIndices = indexedArray.sort((a, b) => {
                     const valA = a.value as string;

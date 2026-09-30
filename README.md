@@ -44,6 +44,17 @@ $env:BASE_PATH="/studio"; npm run build --omit=dev
 
 Use `//` to prevent path lookup issues in bash.
 
+Telemetry is off by default. Set `STUDIO_TELEMETRY=on` to send usage events to beacon-datalake.org:
+
+```bash
+STUDIO_TELEMETRY=on npm run build --omit=dev
+```
+```powershell
+$env:STUDIO_TELEMETRY="on"; npm run build --omit=dev
+```
+
+A build without `STUDIO_TELEMETRY=on` sends nothing, and the settings page shows no telemetry settings.
+
 Build downloadable desktop executables (Tauri):
 
 ```bash
@@ -69,6 +80,7 @@ npm run lint
 
 - Static web output is generated in `build/`.
 - `BASE_PATH` is read by `svelte.config.js` and should be set for subdirectory hosting.
+- `STUDIO_TELEMETRY` is read by `vite.config.ts`. Only the value `on` turns telemetry on.
 
 
 ## Beacon client dependency:

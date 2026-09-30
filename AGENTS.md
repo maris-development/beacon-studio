@@ -97,7 +97,8 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
-- Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Do not repeat the match. Call it through `resolveCoordinateColumns`, so a stored pair wins.
+- Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Use it; do not repeat the match.
+- `beacon-api/data-type.ts` holds the checks on an object schema `DataType` (Timestamp, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
 - The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info), plus the `static` execution and cache-control facade (`ensureQuery`, `peekQuery*`, `invalidateQueryCache`, cache stats/toggle). Its Parquet query path and `parquet-wasm` have been removed.
 - `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
@@ -171,6 +172,9 @@ Read `src/lib/telemetry/README.md` before you add an event.
   three places plus a migration, and that is a separate job.
 - The server **drops a whole `props` object** above its cap; it does not cut it. `track` routes every
   object through `fitProps`, which degrades in steps. Never build an event that bypasses `track`.
+- A build sends telemetry only with `STUDIO_TELEMETRY=on` (`TELEMETRY_BUILD_ENABLED` in `build-info.ts`).
+  Without it, `isDisabled()` stops everything and the settings page hides the Telemetry group.
+  Code must not expect the telemetry settings to appear on the page.
 - Add `describeQuery(query)` to the props of every query event. Query content is open data
   (ERA5, WOD), so the filter values go out as well, and the time range is the most used field.
 
