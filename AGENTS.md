@@ -44,7 +44,7 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Deployment/Base Path
 - `svelte.config.js` sets `kit.paths.base` from `BASE_PATH` env var.
-- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build --omit=dev`.
+- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`.
 - Keep path handling consistent by using SvelteKit helpers (`resolve`, `asset`) already used in the codebase.
 
 ## High-Level Architecture
