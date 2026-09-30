@@ -54,10 +54,10 @@
 		"vite-plugin-devtools-json": "^0.2.0"
 	},
 	"dependencies": {
-		"@beacon/client": "file:../beacon/beacon-clients/beacon-ts",
 		"@geoarrow/deck.gl-layers": "^0.3.0",
 		"@geoarrow/geoarrow-js": "^0.3.2",
 		"@js-temporal/polyfill": "^0.5.1",
+		"@maris-development/beacon-client": "^2.0.0",
 		"@monaco-editor/react": "^4.7.0",
 		"@tauri-apps/plugin-opener": "^2.5.4",
 		"@types/leaflet": "^1.9.18",
