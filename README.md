@@ -30,16 +30,16 @@ npm run tauri:dev
 Build the web app (static output):
 
 ```bash
-npm run build --omit=dev
+npm run build
 ```
 
 Build the web app for a subdirectory deployment (example: `beacon-wod.maris.nl/studio`):
 
 ```bash
-BASE_PATH=//studio npm run build --omit=dev
+BASE_PATH=//studio npm run build
 ```
 ```powershell
-$env:BASE_PATH="/studio"; npm run build --omit=dev
+$env:BASE_PATH="/studio"; npm run build
 ```
 
 Use `//` to prevent path lookup issues in bash.
@@ -47,10 +47,10 @@ Use `//` to prevent path lookup issues in bash.
 Telemetry is off by default. Set `STUDIO_TELEMETRY=on` to send usage events to beacon-datalake.org:
 
 ```bash
-STUDIO_TELEMETRY=on npm run build --omit=dev
+STUDIO_TELEMETRY=on npm run build
 ```
 ```powershell
-$env:STUDIO_TELEMETRY="on"; npm run build --omit=dev
+$env:STUDIO_TELEMETRY="on"; npm run build
 ```
 
 A build without `STUDIO_TELEMETRY=on` sends nothing, and the settings page shows no telemetry settings.
