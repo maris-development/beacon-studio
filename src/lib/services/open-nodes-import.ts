@@ -19,7 +19,6 @@ import {
 	findByUrl,
 	getCurrentNode,
 	getNodes,
-	migrateKey,
 	normalizeUrl,
 	selectNode
 } from './beacon-node';
@@ -27,9 +26,6 @@ import { getOpenNodes, loadOpenNodes, type OpenNode } from './open-nodes';
 
 /** The key of the normalized URLs that the app imported. */
 const IMPORTED_KEY = 'imported-open-node-urls';
-
-// An old storage key. It is a data format, not a term. Never rename it.
-migrateKey('imported-open-instance-urls', IMPORTED_KEY);
 
 const importedUrlsStore = persisted<string[]>(IMPORTED_KEY, []);
 

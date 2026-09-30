@@ -13,12 +13,14 @@ import { queryHistory } from '@/stores/query-history';
 import { savedQueries } from '@/stores/saved-queries';
 import {
 	decodeSharedQuery,
+	LEGACY_NODE_PARAM,
 	nodeRefFromUrl,
 	type NodeRef,
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { QueryCollection } from '@/stores/query-collection';
 import type { CompiledQuery } from '@/beacon-api/types';
+import type { CoordinatePair } from '@/geo/spatial-selection';
 import { resolveRef } from '@/services/beacon-node';
 import { addToast } from "@/stores/toasts";
 
@@ -92,9 +94,8 @@ export interface ResolvedUrlQuery {
 	storedQueryId?: string;
 	/**
 	 * The node that must run the query. A `?q=` link takes it from the record. A
-	 * share link takes it from `?node=`. It is null when the URL named none.
-	 * * Share link takes it from node in the sharedquery object, ?node= deprecated from url
-	 * The caller then falls back to its own default.
+	 * share link takes it from `nodeUrl` in its payload. It is null when the link
+	 * named none. The caller then falls back to its own default.
 	 */
 	node: NodeRef | null;
 	/**
@@ -103,6 +104,11 @@ export interface ResolvedUrlQuery {
 	 * null when the node resolves, and when the link named none.
 	 */
 	missingNodeUrl: string | null;
+	/**
+	 * The coordinate pair that a share link carried, or null. A link of an older
+	 * app version carries none. The new block then takes the pair of its query.
+	 */
+	coordinateColumns?: CoordinatePair | null;
 
 	/**
 	 * True if the URL had either `?q=` or `?query=`. A page uses this to decide
@@ -150,7 +156,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 	const shared = url.searchParams.get('query');
 	if (shared) {
 		try {
-			const payload = decodeSharedQuery(shared);
+			const payload = decodeSharedQuery(shared, url.searchParams.get(LEGACY_NODE_PARAM));
 			const node = sharedNodeRef(payload.nodeUrl);
 
 			return {
@@ -159,6 +165,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 				name: payload.name,
 				node,
 				missingNodeUrl: missingUrlOf(node),
+				coordinateColumns: payload.coordinateColumns ?? null,
 				containsQueryParam
 			};
 		} catch (error) {

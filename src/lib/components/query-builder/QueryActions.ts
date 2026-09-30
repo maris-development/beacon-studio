@@ -1,4 +1,4 @@
-import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
+import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 import { QueryWorkspace } from './QueryWorkspace.svelte';
 import { BeaconClient } from '@/beacon-api/client';
 import { addToast } from '@/stores/toasts';
@@ -6,6 +6,7 @@ import { saveQueryFrom } from '@/stores/saved-queries';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { runBlockReason } from '@/query/query-guard';
+import type { ShareableQuery } from '@/stores/stored-query';
 
 export type ActionCallback = (() => void | Promise<void>) | undefined;
 
@@ -23,20 +24,11 @@ export type QueryActions = {
      * URL and the token of that node. See `PythonQueryBuilder.toPythonCode`.
      *
      * The value is the resolved node. It is null when the node list holds no
-     * node for the query. Use {@link getNodeRef} where a URL is enough.
+     * node for the query. A share link uses the ref of {@link getShareableQuery}.
      */
     getNode?: () => BeaconNode | null;
-    /**
-     * The node ref of the active query, or null. A ref keeps the URL of a node
-     * that the app does not have. A share link therefore still names that node.
-     * See `buildShareLink`.
-     */
-    getNodeRef?: () => NodeRef | null;
-    /**
-     * The name of the active query, or an empty string. A share link carries it,
-     * so the receiver keeps the name of the sender. See `buildShareLink`.
-     */
-    getQueryName?: () => string;
+    /** The active query as a share link carries it, or null. See `buildShareLink`. */
+    getShareableQuery?: () => ShareableQuery | null;
     /**
      * The reason that the active query must not run, or null. The action bar
      * disables the run and download buttons with it, and names the reason.
@@ -65,12 +57,16 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return workspace.activeNode;
     }
 
-    function getNodeRef(): NodeRef | null {
-        return workspace.activeBlock?.node ?? null;
-    }
+    function getShareableQuery(): ShareableQuery | null {
+        const block = workspace.activeBlock;
+        if (!block) return null;
 
-    function getQueryName(): string {
-        return workspace.activeBlock?.name ?? '';
+        return {
+            compiled: QueryWorkspace.getQuery(block),
+            name: block.name,
+            node: block.node,
+            coordinateColumns: block.coordinateColumns ?? null
+        };
     }
   
     /** The reason that the active query must not run. See {@link runBlockReason}. */
@@ -249,8 +245,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         resetQuery,
         saveQuery,
         getNode,
-        getNodeRef,
-        getQueryName,
+        getShareableQuery,
         runBlockReason: activeRunBlockReason
     };
 }

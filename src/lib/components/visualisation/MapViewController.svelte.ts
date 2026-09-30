@@ -44,7 +44,7 @@ import {
 	loadColormaps,
 	paletteIndex
 } from '@/colors/palettes';
-import { detectCoordinateColumns } from '@/geo/coordinate-columns';
+import { resolveCoordinateColumns, type CoordinatePair } from '@/geo/spatial-selection';
 import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
 
@@ -141,18 +141,44 @@ export class MapViewController {
 	 */
 	private rgbTable: Uint8Array = getRgbTable(DEFAULT_PALETTE_ID);
 
-	/** Column names of the current query. Empty until a query runs. */
-	latitudeColumnName = $state('latitude');
-	longitudeColumnName = $state('longitude');
+	/**
+	 * The coordinate pair that the block stores, or null to detect it. See
+	 * {@link setCoordinateColumns}.
+	 */
+	private storedCoordinateColumns: CoordinatePair | null = null;
+
+	/** The resolved coordinate columns of the current query. Empty when none resolve. */
+	latitudeColumnName = $state('');
+	longitudeColumnName = $state('');
 
 	readonly rowCount = $derived(this.entry?.rowCount ?? 0);
 	/** The cache key of the current result. Changes with every new result. */
 	readonly datasetKey = $derived(this.entry?.key ?? null);
 	readonly durationMs = $derived(this.entry?.duration ?? 0);
-	/** True when the query selects both a latitude and a longitude column. */
-	readonly hasCoordinates = $derived.by(() => {
-		const { latitude, longitude } = detectCoordinateColumns(this.availableColumnNames);
-		return !!latitude && !!longitude;
+	/** True when the query has a latitude and a longitude column to plot. */
+	readonly hasCoordinates = $derived(!!this.latitudeColumnName && !!this.longitudeColumnName);
+
+	/** The resolved pair, or null. The coordinate columns dialog starts from it. */
+	readonly coordinateColumns = $derived.by<CoordinatePair | null>(() => {
+		if (!this.hasCoordinates) return null;
+		return { latitude: this.latitudeColumnName, longitude: this.longitudeColumnName };
+	});
+
+	/** True when a loaded result has rows but no coordinate columns resolve. */
+	readonly needsCoordinateColumns = $derived(
+		!!this.entry && this.entry.rowCount > 0 && !this.isLoading && !this.hasCoordinates
+	);
+
+	/**
+	 * The columns the user can pick as coordinates: the number columns of the
+	 * result. Before a result exists, every column of the query.
+	 */
+	readonly coordinateCandidates = $derived.by(() => {
+		if (!this.entry) return this.availableColumnNames;
+
+		return plottableColumns(this.entry.table)
+			.filter((column) => column.kind === 'number')
+			.map((column) => column.name);
 	});
 
 	/**
@@ -183,6 +209,7 @@ export class MapViewController {
 	private readonly firstNumericColumnName = $derived.by(() => {
 		if (!this.entry) return undefined;
 
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const numericColumnNames = new Set(
 			plottableColumns(this.entry.table)
 				.filter((column) => column.kind === 'number')
@@ -380,12 +407,19 @@ export class MapViewController {
 		});
 	}
 
-	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string, keepCamera: boolean): Promise<void> {
+	async runAndShowQuery(
+		query: CompiledQuery,
+		node: BeaconNode,
+		blockId: string,
+		keepCamera: boolean,
+		coordinateColumns: CoordinatePair | null
+	): Promise<void> {
 		this.isLoading = true;
 		const token = this.beginRun(blockId);
 		this.latestRun = token;
 
 		try {
+			this.storedCoordinateColumns = coordinateColumns;
 			this.deriveColumnNames(query);
 
 			this.entry = await BeaconClient.ensureQuery(query, node, blockId);
@@ -438,21 +472,60 @@ export class MapViewController {
 			return param.alias ?? param.column;
 		});
 
-		const { latitude, longitude } = detectCoordinateColumns(this.availableColumnNames);
+		this.resolveColumns();
+	}
 
-		if (!latitude || !longitude) {
-			throw new Error(
-				'Query must contain Latitude and Longitude columns (or columns containing these words (case insensitive))'
-			);
+	/**
+	 * Resolve the coordinate columns from the stored pair and the query. Returns
+	 * true when the resolved pair changed.
+	 */
+	private resolveColumns(): boolean {
+		const pair = resolveCoordinateColumns(this.storedCoordinateColumns, this.availableColumnNames);
+		const latitude = pair?.latitude ?? '';
+		const longitude = pair?.longitude ?? '';
+
+		if (latitude === this.latitudeColumnName && longitude === this.longitudeColumnName) {
+			return false;
 		}
 
-		this.latitudeColumnName = latitude.name;
-		this.longitudeColumnName = longitude.name;
+		this.latitudeColumnName = latitude;
+		this.longitudeColumnName = longitude;
+		return true;
+	}
+
+	/**
+	 * Follow the stored coordinate pair of the block. A new pair redraws the
+	 * current result with no new fetch. A run in flight picks the pair up itself.
+	 */
+	setCoordinateColumns(pair: CoordinatePair | null): void {
+		const hadCoordinates = this.hasCoordinates;
+		this.storedCoordinateColumns = pair;
+
+		if (!this.resolveColumns()) return;
+		if (!this.entry || this.isLoading || this.entry.rowCount === 0) return;
+
+		// A map that showed no points fits the camera to the new ones.
+		void this.prepareTable(hadCoordinates);
+	}
+
+	/** Remove the points from the map. */
+	private clearLayer(): void {
+		this.table = null;
+		this.layer = null;
+		this.renderedColumn = undefined;
+		this.overlay?.setProps({ layers: [] });
 	}
 
 	private async prepareTable(keepCamera: boolean): Promise<void> {
 		if (!this.entry) {
 			addToast({ type: 'error', message: 'No table data available to display.' });
+			return;
+		}
+
+		// The page asks the user for the pair. The result stays loaded.
+		if (!this.hasCoordinates) {
+			this.clearLayer();
+			this.isLoading = false;
 			return;
 		}
 

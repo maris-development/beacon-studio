@@ -44,7 +44,7 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Deployment/Base Path
 - `svelte.config.js` sets `kit.paths.base` from `BASE_PATH` env var.
-- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build --omit=dev`.
+- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`.
 - Keep path handling consistent by using SvelteKit helpers (`resolve`, `asset`) already used in the codebase.
 
 ## High-Level Architecture
@@ -89,7 +89,7 @@ This file is a quick operational guide for coding agents working in this reposit
 ## Data Flow (Important)
 1. User configures a query via easy/advanced builder or raw editor.
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
-3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name and the node URL. Use `encodeSharedQuery` / `decodeSharedQuery`; a bare gzipped `CompiledQuery` is rejected. The `CompiledQuery` inside it also serves as the persistent cache key.
+3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
 4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
 5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
@@ -116,8 +116,30 @@ This file is a quick operational guide for coding agents working in this reposit
 - Move every point of a ring by the same amount. A move per point breaks the shape: a box from -10 to 10 becomes a shape 340 degrees wide.
 - The compile and the read of an area are a round trip: `fromGeoJsonFilter` moves the first copy back to -180..180, so a share link redraws the area and recompiles to the same filters. Keep it that way. A read that infers a range from one copy breaks, because the first copy of a seam area is already in the map frame.
 - `QueryDraft.spatialFilter` holds the area, because it applies to two columns and has no card of its own. `QueryWorkspace.updateActiveSpatialFilter` writes it, and also handles a block that has no draft (share link, JSON editor) by patching `compiled.filters`.
-- The area carries the two columns it tests (`latitudeColumn` / `longitudeColumn`), because the user can pick another pair than the names say, for example `x` and `y`. Resolve the pair with `selectionColumns` (`geo/spatial-selection.ts`), never with `detectCoordinateColumns` alone: the names on the area win while the query still selects them, and detection is only the fallback for an older record. The draw tools rebuild the area on every shape change and drop the two names, so stamp them back with `withColumns` at the point of apply.
+- A block stores one coordinate pair: `StoredQuery.coordinateColumns` (null means detect). The map plots it, the area filter tests it, and the cross section plot reads it. `SpatialSelection` holds only the shape. Never put a pair on the area or on `view.map`.
+- Resolve the pair with `resolveCoordinateColumns` (`geo/spatial-selection.ts`), never with `detectCoordinateColumns` alone. The stored pair wins while the query selects both columns. Pass the pair to `compileDraft(draft, pair)`.
+- Write the pair only through `QueryWorkspace.updateActiveCoordinateColumns`, or through `updateActiveDraft(draft, pair)` when the area also changes. With an area filter the query changes and the result link drops. Without one the result stays.
+- A block from a query with no pair (share link without a pair, JSON editor, old record) takes the pair of its geo filter (`coordinateColumnsOf`) in `makeStoredQuery` and in the load migration. Without that, a recompile moves the filter to the detected pair and changes the query.
+- `CoordinateColumnsDialog` is the one picker for the pair. The map viewer and `GeospatialFilterModal` both open it. `Modal` boxes are transformed, so render the dialog as a sibling of another modal, never inside it.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
+
+## Persisted Data and Migrations (Important)
+Sort each persisted value into one class. The class decides whether a change needs a migration.
+
+| Class | Examples | Rule |
+|---|---|---|
+| Cache | OPFS Arrow cache, `datasetKey`, query history | Never migrate. Bump a version and discard. |
+| Preference or UI state | settings, selected node, data-browser node, blocks-state, `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
+| User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
+| External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
+
+- Never break a share link, also before 1.0. Keep each old field in the read, for example `instanceUrl` in `decodeSharedQuery`.
+- The `legacy` prop of `query.open` counts old links. Remove an old field only when that count stays at zero.
+- Before 1.0, a preference and a UI state can break with no migration.
+- A user-data migration stays until 1.0. At 1.0, delete the migrations of before 1.0.
+- From 1.0, keep every user-data migration.
+- A safe read with defaults is not a migration. Keep it.
+- Current user-data migrations: `migrateKey` in `services/beacon-node.ts`, and `migrateRecord` in `stores/query-collection.ts`.
 
 ## Layer Rule (Important)
 Imports point one way only:

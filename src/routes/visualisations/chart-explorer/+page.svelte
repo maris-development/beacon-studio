@@ -121,11 +121,16 @@
 		// The saved plots of this block belong on the page again. A block with no
 		// saved plots gets one default plot.
 		if (!isSameBlock) {
-			charts.applyViewState(block.id, block.view?.chart, block.draft?.spatialFilter ?? null);
+			charts.applyViewState(
+				block.id,
+				block.view?.chart,
+				block.draft?.spatialFilter ?? null,
+				block.coordinateColumns ?? null
+			);
 		} else {
 			// The same block can carry a new area, for example after the user applied
 			// a cross section on the map. A cross section plot reads that line.
-			charts.setSelection(block.draft?.spatialFilter ?? null);
+			charts.setSelection(block.draft?.spatialFilter ?? null, block.coordinateColumns ?? null);
 		}
 
 		// Show a cached result at once if the block already has one.
