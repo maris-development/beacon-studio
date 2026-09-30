@@ -198,6 +198,7 @@ export class ApacheArrowUtils {
      * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
+     * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
      * - For unsupported types, logs a warning and returns the stringified value.
      * 
      */
@@ -220,6 +221,10 @@ export class ApacheArrowUtils {
 
             case ApacheArrow.Type.Timestamp:
                 return new Date(value as number).toISOString();
+
+            // Arrow returns a date as epoch milliseconds.
+            case ApacheArrow.Type.Date:
+                return new Date(value as number).toISOString().slice(0, 10);
 
             case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
                 return JSON.stringify(value);
@@ -244,7 +249,7 @@ export class ApacheArrowUtils {
     /**
      * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
      *
-     * Supports columns of type Timestamp, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
+     * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
      * Skips null and undefined values during calculation.
      *
      * 
@@ -269,6 +274,7 @@ export class ApacheArrowUtils {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         switch ((colVec.type as any).typeId) {
             case ApacheArrow.Type.Timestamp:
+            case ApacheArrow.Type.Date:
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
                 break;
@@ -287,7 +293,8 @@ export class ApacheArrowUtils {
             if (value > max) max = value;
         }
 
-        return { min, max };
+        // An Int64 or Timestamp column holds bigints; callers expect numbers.
+        return { min: Number(min), max: Number(max) };
     }
 
 
@@ -301,7 +308,7 @@ export class ApacheArrowUtils {
      * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
      *
      * @remarks
-     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
+     * - Supports sorting for columns of type Timestamp, Date, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
      * - Null values are sorted to the end of the table.
      * - If the column does not exist or its type is unsupported, the original table is returned.
      * - The schema of the original table is preserved in the sorted table.
@@ -359,6 +366,7 @@ export class ApacheArrowUtils {
                 break;
 
             case ApacheArrow.Type.Float:
+            case ApacheArrow.Type.Date:
                 // Numeric sorting
                 sortedIndices = indexedArray.sort((a, b) => {
                     const valA = a.value as number;

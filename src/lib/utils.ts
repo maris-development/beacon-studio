@@ -167,15 +167,23 @@ export class Utils {
     }
 
     static isNumericDataType(datatype: DataType): boolean {
-        return ['Int64', 'Int32', 'Int8', 'Float32', 'Float64'].includes(datatype as string);
+        return DataTypes.isNumericDataType(datatype);
     }
 
     static isStringDataType(datatype: DataType): boolean {
-        return datatype === 'Utf8';
+        return DataTypes.isStringDataType(datatype);
     }
 
     static isTimestampDataType(datatype: DataType): boolean {
         return DataTypes.isTimestampDataType(datatype);
+    }
+
+    static isDateDataType(datatype: DataType): boolean {
+        return DataTypes.isDateDataType(datatype);
+    }
+
+    static isTemporalDataType(datatype: DataType): boolean {
+        return DataTypes.isTemporalDataType(datatype);
     }
 
     static isDictionaryOfStrings(datatype: DataType): boolean {
@@ -254,7 +262,7 @@ export class Utils {
     static filterToParameterFilterType(filter: Filter, dataType: DataType): ParameterFilterType | null {
         const isNumeric = Utils.isNumericDataType(dataType);
         const isString = Utils.isStringDataType(dataType);
-        const isTimestamp = Utils.isTimestampDataType(dataType);
+        const isTimestamp = Utils.isTemporalDataType(dataType);
         const isDictionaryString = Utils.isDictionaryOfStrings(dataType);
 
         if ('min' in filter && 'max' in filter) {

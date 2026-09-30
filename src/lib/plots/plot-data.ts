@@ -242,7 +242,11 @@ export function readNumericColumn(
 
 	// A column with no nulls can go through the typed array in one step. That is
 	// the common case, and it avoids one `get()` call per row.
-	if (vector.nullCount === 0 && vector.data.length === 1) {
+	// The raw values of a timestamp are in its own unit. Only `get()` converts them to milliseconds.
+	const rawIsMilliseconds =
+		!ApacheArrow.DataType.isTimestamp(vector.type) || vector.type.unit === ApacheArrow.TimeUnit.MILLISECOND;
+
+	if (rawIsMilliseconds && vector.nullCount === 0 && vector.data.length === 1) {
 		const raw = vector.toArray();
 
 		for (let i = 0; i < rows; i++) {
