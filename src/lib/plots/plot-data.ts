@@ -14,6 +14,7 @@
  * data. No svelte, no canvas.
  */
 import * as ApacheArrow from 'apache-arrow';
+import { ApacheArrowUtils } from '@/arrow-utils';
 import { makeAlongLineProjection } from '@/geo/along-line';
 import type { SpatialSelection } from '@/geo/spatial-selection';
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
@@ -242,11 +243,11 @@ export function readNumericColumn(
 
 	// A column with no nulls can go through the typed array in one step. That is
 	// the common case, and it avoids one `get()` call per row.
-	// The raw values of a timestamp are in its own unit. Only `get()` converts them to milliseconds.
-	const rawIsMilliseconds =
-		!ApacheArrow.DataType.isTimestamp(vector.type) || vector.type.unit === ApacheArrow.TimeUnit.MILLISECOND;
-
-	if (rawIsMilliseconds && vector.nullCount === 0 && vector.data.length === 1) {
+	if (
+		ApacheArrowUtils.rawValuesAreDecoded(vector.type) &&
+		vector.nullCount === 0 &&
+		vector.data.length === 1
+	) {
 		const raw = vector.toArray();
 
 		for (let i = 0; i < rows; i++) {

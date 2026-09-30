@@ -247,6 +247,38 @@ export class ApacheArrowUtils {
     }
 
     /**
+     * Whether `toArray()` gives the same values as `get()` for a column of this type.
+     *
+     * A Float16 column stores half-float bits, and a timestamp stores values in its
+     * own unit. Only `get()` decodes those to numbers and milliseconds.
+     */
+    static rawValuesAreDecoded(type: ApacheArrow.DataType): boolean {
+        if (ApacheArrow.DataType.isFloat(type)) {
+            return type.precision !== ApacheArrow.Precision.HALF;
+        }
+
+        if (ApacheArrow.DataType.isTimestamp(type)) {
+            return type.unit === ApacheArrow.TimeUnit.MILLISECOND;
+        }
+
+        return true;
+    }
+
+    /**
+     * The decoded values of a column, one per row.
+     *
+     * When the raw values are decoded, this returns the typed array, and a null slot reads as 0.
+     * Otherwise it reads each row with `get()`, and a null slot reads as null.
+     */
+    static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector['toArray']> {
+        if (ApacheArrowUtils.rawValuesAreDecoded(vector.type)) {
+            return vector.toArray();
+        }
+
+        return Array.from({ length: vector.length }, (_, i) => vector.get(i));
+    }
+
+    /**
      * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
      *
      * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
@@ -268,7 +300,7 @@ export class ApacheArrowUtils {
         if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
 
         const colVec: ApacheArrow.Vector = table.getChild(column);
-        const colArray = colVec.toArray();
+        const colArray = ApacheArrowUtils.decodedValues(colVec);
 
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -328,7 +360,7 @@ export class ApacheArrowUtils {
         if (colIndex === -1) return table;
 
         const sortColumn: ApacheArrow.Vector = table.getChild(column);
-        const sortedColumnArray = sortColumn.toArray();
+        const sortedColumnArray = ApacheArrowUtils.decodedValues(sortColumn);
         const indexedArray = [];
 
         for (let i = 0; i < sortedColumnArray.length; i++) {
@@ -636,8 +668,8 @@ export class ApacheArrowUtils {
             if (lat > maxLat) maxLat = lat;
         }
 
-        const lons = lonCol.toArray();
-        const lats = latCol.toArray();
+        const lons = ApacheArrowUtils.decodedValues(lonCol);
+        const lats = ApacheArrowUtils.decodedValues(latCol);
         const rows = Math.min(lons.length, lats.length);
 
         // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
