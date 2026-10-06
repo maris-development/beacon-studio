@@ -7,11 +7,9 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import * as Select from '$lib/components/ui/select/index.js';
+	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
 
-	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
-		$props();
-	let username = $state('');
-	let password = $state('');
+	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } = $props();
 	let table_name: string | null = $state(null);
 	let file_formats = ['bbf', 'arrow', 'parquet', 'netcdf'];
 	let selected_file_format: string | null = $state(null);
@@ -53,50 +51,23 @@
 			}
 		};
 
-		// Encode Basic Auth header
-		const token = btoa(`${username}:${password}`);
-		let json = JSON.stringify(table_config, null, 2);
-		// console.log('Creating table with config:', json);
+		// Sub-project 3 replaces this body with the external-table spec of the server.
 		try {
-			const res = await fetch(`${node.url}/api/admin/create-table`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Basic ${token}`,
-					'Content-Type': 'application/json'
-				},
-				body: json
-			});
+			const result = await withAdmin(node, (client) =>
+				client.admin.createExternalTable(table_config)
+			);
+			if (result === null) return;
 
-			if (!res.ok) {
-				const err = await res.text();
-				// console.log('Upload failed:', err);
-				throw new Error(err || 'Upload failed');
-			}
-
-			// console.log('Response:', res);
-
-			const data = await res.json();
-			message = `✅ Created table ${table_name}`;
+			message = `Created table ${table_name}`;
 			onCancel(true);
-		} catch (err: any) {
-			// console.log('Create error:', err);
-			message = `❌ ${err.message}`;
+		} catch (error) {
+			message = adminErrorMessage(error);
 		}
 	}
 </script>
 
 <Modal title="Create Table" onClose={() => onCancel(false)} width="50vw">
 	<div>
-		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="username">Admin Username</Label>
-			<Input id="username" type="text" bind:value={username} required />
-		</div>
-
-		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="password">Admin Password</Label>
-			<Input id="password" type="password" bind:value={password} required />
-		</div>
-
 		<div class="mb-4 grid w-full items-center gap-1.5">
 			<Label for="table_name">Table Name</Label>
 			<Input

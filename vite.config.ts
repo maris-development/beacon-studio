@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { execSync } from 'node:child_process';
 
 const DEFAULT_REPO_URL = 'https://github.com/maris-development/beacon-studio';
@@ -77,5 +77,9 @@ export default defineConfig({
 	},
 	css: {
 		devSourcemap: true
+	},
+	test: {
+		environment: 'jsdom',
+		include: ['src/**/*.test.ts']
 	}
 });

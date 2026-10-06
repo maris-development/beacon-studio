@@ -31,19 +31,9 @@
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
+	import { settings } from '@/stores/settings';
+	import { visibleGroups, type Group, type MenuItem } from './menu';
 
-	type SubItem = { title: string; url: string };
-	type MenuItem = {
-		title: string;
-		url: string;
-		/** Section root the item highlights on. Defaults to `url`. */
-		match?: string;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		icon: any;
-		children?: SubItem[];
-		target?: string;
-	};
-	type Group = { title: string; items: MenuItem[] };
 
 	const groups: Group[] = [
 		{
@@ -122,6 +112,8 @@
 			target: '_blank'
 		}
 	];
+
+	let shownGroups = $derived(visibleGroups(groups, $settings.adminFeatures));
 
 	// The layout owns both flags, because the page header holds the menu button.
 	let {
@@ -247,7 +239,7 @@
 	</div>
 
 	<div class="sidebar-content">
-		{#each groups as group (group.title)}
+		{#each shownGroups as group (group.title)}
 			<div class="menu-group">
 				<span class="menu-title">{group.title}</span>
 				{#each group.items as item (item.url)}

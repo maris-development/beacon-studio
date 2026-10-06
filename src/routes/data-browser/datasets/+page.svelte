@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { track } from '@/telemetry';
-	import { nodes } from '@/services/beacon-node';
-	import { ensureFresh } from '@/services/beacon-node-connect';
+	import { currentNode, nodes } from '@/services/beacon-node';
 	import { BeaconClient } from '@/beacon-api/client';
 	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
@@ -12,20 +11,15 @@
 	import { resolve } from '$app/paths';
 	import Button from '@/components/buttons/Button.svelte';
 	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
-	import { Label } from '@/components/ui/label';
-	import { dataBrowserNodeId } from '@/stores/data-browser-node';
+	import NodePicker from '@/components/NodePicker.svelte';
+	import AdminAction from '@/components/AdminAction.svelte';
 	import { Input } from '@/components/ui/input';
 
 	type Dataset = {
 		dataset: string;
 	};
 
-	let selectedNodeId = dataBrowserNodeId;
-	let selectedNode = $derived(
-		$nodes.find((node) => node.id === $selectedNodeId) ?? $nodes[0] ?? null
-	);
+	let selectedNode = $derived($currentNode);
 	let client: BeaconClient;
 
 	let columns: Column[] = $state([{ key: 'dataset', header: 'Dataset', sortable: false }]);
@@ -46,9 +40,6 @@
 		if (!selectedNode || selectedNode.id === loadedNodeId) return;
 		loadedNodeId = selectedNode.id;
 
-		// Persist a fallback pick (e.g. first node) the same as an explicit one.
-		if ($selectedNodeId !== selectedNode.id) selectedNodeId.set(selectedNode.id);
-
 		client = BeaconClient.new(selectedNode);
 		pageIndex = 1;
 		virtualSchemaData.resetFilter();
@@ -58,12 +49,6 @@
 
 		firstLoad = true; // let getDatasets() run again despite the isLoading guard
 		getDatasets();
-	});
-
-	// Show a true status dot for the picker. `ensureFresh` skips a check that is
-	// not due, so this costs nothing on a second visit.
-	$effect(() => {
-		for (const node of $nodes) void ensureFresh(node);
 	});
 
 	async function getDatasets() {
@@ -122,7 +107,9 @@
 			return false;
 		});
 
-		track('browser.search', { props: { scope: 'datasets', term: searchTerm.slice(0, 60), results: totalRows } });
+		track('browser.search', {
+			props: { scope: 'datasets', term: searchTerm.slice(0, 60), results: totalRows }
+		});
 
 		getPage();
 	}
@@ -162,49 +149,30 @@
 
 		<p>Explore and manage the datasets that are available in your Beacon node.</p>
 
-		<div class="mb-4 node-picker">
-			<Label size="sm" for="beacon-node-select">Beacon Node</Label>
-
-			<div class="flex items-center gap-2">
-				<Select.Root
-					type="single"
-					name="beaconNode"
-					value={selectedNode?.id ?? ''}
-					onValueChange={(id) => selectedNodeId.set(id)}
-				>
-					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
-						{selectedNode?.name ?? 'Select a node'}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Group>
-							<Select.Label>Nodes</Select.Label>
-							{#each $nodes as node (node.id)}
-								<Select.Item value={node.id} label={node.name}>
-									{node.name}
-								</Select.Item>
-							{/each}
-						</Select.Group>
-					</Select.Content>
-				</Select.Root>
-
-				{#if selectedNode}
-					<BeaconNodeStatus health={selectedNode} variant="dot" />
-				{/if}
-			</div>
-		</div>
+		<NodePicker />
 
 		{#if $nodes.length === 0}
-			<p>No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse datasets.</p>
+			<p>
+				No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse
+				datasets.
+			</p>
 		{:else}
 			<div class="table-header-row">
-				<Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+				<Input
+					type="search"
+					id="search"
+					placeholder="Search..."
+					class="search-input"
+					onchange={onSearchBoxChange}
+				/>
 
-				<Button
-					onclick={() => {
-						upload_files_modal_open = true;
-					}}
-					variant="outline">Upload Datasets</Button
-				>
+				<AdminAction>
+					{#snippet children({ disabled })}
+						<Button {disabled} variant="outline" onclick={() => (upload_files_modal_open = true)}>
+							Upload Datasets
+						</Button>
+					{/snippet}
+				</AdminAction>
 			</div>
 
 			<DataTable
@@ -237,12 +205,6 @@
 		align-items: center;
 		gap: 0.5rem;
 		margin-bottom: 0.5rem;
-	}
-
-	div.node-picker {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
 	}
 
 	div.page-container :global(tr.arrow-row) {

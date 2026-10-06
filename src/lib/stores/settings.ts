@@ -68,6 +68,8 @@ export interface BeaconStudioSettings {
 	// -- system ---------------------------------------------------------------
 	/** The refresh period of the system info page, in milliseconds. */
 	systemInfoUpdateIntervalMs: number;
+	/** Shows the admin features of a Beacon node. */
+	adminFeatures: boolean;
 
 	// -- telemetry ------------------------------------------------------------
 	/** Sends pseudonymous usage events to beacon-datalake.org. A random install id groups them. */
@@ -97,6 +99,7 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	sampleAfterRows: 500_000,
 
 	systemInfoUpdateIntervalMs: 1000,
+	adminFeatures: false,
 
 	telemetryEnabled: true,
 	telemetryQueryDetails: true,
@@ -307,6 +310,14 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 		step: 0.5,
 		unit: 'seconds',
 		scale: 1000
+	},
+	{
+		key: 'adminFeatures',
+		group: 'System',
+		type: 'boolean',
+		label: 'Show admin features',
+		description:
+			'Shows the admin pages and the admin actions, for example dataset upload. An admin action asks for the admin username and password of the Beacon node.'
 	},
 	{
 		key: 'telemetryEnabled',

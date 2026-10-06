@@ -2,6 +2,7 @@
 	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
 	import PageHeader from '@/components/sidebar/PageHeader.svelte';
 	import Confirm from '@/components/modals/Confirm.svelte';
+	import AdminSignInDialog from '@/components/modals/AdminSignInDialog.svelte';
 	import Toasts from '@/components/toasts/Toasts.svelte';
 	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
 	import { loadHomeExamples } from '@/data/home-examples';
@@ -68,6 +69,8 @@
 		</main>
 	</div>
 </div>
+
+<AdminSignInDialog />
 
 <!-- Last in the tree, so the question paints above a modal that asked it. -->
 <Confirm />

@@ -6,11 +6,11 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { BeaconNode } from '@/beacon-api/types';
+	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { addToast } from '@/stores/toasts';
 
-	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
+	let { onCancel = () => {}, node }: { onCancel: (uploaded: boolean) => void; node: BeaconNode } =
 		$props();
-	let username = $state('');
-	let password = $state('');
 	let files: FileList | null = $state(null);
 	let progress = $state(0);
 	let message = $state('');
@@ -23,38 +23,38 @@
 		}
 
 		uploading = true;
+		message = '';
+		progress = 0;
 
-		const formData = new FormData();
-		for (const file of files) {
-			// console.log('Appending file:', file.name);
-			formData.append('files', file);
-		}
-
-		// Encode Basic Auth header
-		const token = btoa(`${username}:${password}`);
+		const list = Array.from(files);
+		const totalBytes = list.reduce((sum, file) => sum + file.size, 0);
+		let doneBytes = 0;
+		let done = 0;
 
 		try {
-			const res = await fetch(`${node.url}/api/admin/upload-file`, {
-				method: 'POST',
-				headers: {
-					Authorization: `Basic ${token}`
-				},
-				body: formData
-			});
+			for (const file of list) {
+				const result = await withAdmin(node, (client) =>
+					client.admin.uploadDataset(file.name, file, {
+						onProgress: ({ uploaded }) => {
+							progress = Math.round(((doneBytes + uploaded) / totalBytes) * 100);
+						}
+					})
+				);
 
-			if (!res.ok) {
-				const err = await res.text();
-				// console.log('Upload failed:', err);
-				throw new Error(err || 'Upload failed');
+				if (result === null) {
+					message = 'Upload cancelled.';
+					return;
+				}
+
+				doneBytes += file.size;
+				done += 1;
+				progress = Math.round((doneBytes / totalBytes) * 100);
 			}
 
-			// console.log('Response:', res);
-
-			const data = await res.json();
-			message = `✅ Uploaded ${data.uploaded.length} file(s)`;
-		} catch (err: any) {
-			// console.log('Upload error:', err);
-			message = `❌ ${err.message}`;
+			message = `Uploaded ${done} file(s).`;
+		} catch (error) {
+			addToast({ type: 'error', message: adminErrorMessage(error) });
+			message = `Uploaded ${done} of ${list.length} file(s).`;
 		} finally {
 			uploading = false;
 		}
@@ -63,16 +63,6 @@
 
 <Modal title="Upload Datasets" onClose={() => onCancel(false)} width="50vw">
 	<div>
-		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="username">Admin Username</Label>
-			<Input id="username" type="text" bind:value={username} required />
-		</div>
-
-		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="password">Admin Password</Label>
-			<Input id="password" type="password" bind:value={password} required />
-		</div>
-
 		<div class="grid w-full max-w-sm items-center gap-1.5">
 			<Label for="dataset">Dataset</Label>
 			<Input id="dataset" type="file" multiple bind:files required />

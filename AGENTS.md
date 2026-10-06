@@ -9,6 +9,9 @@ Write strictly using **ASD-STE100 (Simplified Technical English)** constraints:
 ## Purpose
 This file is a quick operational guide for coding agents working in this repository.
 
+## Work in Progress
+- Admin mode: read `docs/superpowers/admin-mode-roadmap.md` first. It holds the status, the decisions and the next step.
+
 ## Project Snapshot
 - Name: beacon-studio-sv
 - Stack: SvelteKit 2, Svelte 5, TypeScript, Vite 6, Tailwind CSS 4, SCSS
@@ -50,7 +53,7 @@ This file is a quick operational guide for coding agents working in this reposit
 ## High-Level Architecture
 - App shell and navigation:
   - `src/routes/+layout.svelte`
-  - `src/lib/components/app-sidebar.svelte`
+  - `src/lib/components/sidebar/AppSidebar.svelte`
 - Landing and top-level sections:
   - `src/routes/+page.svelte`
   - `src/routes/queries/*`
@@ -71,8 +74,9 @@ This file is a quick operational guide for coding agents working in this reposit
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
-  - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/query-history`)
+  - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
+  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. Never ask for admin credentials in a page or a modal.)
   - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
     therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
     there, so a first-ever visit has no node list when a page mounts. A page that names a
@@ -87,13 +91,13 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/workers/ArrowProcessingWorkerManager.ts`
 
 ## Data Flow (Important)
-1. User configures a query via easy/advanced builder or raw editor.
+1. User configures a query in the builder (`QueryBuilder.svelte`, on `/queries/workbench`) or in the raw editor (`/queries/query-editor`).
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
 3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
 4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
 5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
-7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. The `queries/query-history` page lists them and re-runs each by navigating to a visualiser with `?q=<record id>`, and shares each as a `SharedQuery` in `?query=`; `query-editor` preloads a query supplied via either form.
+7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. The `queries/history` page lists them and re-runs each by navigating to a visualiser with `?q=<record id>`, and shares each as a `SharedQuery` in `?query=`; `query-editor` preloads a query supplied via either form.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
@@ -200,6 +204,7 @@ message the change never reaches production.
 - Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
+- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
   Inline expressions in Svelte markup, where a statement is not possible, are exempt.
@@ -210,7 +215,7 @@ message the change never reaches production.
 - Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
 - A canvas path holds about 150,000 arcs. Above that the browser drops the fill and reports no error, so the plot draws blank. `fillPointChunks` in `plots/uplot-render.ts` flushes the path every 10,000 arcs, and it also draws faster than one large path. Draw every point set through it. A palette bucket needs the same flush: the buckets divide the Z range, not the row count, so one bucket can hold every row.
-- `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including `markBlockRun`/`markBlockRunning` and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
+- `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including the run result that `queryStore.ensure()` writes and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
 
 ## Editing Guidance for Agents
 - Make minimal, localized changes; avoid broad refactors unless requested.
@@ -227,7 +232,7 @@ message the change never reaches production.
 - Run: `npm run check`
 - Run: `npm run lint`
 - If behavior changed, smoke-test relevant route(s):
-  - `/queries/query-workbench`
+  - `/queries/workbench`
   - `/queries/query-editor`
   - `/visualisations/map-viewer`
   - `/visualisations/table-explorer`
@@ -237,7 +242,7 @@ message the change never reaches production.
 ## Known Repo Facts
 - Static adapter outputs to `build/` and uses `fallback: 'index.html'`.
 - Monaco editor is included and loaded client-side.
-- Project currently contains generated `build/` artifacts in repo; avoid editing generated files directly unless explicitly asked.
+- `build/` holds generated artifacts. Git ignores it. Avoid editing generated files directly unless explicitly asked.
 
 ## Comment Rules
 - Write short comments.
