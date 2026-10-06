@@ -99,7 +99,13 @@ describe('runPreview', () => {
 			signal: new AbortController().signal
 		});
 
-		expect(result).toEqual({ columns: [], types: [], rows: [], truncated: false, cancelled: false });
+		expect(result).toEqual({
+			columns: [],
+			types: [],
+			rows: [],
+			truncated: false,
+			cancelled: false
+		});
 	});
 
 	it('passes a server error through', async () => {
@@ -108,5 +114,24 @@ describe('runPreview', () => {
 		await expect(runPreview(source, 'x', { signal: new AbortController().signal })).rejects.toThrow(
 			'bad sql'
 		);
+	});
+
+	it('passes a structured query through to the source', async () => {
+		let received: unknown = null;
+		const source: BatchSource = {
+			queryBatches: async (query) => {
+				received = query;
+				return { queryId: null, batches: (async function* () {})() };
+			}
+		};
+		const structured = {
+			select: [{ column: 'n' }],
+			from: { netcdf: { paths: ['a.nc'] } },
+			limit: 100
+		};
+
+		await runPreview(source, structured, { signal: new AbortController().signal });
+
+		expect(received).toEqual(structured);
 	});
 });

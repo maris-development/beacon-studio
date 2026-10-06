@@ -1,50 +1,47 @@
 <script lang="ts">
-	import { BeaconClient } from '@/beacon-api/client';
+	import { makeBeaconClient } from '@/beacon-api/client';
 	import { currentNode } from '@/services/beacon-node';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { resolve } from '$app/paths';
-
-	let currentNodeValue: BeaconNode | null = $state(null);
-	let client: BeaconClient;
+	import { untrack } from 'svelte';
 
 	let datasetsTitle: string = $state('Datasets');
 	let dataTablesTitle: string = $state('Data Tables');
 
-	onMount(() => {
-		currentNodeValue = $currentNode;
-		client = BeaconClient.new(currentNodeValue);
+	let nodeUrl = $derived($currentNode?.url ?? null);
 
-		countDatasets();
-		countDataTables();
+	$effect(() => {
+		if (!nodeUrl) return;
+		untrack(() => count());
 	});
 
-	function countDatasets() {
-		client
-			.getTotalDatasets()
-			.then((count) => {
-				if (count > 0) {
-					datasetsTitle = `${count} dataset${count > 1 ? 's' : ''}`;
-				}
-			})
-			.catch((error) => {
-				console.error('Error fetching dataset count:', error);
-			});
+	function plural(count: number, word: string): string {
+		if (count === 1) return `1 ${word}`;
+		return `${count.toLocaleString()} ${word}s`;
 	}
 
-	async function countDataTables() {
-		client
-			.getTables()
-			.then((tables) => {
-				if (tables.length > 0) {
-					dataTablesTitle = `${tables.length} data table${tables.length > 1 ? 's' : ''}`;
-				}
-			})
-			.catch((error) => {
-				console.error('Error fetching data tables:', error);
-			});
+	function count() {
+		const node = $currentNode;
+		if (!node) return;
+
+		const client = makeBeaconClient(node);
+		datasetsTitle = 'Datasets';
+		dataTablesTitle = 'Data Tables';
+
+		client.totalDatasets().then(
+			(total) => {
+				if (total > 0) datasetsTitle = plural(total, 'dataset');
+			},
+			() => {}
+		);
+
+		client.tables().then(
+			(tables) => {
+				if (tables.length > 0) dataTablesTitle = plural(tables.length, 'data table');
+			},
+			() => {}
+		);
 	}
 </script>
 
@@ -52,7 +49,7 @@
 	<title>Data Browser - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }]} />
+<Cookiecrumb crumbs={[{ label: 'Data Browser', href: resolve('/data-browser') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">

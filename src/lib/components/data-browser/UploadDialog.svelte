@@ -1,0 +1,321 @@
+<script lang="ts">
+	import { onDestroy } from 'svelte';
+	import Modal from '@/components/modals/Modal.svelte';
+	import Button from '@/components/buttons/Button.svelte';
+	import { Input } from '@/components/ui/input';
+	import { Label } from '@/components/ui/label';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { filesFromDrop, filesFromInput, type PickedFile } from './dropped-files';
+	import {
+		planUpload,
+		retryItems,
+		uploadProgress,
+		uploadSummary,
+		type UploadItem
+	} from '@/data-browser/upload';
+	import { formatSize } from '@/data-browser/datasets';
+
+	type Props = { node: BeaconNode; folder: string; onClose: () => void; onUploaded: () => void };
+
+	let { node, folder, onClose, onUploaded }: Props = $props();
+
+	let destination = $state(folder);
+	let overwrite = $state(false);
+	let picked: PickedFile[] = $state([]);
+	let items: UploadItem[] = $state([]);
+	let running = $state(false);
+	let finished = $state(false);
+	let dragOver = $state(false);
+	let controller: AbortController | null = null;
+
+	let progress = $derived(uploadProgress(items));
+	let summary = $derived(uploadSummary(items));
+
+	function setPicked(files: PickedFile[]) {
+		picked = files;
+		items = planUpload(
+			destination,
+			files.map((entry) => ({ relativePath: entry.relativePath, size: entry.file.size }))
+		);
+		finished = false;
+	}
+
+	async function onDrop(event: DragEvent) {
+		event.preventDefault();
+		dragOver = false;
+		if (running) return;
+		setPicked(await filesFromDrop(event));
+	}
+
+	function onPick(event: Event & { currentTarget: HTMLInputElement }) {
+		const list = event.currentTarget.files;
+		if (list) setPicked(filesFromInput(list));
+	}
+
+	function update(id: number, patch: Partial<UploadItem>) {
+		items = items.map((item) => {
+			if (item.id !== id) return item;
+			return { ...item, ...patch };
+		});
+	}
+
+	async function start() {
+		if (running || items.length === 0) return;
+
+		// The destination can change after the pick, so the targets follow it.
+		const planned = planUpload(
+			destination,
+			picked.map((entry) => ({ relativePath: entry.relativePath, size: entry.file.size }))
+		);
+		items = planned.map((item, index) => ({ ...item, status: items[index]?.status ?? 'waiting' }));
+
+		running = true;
+		controller = new AbortController();
+		const signal = controller.signal;
+
+		try {
+			for (const item of items) {
+				if (item.status === 'done') continue;
+				if (signal.aborted) break;
+
+				update(item.id, { status: 'uploading', uploaded: 0, error: '' });
+				const file = picked[item.id].file;
+
+				try {
+					const result = await withAdmin(node, (client) =>
+						client.admin.uploadDataset(item.target, file, {
+							overwrite,
+							signal,
+							onProgress: ({ uploaded }) => update(item.id, { uploaded })
+						})
+					);
+
+					if (result === null) {
+						update(item.id, { status: 'waiting', uploaded: 0 });
+						break;
+					}
+
+					update(item.id, { status: 'done', uploaded: item.size });
+				} catch (caught) {
+					if (signal.aborted) {
+						update(item.id, { status: 'waiting', uploaded: 0 });
+						break;
+					}
+					update(item.id, { status: 'failed', error: adminErrorMessage(caught) });
+				}
+			}
+		} finally {
+			running = false;
+			controller = null;
+			finished = items.length > 0 && items.every((item) => item.status !== 'waiting');
+			if (uploadSummary(items).done > 0) onUploaded();
+		}
+	}
+
+	function stop() {
+		controller?.abort();
+	}
+
+	function retry() {
+		items = retryItems(items);
+		void start();
+	}
+
+	function close() {
+		stop();
+		onClose();
+	}
+
+	onDestroy(stop);
+</script>
+
+<Modal title="Upload datasets" onClose={close} width="680px">
+	<div class="form">
+		<div class="field">
+			<Label for="upload-dest">Destination folder</Label>
+			<Input
+				id="upload-dest"
+				bind:value={destination}
+				placeholder="argo/2024/"
+				disabled={running}
+			/>
+		</div>
+
+		<div
+			class="drop"
+			class:over={dragOver}
+			role="region"
+			aria-label="Drop files or folders here"
+			ondragover={(event) => {
+				event.preventDefault();
+				dragOver = true;
+			}}
+			ondragleave={() => (dragOver = false)}
+			ondrop={onDrop}
+		>
+			<p>Drop files or folders here, or</p>
+			<div class="pickers">
+				<label class="pick">
+					Pick files
+					<input type="file" multiple disabled={running} onchange={onPick} />
+				</label>
+				<label class="pick">
+					Pick a folder
+					<input type="file" webkitdirectory disabled={running} onchange={onPick} />
+				</label>
+			</div>
+		</div>
+
+		<label class="check">
+			<input type="checkbox" bind:checked={overwrite} disabled={running} />
+			Replace existing files
+		</label>
+
+		{#if items.length > 0}
+			<div class="bar" aria-label="Progress"><span style="width: {progress}%"></span></div>
+			<p class="muted">
+				{summary.done} of {summary.total} done{#if summary.failed > 0}, {summary.failed} failed{/if}
+			</p>
+
+			<ul class="items">
+				{#each items as item (item.id)}
+					<li class={item.status}>
+						<span class="path">{item.target}</span>
+						<span class="size">{formatSize(item.size)}</span>
+						<span class="status">
+							{#if item.status === 'failed'}
+								{item.error}
+							{:else}
+								{item.status}
+							{/if}
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		{#if finished && summary.done > 0}
+			<p class="muted">
+				To query these files, create a table: run a crawler, or use Create external table.
+			</p>
+		{/if}
+	</div>
+
+	<div slot="footer" class="actions">
+		<Button variant="outline" onclick={close}>Close</Button>
+		{#if running}
+			<Button variant="destructive" onclick={stop}>Stop</Button>
+		{:else if summary.failed > 0}
+			<Button onclick={retry}>Retry failed</Button>
+		{:else}
+			<Button onclick={start} disabled={items.length === 0 || finished}>Upload</Button>
+		{/if}
+	</div>
+</Modal>
+
+<style lang="scss">
+	.form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.field {
+		display: grid;
+		gap: 0.375rem;
+	}
+
+	.drop {
+		padding: 1rem;
+		border: 2px dashed var(--border);
+		border-radius: 0.5rem;
+		text-align: center;
+
+		&.over {
+			border-color: var(--primary);
+			background: var(--accent);
+		}
+
+		p {
+			margin: 0 0 0.5rem;
+		}
+	}
+
+	.pickers {
+		display: flex;
+		justify-content: center;
+		gap: 0.75rem;
+	}
+
+	.pick {
+		padding: 0.375rem 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 0.375rem;
+		cursor: pointer;
+
+		input {
+			display: none;
+		}
+	}
+
+	.check {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.bar {
+		height: 0.5rem;
+		overflow: hidden;
+		border-radius: 0.25rem;
+		background: var(--secondary);
+
+		span {
+			display: block;
+			height: 100%;
+			background: var(--primary);
+			transition: width 0.2s;
+		}
+	}
+
+	.items {
+		max-height: 14rem;
+		margin: 0;
+		padding: 0;
+		overflow: auto;
+		list-style: none;
+		font-size: 0.8125rem;
+
+		li {
+			display: grid;
+			grid-template-columns: 1fr auto 8rem;
+			gap: 0.5rem;
+			padding: 0.25rem 0;
+			border-bottom: 1px solid var(--border);
+
+			&.failed .status {
+				color: var(--destructive);
+			}
+
+			&.done .status {
+				color: var(--muted-foreground);
+			}
+		}
+	}
+
+	.path {
+		word-break: break-all;
+	}
+
+	.size,
+	.muted {
+		color: var(--muted-foreground);
+	}
+
+	.actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.5rem;
+	}
+</style>

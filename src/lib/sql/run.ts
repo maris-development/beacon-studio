@@ -1,4 +1,8 @@
-import { rowsFromBatch, type ArrowRecordBatch } from '@maris-development/beacon-client';
+import {
+	rowsFromBatch,
+	type ArrowRecordBatch,
+	type QueryInput
+} from '@maris-development/beacon-client';
 
 export const PREVIEW_ROW_LIMIT = 500;
 
@@ -16,7 +20,7 @@ export interface PreviewResult {
 /** The part of the SDK client that the preview needs. */
 export interface BatchSource {
 	queryBatches(
-		query: string,
+		query: QueryInput,
 		signal?: AbortSignal
 	): Promise<{ queryId: string | null; batches: AsyncIterable<ArrowRecordBatch> }>;
 }
@@ -24,7 +28,7 @@ export interface BatchSource {
 /** Streams the result and stops at `limit` rows. A stop through `signal` keeps the rows so far. */
 export async function runPreview(
 	source: BatchSource,
-	sql: string,
+	query: QueryInput,
 	options: { signal: AbortSignal; limit?: number }
 ): Promise<PreviewResult> {
 	const limit = options.limit ?? PREVIEW_ROW_LIMIT;
@@ -39,7 +43,7 @@ export async function runPreview(
 	let truncated = false;
 
 	try {
-		const { batches } = await source.queryBatches(sql, request.signal);
+		const { batches } = await source.queryBatches(query, request.signal);
 
 		for await (const batch of batches) {
 			if (columns.length === 0) {

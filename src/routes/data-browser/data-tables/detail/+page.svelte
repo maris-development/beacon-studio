@@ -280,7 +280,7 @@
 			{#if tab === 'schema'}
 				<SchemaTable load={loadSchema} {onFilter} />
 			{:else if tab === 'preview'}
-				<PreviewGrid source={client} sql={previewSql(ref, defaults)} />
+				<PreviewGrid source={client} query={previewSql(ref, defaults)} />
 			{:else if !$settings.adminFeatures}
 				<p class="muted">
 					The definition needs admin features. Turn on "Show admin features" in Settings.
