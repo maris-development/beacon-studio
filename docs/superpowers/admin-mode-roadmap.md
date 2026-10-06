@@ -16,7 +16,7 @@ Users who are not technical must see almost no change.
 | 2 | SQL editor with catalogue | [spec](specs/2026-10-06-sql-editor-design.md) (approved) | [plan](plans/2026-10-06-sql-editor.md) | Code complete, not committed. Verified 2026-10-06: 95 tests pass (69 new), `npm run check` clean, no lint errors in new files, `npm run build` passes. Manual test (plan Task 11) still open. |
 | 3 | Tables | [spec 3+4+5](specs/2026-10-06-data-browser-design.md) (approved) | [plan](plans/2026-10-06-data-browser-tables.md) | Code complete, not committed. Verified 2026-10-06: 133 tests pass (29 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 9 Step 3) still open. |
 | 4 | Datasets | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-datasets.md) | Code complete. Verified 2026-10-06: 157 tests pass (24 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 8 Step 2) still open. |
-| 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) (user review pending; build after step 4) | - |
+| 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) | Code complete, not committed. Verified 2026-10-06: 176 tests pass (19 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 5 Step 3) still open. |
 | 6 | Users and roles | - | - | - |
 | 7 | System info | - | - | - |
 

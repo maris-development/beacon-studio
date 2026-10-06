@@ -79,7 +79,8 @@
 					icon: Table2Icon,
 					children: [
 						{ title: 'Datasets', url: resolve('/data-browser/datasets') },
-						{ title: 'Data Tables', url: resolve('/data-browser/data-tables') }
+						{ title: 'Data Tables', url: resolve('/data-browser/data-tables') },
+						{ title: 'Crawlers', url: resolve('/data-browser/crawlers'), adminOnly: true }
 					]
 				},
 				{ title: 'System Info', url: resolve('/system-info'), icon: CpuIcon }

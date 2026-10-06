@@ -36,6 +36,7 @@ This file is a quick operational guide for coding agents working in this reposit
   new code, and migrate existing usage toward it instead of extending the local
   client. Reuse the SDK's query builder and result handling rather than
   reimplementing them locally.
+- One temporary exception: `src/lib/beacon-api/crawler-run.ts` calls `POST /api/admin/crawlers/{name}/run` itself, because the SDK `admin.runCrawler()` returns `void` and drops the crawl report. Delete the file when an SDK release returns the report. Add no other direct calls.
 
 ## Core Commands
 - Install deps: `npm install`
