@@ -5,7 +5,7 @@
 	import { page } from '$app/state';
 	import { Utils, VirtualPaginationArrowTableData } from '@/utils';
 	import { addToast } from '@/stores/toasts';
-	import { track } from '@/telemetry';
+	import { describeQuery, track } from '@/telemetry';
 	import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 	import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 	import { queryStore } from '@/stores/query-store.svelte';
@@ -151,20 +151,34 @@
 		isLoading = true;
 
 		try {
-			entry = await BeaconClient.ensureQuery(query, node, block.id);
-			workspace.markBlockRun(block.id, entry.rowCount);
+			const result = await BeaconClient.ensureQuery(query, node, block.id);
 
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: entry.rowCount,
-				props: { kind: 'table' }
-			});
+			entry = result;
+			workspace.markBlockRun(block.id, result.rowCount);
 
-			if (entry.rowCount === 0) {
+			const readyAt = performance.now();
+
+			// An empty result is a view as well. The map and the chart report it too,
+			// so the counts of the three stay comparable.
+			const reportVisualise = () =>
+				track('query.visualise', {
+					nodeHost: node.url,
+					rowCount: result.rowCount,
+					queryId: result.queryId,
+					props: {
+						...describeQuery(query),
+						kind: 'table',
+						tier: result.stats?.tier,
+						renderMs: Math.round(performance.now() - readyAt)
+					}
+				});
+
+			if (result.rowCount === 0) {
 				isLoading = false;
 				columns = [];
 				displayRows = [];
 				totalRows = 0;
+				reportVisualise();
 				addToast({
 					type: 'info',
 					message: `Query executed successfully but returned no data.`
@@ -173,6 +187,7 @@
 			}
 
 			prepareTableForDisplay();
+			reportVisualise();
 		} catch (error) {
 			workspace.endBlockRun(block.id, token);
 			if (latestRun === token) isLoading = false;

@@ -30,6 +30,13 @@ import { normalizeUrl } from './beacon-node-url';
 export type { BeaconNode, NodeRef, StoredBeaconNode };
 export { normalizeUrl };
 
+/**
+ * What added a node, or what selected one. Only `user` is an action of the user:
+ * `import` is the public list at startup, and `host` is the node of the current
+ * host root. The value goes into the telemetry event.
+ */
+export type NodeActionSource = 'user' | 'import' | 'host';
+
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
 export type BeaconNodeInput = {
 	name: string;
@@ -41,15 +48,12 @@ export type BeaconNodeInput = {
 const LIST_KEY = 'beacon-nodes';
 const SELECTED_KEY = 'current-beacon-node-id';
 
-/** The key of the app version that persisted the full selected object. */
-const LEGACY_SELECTED_KEY = 'current-beacon-instance';
-
 /**
  * Moves the raw value of a renamed local storage key. The function writes only
  * when the new key is absent, and then removes the old key. Call it before a
  * `persisted()` store reads the new key.
  */
-export function migrateKey(oldKey: string, newKey: string): void {
+function migrateKey(oldKey: string, newKey: string): void {
 	if (!browser) return;
 
 	const value = window.localStorage.getItem(oldKey);
@@ -69,52 +73,6 @@ migrateKey('current-beacon-instance-id', SELECTED_KEY);
 
 const listStore = persisted<StoredBeaconNode[]>(LIST_KEY, []);
 const selectedIdStore = persisted<string | null>(SELECTED_KEY, null);
-
-/**
- * Moves an old selection to the new key. The app kept a full copy of the
- * selected node. It now keeps the id only. The function runs once, because it
- * deletes the old key.
- */
-function migrateLegacySelection(): void {
-	if (!browser) return;
-
-	const raw = window.localStorage.getItem(LEGACY_SELECTED_KEY);
-	if (raw === null) return;
-
-	try {
-		const legacy = JSON.parse(raw) as BeaconNode | null;
-
-		if (legacy?.id && get(selectedIdStore) === null) {
-			selectedIdStore.set(legacy.id);
-		}
-	} catch (error) {
-		console.warn('Could not read the old Beacon node selection.', error);
-	}
-
-	window.localStorage.removeItem(LEGACY_SELECTED_KEY);
-}
-
-migrateLegacySelection();
-
-/**
- * Puts every stored URL in the form of {@link normalizeUrl}. An older app
- * version stored the value of the user, so a record can hold a trailing slash
- * or a mixed case host.
- *
- * The function writes only when a URL changes. It is therefore safe to run on
- * every start, and a list that needs no change writes nothing.
- */
-function migrateNodeUrls(): void {
-	if (!browser) return;
-
-	const list = get(listStore);
-
-	if (list.every((node) => node.url === normalizeUrl(node.url))) return;
-
-	listStore.set(list.map((node) => ({ ...node, url: normalizeUrl(node.url) })));
-}
-
-migrateNodeUrls();
 
 // -- Reads ------------------------------------------------------------------
 
@@ -219,7 +177,7 @@ function applyInput(node: StoredBeaconNode, input: Partial<BeaconNodeInput>): St
  * Adds a node to the end of the list. The function selects the new node when
  * the app has no selection. It never replaces a selection.
  */
-export function addNode(input: BeaconNodeInput): BeaconNode {
+export function addNode(input: BeaconNodeInput, source: NodeActionSource = 'user'): BeaconNode {
 	const now = new Date();
 
 	const stored: StoredBeaconNode = {
@@ -237,6 +195,8 @@ export function addNode(input: BeaconNodeInput): BeaconNode {
 	if (getCurrentNode() === null) {
 		selectedIdStore.set(stored.id);
 	}
+
+	track('node.add', { nodeHost: stored.url, props: { hasToken: stored.token !== '', source } });
 
 	return { ...stored, ...UNKNOWN_HEALTH };
 }
@@ -263,6 +223,14 @@ export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconN
 			return updated;
 		})
 	);
+
+	track('node.update', {
+		nodeHost: updated.url,
+		props: {
+			urlChanged: updated.url !== previous.url,
+			tokenChanged: updated.token !== previous.token
+		}
+	});
 
 	if (updated.token !== previous.token) {
 		dropHealth(updated.url);
@@ -295,11 +263,13 @@ export function removeNode(id: string): BeaconNode | null {
 		selectFirstIfNone();
 	}
 
+	track('node.remove', { nodeHost: removed.url, props: { wasSelected } });
+
 	return removed;
 }
 
 /** Selects a node. Pass `null` to clear the selection. */
-export function selectNode(id: string | null): void {
+export function selectNode(id: string | null, source: NodeActionSource = 'user'): void {
 	if (id !== null && findById(id) === null) {
 		console.warn(`No Beacon node has the id "${id}". The app keeps the selection.`);
 		return;
@@ -308,7 +278,11 @@ export function selectNode(id: string | null): void {
 	selectedIdStore.set(id);
 
 	const selected = id === null ? null : findById(id);
-	track('node.select', { nodeHost: selected?.url });
+
+	track('node.select', {
+		nodeHost: selected?.url,
+		props: { status: selected ? getHealthOf(selected.url).status : 'none', source }
+	});
 }
 
 /**

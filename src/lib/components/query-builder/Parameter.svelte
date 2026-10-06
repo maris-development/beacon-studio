@@ -49,7 +49,11 @@
 
 				<div class="filter-wrapper">
 			
-					<ParameterFilter class="advanced-filter" bind:filter={filter.filter_value} />
+					<ParameterFilter
+						class="advanced-filter"
+						dateOnly={Utils.isDateDataType(column.type)}
+						bind:filter={filter.filter_value}
+					/>
 					
 
 					<Button variant="ghost" size="xs"

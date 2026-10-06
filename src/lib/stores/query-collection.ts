@@ -25,6 +25,7 @@ import {
 	type StoredQueryInput,
 	type StoredQueryRole
 } from '@/stores/stored-query';
+import { coordinateColumnsOf } from '@/geo/spatial-selection';
 
 /** What makes two records the same entry within one collection. */
 export type CollectionIdentity = 'id' | 'datasetKey';
@@ -55,24 +56,37 @@ function recencyOf(entry: StoredQuery): number {
 }
 
 /**
- * A record as an older app version wrote it: the node ref sat on `instance`.
- * That name is a storage format, not a term. Never rename it.
+ * A record as an older app version wrote it. The node ref sat on `instance`,
+ * and the record had no coordinate pair. `instance` is a storage format, not a
+ * term. Never rename it.
  */
-type LegacyRecord = StoredQuery & { instance?: StoredQuery['node'] };
+type LegacyRecord = Omit<StoredQuery, 'coordinateColumns'> & {
+	instance?: StoredQuery['node'];
+	coordinateColumns?: StoredQuery['coordinateColumns'];
+};
 
 /**
- * Moves the node ref of a stored record onto `node`. It returns null for a
- * record that needs no change, so the caller writes only when something moved.
- *
- * The migration also clears `datasetKey`. The cache key format changed with the
- * field, so an old key matches no entry of either cache tier.
+ * Brings a stored record to the current shape. It returns null for a record
+ * that needs no change, so the caller writes only when something moved.
  */
 function migrateRecord(entry: LegacyRecord): StoredQuery | null {
-	if (!entry.instance) return null;
+	let migrated: LegacyRecord | null = null;
 
-	const { instance, ...rest } = entry;
+	// The node ref moves onto `node`. The cache key format changed with the
+	// field, so an old key matches no entry of either cache tier.
+	if (entry.instance) {
+		const { instance, ...rest } = entry;
+		migrated = { ...rest, node: entry.node ?? instance, datasetKey: null };
+	}
 
-	return { ...rest, node: entry.node ?? instance, datasetKey: null };
+	// The geo filter of the stored query names the pair. The query does not
+	// change, so the cache key stays.
+	if (entry.coordinateColumns === undefined) {
+		const source = migrated ?? entry;
+		migrated = { ...source, coordinateColumns: coordinateColumnsOf(source.compiled?.filters) };
+	}
+
+	return migrated as StoredQuery | null;
 }
 
 export class QueryCollection implements Readable<StoredQuery[]> {

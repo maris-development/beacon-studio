@@ -25,11 +25,11 @@ This file is a quick operational guide for coding agents working in this reposit
   or graceful fallback.
 
 ## API Client Strategy (Important)
-- **Migrate to `@beacon/client`** (installed via `package.json` as
-  `"@beacon/client": "file:../beacon/clients/beacon-ts"`). It is the isomorphic
+- **Migrate to `@maris-development/beacon-client`** (the npm package, source in the
+  `beacon` repo under `beacon-clients/beacon-ts`). It is the isomorphic
   TypeScript SDK for querying Beacon (browser + Node), with a fluent query builder,
   Arrow/CSV result decoding, and admin endpoints. See its README for the full API.
-- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@beacon/client` for
+- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@maris-development/beacon-client` for
   new code, and migrate existing usage toward it instead of extending the local
   client. Reuse the SDK's query builder and result handling rather than
   reimplementing them locally.
@@ -44,7 +44,7 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Deployment/Base Path
 - `svelte.config.js` sets `kit.paths.base` from `BASE_PATH` env var.
-- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build --omit=dev`.
+- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`.
 - Keep path handling consistent by using SvelteKit helpers (`resolve`, `asset`) already used in the codebase.
 
 ## High-Level Architecture
@@ -57,7 +57,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/routes/visualisations/*`
   - `src/routes/data-browser/*`
 - API client and query model:
-  - `@beacon/client` — preferred SDK; built via `makeBeaconClient` in `src/lib/beacon-api/client.ts`
+  - `@maris-development/beacon-client` — preferred SDK; built via `makeBeaconClient` in `src/lib/beacon-api/client.ts`
   - `src/lib/beacon-api/client.ts` — legacy client, now metadata/download only
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
@@ -89,15 +89,17 @@ This file is a quick operational guide for coding agents working in this reposit
 ## Data Flow (Important)
 1. User configures a query via easy/advanced builder or raw editor.
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
-3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name and the node URL. Use `encodeSharedQuery` / `decodeSharedQuery`; a bare gzipped `CompiledQuery` is rejected. The `CompiledQuery` inside it also serves as the persistent cache key.
-4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@beacon/client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
-5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@beacon/client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
+3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
+4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
+5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
 7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. The `queries/query-history` page lists them and re-runs each by navigating to a visualiser with `?q=<record id>`, and shares each as a `SharedQuery` in `?query=`; `query-editor` preloads a query supplied via either form.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
 - Map viewer requires latitude/longitude query columns and builds the GeoArrow point geometry client-side (`ApacheArrowUtils.addPointGeometryColumn`). `detectCoordinateColumns` (`geo/coordinate-columns.ts`) is the single rule that finds those two columns by name. Use it; do not repeat the match.
+- `beacon-api/data-type.ts` holds the checks on a schema `DataType` (number, string, Timestamp, Date, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
+- A `Date32` / `Date64` column takes the same ISO filter strings as a Timestamp column (`2020-01-01T00:00:00Z`), so the builder gives both the timestamp filters (`isTemporalDataType`). The server drops the time from the literal (`gt 2020-06-16T12:00:00Z` excludes the whole 16th), so a date column gets a date-only input (`DateTimeInput` `dateOnly`) and stores `YYYY-MM-DD`. Arrow JS returns a date value as epoch milliseconds.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
 - The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info), plus the `static` execution and cache-control facade (`ensureQuery`, `peekQuery*`, `invalidateQueryCache`, cache stats/toggle). Its Parquet query path and `parquet-wasm` have been removed.
 - `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
@@ -114,8 +116,30 @@ This file is a quick operational guide for coding agents working in this reposit
 - Move every point of a ring by the same amount. A move per point breaks the shape: a box from -10 to 10 becomes a shape 340 degrees wide.
 - The compile and the read of an area are a round trip: `fromGeoJsonFilter` moves the first copy back to -180..180, so a share link redraws the area and recompiles to the same filters. Keep it that way. A read that infers a range from one copy breaks, because the first copy of a seam area is already in the map frame.
 - `QueryDraft.spatialFilter` holds the area, because it applies to two columns and has no card of its own. `QueryWorkspace.updateActiveSpatialFilter` writes it, and also handles a block that has no draft (share link, JSON editor) by patching `compiled.filters`.
-- The area carries the two columns it tests (`latitudeColumn` / `longitudeColumn`), because the user can pick another pair than the names say, for example `x` and `y`. Resolve the pair with `selectionColumns` (`geo/spatial-selection.ts`), never with `detectCoordinateColumns` alone: the names on the area win while the query still selects them, and detection is only the fallback for an older record. The draw tools rebuild the area on every shape change and drop the two names, so stamp them back with `withColumns` at the point of apply.
+- A block stores one coordinate pair: `StoredQuery.coordinateColumns` (null means detect). The map plots it, the area filter tests it, and the cross section plot reads it. `SpatialSelection` holds only the shape. Never put a pair on the area or on `view.map`.
+- Resolve the pair with `resolveCoordinateColumns` (`geo/spatial-selection.ts`), never with `detectCoordinateColumns` alone. The stored pair wins while the query selects both columns. Pass the pair to `compileDraft(draft, pair)`.
+- Write the pair only through `QueryWorkspace.updateActiveCoordinateColumns`, or through `updateActiveDraft(draft, pair)` when the area also changes. With an area filter the query changes and the result link drops. Without one the result stays.
+- A block from a query with no pair (share link without a pair, JSON editor, old record) takes the pair of its geo filter (`coordinateColumnsOf`) in `makeStoredQuery` and in the load migration. Without that, a recompile moves the filter to the detected pair and changes the query.
+- `CoordinateColumnsDialog` is the one picker for the pair. The map viewer and `GeospatialFilterModal` both open it. `Modal` boxes are transformed, so render the dialog as a sibling of another modal, never inside it.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
+
+## Persisted Data and Migrations (Important)
+Sort each persisted value into one class. The class decides whether a change needs a migration.
+
+| Class | Examples | Rule |
+|---|---|---|
+| Cache | OPFS Arrow cache, `datasetKey`, query history | Never migrate. Bump a version and discard. |
+| Preference or UI state | settings, selected node, data-browser node, blocks-state, `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
+| User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
+| External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
+
+- Never break a share link, also before 1.0. Keep each old field in the read, for example `instanceUrl` in `decodeSharedQuery`.
+- The `legacy` prop of `query.open` counts old links. Remove an old field only when that count stays at zero.
+- Before 1.0, a preference and a UI state can break with no migration.
+- A user-data migration stays until 1.0. At 1.0, delete the migrations of before 1.0.
+- From 1.0, keep every user-data migration.
+- A safe read with defaults is not a migration. Keep it.
+- Current user-data migrations: `migrateKey` in `services/beacon-node.ts`, and `migrateRecord` in `stores/query-collection.ts`.
 
 ## Layer Rule (Important)
 Imports point one way only:
@@ -129,11 +153,41 @@ Imports point one way only:
   up into a component to get them.
 - `src/lib/stores/*` must never import from `src/lib/components/*`. The persisted shape of a query
   (`QueryDraft`) is domain, not view.
+- `src/lib/telemetry/*` sits beside `stores/` and reads `stores/settings`. Therefore
+  `stores/settings.ts` must never import telemetry. `watchSettings` in `telemetry/index.ts` diffs the
+  store and reports a change from there.
 - `src/lib/components/*` holds `.svelte` files, plus the `.svelte.ts` runes classes and the barrel
   `index.ts` files that belong to one component folder. Anything with no Svelte dependency and more
   than one consumer belongs below, in `query/` or `geo/`.
 - New non-component files under `src/lib/query/*` and `src/lib/geo/*` use kebab-case, matching
   `stores/` and `beacon-api/`. Components keep PascalCase.
+
+## Telemetry (Important)
+Read `src/lib/telemetry/README.md` before you add an event.
+
+- Event names are a **closed list on both sides**: `ActionName` in `telemetry/types.ts`, and
+  `TelemetryValidator::NAMES` on `beacon-datalake.org`. The server drops an unknown name with no
+  error and no log line. Land the server list first, then Studio.
+- **The `studio_telemetry` table takes no new columns**, unless absolutely required. Discuss that with
+  the user first. Every new field goes in the `props` JSON object. A new column needs a change in
+  three places plus a migration, and that is a separate job.
+- The server **drops a whole `props` object** above its cap; it does not cut it. `track` routes every
+  object through `fitProps`, which degrades in steps. Never build an event that bypasses `track`.
+- A build sends telemetry only with `STUDIO_TELEMETRY=on` (`TELEMETRY_BUILD_ENABLED` in `build-info.ts`).
+  Without it, `isDisabled()` stops everything and the settings page hides the Telemetry group.
+  Code must not expect the telemetry settings to appear on the page.
+- Add `describeQuery(query)` to the props of every query event. Query content is open data
+  (ERA5, WOD), so the filter values go out as well, and the time range is the most used field.
+
+### The two files outside this repo
+| Part | Path |
+|---|---|
+| Receiver (the endpoint that Studio posts to) | `S:\www\beacon-datalake.org\src\Controller\Api\TelemetryController.php` |
+| Dashboard (the page that reads the events) | `S:\application\beacon-datalake.org\management\src\Controller\StudioTelemetryController.php` |
+
+Edit either file **only when the task needs it**. Both live in another repository, on a slow share.
+**Always tell the user which of the two you changed.** The user deploys them by hand. Without that
+message the change never reaches production.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
@@ -165,7 +219,7 @@ Imports point one way only:
   - builders (`query-builder/*`)
   - editor (`query-editor/*`)
   - visualizers (`visualisations/*`)
-  - API client (`@beacon/client`; legacy `beacon-api/client.ts` where still used)
+  - API client (`@maris-development/beacon-client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 

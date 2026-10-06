@@ -14,9 +14,13 @@
  * data. No svelte, no canvas.
  */
 import * as ApacheArrow from 'apache-arrow';
+import { ApacheArrowUtils } from '@/arrow-utils';
 import { makeAlongLineProjection } from '@/geo/along-line';
-import type { SpatialSelection } from '@/geo/spatial-selection';
-import { detectCoordinateColumns } from '@/geo/coordinate-columns';
+import {
+	resolveCoordinateColumns,
+	type CoordinatePair,
+	type SpatialSelection
+} from '@/geo/spatial-selection';
 import { MAX_LINE_GROUPS, usesZColumn, type PlotConfig } from './plot-config';
 
 /** How the values of a column are read, and how a tick label is formatted. */
@@ -121,6 +125,8 @@ export function formatSeriesCaption(
 export interface PlotDataContext {
 	/** The spatial filter of the query. A cross section plot reads its line. */
 	selection?: SpatialSelection | null;
+	/** The stored coordinate pair of the block, or null to detect it. */
+	coordinateColumns?: CoordinatePair | null;
 }
 
 // -- columns -----------------------------------------------------------------
@@ -242,7 +248,11 @@ export function readNumericColumn(
 
 	// A column with no nulls can go through the typed array in one step. That is
 	// the common case, and it avoids one `get()` call per row.
-	if (vector.nullCount === 0 && vector.data.length === 1) {
+	if (
+		ApacheArrowUtils.rawValuesAreDecoded(vector.type) &&
+		vector.nullCount === 0 &&
+		vector.data.length === 1
+	) {
 		const raw = vector.toArray();
 
 		for (let i = 0; i < rows; i++) {
@@ -273,7 +283,7 @@ export function readNumericColumn(
  *
  * The line comes from the spatial filter of the query. The coordinates come from
  * the latitude and longitude columns of the result, which
- * {@link detectCoordinateColumns} finds by name.
+ * {@link resolveCoordinateColumns} finds.
  *
  * The message on failure names what is missing. A cross section plot fails for
  * three separate reasons, and the user fixes each one somewhere else: on the
@@ -281,7 +291,8 @@ export function readNumericColumn(
  */
 function crossSectionDistances(
 	table: ApacheArrow.Table,
-	selection: SpatialSelection | null | undefined
+	selection: SpatialSelection | null | undefined,
+	coordinateColumns: CoordinatePair | null | undefined
 ): { values: Float64Array } | { message: string } {
 	if (!selection || selection.mode !== 'cross-section' || !selection.line) {
 		return {
@@ -296,14 +307,14 @@ function crossSectionDistances(
 	}
 
 	const names = table.schema.fields.map((field) => field.name);
-	const detection = detectCoordinateColumns(names);
+	const columns = resolveCoordinateColumns(coordinateColumns, names);
 
-	if (!detection.latitude || !detection.longitude) {
+	if (!columns) {
 		return { message: 'The result has no latitude and longitude columns, so it has no distance.' };
 	}
 
-	const latitude = readNumericColumn(table, detection.latitude.name);
-	const longitude = readNumericColumn(table, detection.longitude.name);
+	const latitude = readNumericColumn(table, columns.latitude);
+	const longitude = readNumericColumn(table, columns.longitude);
 
 	if (!latitude || !longitude) {
 		return { message: 'The latitude and longitude columns hold no numbers.' };
@@ -562,7 +573,11 @@ export function buildPlotSeries(
 	let xKind: PlotColumnKind = 'number';
 
 	if (plot.type === 'cross-section') {
-		const distances = crossSectionDistances(table, context.selection);
+		const distances = crossSectionDistances(
+			table,
+			context.selection,
+			context.coordinateColumns
+		);
 		if ('message' in distances) return { ok: false, message: distances.message };
 		xValues = distances.values;
 	} else {

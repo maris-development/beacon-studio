@@ -5,11 +5,5 @@
  */
 
 import { persisted } from 'svelte-local-storage-store';
-import { migrateKey } from '@/services/beacon-node';
 
-const KEY = 'data-browser-node-id';
-
-// An old storage key. It is a data format, not a term. Never rename it.
-migrateKey('data-browser-instance-id', KEY);
-
-export const dataBrowserNodeId = persisted<string | null>(KEY, null);
+export const dataBrowserNodeId = persisted<string | null>('data-browser-node-id', null);

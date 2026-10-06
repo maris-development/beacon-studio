@@ -180,9 +180,12 @@ export async function ensureHostNode(origin: string): Promise<BeaconNode | null>
 
 	const { hostname } = new URL(origin);
 
-	return addNode({
-		name: `Beacon - ${hostname}`,
-		url: origin,
-		description: `Beacon node of the current host root. (${origin})`
-	});
+	return addNode(
+		{
+			name: `Beacon - ${hostname}`,
+			url: origin,
+			description: `Beacon node of the current host root. (${origin})`
+		},
+		'host'
+	);
 }

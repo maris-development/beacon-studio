@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
+	import { track } from '@/telemetry';
     import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
     import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
     import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
@@ -9,6 +10,7 @@
     import type { QueryActions } from './QueryActions';
     import type { CompiledQuery } from '@/beacon-api/types';
     import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
+    import type { CoordinatePair } from '@/geo/spatial-selection';
     import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
 	import Button from '../buttons/Button.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
@@ -23,6 +25,7 @@
         onSeedMismatch,
         initialDraft = null,
         pendingSeed = null,
+        coordinateColumns = null,
         onDraftChange,
         onTableChange,
         status = $bindable<QuerySelectionStatus>({
@@ -54,7 +57,10 @@
         onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
-        onDraftChange?: (draft: QueryDraft) => void;
+        /** The stored coordinate pair of the block, or null to detect it. */
+        coordinateColumns?: CoordinatePair | null;
+        /** Called on every draft edit. The pair comes with an edit that changes it. */
+        onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
         onTableChange?: (tableName: string) => void;
         status?: QuerySelectionStatus;
         /** Bound to the parent. The builder puts `compileQuery` here. */
@@ -184,13 +190,13 @@
 	 * blocked. The first real edit of the user has columns, and that edit takes
 	 * the block over.
 	 */
-	function handleDraftChange(draft: QueryDraft): void {
+	function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
 		if (seedBlocked) {
 			if (draft.selectedFields.length === 0) return;
 			seedBlocked = false;
 		}
 
-		onDraftChange?.(draft);
+		onDraftChange?.(draft, pair);
 	}
 
 	/**
@@ -206,6 +212,18 @@
 		status.dataTable = selected_table_name;
         onTableChange?.(selected_table_name);
 	});
+
+	/**
+	 * Reports a table that the user picks. The loader also writes
+	 * `selected_table_name`, for a draft, a seed or the default table. Those are
+	 * no choice of the user, so the selector calls this and an effect does not.
+	 */
+	function handleTablePick(table_name: string): void {
+		track('builder.table.select', {
+			nodeHost: node?.url,
+			props: { table: table_name, tables: table_names.length }
+		});
+	}
 
 </script>
 
@@ -231,7 +249,7 @@
 
 	<hr>
 {:else if node && client}
-	<QueryBuilderTableSelector {table_names} {loaded} {status} bind:selected_table_name />
+	<QueryBuilderTableSelector {table_names} {loaded} {status} onPick={handleTablePick} bind:selected_table_name />
 
     <hr>
 
@@ -239,7 +257,7 @@
 		`pendingSeed` is null while the seed is blocked. This node does not hold the
 		table of that seed, so a hydration finds no column. See `loadTables`.
 	-->
-	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
+	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
 
 	<hr>
 

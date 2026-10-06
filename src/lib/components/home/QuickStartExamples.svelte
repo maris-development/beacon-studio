@@ -13,6 +13,7 @@
 	import Card from '@/components/card/Card.svelte';
 	import { Badge } from '@/components/ui/badge/index.js';
 	import { homeExamples, type HomeExample } from '@/data/home-examples';
+	import { track } from '@/telemetry';
 	import { SHARE_LINK_PATH } from '@/stores/stored-query';
 
 	const METRIC_HINT = 'Measured on a reference run. Your run can differ.';
@@ -61,7 +62,14 @@
 				</div>
 
 				<div class="actions">
-					<Button variant="outline" href={exampleHref(example)}>
+					<Button
+						variant="outline"
+						href={exampleHref(example)}
+						onclick={() =>
+							track('example.start', {
+								props: { title: example.title, table: example.tableName, source: example.sourceName }
+							})}
+					>
 						<BracesIcon />
 						Check query
 					</Button>

@@ -22,6 +22,7 @@ import {
 import type { CompiledQuery } from '@/beacon-api/types';
 import type { QueryDraft } from '@/query/draft';
 import { getCurrentNode } from '@/services/beacon-node';
+import { describeQuery, track } from '@/telemetry';
 
 /** The persisted list of saved queries for the full app. The newest comes first. */
 export const savedQueries = createQueryCollection({
@@ -43,12 +44,19 @@ export interface SaveQueryInput {
  * A caller can then point to it, for example to build a link.
  */
 export function addSavedQuery(input: SaveQueryInput): StoredQuery {
-	return savedQueries.add({
+	const saved = savedQueries.add({
 		name: input.name,
 		draft: input.draft ?? null,
 		compiled: input.compiled,
 		node: input.node ?? snapshotNode(getCurrentNode())
 	});
+
+	track('query.save', {
+		nodeHost: saved.node?.url,
+		props: { ...describeQuery(saved.compiled), copy: false, hasDraft: saved.draft !== null }
+	});
+
+	return saved;
 }
 
 /**
@@ -59,6 +67,12 @@ export function addSavedQuery(input: SaveQueryInput): StoredQuery {
 export function saveQueryFrom(source: StoredQuery, name?: string): StoredQuery {
 	const copy = cloneStoredQuery(source, { role: 'saved', name: name ?? source.name });
 	savedQueries.insertAt(0, copy);
+
+	track('query.save', {
+		nodeHost: copy.node?.url,
+		props: { ...describeQuery(copy.compiled), copy: true, source: source.role }
+	});
+
 	return copy;
 }
 

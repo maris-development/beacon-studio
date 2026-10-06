@@ -24,6 +24,20 @@ const MAX_EVENTS_PER_BATCH = 50;
 /** Drop the oldest events above this size. A stuck server must not fill memory. */
 const MAX_BUFFER = 200;
 
+/**
+ * The size of one request body, in bytes. It stays below the server cap of
+ * 262144. A query shape makes one event large, so an event count alone is not
+ * enough: 50 rich events pass the cap, and the server then answers 413.
+ */
+const MAX_BODY_BYTES = 200_000;
+
+/**
+ * The size of one body on unload, in bytes. A browser refuses a `keepalive`
+ * request above its own quota, which the Fetch standard sets at 65536 bytes for
+ * every keepalive request together. This budget stays below it.
+ */
+const MAX_KEEPALIVE_BYTES = 50_000;
+
 /** Stop for this long after a 429, in milliseconds. */
 const RATE_LIMIT_PAUSE_MS = 300_000;
 
@@ -34,6 +48,67 @@ let epoch = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let pausedUntil = 0;
 let sending = false;
+
+/** The encoded size of one event, in bytes. */
+function byteSize(event: TelemetryEvent): number {
+	try {
+		return new TextEncoder().encode(JSON.stringify(event)).length;
+	} catch {
+		return 0;
+	}
+}
+
+/**
+ * Takes the next batch off the front of the buffer.
+ *
+ * The batch stops at the event count and at the byte budget. It always holds at
+ * least one event, so a single large event can never block the queue.
+ */
+function takeBatch(): TelemetryEvent[] {
+	let bytes = 0;
+	let count = 0;
+
+	// The body holds the events plus the wrapper, so start above zero.
+	const overhead = 16;
+
+	while (count < buffer.length && count < MAX_EVENTS_PER_BATCH) {
+		const size = byteSize(buffer[count]) + 1;
+
+		if (count > 0 && bytes + size + overhead > MAX_BODY_BYTES) break;
+
+		bytes += size;
+		count += 1;
+	}
+
+	return buffer.splice(0, count);
+}
+
+/**
+ * Takes the last events of the buffer, inside the unload budget.
+ *
+ * The unload budget holds fewer events than the buffer can. The newest events
+ * therefore go first, so `session.end` is always in the batch. The rest stays in
+ * the buffer: a hidden tab that comes back sends it later, and the server orders
+ * every row on `occurred_at`.
+ */
+function takeTail(budget: number): TelemetryEvent[] {
+	let bytes = 0;
+	let count = 0;
+
+	// The body holds the events plus the wrapper, so start above zero.
+	const overhead = 16;
+
+	while (count < buffer.length && count < MAX_EVENTS_PER_BATCH) {
+		const size = byteSize(buffer[buffer.length - 1 - count]) + 1;
+
+		if (count > 0 && bytes + size + overhead > budget) break;
+
+		bytes += size;
+		count += 1;
+	}
+
+	return buffer.splice(buffer.length - count, count);
+}
 
 /** Adds one event to the buffer, and flushes when the buffer is full. */
 export function enqueue(event: TelemetryEvent): void {
@@ -56,7 +131,7 @@ export async function flush(): Promise<void> {
 
 	try {
 		const startEpoch = epoch;
-		const events = buffer.splice(0, MAX_EVENTS_PER_BATCH);
+		const events = takeBatch();
 		const sent = await post(events);
 
 		// A refused batch goes back to the front, so the next flush tries again.
@@ -79,7 +154,7 @@ export async function flush(): Promise<void> {
 export function flushOnHide(): void {
 	if (buffer.length === 0 || Date.now() < pausedUntil) return;
 
-	const events = buffer.splice(0, MAX_EVENTS_PER_BATCH);
+	const events = takeTail(MAX_KEEPALIVE_BYTES);
 
 	void post(events, true);
 }

@@ -7,6 +7,7 @@
 	import type { DataType } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import type { SelectedFilterType } from '@/query/filter-types';
+	import { track } from '@/telemetry';
 
 	let {
 		data_type,
@@ -93,12 +94,29 @@
 				}
 			];
 			
-		} else if (Utils.isTimestampDataType(data_type)) {
+		} else if (Utils.isDictionaryOfStrings(data_type)) {
+			return [
+				{
+					label: 'Equals',
+					filter_value: { type: 'equals_string', value: null }
+				},
+				{
+					label: 'Not Equals',
+					filter_value: { type: 'not_equals_string', value: null }
+				}
+			];
+		} else if (Utils.isTemporalDataType(data_type)) {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity
 			const d = new Date();
 			d.setUTCFullYear(d.getUTCFullYear() - 1);
-			const minDefaultDateValue = d.toISOString().slice(0, 10) + 'T00:00:00Z';
-			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + 'T00:00:00Z';
+			let minTimeSuffix = 'T00:00:00Z';
+			let maxTimeSuffix = 'T23:59:59Z';
+			if (Utils.isDateDataType(data_type)) {
+				minTimeSuffix = '';
+				maxTimeSuffix = '';
+			}
+			const minDefaultDateValue = d.toISOString().slice(0, 10) + minTimeSuffix;
+			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + maxTimeSuffix;
 			return [
 				{
 					label: 'Between',
@@ -130,7 +148,7 @@
 				}
 			];
 		} else {
-			console.warn(`Unsupported data type for filters: ${data_type}`);
+			console.warn(`Unsupported data type for filters: ${Utils.dataTypeToString(data_type)}`);
 			return [];
 		}
 	}
@@ -166,6 +184,9 @@
 							value={filter.label}
 							onSelect={() => {
 								selected_filters.push(filter);
+								track('builder.filter.add', {
+									props: { kind: filter.filter_value.type, dataType: Utils.dataTypeToString(data_type) }
+								});
 								open = false;
 							}}
 						>

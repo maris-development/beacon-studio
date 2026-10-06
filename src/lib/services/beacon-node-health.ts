@@ -14,6 +14,7 @@
 
 import { get, readonly, writable, type Readable } from 'svelte/store';
 import type { BeaconNodeHealth } from '@/beacon-api/types';
+import { track } from '@/telemetry';
 import { normalizeUrl } from './beacon-node-url';
 
 export type { BeaconNodeHealth };
@@ -58,8 +59,19 @@ export function getHealthOf(url: string): BeaconNodeHealth {
 /** Records the result of one check. This is the only writer of the store. */
 export function setHealth(url: string, health: BeaconNodeHealth): void {
 	const key = normalizeUrl(url);
+	const previous = getHealthOf(url).status;
 
 	healthStore.update((map) => ({ ...map, [key]: health }));
+
+	// A steady result repeats every sweep. Only a change carries news.
+	if (previous !== health.status) {
+		track('node.health', {
+			level: health.status === 'offline' ? 'warn' : 'info',
+			nodeHost: url,
+			durationMs: health.latencyMs ?? undefined,
+			props: { from: previous, to: health.status }
+		});
+	}
 }
 
 /** Drops the health of one node. Call it when no node keeps that URL. */

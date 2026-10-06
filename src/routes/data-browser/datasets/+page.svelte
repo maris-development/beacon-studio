@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { track } from '@/telemetry';
 	import { nodes } from '@/services/beacon-node';
 	import { ensureFresh } from '@/services/beacon-node-connect';
 	import { BeaconClient } from '@/beacon-api/client';
@@ -120,6 +121,8 @@
 
 			return false;
 		});
+
+		track('browser.search', { props: { scope: 'datasets', term: searchTerm.slice(0, 60), results: totalRows } });
 
 		getPage();
 	}

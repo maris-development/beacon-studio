@@ -49,13 +49,19 @@ export type PrimitiveType =
     | 'Utf8'
     | 'Float32'
     | 'Float64'
-    | 'Int8';
+    | 'Int8'
+    // The server can send any Arrow type name.
+    | (string & Record<never, never>);
 
 export type TimestampDataType = {
     Timestamp: [string, string | null];
 };
 
-export type DataType = PrimitiveType | TimestampDataType;
+export type DictionaryDataType = {
+    Dictionary: [DataType, DataType];
+};
+
+export type DataType = PrimitiveType | TimestampDataType | DictionaryDataType;
 
 
 export interface TableDefinition {

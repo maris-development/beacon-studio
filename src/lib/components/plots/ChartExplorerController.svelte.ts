@@ -25,7 +25,7 @@ import { untrack } from 'svelte';
 import { BeaconClient, type DatasetEntry } from '@/beacon-api/client';
 import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 import { addToast } from '@/stores/toasts';
-import type { SpatialSelection } from '@/geo/spatial-selection';
+import type { CoordinatePair, SpatialSelection } from '@/geo/spatial-selection';
 import {
 	clonePlotConfig,
 	makeChartViewState,
@@ -53,7 +53,7 @@ import { buildContours, type ContourResult } from '@/plots/contour';
 import { buildInterpolationSurface, type InterpolationResult } from '@/plots/interpolation';
 import { samplePlotSeries } from '@/plots/sampling';
 import { getSettings } from '@/stores/settings';
-import { track } from '@/telemetry';
+import { describeQuery, track } from '@/telemetry';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -73,6 +73,8 @@ export class ChartExplorerController {
 
 	/** The area drawn on the map. A cross section plot reads its line. */
 	private selection = $state.raw<SpatialSelection | null>(null);
+	/** The stored coordinate pair of the block. A cross section plot reads it. */
+	private coordinateColumns = $state.raw<CoordinatePair | null>(null);
 
 	readonly table = $derived(this.entry?.table ?? null);
 	readonly rowCount = $derived(this.entry?.rowCount ?? 0);
@@ -124,7 +126,8 @@ export class ChartExplorerController {
 			plot.line.groupColumn,
 			plot.line.sortBy,
 			this.binningKey(plot),
-			JSON.stringify(this.selection?.line ?? null)
+			JSON.stringify(this.selection?.line ?? null),
+			JSON.stringify(this.coordinateColumns)
 		].join('|');
 	});
 
@@ -304,7 +307,10 @@ export class ChartExplorerController {
 			return;
 		}
 
-		this.data = buildPlotSeries(table, plot, { selection: this.selection });
+		this.data = buildPlotSeries(table, plot, {
+			selection: this.selection,
+			coordinateColumns: this.coordinateColumns
+		});
 
 		let series: PlotSeries | null = null;
 		if (this.data.ok) series = this.data.series;
@@ -358,7 +364,8 @@ export class ChartExplorerController {
 	// --------------------------------------------------------------- view state
 
 	/**
-	 * Restore the plots of a block, and the area that its query filters on.
+	 * Restore the plots of a block, the area that its query filters on, and its
+	 * coordinate pair.
 	 *
 	 * Call this method at every change of block, also for a block with no stored
 	 * plots. That block gets one default plot, and does not keep the plots of the
@@ -367,10 +374,12 @@ export class ChartExplorerController {
 	applyViewState(
 		blockId: string | null,
 		view: ChartViewState | null | undefined,
-		selection: SpatialSelection | null
+		selection: SpatialSelection | null,
+		coordinateColumns: CoordinatePair | null
 	): void {
 		this.viewBlockId = blockId;
 		this.selection = selection;
+		this.coordinateColumns = coordinateColumns;
 		this.view = normaliseChartView(view) ?? makeChartViewState([makePlotConfig()]);
 
 		// Do not sync against columns here: `entry` still holds the previous
@@ -385,7 +394,11 @@ export class ChartExplorerController {
 	 * can apply a new cross section to the same block, and the X values of a cross
 	 * section plot come from that line.
 	 */
-	setSelection(selection: SpatialSelection | null): void {
+	setSelection(selection: SpatialSelection | null, coordinateColumns: CoordinatePair | null): void {
+		if (JSON.stringify(this.coordinateColumns) !== JSON.stringify(coordinateColumns)) {
+			this.coordinateColumns = coordinateColumns;
+		}
+
 		if (JSON.stringify(this.selection) === JSON.stringify(selection)) return;
 		this.selection = selection;
 	}
@@ -411,6 +424,24 @@ export class ChartExplorerController {
 	// ------------------------------------------------------------- query cycle
 
 	/** Run a query and show it. */
+	/**
+	 * Reports one chart view. The call comes after the plot setup, so `renderMs`
+	 * holds the time that the chart itself took.
+	 */
+	private reportVisualise(query: CompiledQuery, node: BeaconNode, readyAt: number): void {
+		track('query.visualise', {
+			nodeHost: node.url,
+			rowCount: this.entry?.rowCount,
+			queryId: this.entry?.queryId,
+			props: {
+				...describeQuery(query),
+				kind: 'chart',
+				tier: this.entry?.stats?.tier,
+				renderMs: Math.round(performance.now() - readyAt)
+			}
+		});
+	}
+
 	async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string): Promise<void> {
 		const token = this.beginRun(blockId);
 		this.latestRun = token;
@@ -421,18 +452,16 @@ export class ChartExplorerController {
 			this.markRun(blockId, this.entry.rowCount);
 			this.isLoading = false;
 
-			track('query.visualise', {
-				nodeHost: node.url,
-				rowCount: this.entry.rowCount,
-				props: { kind: 'chart' }
-			});
+			const readyAt = performance.now();
 
 			if (this.entry.rowCount === 0) {
+				this.reportVisualise(query, node, readyAt);
 				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
 				return;
 			}
 
 			this.syncPlotToColumns();
+			this.reportVisualise(query, node, readyAt);
 		} catch (error) {
 			this.endRun(blockId, token);
 			if (this.latestRun === token) this.isLoading = false;

@@ -178,6 +178,15 @@ export class ApacheArrowUtils {
         ];
     }
 
+    // A Dictionary vector decodes to its value type, so switch on that type.
+    private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
+        if (ApacheArrow.DataType.isDictionary(type)) {
+            return type.dictionary.typeId;
+        }
+
+        return type.typeId;
+    }
+
     /**
      * Converts a typed value to its string representation based on the provided Apache Arrow type.
      * 
@@ -186,9 +195,10 @@ export class ApacheArrowUtils {
      * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
      *
      * @remarks
-     * - For `Utf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
+     * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
+     * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
      * - For unsupported types, logs a warning and returns the stringified value.
      * 
      */
@@ -197,9 +207,9 @@ export class ApacheArrowUtils {
             return '';
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 return String(value);
 
             case ApacheArrow.Type.Int:
@@ -211,6 +221,10 @@ export class ApacheArrowUtils {
 
             case ApacheArrow.Type.Timestamp:
                 return new Date(value as number).toISOString();
+
+            // Arrow returns a date as epoch milliseconds.
+            case ApacheArrow.Type.Date:
+                return new Date(value as number).toISOString().slice(0, 10);
 
             case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
                 return JSON.stringify(value);
@@ -233,9 +247,41 @@ export class ApacheArrowUtils {
     }
 
     /**
+     * Whether `toArray()` gives the same values as `get()` for a column of this type.
+     *
+     * A Float16 column stores half-float bits, and a timestamp stores values in its
+     * own unit. Only `get()` decodes those to numbers and milliseconds.
+     */
+    static rawValuesAreDecoded(type: ApacheArrow.DataType): boolean {
+        if (ApacheArrow.DataType.isFloat(type)) {
+            return type.precision !== ApacheArrow.Precision.HALF;
+        }
+
+        if (ApacheArrow.DataType.isTimestamp(type)) {
+            return type.unit === ApacheArrow.TimeUnit.MILLISECOND;
+        }
+
+        return true;
+    }
+
+    /**
+     * The decoded values of a column, one per row.
+     *
+     * When the raw values are decoded, this returns the typed array, and a null slot reads as 0.
+     * Otherwise it reads each row with `get()`, and a null slot reads as null.
+     */
+    static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector['toArray']> {
+        if (ApacheArrowUtils.rawValuesAreDecoded(vector.type)) {
+            return vector.toArray();
+        }
+
+        return Array.from({ length: vector.length }, (_, i) => vector.get(i));
+    }
+
+    /**
      * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
      *
-     * Supports columns of type Timestamp, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
+     * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
      * Skips null and undefined values during calculation.
      *
      * 
@@ -254,12 +300,13 @@ export class ApacheArrowUtils {
         if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
 
         const colVec: ApacheArrow.Vector = table.getChild(column);
-        const colArray = colVec.toArray();
+        const colArray = ApacheArrowUtils.decodedValues(colVec);
 
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         switch ((colVec.type as any).typeId) {
             case ApacheArrow.Type.Timestamp:
+            case ApacheArrow.Type.Date:
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
                 break;
@@ -278,7 +325,8 @@ export class ApacheArrowUtils {
             if (value > max) max = value;
         }
 
-        return { min, max };
+        // An Int64 or Timestamp column holds bigints; callers expect numbers.
+        return { min: Number(min), max: Number(max) };
     }
 
 
@@ -292,7 +340,7 @@ export class ApacheArrowUtils {
      * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
      *
      * @remarks
-     * - Supports sorting for columns of type Timestamp, Int, Float, Utf8 (string), and Bool.
+     * - Supports sorting for columns of type Timestamp, Date, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
      * - Null values are sorted to the end of the table.
      * - If the column does not exist or its type is unsupported, the original table is returned.
      * - The schema of the original table is preserved in the sorted table.
@@ -312,7 +360,7 @@ export class ApacheArrowUtils {
         if (colIndex === -1) return table;
 
         const sortColumn: ApacheArrow.Vector = table.getChild(column);
-        const sortedColumnArray = sortColumn.toArray();
+        const sortedColumnArray = ApacheArrowUtils.decodedValues(sortColumn);
         const indexedArray = [];
 
         for (let i = 0; i < sortedColumnArray.length; i++) {
@@ -323,8 +371,7 @@ export class ApacheArrowUtils {
 
         let sortedIndices: number[];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((sortColumn.type as any).typeId) {
+        switch (ApacheArrowUtils.valueTypeId(sortColumn.type)) {
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Time:
             case ApacheArrow.Type.Timestamp:
@@ -351,6 +398,7 @@ export class ApacheArrowUtils {
                 break;
 
             case ApacheArrow.Type.Float:
+            case ApacheArrow.Type.Date:
                 // Numeric sorting
                 sortedIndices = indexedArray.sort((a, b) => {
                     const valA = a.value as number;
@@ -363,6 +411,7 @@ export class ApacheArrowUtils {
                 break;
 
             case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
                 // String sorting
                 sortedIndices = indexedArray.sort((a, b) => {
                     const valA = a.value as string;
@@ -619,8 +668,8 @@ export class ApacheArrowUtils {
             if (lat > maxLat) maxLat = lat;
         }
 
-        const lons = lonCol.toArray();
-        const lats = latCol.toArray();
+        const lons = ApacheArrowUtils.decodedValues(lonCol);
+        const lats = ApacheArrowUtils.decodedValues(latCol);
         const rows = Math.min(lons.length, lats.length);
 
         // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only

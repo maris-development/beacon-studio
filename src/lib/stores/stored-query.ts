@@ -23,7 +23,10 @@ import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
 import type { ChartViewState } from '@/plots/plot-config';
 import type { QueryDraft } from '@/query/draft';
 import { compileDraft } from '@/query/draft';
+import { coordinateColumnsOf, type CoordinatePair } from '@/geo/spatial-selection';
+import { describeQuery, track } from '@/telemetry';
 import { Utils } from '@/utils';
+import { resolve } from '$app/paths';
 
 export type { NodeRef };
 
@@ -90,6 +93,12 @@ export interface StoredQuery {
 	 */
 	node: NodeRef;
 	/**
+	 * The columns that hold the position, or null to detect them. The map plots
+	 * this pair, and the area filter tests it. It is the only stored pair: the
+	 * area filter in `compiled` is derived from it.
+	 */
+	coordinateColumns: CoordinatePair | null;
+	/**
 	 * How the visualisation pages show this query. Null for a record that the
 	 * user never opened on the map. See {@link QueryViewState}.
 	 */
@@ -143,6 +152,9 @@ export function createId(): string {
  * Build a record. This function adds the identity, the timestamps and empty run
  * stats. If the input has a `draft` but no `compiled`, it derives the compiled
  * form from the draft. Therefore callers do not sync the two forms manually.
+ *
+ * An input with no pair takes the pair of the area filter in `compiled`. A
+ * later compile then tests the same columns.
  */
 export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 	const now = Date.now();
@@ -151,12 +163,19 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 		draft = Utils.cloneObject(input.draft);
 	}
 
+	let coordinateColumns: CoordinatePair | null = null;
+	if (input.coordinateColumns) {
+		coordinateColumns = { ...input.coordinateColumns };
+	}
+
 	let compiled: CompiledQuery | null;
 	if (input.compiled) {
 		compiled = Utils.cloneObject(input.compiled);
 	} else {
-		compiled = compileDraft(draft);
+		compiled = compileDraft(draft, coordinateColumns);
 	}
+
+	coordinateColumns ??= coordinateColumnsOf(compiled?.filters);
 
 	return {
 		id: createId(),
@@ -165,6 +184,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 		draft,
 		compiled,
 		node: input.node ?? snapshotNode(null),
+		coordinateColumns,
 		view: input.view ?? null,
 		datasetKey: input.datasetKey ?? null,
 		createdAt: input.createdAt ?? now,
@@ -207,11 +227,17 @@ export function cloneStoredQuery(
 		view = Utils.cloneObject(source.view);
 	}
 
+	let coordinateColumns: CoordinatePair | null = null;
+	if (source.coordinateColumns) {
+		coordinateColumns = { ...source.coordinateColumns };
+	}
+
 	return {
 		...source,
 		id: createId(),
 		draft,
 		compiled,
+		coordinateColumns,
 		view,
 		node: { ...source.node },
 		datasetKey: null,
@@ -251,6 +277,11 @@ export type SharedQuery = {
 	name: string;
 	/** The node that runs the query. Empty when the sender named none. */
 	nodeUrl: string;
+	/**
+	 * The columns that hold the position. Optional: a link without it takes the
+	 * pair of the area filter in `query`, or detects one.
+	 */
+	coordinateColumns?: CoordinatePair | null;
 };
 
 /**
@@ -268,55 +299,102 @@ export function encodeSharedQuery(shared: SharedQuery): string {
 }
 
 /**
- * Read a `?query=` payload. The function throws for every other input. A link of
- * an older app version holds a bare `CompiledQuery`, and therefore fails here.
- * The caller shows that message to the user.
+ * The search parameter that carries the node of a link that holds a bare
+ * `CompiledQuery`. It is a wire format, not a term. Never rename it.
  */
-export function decodeSharedQuery(value: string): SharedQuery {
-	const payload = Utils.gzipStringToObject<IncomingSharedQuery>(value);
-	const hasQuery = !!payload && typeof payload === 'object' && !!payload.query;
-
-	if (!hasQuery || typeof payload.query !== 'object') {
-		throw new Error('This link does not hold a shared query of this app version.');
-	}
-
-	return {
-		query: payload.query as CompiledQuery,
-		name: payload.name ?? '',
-		nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? ''
-	};
-}
+export const LEGACY_NODE_PARAM = 'instance';
 
 /**
- * Build an absolute share URL for a query. Returns null if the app cannot encode
- * the query. Supply `resolve(SHARE_LINK_PATH)` as `basePath`. Path resolution is
- * a SvelteKit task, so this module does not do it.
+ * Read a `?query=` payload. The function throws for an input that holds no
+ * query. The caller shows that message to the user.
  *
- * The link carries the name and the URL of the node inside `?query=`. A query
- * runs on one node only, so the receiver needs that URL.
+ * An old link holds a bare `CompiledQuery`, sometimes as a JSON string. Its node
+ * is in the search parameter {@link LEGACY_NODE_PARAM}: pass that value as
+ * `legacyNodeUrl`.
  */
-export function buildShareLink(
-	query: CompiledQuery | null,
-	basePath: string,
-	name: string,
-	node?: NodeRef | null
-): string | null {
-	if (!query) return null;
+export function decodeSharedQuery(value: string, legacyNodeUrl?: string | null): SharedQuery {
+	let raw = Utils.gzipStringToObject<unknown>(value);
+	if (typeof raw === 'string') raw = JSON.parse(raw);
 
-	const gzipped = encodeSharedQuery({
-		query,
-		name,
-		nodeUrl: node?.url ?? ''
+	if (!raw || typeof raw !== 'object') {
+		throw new Error('This link does not hold a shared query.');
+	}
+
+	let payload = raw as IncomingSharedQuery;
+	const isBareQuery = 'query_parameters' in raw;
+	if (isBareQuery) {
+		payload = { query: raw as CompiledQuery, nodeUrl: legacyNodeUrl ?? '' };
+	}
+
+	if (!payload.query || typeof payload.query !== 'object') {
+		throw new Error('This link does not hold a shared query.');
+	}
+
+	const shared: SharedQuery = {
+		query: payload.query as CompiledQuery,
+		name: payload.name ?? '',
+		nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? '',
+		coordinateColumns: readCoordinatePair(payload.coordinateColumns)
+	};
+
+	// The receiver of a link, not the sender. It counts the reach of a share.
+	track('query.open', {
+		nodeHost: shared.nodeUrl || undefined,
+		props: {
+			...describeQuery(shared.query),
+			legacy: isBareQuery || payload.instanceUrl !== undefined
+		}
 	});
 
+	return shared;
+}
+
+/** A pair from a link payload, or null when the value is no valid pair. */
+function readCoordinatePair(value: unknown): CoordinatePair | null {
+	const pair = value as Partial<CoordinatePair> | null | undefined;
+
+	if (typeof pair?.latitude !== 'string' || typeof pair?.longitude !== 'string') {
+		return null;
+	}
+
+	return { latitude: pair.latitude, longitude: pair.longitude };
+}
+
+/** The fields of a record that a share link carries. */
+export type ShareableQuery = Pick<StoredQuery, 'compiled' | 'name' | 'node' | 'coordinateColumns'>;
+
+/**
+ * Build an absolute share URL for a record. Returns null if the record has no
+ * query, or if the app cannot encode it.
+ *
+ * The link carries the name and the URL of the node inside `?query=`. A query
+ * runs on one node only, so the receiver needs that URL. It also carries the
+ * coordinate pair, when the record stores one. It never carries a token.
+ */
+export function buildShareLink(record: ShareableQuery): string | null {
+	const query = record.compiled;
+	if (!query) return null;
+
+	const shared: SharedQuery = { query, name: record.name, nodeUrl: record.node?.url ?? '' };
+	if (record.coordinateColumns) {
+		shared.coordinateColumns = { ...record.coordinateColumns };
+	}
+
+	const gzipped = encodeSharedQuery(shared);
+
 	if (!gzipped) return null;
+
+	track('query.share', {
+		nodeHost: record.node?.url,
+		props: { ...describeQuery(query), linkChars: gzipped.length }
+	});
 
 	let origin = 'http://localhost';
 	if (typeof window !== 'undefined') {
 		origin = window.location.origin;
 	}
 
-	const url = new URL(basePath, origin);
+	const url = new URL(resolve(SHARE_LINK_PATH), origin);
 	url.searchParams.set('query', gzipped);
 
 	return url.toString();

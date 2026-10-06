@@ -26,7 +26,6 @@
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
-	import MenuIcon from '@lucide/svelte/icons/menu';
 
 	// Components
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
@@ -124,8 +123,11 @@
 		}
 	];
 
-	let collapsed = $state(false);
-	let isMobile = $state(false);
+	// The layout owns both flags, because the page header holds the menu button.
+	let {
+		collapsed = $bindable(false),
+		isMobile = false
+	}: { collapsed?: boolean; isMobile?: boolean } = $props();
 
 	// The sidebar shows the status of the selection on every page. Refresh a
 	// stale result. `ensureFresh` skips a check that is not due.
@@ -164,21 +166,9 @@
 	});
 
 	onMount(() => {
-		// Track mobile viewport; start collapsed (closed overlay) on mobile
-		const mobileQuery = window.matchMedia('(max-width: 767px)');
-		const applyMobile = (matches: boolean) => {
-			isMobile = matches;
-			collapsed = matches;
-		};
-		applyMobile(mobileQuery.matches);
-		const onMobileChange = (e: MediaQueryListEvent) => applyMobile(e.matches);
-		mobileQuery.addEventListener('change', onMobileChange);
-
 		// Give the browse pages a node, with no modal. A query carries its own node,
 		// and the builder asks for one where it is missing.
 		selectFirstIfNone();
-
-		return () => mobileQuery.removeEventListener('change', onMobileChange);
 	});
 
 	// `beforeNavigate` never runs for the page a session opens on. A direct load of
@@ -246,9 +236,7 @@
 					collapsed = !collapsed;
 				}}
 			>
-				{#if isMobile}
-					<MenuIcon class="toggle-icon" />
-				{:else if collapsed}
+				{#if collapsed}
 					<PanelLeftOpenIcon class="toggle-icon" />
 				{:else}
 					<PanelLeftCloseIcon class="toggle-icon" />
@@ -306,11 +294,15 @@
 		display: flex;
 		flex-direction: column;
 		min-width: 250px;
+		// Keep the sidebar inside the viewport. The menu list scrolls on its own.
+		max-height: 100dvh;
+		overflow: hidden;
 		transition:
 			min-width 0.2s ease,
 			width 0.2s ease;
 
 		.sidebar-header {
+			flex-shrink: 0;
 			padding-bottom: 1rem;
 			border-bottom: 1px solid var(--sidebar-border);
 
@@ -378,9 +370,14 @@
 
 		.sidebar-content {
 			flex-grow: 1;
+			min-height: 0;
+			overflow-y: auto;
+			overflow-x: hidden;
 		}
 
 		.sidebar-footer {
+			flex-shrink: 0;
+
 			.menu-group {
 				border-top: 1px solid var(--sidebar-border);
 			}
@@ -427,25 +424,16 @@
 			position: fixed;
 			top: 0;
 			left: 0;
-			height: 100vh;
+			height: 100dvh;
 			width: 16rem;
 			max-width: 85vw;
 			z-index: 50;
 			background: var(--app-background);
 			box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
 
+			// Closed: leave the screen. The page header keeps the menu button.
 			&.collapsed {
-				// Closed: shrink to a floating hamburger, leaving the content clickable
-				width: auto;
-				min-width: unset;
-				height: auto;
-				background: transparent;
-				box-shadow: none;
-
-				.logo-wrapper .collapse-toggle {
-					background: var(--app-background);
-					box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.2);
-				}
+				display: none;
 			}
 		}
 	}

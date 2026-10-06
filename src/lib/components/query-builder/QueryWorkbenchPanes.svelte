@@ -19,6 +19,7 @@
 	import QueryBuilder from './QueryBuilder.svelte';
 	import QueryTextEditor from '@/components/query-editor/QueryTextEditor.svelte';
 	import type { QueryDraft } from '@/query/draft';
+	import type { CoordinatePair } from '@/geo/spatial-selection';
 	import { QueryWorkspace } from './QueryWorkspace.svelte';
 	import type { QueryActions } from './QueryActions';
 	import type { BeaconNode } from '@/beacon-api/types';
@@ -63,8 +64,8 @@
 	});
 
 	/** Builder edits flow into the active block's draft. */
-	function handleDraftChange(draft: QueryDraft) {
-		workspace.updateActiveDraft(draft);
+	function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null) {
+		workspace.updateActiveDraft(draft, pair);
 	}
 
 	/**
@@ -82,7 +83,7 @@
 	/**
 	 * The node of the active block does not hold the query of a deep-link seed.
 	 * The workspace writes the message, because it knows whether the app guessed
-	 * that node. A share link of an older app version carries no `?node=`.
+	 * that node. A share link can name no node.
 	 */
 	function handleSeedMismatch(table: string, part: 'table' | 'columns') {
 		const blockId = workspace.activeBlockId;
@@ -132,6 +133,7 @@
 						onSeedMismatch={handleSeedMismatch}
 						initialDraft={workspace.activeBlock?.draft ?? null}
 						pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
+						coordinateColumns={workspace.activeBlock?.coordinateColumns ?? null}
 						onDraftChange={handleDraftChange}
 						workbenchActions={queryActions}
 					/>
@@ -175,7 +177,12 @@
 
 		{#if showRight}
 			<div class="pane-body">
-				<QueryTextEditor sourceCode={activeQueryJson} height="100%" readOnly />
+				<!-- Stacked panes have no height to fill, so the editor sets its own. -->
+				<QueryTextEditor
+					sourceCode={activeQueryJson}
+					height={isNarrow ? '50dvh' : '100%'}
+					readOnly
+				/>
 			</div>
 		{/if}
 	</section>

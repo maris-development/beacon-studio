@@ -3,7 +3,7 @@ import { MemoryCache } from '@/cache';
 import type { BeaconNode, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
 import { Utils } from '@/utils';
 import { addToast } from '@/stores/toasts';
-import { BeaconClient as BeaconSdkClient } from '@beacon/client';
+import { BeaconClient as BeaconSdkClient } from '@maris-development/beacon-client';
 import { normalizeUrl, splitNodeUrl } from '@/services/beacon-node-url';
 import { PUBLIC_NODE_TABLES } from '@/services/open-nodes';
 
@@ -41,14 +41,14 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *  2. **Cached metadata** ({@link getCachedTables} / {@link getCachedDefaultTable} /
  *     {@link getCachedSchema}): memoization by base URL that survives navigation.
  *  3. **Query execution + result cache** (the `static` query methods below): the
- *     native zstd Arrow IPC path via `@beacon/client`, with a two-tier
+ *     native zstd Arrow IPC path via `@maris-development/beacon-client`, with a two-tier
  *     (memory + OPFS) result cache. These are `static` because the result cache is
  *     app-wide, independent of any single client instance's node. They take the
  *     node of the query as an argument: a query record owns its node, and the URL
  *     of that node is part of the cache key.
  *
  * Prefer this facade for anything that talks to a Beacon node; do not import
- * `@beacon/client` directly from app code.
+ * `@maris-development/beacon-client` directly from app code.
  *
  * Transforms of a fetched result (sort, dedup, min/max, geometry) are *not* here.
  * They do no I/O, and they key the worker's loaded tables by the dataset cache
@@ -633,7 +633,7 @@ export class BeaconClient {
 
 
 /**
- * Builds a `@beacon/client` client for the given Beacon node.
+ * Builds a `@maris-development/beacon-client` client for the given Beacon node.
  *
  * - A bearer token (if configured on the node) is sent via the `Authorization`
  *   header on every request. The SDK's own `username`/`password` option is for
