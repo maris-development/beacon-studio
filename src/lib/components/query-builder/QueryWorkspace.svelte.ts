@@ -507,7 +507,7 @@ export class QueryWorkspace {
 			const goAhead = await askConfirm({
 				title: 'Close this query',
 				message: 'This query holds columns that you picked.',
-				note: 'The block goes away.',
+				note: 'You cannot undo this.',
 				confirmLabel: 'Close query',
 				destructive: true
 			});
