@@ -95,8 +95,7 @@
         <Select.Root
             type="single"
             name="dataCollection"
-            value={selected_table_name}
-            onValueChange={(table_name) => pickTable(table_name)}
+            bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
         >
             <Select.Trigger class="table-select-trigger">
                 {selected_table_name ?? 'Select a table'}
