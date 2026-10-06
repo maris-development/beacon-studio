@@ -12,11 +12,11 @@ Users who are not technical must see almost no change.
 
 | # | Sub-project | Spec | Plan | Build |
 |---|---|---|---|---|
-| 1 | Admin mode foundation | [spec](specs/2026-10-05-admin-mode-foundation-design.md) | [plan](plans/2026-10-05-admin-mode-foundation.md) | Code complete, not committed. Verified 2026-10-06: 26 tests pass, `npm run check` clean, no new lint errors. Manual test (plan Task 8 Step 6) still open. |
-| 2 | SQL editor with catalogue | [spec](specs/2026-10-06-sql-editor-design.md) (draft, user review pending) | - | - |
-| 3 | Tables | - | - | - |
-| 4 | Datasets | - | - | - |
-| 5 | Crawlers | - | - | - |
+| 1 | Admin mode foundation | [spec](specs/2026-10-05-admin-mode-foundation-design.md) | [plan](plans/2026-10-05-admin-mode-foundation.md) | Committed (`3be6a08`). Verified 2026-10-06: 26 tests pass, `npm run check` clean, no new lint errors. Manual test (plan Task 8 Step 6) still open. |
+| 2 | SQL editor with catalogue | [spec](specs/2026-10-06-sql-editor-design.md) (approved) | [plan](plans/2026-10-06-sql-editor.md) | Code complete, not committed. Verified 2026-10-06: 95 tests pass (69 new), `npm run check` clean, no lint errors in new files, `npm run build` passes. Manual test (plan Task 11) still open. |
+| 3 | Tables | Brainstorm in progress (one spec for 3+4+5) | - | - |
+| 4 | Datasets | (in the 3+4+5 spec) | - | - |
+| 5 | Crawlers | (in the 3+4+5 spec) | - | - |
 | 6 | Users and roles | - | - | - |
 | 7 | System info | - | - | - |
 
@@ -32,6 +32,9 @@ Sub-projects 2 to 7 depend only on sub-project 1. Their order is free.
 Rules from the user for this work:
 - Do not commit unless the user writes "commit". Never create a branch.
 - An answer of the user in a brainstorm is input, not a final decision. Give your own view and disagree when you have a reason.
+- Put tests in a `tests/` folder next to the code (`src/lib/sql/tests/x.test.ts`), not beside the file. Older plans show the beside form; follow this rule instead.
+- Edit files with the Edit tool. Never with `sed`, `perl` or `echo`: they break backslashes.
+- Wrap each page in `<div class="page-wrapper"><div class="page-container">`, as `routes/queries/history/+page.svelte` does.
 - Check a fact in the code before you state it. An earlier wrong guess: "the node picker changes the node of query blocks". It does not. A block keeps its own node.
 
 ## Decisions
@@ -89,10 +92,18 @@ Short notes that are not in a spec yet. Move them into the spec when it is writt
   - Later sub-project "SQL in Studio" (after step 2, not admin work): SQL results in the map, table and chart viewers, plus SQL in Query History and Saved Queries. Explore both in one brainstorm.
   - Server request (open): return 403 for this refusal, so Studio does not match on message text.
   - Future, separate task: maybe move the JSON query model to SQL completely. Not part of the admin work.
-  - Path: not `/queries/workbench`. That route is the visual query builder and the share-link target (`SHARE_LINK_PATH`).
+  - Path: `/sql-editor`. Not under `/queries`: the "Queries" menu item has `match: '/queries'` and would show as active too.
   - Server: a plain SELECT needs no admin. `POST /api/query` with `{sql}` works anonymously or with a bearer token. DDL, DML, REFRESH and ALTER need the super-user (`validate_query_plan` in `beacon-core/src/statement_plan/mod.rs`). A server with `config.sql.enable = false` answers 400 "SQL queries are not enabled".
   - Catalogue endpoints (`catalogs`, `tableSchema`, `functions`, `explainQuery`) are on the client router, so they need no admin.
   - beacon-web workbench (`pages/workbench.tsx`): Monaco SQL with tabs saved in localStorage; autocomplete of tables, functions and keywords (no columns); Ctrl+Enter runs the full tab; stream with `queryBatches`, stop at 500 rows; Stop keeps partial rows; download through `queryRaw` (CSV, Parquet, Arrow IPC, NetCDF); explain and explain-analyze as a plan tree; query metrics dialog. Catalogue tree: catalog > schema > table > columns (lazy `tableSchema`), with a filter; a click inserts the quoted name.
   - Studio today: `QueryTextEditor.svelte` hard-codes `language: 'json'` and loads the full `monaco-editor`. `queryStore.ensure()`, `StoredQuery` and `SharedQuery` accept a `CompiledQuery` only, so a SQL result cannot reach the map, table or chart viewers yet.
+- 3+4+5 Tables, Datasets, Crawlers (decision 2026-10-06): one brainstorm and one spec, then three separate plans and builds, in the order Tables, Datasets, Crawlers. Reason: they share the list and detail parts, and they form one flow (upload, crawler, table). One build would be too large to review (the beacon-web pages are about 2,700 lines).
+  - Decision: a table or dataset detail opens as its own page, with an easy way back to the previous page.
+  - Research (2026-10-06), Studio today: the data-browser pages use the legacy `BeaconClient`. The detail pages show the schema only (no preview). Detail URLs are `?file=|table_name=…&node=<node URL>`; they are an external format (share links), so keep them working. `CookieCrumb` is hidden by CSS (`visibility: hidden`), so the app has no visible way back today.
+  - Research, Tables (beacon-web `pages/tables.tsx`): catalog tree from `catalogs()`; schema tab (500 columns per page); preview `SELECT * FROM <name> LIMIT 10`; definition tab (`admin.tableDefinition`, null for crawler-made tables); Refresh (`REFRESH`) and Drop (`DROP TABLE IF EXISTS`, files stay) only in the default schema; create view / materialized view through `CREATE [MATERIALIZED] VIEW` SQL; create external table through `admin.createExternalTable({name, location, file_type, partition_cols?, options?, if_not_exists})` (server type `CreateExternalTableRequest`, `beacon-server/src/api.rs:482`). `file_type` values: PARQUET, GEOPARQUET, CSV, ARROW, NC, HDF5, ZARR, ATLAS, TIFF, BBF, ODV, DELTA, ICEBERG, REMOTE.
+  - Research, Datasets (`pages/datasets.tsx`): `datasets({pattern, limit})` returns `{file_path, format, can_inspect, can_partial_explore, size?, last_modified?}`; server also takes `offset`. Total from `totalDatasets()`. Schema per file `datasetSchema(file)`. Preview through a structured query `{select, from: {<format>: {paths: [path]}}, limit: 10}` (`nc` maps to `netcdf`). "Query" opens SQL `SELECT * FROM read_<fn>(['path']) LIMIT 100`. Upload: destination folder, folder upload, sequential per file, per-file status, retry failed, overwrite off by default (409 if exists). Download, delete (204), storage use `{kind: local|s3, location, total/used/free_space?, used_percent?, object_count?}`.
+  - Research, Crawlers (`beacon-core/src/crawler/definition.rs:41`): `{name, target_prefix, format_filter?, table_naming: leaf_prefix|crawler_prefixed, detect_partitions=true, schedule_secs?, event_driven=false, options, replace}`. A run scans the prefix, groups files into tables, and creates or updates external tables with option `__crawler__=<name>`; it never touches tables it does not own. Runs on demand or on `schedule_secs`. **An upload does not start a crawler.** `event_driven` is not implemented. Run is synchronous and returns `{crawler, discovered, created[], updated[], skipped[], failed[[name,msg]], skipped_files}`.
+  - Server/SDK gaps found: SDK `runCrawler` returns `void` and drops the run report; `GET /api/admin/crawlers` returns `[]` on any error; dataset delete has no "file in use by a table" check, although the SDK doc says 409.
+  - Auth: all `/api/admin/*` need the super-user. `catalogs`, `table-schema`, `list-datasets`, `dataset-schema`, `total-datasets` and `/api/query` are public; DDL through `/api/query` follows the super-user rule from step 2.
 - 5 Crawlers: auto-create tables when datasets are uploaded.
 - 7 System info: extend the current `/system-info` page with CPU and memory (`GET /api/info`) and health.

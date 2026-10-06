@@ -650,8 +650,9 @@ export class VirtualPaginationArrowTableData {
         this.setData(data);
     }
 
-    getPageData(offset: number, limit: number): Record<string, string>[] {
-        const pageData: Record<string, string>[] = [];
+    // A null cell stays null, so the table can show it apart from an empty string.
+    getPageData(offset: number, limit: number): Record<string, string | null>[] {
+        const pageData: Record<string, string | null>[] = [];
 
         for (let i = offset; i < offset + limit && i < this.length; i++) {
             const row: ApacheArrow.StructRowProxy = this.data.get(i);
@@ -660,7 +661,10 @@ export class VirtualPaginationArrowTableData {
             pageData.push(
                 Object.fromEntries(
                     this.data.schema.fields.map((field: ApacheArrow.Field, idx: number) => {
-                        return [field.name, ApacheArrowUtils.typedValueToString(data[idx], field.type)];
+                        const value = data[idx];
+                        if (value === null || value === undefined) return [field.name, null];
+
+                        return [field.name, ApacheArrowUtils.typedValueToString(value, field.type)];
                     })
                 )
             );

@@ -18,6 +18,9 @@
 		isLoading?: boolean;
 		rowClass?: string;
 		size?: 'small' | 'medium' | 'large';
+		pagination?: boolean;
+		/** Shows a null or undefined cell as a styled NULL, apart from an empty string. */
+		showNull?: boolean;
 	};
 
 	let {
@@ -31,7 +34,9 @@
 		totalRows = 0,
 		isLoading = false,
 		rowClass = '',
-		size = 'medium'
+		size = 'medium',
+		pagination = true,
+		showNull = true
 	}: Props = $props();
 
 	let pageCount: number = $derived.by(() => {
@@ -118,7 +123,9 @@
 					{#each rows as row, rowIndex (rowIndex)}
 						<tr class={rowClass}>
 							{#each columns as column (column.key)}
-								{#if column.rawHtml === true}
+								{#if showNull && cell(row, column) == null}
+									<td onclick={() => onCellClick(row, column)}><span class="null-value">NULL</span></td>
+								{:else if column.rawHtml === true}
 									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>
 								{:else}
@@ -131,23 +138,25 @@
 			</tbody>
 		</table>
 	</div>
-	<div class="pagination">
-		<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
-			Previous
-		</button>
-		<div class="page-info">
-			Page 
-			<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
-			of {pageCount}
+	{#if pagination}
+		<div class="pagination">
+			<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
+				Previous
+			</button>
+			<div class="page-info">
+				Page
+				<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
+				of {pageCount}
 
-			
 
+
+			</div>
+			<button
+				disabled={pageIndex >= pageCount}
+				onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>Next</button
+			>
 		</div>
-		<button
-			disabled={pageIndex >= pageCount}
-			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>Next</button
-		>
-	</div>
+	{/if}
 </div>
 
 <style lang="scss">
@@ -243,6 +252,12 @@
 
 						td {
 							color: #555;
+
+							.null-value {
+								color: var(--muted-foreground);
+								font-style: italic;
+								opacity: 0.7;
+							}
 
 							&.no-data {
 								display: table-cell;

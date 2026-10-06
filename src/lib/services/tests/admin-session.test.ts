@@ -11,7 +11,7 @@ function node(id: string, url = `https://${id}.example.org`): BeaconNode {
 // The SDK loads after the reset too, so `instanceof` sees the same classes as the module.
 async function load() {
 	vi.resetModules();
-	const session = await import('./admin-session');
+	const session = await import('../admin-session');
 	const sdk = await import('@maris-development/beacon-client');
 	return { session, sdk };
 }

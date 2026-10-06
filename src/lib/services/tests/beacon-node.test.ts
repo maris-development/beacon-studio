@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/telemetry', () => ({ track: vi.fn() }));
 vi.mock('@/utils', () => ({ Utils: { randomUUID: () => crypto.randomUUID() } }));
-vi.mock('./admin-session', () => ({ signOut: vi.fn() }));
+vi.mock('../admin-session', () => ({ signOut: vi.fn() }));
 
 async function load() {
 	vi.resetModules();
-	const service = await import('./beacon-node');
-	const session = await import('./admin-session');
+	const service = await import('../beacon-node');
+	const session = await import('../admin-session');
 	return { service, signOut: vi.mocked(session.signOut) };
 }
 

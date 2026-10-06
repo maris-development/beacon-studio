@@ -26,6 +26,7 @@
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	// Components
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
@@ -49,7 +50,8 @@
 						{ title: 'Saved Queries', url: resolve('/queries/saved') },
 						{ title: 'Query History', url: resolve('/queries/history') }
 					]
-				}
+				},
+				{ title: 'SQL Editor', url: resolve('/sql-editor'), icon: SquareTerminalIcon }
 			]
 		},
 		{

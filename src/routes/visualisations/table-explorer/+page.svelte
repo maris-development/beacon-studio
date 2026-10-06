@@ -28,7 +28,7 @@
 	let virtualPaginationData: VirtualPaginationArrowTableData =
 		new VirtualPaginationArrowTableData();
 	let columns: Column[] = $state([]);
-	let displayRows: Record<string, string>[] = $state([]); //currently displayed rows
+	let displayRows: Record<string, string | null>[] = $state([]); //currently displayed rows
 
 	let totalRows: number = $state(0);
 	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
@@ -263,7 +263,7 @@
 		Utils.setPageUrlParameter(pageIndex);
 	}
 
-	function setData(fields: Record<string, string>[]) {
+	function setData(fields: Record<string, string | null>[]) {
 		displayRows = fields;
 
 		isLoading = false;

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { SETTING_DEFINITIONS, getSettings, setSetting } from './settings';
+import { SETTING_DEFINITIONS, getSettings, setSetting } from '../settings';
 
 describe('adminFeatures setting', () => {
 	beforeEach(() => {

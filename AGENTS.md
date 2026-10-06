@@ -71,6 +71,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
   - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
   - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
+  - `src/lib/sql/*` (the SQL editor: tabs, statement rules, catalogue cache, completion, 500-row preview, admin fallback. `withAdminFallback` takes the admin runner as an argument, so this folder imports no service.)
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
@@ -148,13 +149,14 @@ Sort each persisted value into one class. The class decides whether a change nee
 ## Layer Rule (Important)
 Imports point one way only:
 
-`beacon-api` → `query` / `geo` → `stores` → `components` → `routes`
+`beacon-api` → `query` / `geo` / `sql` → `stores` → `components` → `routes`
 
 - `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
   import a type out of a `.svelte` file. A type that both a component and the domain need belongs in
   the domain layer. `query/filter-types.ts` exists for that reason: `ParameterFilter.svelte` and
   `AddFilterDropdown.svelte` declared those types, and `utils.ts` plus `query/draft.ts` had to reach
   up into a component to get them.
+- `src/lib/sql/*` must never import from `services`, `stores` or `components`. The page passes `withAdmin` into `withAdminFallback`.
 - `src/lib/stores/*` must never import from `src/lib/components/*`. The persisted shape of a query
   (`QueryDraft`) is domain, not view.
 - `src/lib/telemetry/*` sits beside `stores/` and reads `stores/settings`. Therefore
@@ -228,7 +230,12 @@ message the change never reaches production.
 - Prefer fixing root causes over adding one-off patches in page components.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 
+## Tests
+- Vitest with jsdom. Run `npm test`.
+- Put a test in a `tests/` folder next to the code it tests: `src/lib/sql/tests/tabs.test.ts` tests `src/lib/sql/tabs.ts`. Import the code with `../`.
+
 ## Validation Checklist Before Finishing
+- Run: `npm test`
 - Run: `npm run check`
 - Run: `npm run lint`
 - If behavior changed, smoke-test relevant route(s):
@@ -237,6 +244,7 @@ message the change never reaches production.
   - `/visualisations/map-viewer`
   - `/visualisations/table-explorer`
   - `/visualisations/chart-explorer`
+  - `/sql-editor`
 - Confirm no regressions in query JSON -> visualization navigation path.
 
 ## Known Repo Facts

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { visibleGroups, type Group } from './menu';
+import { visibleGroups, type Group } from '../menu';
 
 const groups: Group[] = [
 	{

@@ -39,7 +39,7 @@ Out (see the roadmap):
 ## Behaviour
 
 ### Route and menu
-- Route: `/queries/sql`. Not `/queries/workbench`: that route is the visual query builder and the share-link target.
+- Route: `/sql-editor`. Not under `/queries`: the "Queries" menu item matches every path under `/queries`, so it would show as active on this page too.
 - Menu: "SQL Editor" in the group "Data Access", after "Queries". Always visible.
 
 ### Layout
@@ -90,6 +90,7 @@ For Run, Explain, Analyze and Download:
 ### Catalogue
 - Loads with one `catalogs()` call. The default catalog and schema open on load.
 - The columns of a table load when it opens (`tableSchema(name, { catalog, schema })`). They show name and type.
+- A Beacon table can have more than 100,000 columns. The tree shows 500 columns at a time, with a "Show more" button.
 - The filter matches catalog, schema, table and loaded column names, and opens the matches.
 - A Refresh button loads the tree again.
 - A click on a table inserts its name, quoted and qualified when needed. A click on a column inserts its name, quoted when needed.
@@ -99,7 +100,7 @@ For Run, Explain, Analyze and Download:
 - Tables: the qualified name outside the default catalog and schema.
 - Functions from `functions()`, inserted as `name($0)`.
 - SQL keywords.
-- Column names of every table whose columns are loaded.
+- Column names of every table whose columns are loaded. At most 5,000 column entries in total, to keep the editor fast.
 - A `functions()` failure removes function entries only. It shows no error.
 
 ## Units
@@ -115,7 +116,9 @@ New domain folder beside `query/` and `geo/`. Layer: `beacon-api` → `query` / 
 | `identifiers.ts` | `quoteIdent(name)`, `sqlName(catalog, schema, table, defaults)`. |
 | `catalog.ts` | Tree from `catalogs()`, lazy columns from `tableSchema`, cache by node URL. |
 | `completion.ts` | Completion entries from catalogue, functions and keywords. No Monaco import. |
-| `run.ts` | `runPreview(client, sql, { limit, signal })`: batches into an Arrow table, with `truncated` and `cancelled`. |
+| `run.ts` | `runPreview(client, sql, { limit, signal })`: batches into plain rows and column names, with `truncated` and `cancelled`. |
+| `privilege.ts` | `withAdminFallback`: the admin refusal rule, with the admin runner passed in, so it has no service import. |
+| `download.ts` | Formats and their file names. |
 
 ### Components: `src/lib/components/sql-editor/`
 
@@ -124,7 +127,7 @@ New domain folder beside `query/` and `geo/`. Layer: `beacon-api` → `query` / 
 | `SqlEditor.svelte` | Monaco in `sql` mode, completion provider, Ctrl+Enter, `insert(text)`. |
 | `SqlTabs.svelte` | Tab bar: add, close, rename, select. |
 | `CatalogTree.svelte` | The tree, filter, refresh, click to insert. |
-| `ResultGrid.svelte` | Arrow table into `DataTable`, pages of 100 rows. |
+| `ResultGrid.svelte` | Rows into `DataTable`, pages of 100 rows. |
 | `PlanTree.svelte` | Foldable plan tree. |
 | `DownloadMenu.svelte` | Format menu and file save. |
 
@@ -133,7 +136,7 @@ New domain folder beside `query/` and `geo/`. Layer: `beacon-api` → `query` / 
 - `QueryTextEditor.svelte` and `SqlEditor.svelte` both import it. Neither sets `MonacoEnvironment` itself.
 
 ### Route
-- `src/routes/queries/sql/+page.svelte`: orchestration only. It holds the action state and connects the parts.
+- `src/routes/sql-editor/+page.svelte`: orchestration only. It holds the action state and connects the parts.
 
 ## Testing
 

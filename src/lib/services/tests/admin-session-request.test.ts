@@ -13,7 +13,7 @@ function node(id: string): BeaconNode {
 	};
 }
 
-type Session = typeof import('./admin-session');
+type Session = typeof import('../admin-session');
 type Sdk = typeof import('@maris-development/beacon-client');
 
 let sdk: Sdk;
@@ -21,7 +21,7 @@ let sdk: Sdk;
 // A fresh module per test, and the SDK of the same load, so `instanceof` matches.
 async function load(): Promise<Session> {
 	vi.resetModules();
-	const session = await import('./admin-session');
+	const session = await import('../admin-session');
 	sdk = await import('@maris-development/beacon-client');
 	vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
 	return session;
