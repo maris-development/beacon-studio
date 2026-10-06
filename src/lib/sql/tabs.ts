@@ -111,3 +111,9 @@ export function renameTab(state: TabsState, id: string, title: string): TabsStat
 export function setTabSql(state: TabsState, id: string, sql: string): TabsState {
 	return { ...state, tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, sql } : tab)) };
 }
+
+/** A new selected tab that holds `sql`. Another page opens SQL in the editor this way. */
+export function openInNewTab(state: TabsState, sql: string): TabsState {
+	const added = addTab(state);
+	return setTabSql(added, added.activeId, sql);
+}

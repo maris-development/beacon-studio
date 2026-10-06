@@ -1,109 +1,128 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { currentNode, nodes } from '@/services/beacon-node';
-	import { BeaconClient } from '@/beacon-api/client';
-	import DataTable from '@/components/visualisation/DataTable.svelte';
 	import { goto } from '$app/navigation';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { AffixString } from '@/utils';
-	import type { Column } from '@/util-types';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
+	import { untrack } from 'svelte';
+	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import Button from '@/components/buttons/Button.svelte';
-	import CreateTableModal from '@/components/modals/CreateTableModal.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import NodePicker from '@/components/NodePicker.svelte';
 	import AdminAction from '@/components/AdminAction.svelte';
+	import CreateViewDialog from '@/components/data-browser/CreateViewDialog.svelte';
+	import CreateExternalTableDialog from '@/components/data-browser/CreateExternalTableDialog.svelte';
+	import { Input } from '@/components/ui/input';
+	import { makeBeaconClient } from '@/beacon-api/client';
+	import { currentNode } from '@/services/beacon-node';
+	import { track } from '@/telemetry';
+	import { withBack } from '@/data-browser/back';
+	import { splitTree, tableDetailQuery, tableKind } from '@/data-browser/tables';
+	import { buildTree, filterTree, type CatalogTree } from '@/sql/catalog';
+	import type { TableRef } from '@/sql/identifiers';
+	import { sqlErrorMessage } from '@/sql/statement';
 
-	let selectedNode = $derived($currentNode);
-	let client: BeaconClient;
+	type Dialog = 'view' | 'materialized' | 'external' | null;
 
-	let columns: Column[] = $state([
-		{ key: 'table', header: 'Table', sortable: false, rawHtml: true }
-	]);
-	let rows: { table: AffixString }[] = $state([]);
+	let tree: CatalogTree | null = $state(null);
+	let defaultTable: string | null = $state(null);
+	let loading = $state(false);
+	let error = $state('');
+	let needle = $state(page.url.searchParams.get('q') ?? '');
+	let othersOpen = $state(false);
+	let dialog: Dialog = $state(null);
 
-	let totalRows: number = $state(0);
-	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let pageSize: number = 1000;
-	let isLoading = $state(true);
-	let firstLoad = true;
-	let create_table_modal_open: boolean = $state(false);
+	let node = $derived($currentNode);
+	let nodeUrl = $derived(node?.url ?? null);
 
-	let loadedNodeId: string | null = null;
-
-	$effect(() => {
-		if (!selectedNode || selectedNode.id === loadedNodeId) return;
-		loadedNodeId = selectedNode.id;
-
-		client = BeaconClient.new(selectedNode);
-		pageIndex = 1;
-
-		firstLoad = true; // let getTables() run again despite the isLoading guard
-		onAsyncMount();
+	let shown = $derived.by(() => {
+		if (!tree) return null;
+		return splitTree(filterTree(tree, needle));
 	});
 
-	async function onAsyncMount() {
-		await getTables(pageIndex);
+	let searching = $derived(needle.trim() !== '');
 
-		await getDefaultTable();
-	}
+	$effect(() => {
+		if (!nodeUrl) return;
+		untrack(() => load());
+	});
 
-	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.warn('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
-	}
+	async function load() {
+		const current = node;
+		if (!current) return;
 
-	function onPageChange(page: number) {
-		pageIndex = page;
+		const client = makeBeaconClient(current);
+		// The tree of the previous node must not link to this node.
+		tree = null;
+		defaultTable = null;
+		loading = true;
+		error = '';
 
-		getTables(page);
-	}
+		try {
+			const [view, fallback] = await Promise.all([
+				client.catalogs(),
+				client.defaultTable<unknown>().catch(() => null)
+			]);
 
-	async function getTables(page: number) {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+			// A node switch during the load makes this answer stale.
+			if (current.url !== nodeUrl) return;
 
-		firstLoad = false;
-		isLoading = true;
-
-		let results = await client.getTables();
-
-		rows = results.map((table) => ({ table: new AffixString(table) }));
-
-		totalRows = rows.length;
-		pageIndex = page;
-
-		isLoading = false;
-	}
-
-	async function getDefaultTable() {
-		const defaultTable = await client.getDefaultTable();
-
-		// console.log('Default table:', defaultTable);
-
-		if (defaultTable) {
-			const _rows = [...rows];
-
-			let idx = _rows.findIndex((row) => row.table.main === defaultTable);
-
-			if (_rows[idx]) {
-				_rows[idx].table.suffix = ` <span class="default-label">Default</span>`;
+			tree = buildTree(view);
+			if (typeof fallback === 'string') {
+				defaultTable = fallback;
+			} else {
+				defaultTable = null;
 			}
-
-			rows = _rows;
-
-			// console.log('Updated rows:', rows);
+		} catch (caught) {
+			if (current.url === nodeUrl) {
+				tree = null;
+				error = sqlErrorMessage(caught);
+			}
+		} finally {
+			if (current.url === nodeUrl) loading = false;
 		}
 	}
 
-	function onCellClick(row: { table: AffixString }) {
-		if (!selectedNode) return;
+	function listUrl(): string {
+		const url = new URL(page.url);
+		if (needle.trim() === '') {
+			url.searchParams.delete('q');
+		} else {
+			url.searchParams.set('q', needle.trim());
+		}
+		return `${url.pathname}${url.search}`;
+	}
 
-		const filename = row.table;
+	function detailHref(ref: TableRef): string {
+		if (!tree || !node) return '#';
 
-		const url = new URL(resolve('/data-browser/data-tables/detail'), window.location.origin);
+		const href = `${resolve('/data-browser/data-tables/detail')}?${tableDetailQuery(ref, tree.defaults, node.url)}`;
+		return withBack(href, listUrl());
+	}
 
-		url.searchParams.set('table_name', filename.main);
-		url.searchParams.set('node', selectedNode.url);
+	function onSearch() {
+		if (searching && shown) {
+			const results = shown.defaultTables.length;
+			track('browser.search', {
+				props: { scope: 'tables', term: needle.trim().slice(0, 60), results }
+			});
+		}
+	}
 
-		goto(url.toString());
+	async function loadPaths(): Promise<string[]> {
+		if (!node) return [];
+
+		const list = await makeBeaconClient(node).datasets<{ file_path: string }[]>({
+			limit: 100000
+		});
+		return list.map((entry) => entry.file_path);
+	}
+
+	function onCreated(name: string) {
+		dialog = null;
+		if (!tree || !node) return;
+
+		const ref = { catalog: tree.defaults.catalog, schema: tree.defaults.schema, name };
+		goto(detailHref(ref));
 	}
 </script>
 
@@ -117,78 +136,191 @@
 		{ label: 'Data tables', href: resolve('/data-browser/data-tables') }
 	]}
 />
+
 <div class="page-wrapper">
 	<div class="page-container">
 		<h1>Data Tables</h1>
 
-		<p>Explore and manage the tables that are available in your Beacon node.</p>
+		<p>Explore the tables of your Beacon node.</p>
 
 		<NodePicker>
 			{#snippet actions()}
-				{#if $nodes.length > 0}
-					<AdminAction>
-						{#snippet children({ disabled })}
-							<Button {disabled} variant="outline" onclick={() => (create_table_modal_open = true)}>
-								Create Table
-							</Button>
-						{/snippet}
-					</AdminAction>
-				{/if}
+				<AdminAction>
+					{#snippet children({ disabled })}
+						<DropdownMenu.Root>
+							<DropdownMenu.Trigger disabled={disabled || !node}>
+								<Button variant="outline" disabled={disabled || !node}>Create</Button>
+							</DropdownMenu.Trigger>
+							<DropdownMenu.Content class="w-52">
+								<DropdownMenu.Item onclick={() => (dialog = 'view')}>View</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => (dialog = 'materialized')}>
+									Materialized view
+								</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => (dialog = 'external')}>
+									External table
+								</DropdownMenu.Item>
+							</DropdownMenu.Content>
+						</DropdownMenu.Root>
+					{/snippet}
+				</AdminAction>
 			{/snippet}
 		</NodePicker>
 
-		{#if $nodes.length === 0}
-			<p>
-				No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse data
-				tables.
-			</p>
+		{#if !node}
+			<p>Pick a Beacon node.</p>
 		{:else}
-			<DataTable
-				rowClass="arrow-row"
-				{onChangeSort}
-				{onPageChange}
-				{onCellClick}
-				{columns}
-				{rows}
-				{totalRows}
-				{pageSize}
-				{pageIndex}
-				{isLoading}
-			/>
+			<Input type="search" placeholder="Search tables" bind:value={needle} onchange={onSearch} />
 
-			{#if create_table_modal_open}
-				<CreateTableModal onCancel={() => (create_table_modal_open = false)} node={selectedNode} />
+			{#if loading && !tree}
+				<p class="muted">Loading the tables...</p>
+			{:else if error}
+				<p class="error">{error}</p>
+			{:else if shown}
+				{#if shown.defaultTables.length === 0}
+					<p class="muted">No tables match.</p>
+				{:else}
+					<ul class="tables">
+						{#each shown.defaultTables as table (table.name)}
+							{@const ref = {
+								catalog: shown.others.defaults.catalog,
+								schema: shown.others.defaults.schema,
+								name: table.name
+							}}
+							<li>
+								<a href={detailHref(ref)}>
+									<span class="name">{table.name}</span>
+									{#if tableKind(table.table_type) === 'view'}
+										<span class="badge">View</span>
+									{:else}
+										<span class="badge">Table</span>
+									{/if}
+									{#if table.name === defaultTable}
+										<span class="badge default">Default</span>
+									{/if}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+
+				{#if shown.others.catalogs.length > 0}
+					<details class="others" open={othersOpen || searching}>
+						<summary
+							onclick={(event) => {
+								event.preventDefault();
+								othersOpen = !othersOpen;
+							}}
+						>
+							<ChevronRightIcon class="chevron size-4" />
+							Other schemas
+						</summary>
+
+						{#each shown.others.catalogs as catalog (catalog.name)}
+							{#each catalog.schemas as schema (schema.name)}
+								<h3 class="schema-title">{catalog.name}.{schema.name}</h3>
+								<ul class="tables">
+									{#each schema.tables as table (table.name)}
+										{@const ref = { catalog: catalog.name, schema: schema.name, name: table.name }}
+										<li>
+											<a href={detailHref(ref)}>
+												<span class="name">{table.name}</span>
+												{#if tableKind(table.table_type) === 'view'}
+													<span class="badge">View</span>
+												{:else}
+													<span class="badge">Table</span>
+												{/if}
+											</a>
+										</li>
+									{/each}
+								</ul>
+							{/each}
+						{/each}
+					</details>
+				{/if}
 			{/if}
 		{/if}
 	</div>
 </div>
 
+{#if node && (dialog === 'view' || dialog === 'materialized')}
+	<CreateViewDialog
+		{node}
+		materialized={dialog === 'materialized'}
+		onClose={() => (dialog = null)}
+		{onCreated}
+	/>
+{/if}
+
+{#if node && dialog === 'external'}
+	<CreateExternalTableDialog {node} {loadPaths} onClose={() => (dialog = null)} {onCreated} />
+{/if}
+
 <style lang="scss">
-	div.page-container :global(tr.arrow-row) {
-		position: relative;
+	.tables {
+		margin: 0.5rem 0 0;
+		padding: 0;
+		list-style: none;
 
-		cursor: pointer;
+		li a {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.5rem 0.25rem;
+			border-bottom: 1px solid var(--border);
+			color: inherit;
+			text-decoration: none;
 
-		&::after {
-			content: '';
-			position: absolute;
-			top: 50%;
-			right: 1rem;
-			width: 1em;
-			height: 1em;
-			transform: translateY(-50%);
-
-			mask: url('/icons/arrow-right.svg') no-repeat center/contain;
-			background-color: currentColor;
+			&:hover {
+				background: var(--accent);
+			}
 		}
 	}
 
-	div.page-container :global(td span.default-label) {
-		font-size: 0.8em;
-		padding: 0.2em 0.4em;
-		border-radius: 4px;
-		margin-left: 0.5em;
-		background-color: var(--primary);
-		color: var(--primary-foreground);
+	.name {
+		font-weight: 500;
+		word-break: break-all;
+	}
+
+	.badge {
+		padding: 0 0.375rem;
+		border-radius: 0.25rem;
+		background: var(--secondary);
+		color: var(--muted-foreground);
+		font-size: 0.75rem;
+
+		&.default {
+			background: var(--primary);
+			color: var(--primary-foreground);
+		}
+	}
+
+	.others {
+		margin-top: 1rem;
+
+		summary {
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
+			cursor: pointer;
+			font-weight: 600;
+			list-style: none;
+		}
+
+		&[open] :global(.chevron) {
+			transform: rotate(90deg);
+		}
+	}
+
+	.schema-title {
+		margin: 0.75rem 0 0;
+		color: var(--muted-foreground);
+	}
+
+	.muted {
+		color: var(--muted-foreground);
+	}
+
+	.error {
+		color: var(--destructive);
 	}
 </style>

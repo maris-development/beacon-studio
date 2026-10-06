@@ -1,181 +1,371 @@
 <script lang="ts">
-
-    import { page } from '$app/state';
-	import { BeaconClient } from '@/beacon-api/client';
-	import { findByUrl } from '@/services/beacon-node';
-    import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import { track } from '@/telemetry';
-	import DataTable from '@/components/visualisation/DataTable.svelte';
-	import { Utils, VirtualPaginationData } from '@/utils';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { error as kitError } from '@sveltejs/kit';
+	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
+	import Button from '@/components/buttons/Button.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import type { SchemaField, Schema } from '@/beacon-api/types';
-	import type { Column, SortDirection } from '@/util-types';
-    import { resolve } from '$app/paths';
-	import { Input } from '@/components/ui/input';
-    
-    const tableName = page.url.searchParams.get('table_name') || '';
+	import AdminAction from '@/components/AdminAction.svelte';
+	import BackLink from '@/components/data-browser/BackLink.svelte';
+	import SchemaTable from '@/components/data-browser/SchemaTable.svelte';
+	import PreviewGrid from '@/components/data-browser/PreviewGrid.svelte';
+	import DetailTabs from '@/components/data-browser/DetailTabs.svelte';
+	import { makeBeaconClient } from '@/beacon-api/client';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { findByUrl } from '@/services/beacon-node';
+	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
+	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { askConfirm } from '@/stores/confirm';
+	import { addToast } from '@/stores/toasts';
+	import { settings } from '@/stores/settings';
+	import { track } from '@/telemetry';
+	import {
+		canManage,
+		dropSql,
+		editorSql,
+		previewSql,
+		refreshSql,
+		tableKind
+	} from '@/data-browser/tables';
+	import type { CatalogDefaults, TableRef } from '@/sql/identifiers';
+	import { sqlErrorMessage } from '@/sql/statement';
 
-    if (!tableName) {
-        throw error(400, 'Missing `table_name` query parameter');
-    }
+	const LIST = resolve('/data-browser/data-tables');
 
-    // The node URL, and not its id. An id exists in one browser only, so a
-    // shared link must name the node itself.
-    const nodeUrl = page.url.searchParams.get('node') || '';
+	const tableName = page.url.searchParams.get('table_name') ?? '';
+	if (!tableName) throw kitError(400, 'Missing `table_name` query parameter');
 
-    if (!nodeUrl) {
-        throw error(400, 'Missing `node` query parameter');
-    }
+	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
+	const nodeUrl = page.url.searchParams.get('node') ?? '';
+	if (!nodeUrl) throw kitError(400, 'Missing `node` query parameter');
 
-	let client: BeaconClient;
+	// Admin actions need a saved node: the sign-in session belongs to its id.
+	let savedNode: BeaconNode | null = $state(null);
+	let client: SdkClient | null = $state(null);
 
-    let columns: Column[] = $state([
-        { key: 'name', header: 'Field', sortable: true },
-        { key: 'data_type', header: 'Data Type', sortable: true },
-        { key: 'nullable', header: 'Nullable', sortable: true },
-        { key: 'dict_id', header: 'Dictionary ID', sortable: true },
-        { key: 'dict_is_ordered', header: 'Is Ordered', sortable: true },
-        { key: 'metadata', header: 'Metadata', sortable: false }
-    ]);
-    let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
-	let rows: SchemaField[] = $state([]);
+	let defaults: CatalogDefaults | null = $state(null);
+	let tableType = $state('');
+	let found = $state(false);
+	let loadError = $state('');
+	let tab = $state('schema');
+	let definition: string | null | undefined = $state(undefined);
+	let definitionError = $state('');
+	let busy = $state(false);
 
-	let totalRows: number = $state(0);
-    let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let offset = $state(0);
-	let isLoading = $state(true);
-    let pageSize: number = 20;
-	let firstLoad = true;
-    
-	onMount(() => {
-		// A receiver without this node still reads it, over a client with no token.
-		const saved = findByUrl(nodeUrl);
+	let ref: TableRef | null = $derived.by(() => {
+		if (!defaults) return null;
+		return {
+			catalog: page.url.searchParams.get('catalog') ?? defaults.catalog,
+			schema: page.url.searchParams.get('schema') ?? defaults.schema,
+			name: tableName
+		};
+	});
 
-		if (saved) {
-			client = BeaconClient.new(saved);
-		} else {
-			client = new BeaconClient(nodeUrl);
-		}
+	let isView = $derived(tableKind(tableType) === 'view');
+	let manageable = $derived(
+		found && savedNode !== null && ref !== null && defaults !== null && canManage(ref, defaults)
+	);
 
+	// A node outside the list gets a client with no token.
+	function readNode(): BeaconNode {
+		if (savedNode) return savedNode;
+
+		return {
+			id: '',
+			name: nodeUrl,
+			url: nodeUrl,
+			status: 'unknown',
+			latencyMs: null,
+			lastCheckedAt: null
+		};
+	}
+
+	onMount(async () => {
 		track('browser.table.open', { nodeHost: nodeUrl, props: { table: tableName } });
 
-		getTableSchemaData();
-    });
+		// On a first visit the public nodes arrive after this page mounts.
+		await whenOpenNodesSettled();
+		savedNode = findByUrl(nodeUrl);
+		const current = makeBeaconClient(readNode());
 
-    async function getTableSchemaData(){
-        if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+		try {
+			const view = await current.catalogs();
 
-		firstLoad = false;
-		isLoading = true;
+			const catalog = page.url.searchParams.get('catalog') ?? view.default_catalog;
+			const schema = page.url.searchParams.get('schema') ?? view.default_schema;
+			const table = view.catalogs
+				.find((c) => c.name === catalog)
+				?.schemas.find((s) => s.name === schema)
+				?.tables.find((t) => t.name === tableName);
 
-        const schema: Schema|null = await client.getTableSchema(tableName);
+			if (table) {
+				tableType = table.table_type;
+				found = true;
+			} else {
+				loadError = `The node has no table "${tableName}" in ${catalog}.${schema}.`;
+			}
 
-        if(schema){
-            totalRows = schema.fields.length;
-            virtualSchemaData.setData(schema.fields);
-            getPage();
-        }
-    }
+			client = current;
+			defaults = { catalog: view.default_catalog, schema: view.default_schema };
+		} catch (caught) {
+			loadError = sqlErrorMessage(caught);
+		}
+	});
 
-    function getPage() {
-        offset = (pageIndex - 1) * pageSize;
-
-        const data = virtualSchemaData.getPageData(offset, pageSize);
-        
-        setData(data);
-
-        Utils.setPageUrlParameter(pageIndex);
-    }
-
-    function setData(fields: SchemaField[]) {
-        rows = fields;
-
-        isLoading = false;
-    }
-
-	function onPageChange(page: number) {
-		pageIndex = page;
-
-		getPage();
+	function loadSchema(): Promise<unknown> {
+		if (!client || !ref) return Promise.resolve(null);
+		return client.tableSchema(tableName, { catalog: ref.catalog, schema: ref.schema });
 	}
 
-    function onSearchBoxChange() {
-        const searchTerm = (document.getElementById('search') as HTMLInputElement).value;
-
-        if(!searchTerm) {
-            totalRows = virtualSchemaData.resetFilter();
-            getPage();
-            return;
-        }
-
-
-        totalRows = virtualSchemaData.filter(function(field: SchemaField) {
-
-            for (const value of Object.values(field)) {                
-                if (typeof value === 'string') {
-                    return value.toLowerCase()
-                        .includes(searchTerm.toLowerCase());
-                }
-            }
-
-            return false;
-        });
-
-        track('browser.search', { props: { scope: 'table-fields', term: searchTerm.slice(0, 60), results: totalRows } });
-
-
-        getPage();
-    }
-
-	function onChangeSort(column: keyof SchemaField, direction: SortDirection) {
-
-		virtualSchemaData.orderBy(column, direction);
-
-		getPage();
+	function onFilter(term: string, results: number) {
+		track('browser.search', {
+			props: { scope: 'table-fields', term: term.slice(0, 60), results }
+		});
 	}
 
+	async function loadDefinition() {
+		if (!savedNode || !ref || definition !== undefined) return;
+
+		definitionError = '';
+		const current = ref;
+
+		try {
+			const result = await withAdmin(savedNode, (admin) =>
+				admin.admin.tableDefinition(current.name, {
+					catalog: current.catalog,
+					schema: current.schema
+				})
+			);
+			if (result === null) {
+				definitionError = 'Sign in to see the definition. Open this tab again to sign in.';
+			} else {
+				definition = result.definition;
+			}
+		} catch (caught) {
+			definitionError = adminErrorMessage(caught);
+		}
+	}
+
+	function selectTab(id: string) {
+		tab = id;
+		if (id === 'definition' && $settings.adminFeatures) void loadDefinition();
+	}
+
+	async function refresh() {
+		if (!savedNode || !ref || !defaults) return;
+
+		busy = true;
+		const sql = refreshSql(ref, defaults);
+
+		try {
+			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
+			if (done !== null) addToast({ type: 'success', message: `Refreshed ${tableName}.` });
+		} catch (caught) {
+			addToast({ type: 'error', message: adminErrorMessage(caught) });
+		} finally {
+			busy = false;
+		}
+	}
+
+	async function drop() {
+		if (!savedNode || !ref || !defaults) return;
+
+		const sure = await askConfirm({
+			title: `Drop ${tableName}`,
+			message: `Drop the table "${tableName}" from ${savedNode.name}?`,
+			note: 'The files stay in place.',
+			confirmLabel: 'Drop',
+			destructive: true
+		});
+		if (!sure) return;
+
+		busy = true;
+		const sql = dropSql(ref, defaults);
+
+		try {
+			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
+			if (done !== null) {
+				addToast({ type: 'success', message: `Dropped ${tableName}.` });
+				goto(LIST);
+			}
+		} catch (caught) {
+			addToast({ type: 'error', message: adminErrorMessage(caught) });
+		} finally {
+			busy = false;
+		}
+	}
+
+	function openInEditor() {
+		if (!ref || !defaults) return;
+		goto(`${resolve('/sql-editor')}?sql=${encodeURIComponent(editorSql(ref, defaults))}`);
+	}
+
+	async function copyDefinition() {
+		if (!definition) return;
+		await navigator.clipboard.writeText(definition);
+		addToast({ type: 'success', message: 'Copied the definition.' });
+	}
 </script>
-
 
 <svelte:head>
 	<title>Table {tableName} - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[
-    { label: 'Data Browser', href: resolve('/data-browser') }, 
-    { label: 'Data tables', href: resolve('/data-browser/data-tables') }, 
-    { label: `Table ${tableName}`, href: '' }]} 
+<Cookiecrumb
+	crumbs={[
+		{ label: 'Data Browser', href: resolve('/data-browser') },
+		{ label: 'Data tables', href: LIST },
+		{ label: `Table ${tableName}`, href: '' }
+	]}
 />
 
 <div class="page-wrapper">
-    <div class="page-container">
-        <h1>Table '{tableName}' ({totalRows} fields)</h1>
+	<div class="page-container">
+		<BackLink label="Tables" fallback={LIST} />
 
-        <p class="node-line">Node: {nodeUrl}</p>
+		<header class="head">
+			<div>
+				<h1>{tableName}</h1>
+				<p class="meta">
+					{#if ref}{ref.catalog}.{ref.schema}{/if}
+					{#if tableType}<span class="badge">{isView ? 'View' : 'Table'}</span>{/if}
+					<span class="node">· {savedNode?.name ?? nodeUrl}</span>
+				</p>
+			</div>
 
-        <Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+			<div class="actions">
+				<Button variant="outline" onclick={openInEditor} disabled={!ref}>
+					<SquareTerminalIcon />
+					Open in SQL Editor
+				</Button>
 
-        <DataTable
-            {onPageChange}
-            {onChangeSort}
-            {columns}
-            {rows}
-            {totalRows}
-            {pageSize}
-            {pageIndex}
-            {isLoading}
-        />
-    </div>
+				{#if manageable}
+					{#if !isView}
+						<AdminAction>
+							{#snippet children({ disabled })}
+								<Button variant="outline" disabled={disabled || busy} onclick={refresh}>
+									Refresh
+								</Button>
+							{/snippet}
+						</AdminAction>
+					{/if}
+					<AdminAction>
+						{#snippet children({ disabled })}
+							<Button variant="destructive" disabled={disabled || busy} onclick={drop}>Drop</Button>
+						{/snippet}
+					</AdminAction>
+				{/if}
+			</div>
+		</header>
+
+		{#if loadError}
+			<p class="error">{loadError}</p>
+		{:else if !ref || !defaults || !client}
+			<p class="muted">Loading the table...</p>
+		{:else}
+			<DetailTabs
+				tabs={[
+					{ id: 'schema', label: 'Schema' },
+					{ id: 'preview', label: 'Preview' },
+					{ id: 'definition', label: 'Definition' }
+				]}
+				active={tab}
+				onSelect={selectTab}
+			/>
+
+			{#if tab === 'schema'}
+				<SchemaTable load={loadSchema} {onFilter} />
+			{:else if tab === 'preview'}
+				<PreviewGrid source={client} sql={previewSql(ref, defaults)} />
+			{:else if !$settings.adminFeatures}
+				<p class="muted">
+					The definition needs admin features. Turn on "Show admin features" in Settings.
+				</p>
+			{:else if !savedNode}
+				<p class="muted">Add this node on the Beacon Nodes page to see the definition.</p>
+			{:else if definitionError}
+				<p class="error">{definitionError}</p>
+			{:else if definition === undefined}
+				<p class="muted">Loading the definition...</p>
+			{:else if definition === null}
+				<p class="muted">
+					Beacon stores no definition for this table. A crawler made it, or it is an older table.
+				</p>
+			{:else}
+				<div class="definition">
+					<Button variant="outline" size="sm" onclick={copyDefinition}>
+						<CopyIcon />
+						Copy
+					</Button>
+					<pre>{definition}</pre>
+				</div>
+			{/if}
+		{/if}
+	</div>
 </div>
 
 <style lang="scss">
-    :global(.search-input) {
-        margin-bottom: 0.5rem;
-    }
-    p.node-line {
-        margin-bottom: 1rem;
+	.head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
 
-        color: var(--muted-foreground);
-    }
+		h1 {
+			margin: 0;
+			word-break: break-all;
+		}
+	}
+
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0.25rem 0 0;
+		color: var(--muted-foreground);
+		font-family: monospace;
+	}
+
+	.badge {
+		padding: 0 0.375rem;
+		border-radius: 0.25rem;
+		background: var(--secondary);
+		font-family: inherit;
+		font-size: 0.75rem;
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.definition {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+
+		pre {
+			width: 100%;
+			padding: 0.75rem;
+			overflow: auto;
+			border-radius: 0.375rem;
+			background: var(--secondary);
+			white-space: pre-wrap;
+		}
+	}
+
+	.muted {
+		color: var(--muted-foreground);
+	}
+
+	.error {
+		color: var(--destructive);
+	}
 </style>

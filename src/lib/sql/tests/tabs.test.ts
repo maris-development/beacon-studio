@@ -5,6 +5,7 @@ import {
 	closeTab,
 	emptyTabs,
 	loadTabs,
+	openInNewTab,
 	readTabs,
 	renameTab,
 	saveTabs,
@@ -107,5 +108,20 @@ describe('storage', () => {
 		saveTabs(state);
 		expect(JSON.parse(localStorage.getItem(TABS_STORAGE_KEY)!)).toEqual(state);
 		expect(loadTabs()).toEqual(state);
+	});
+});
+
+describe('openInNewTab', () => {
+	it('adds a selected tab that holds the SQL', () => {
+		const state = emptyTabs();
+		const next = openInNewTab(state, 'SELECT 1');
+		expect(next.tabs).toHaveLength(2);
+		expect(next.tabs[1].sql).toBe('SELECT 1');
+		expect(next.activeId).toBe(next.tabs[1].id);
+	});
+
+	it('opens a second tab for the same SQL', () => {
+		const once = openInNewTab(emptyTabs(), 'SELECT 1');
+		expect(openInNewTab(once, 'SELECT 1').tabs).toHaveLength(3);
 	});
 });

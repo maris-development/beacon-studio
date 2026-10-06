@@ -71,6 +71,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
   - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
   - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
+  - `src/lib/data-browser/*` (data-browser rules: `backTarget` for the safe "← back" link, folder tree, table statements, external-table body. Shared parts in `components/data-browser/`.)
   - `src/lib/sql/*` (the SQL editor: tabs, statement rules, catalogue cache, completion, 500-row preview, admin fallback. `withAdminFallback` takes the admin runner as an argument, so this folder imports no service.)
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
@@ -149,7 +150,7 @@ Sort each persisted value into one class. The class decides whether a change nee
 ## Layer Rule (Important)
 Imports point one way only:
 
-`beacon-api` → `query` / `geo` / `sql` → `stores` → `components` → `routes`
+`beacon-api` → `query` / `geo` / `sql` / `data-browser` → `stores` → `components` → `routes`
 
 - `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
   import a type out of a `.svelte` file. A type that both a component and the domain need belongs in

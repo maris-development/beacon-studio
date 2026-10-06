@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
+	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
 	import PlayIcon from '@lucide/svelte/icons/play';
 	import SquareIcon from '@lucide/svelte/icons/square';
@@ -32,6 +34,7 @@
 		addTab,
 		closeTab,
 		loadTabs,
+		openInNewTab,
 		renameTab,
 		saveTabs,
 		selectTab,
@@ -51,6 +54,20 @@
 	const ADMIN_HINT = 'Turn on "Show admin features" in Settings';
 
 	let tabs: TabsState = $state(loadTabs());
+
+	// Another page hands SQL over in `?sql=`. It opens in a new tab and leaves the URL.
+	onMount(async () => {
+		const handed = page.url.searchParams.get('sql');
+		if (handed === null || handed.trim() === '') return;
+
+		tabs = openInNewTab(tabs, handed);
+
+		// In dev, replaceState throws until the router has started.
+		await tick();
+		const url = new URL(page.url);
+		url.searchParams.delete('sql');
+		replaceState(url, {});
+	});
 	let outcomes: Record<string, Outcome> = $state({});
 	let busy = $state(false);
 	let downloading = $state(false);

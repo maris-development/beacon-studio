@@ -14,9 +14,9 @@ Users who are not technical must see almost no change.
 |---|---|---|---|---|
 | 1 | Admin mode foundation | [spec](specs/2026-10-05-admin-mode-foundation-design.md) | [plan](plans/2026-10-05-admin-mode-foundation.md) | Committed (`3be6a08`). Verified 2026-10-06: 26 tests pass, `npm run check` clean, no new lint errors. Manual test (plan Task 8 Step 6) still open. |
 | 2 | SQL editor with catalogue | [spec](specs/2026-10-06-sql-editor-design.md) (approved) | [plan](plans/2026-10-06-sql-editor.md) | Code complete, not committed. Verified 2026-10-06: 95 tests pass (69 new), `npm run check` clean, no lint errors in new files, `npm run build` passes. Manual test (plan Task 11) still open. |
-| 3 | Tables | Brainstorm in progress (one spec for 3+4+5) | - | - |
-| 4 | Datasets | (in the 3+4+5 spec) | - | - |
-| 5 | Crawlers | (in the 3+4+5 spec) | - | - |
+| 3 | Tables | [spec 3+4+5](specs/2026-10-06-data-browser-design.md) (approved) | [plan](plans/2026-10-06-data-browser-tables.md) | Code complete, not committed. Verified 2026-10-06: 133 tests pass (29 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 9 Step 3) still open. |
+| 4 | Datasets | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-datasets.md) (user review pending; build after step 3) | - |
+| 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) (user review pending; build after step 4) | - |
 | 6 | Users and roles | - | - | - |
 | 7 | System info | - | - | - |
 
@@ -51,7 +51,7 @@ Each line: the decision, then the reason.
 - A sign-in belongs to one node. A session on node A gives no rights on node B.
 - Studio asks for a sign-in only when the user starts an admin action. The dialog title is "Sign in to Beacon node <name>".
 - Credentials go in `sessionStorage` (option A). They go away when the tab closes. Reason: Basic auth sends the real super-user password.
-- Future work: the convenience of saved credentials with the security of `sessionStorage`. One option: a non-extractable `CryptoKey` in IndexedDB that encrypts the saved password.
+- Future work (user goal): a set-and-forget admin sign-in, so an admin does not sign in again every session. It needs the convenience of saved credentials with the security of `sessionStorage`. One option: a non-extractable `CryptoKey` in IndexedDB that encrypts the saved password.
 - A 401 removes the session, asks again, and retries one time. A 403 shows a toast and keeps the session.
 - "Signed in" and a "Sign out" link show under the node picker. No username shows. The sidebar shows no sign-in state.
 - Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`. No page or modal asks for credentials itself.
@@ -59,7 +59,7 @@ Each line: the decision, then the reason.
 ### Menu
 - Group names stay the same: "Data Access", "Explore and Analyze", "Node Management", "Beacon Studio".
 - The SQL Editor goes in "Data Access", and is always visible.
-- Crawlers and Users & Roles go in "Node Management", as `adminOnly` items.
+- Crawlers goes under Data Browser (Data Browser > Crawlers), as an `adminOnly` sub-item (changed 2026-10-06, data-browser spec). Users & Roles goes in "Node Management", as an `adminOnly` item.
 
 ### Node
 - Admin and browse pages use the global node (`$currentNode`) through one shared `NodePicker`.
@@ -103,6 +103,12 @@ Short notes that are not in a spec yet. Move them into the spec when it is writt
   - Research, Tables (beacon-web `pages/tables.tsx`): catalog tree from `catalogs()`; schema tab (500 columns per page); preview `SELECT * FROM <name> LIMIT 10`; definition tab (`admin.tableDefinition`, null for crawler-made tables); Refresh (`REFRESH`) and Drop (`DROP TABLE IF EXISTS`, files stay) only in the default schema; create view / materialized view through `CREATE [MATERIALIZED] VIEW` SQL; create external table through `admin.createExternalTable({name, location, file_type, partition_cols?, options?, if_not_exists})` (server type `CreateExternalTableRequest`, `beacon-server/src/api.rs:482`). `file_type` values: PARQUET, GEOPARQUET, CSV, ARROW, NC, HDF5, ZARR, ATLAS, TIFF, BBF, ODV, DELTA, ICEBERG, REMOTE.
   - Research, Datasets (`pages/datasets.tsx`): `datasets({pattern, limit})` returns `{file_path, format, can_inspect, can_partial_explore, size?, last_modified?}`; server also takes `offset`. Total from `totalDatasets()`. Schema per file `datasetSchema(file)`. Preview through a structured query `{select, from: {<format>: {paths: [path]}}, limit: 10}` (`nc` maps to `netcdf`). "Query" opens SQL `SELECT * FROM read_<fn>(['path']) LIMIT 100`. Upload: destination folder, folder upload, sequential per file, per-file status, retry failed, overwrite off by default (409 if exists). Download, delete (204), storage use `{kind: local|s3, location, total/used/free_space?, used_percent?, object_count?}`.
   - Research, Crawlers (`beacon-core/src/crawler/definition.rs:41`): `{name, target_prefix, format_filter?, table_naming: leaf_prefix|crawler_prefixed, detect_partitions=true, schedule_secs?, event_driven=false, options, replace}`. A run scans the prefix, groups files into tables, and creates or updates external tables with option `__crawler__=<name>`; it never touches tables it does not own. Runs on demand or on `schedule_secs`. **An upload does not start a crawler.** `event_driven` is not implemented. Run is synchronous and returns `{crawler, discovered, created[], updated[], skipped[], failed[[name,msg]], skipped_files}`.
+  - Decision (2026-10-06): option C, same as beacon-web. An upload only uploads. A table appears through a crawler run (Run button or `schedule_secs`) or through "Create external table". Later improvement (option A): after an upload, offer to run the crawlers whose `target_prefix` covers the folder, and show the run report. Server request for later (option B): implement `event_driven`.
+  - Decision (2026-10-06): Tables list shows the default schema as a flat list (as today), and one folded "Other schemas" section with the tree of every other catalog and schema.
+  - Decision (2026-10-06): Datasets list uses folders, like beacon-web. One folder at a time, with a folder breadcrumb; search matches the full path in all folders; the folder goes in the URL (`?folder=`); upload uses the current folder as destination. Load at most 100,000 paths and show a warning when the list is cut. Server-side `pattern` search can come later.
+  - Decision (2026-10-06): both detail pages get "Open in SQL Editor". Table: `SELECT * FROM <name> LIMIT 100`. Dataset: `SELECT * FROM read_<format>(['path']) LIMIT 100`. The SQL editor reads `?sql=`, opens it in a new tab without a run, and removes the parameter from the URL. "Open in Query Builder" is a later follow-up: check first whether the builder can take a table from the URL.
+  - Decision (2026-10-06): show the crawler run report. Target: the SDK returns it (issue for `beacon-ts`: `runCrawler()` returns `CrawlReport` instead of `void`; the user submits it). Until that release: Studio calls `POST /api/admin/crawlers/{name}/run` itself, in one isolated function with a comment that names the SDK issue, so the swap is one change. Remove it when the SDK release has `CrawlReport`.
+  - Decision (2026-10-06): crawler create and edit through a form (folder picker from the dataset folders, format checkboxes, naming choice, schedule with unit, option rows). The list shows readable cards with Run, Edit, Delete. Edit sends `replace: true`. Leave out `event_driven` (not implemented on the server).
   - Server/SDK gaps found: SDK `runCrawler` returns `void` and drops the run report; `GET /api/admin/crawlers` returns `[]` on any error; dataset delete has no "file in use by a table" check, although the SDK doc says 409.
   - Auth: all `/api/admin/*` need the super-user. `catalogs`, `table-schema`, `list-datasets`, `dataset-schema`, `total-datasets` and `/api/query` are public; DDL through `/api/query` follows the super-user rule from step 2.
 - 5 Crawlers: auto-create tables when datasets are uploaded.
