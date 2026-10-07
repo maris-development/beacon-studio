@@ -18,7 +18,7 @@ Users who are not technical must see almost no change.
 | 4 | Datasets | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-datasets.md) | Committed (`e824dcc`). Verified 2026-10-06: 157 tests pass (24 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 8 Step 2) still open. |
 | 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) | Committed (`2501af7`). Verified 2026-10-06: 176 tests pass (19 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 5 Step 3) still open. Fixes for steps 4 and 5: [fix plan](plans/2026-10-06-data-browser-fixes.md), built 2026-10-06 (184 tests pass), not committed. |
 | 6 | Users and roles | - | - | - |
-| 7 | System info | - | - | - |
+| 7 | System info | Design approved in chat 2026-10-07 (bounded, no spec file; summary in the plan) | [plan](plans/2026-10-07-system-info.md) | Built 2026-10-07, not committed. Verified 2026-10-07: 197 tests pass (12 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 4 Step 4) still open. |
 
 Sub-projects 2 to 7 depend only on sub-project 1. Their order is free.
 
@@ -112,4 +112,4 @@ Short notes that are not in a spec yet. Move them into the spec when it is writt
   - Server/SDK gaps found: SDK `runCrawler` returns `void` and drops the run report; `GET /api/admin/crawlers` returns `[]` on any error; dataset delete has no "file in use by a table" check, although the SDK doc says 409.
   - Auth: all `/api/admin/*` need the super-user. `catalogs`, `table-schema`, `list-datasets`, `dataset-schema`, `total-datasets` and `/api/query` are public; DDL through `/api/query` follows the super-user rule from step 2.
 - 5 Crawlers: auto-create tables when datasets are uploaded.
-- 7 System info: extend the current `/system-info` page with CPU and memory (`GET /api/info`) and health.
+- 7 System info (decided 2026-10-07): node picker; version, health, host data, CPU per core, memory, swap, load, functions, raw answer. Admin extras with a session only, no prompt: storage, and counts of crawlers, users and roles. The admin info route gives the same data as the public one; host data needs `BEACON_ENABLE_SYS_INFO` on the server, whoever asks. Rejected: a server change that gives host data to an admin with the flag off.

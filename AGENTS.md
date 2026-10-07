@@ -73,6 +73,7 @@ This file is a quick operational guide for coding agents working in this reposit
   - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
   - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
   - `src/lib/data-browser/*` (data-browser rules: `backTarget` for the safe "← back" link, folder tree, table statements, external-table body. Shared parts in `components/data-browser/`.)
+  - `src/lib/system-info/host.ts` (`readInfo`: a safe read of `GET /api/info`. `cpu_usage` is already a percentage. `system_info` is `null` unless the server runs with `BEACON_ENABLE_SYS_INFO`; the admin route returns the same data.)
   - `src/lib/sql/*` (the SQL editor: tabs, statement rules, catalogue cache, completion, 500-row preview, admin fallback. `withAdminFallback` takes the admin runner as an argument, so this folder imports no service.)
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)

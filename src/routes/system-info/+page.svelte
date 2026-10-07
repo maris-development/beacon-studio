@@ -1,64 +1,123 @@
 <script lang="ts">
-	import { BeaconClient } from '@/beacon-api/client';
-
-	import { currentNode } from '@/services/beacon-node';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { settings } from '@/stores/settings';
+	import { resolve } from '$app/paths';
+	import { untrack } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import Card from '@/components/card/Card.svelte';
-	import { onMount } from 'svelte';
-	import type { BeaconSystemInfo } from '@/beacon-api/types';
-	import { Utils } from '@/utils';
-	import { askAlert } from '@/stores/confirm';
+	import NodePicker from '@/components/NodePicker.svelte';
+	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import Meter from '@/components/system-info/Meter.svelte';
+	import StatTile from '@/components/system-info/StatTile.svelte';
+	import AdminSummary from '@/components/system-info/AdminSummary.svelte';
+	import { Input } from '@/components/ui/input';
+	import { makeBeaconClient } from '@/beacon-api/client';
+	import { currentNode } from '@/services/beacon-node';
+	import { settings } from '@/stores/settings';
+	import { parseFunctions, type FnMeta } from '@/sql/completion';
+	import { sqlErrorMessage } from '@/sql/statement';
+	import {
+		formatBytesOrDash,
+		formatPercent,
+		formatUptime,
+		readInfo,
+		type HostView,
+		type InfoView,
+		type Usage
+	} from '@/system-info/host';
+	import { poll } from '@/system-info/poll';
 
-	let currentNodeValue: BeaconNode | null = null;
-	let client: BeaconClient;
-	let systemInfo: BeaconSystemInfo | undefined = $state(undefined);
-	let ready = $state(false);
+	let info: InfoView | null = $state(null);
+	let raw: unknown = $state(null);
+	let error = $state('');
+	let functions: FnMeta[] | null = $state(null);
+	let functionsError = $state('');
+	let needle = $state('');
 
-	onMount(() => {
-		currentNodeValue = $currentNode;
+	let node = $derived($currentNode);
+	let nodeUrl = $derived(node?.url ?? null);
+	let period = $derived($settings.systemInfoUpdateIntervalMs);
 
-		if (!currentNodeValue) {
-			void askAlert({
-				title: 'No Beacon node',
-				message: 'This page reads one node. Select a node first.'
-			});
-
-			return;
-		}
-
-		client = BeaconClient.new(currentNodeValue);
-		ready = true;
+	let matches = $derived.by(() => {
+		if (!functions) return [];
+		const query = needle.trim().toLowerCase();
+		if (!query) return functions;
+		return functions.filter((fn) => fn.name.toLowerCase().includes(query));
 	});
 
-	// The user sets the period on the settings page. A new value restarts the timer.
+	// The info repeats on the period from Settings. Only a node or period change restarts it.
 	$effect(() => {
-		if (!ready) return;
+		const url = nodeUrl;
+		const every = period;
+		if (!url) return;
 
-		const period = $settings.systemInfoUpdateIntervalMs;
-		const updateInterval = setInterval(async () => {
-			await updateSystemInfo();
-		}, period);
+		info = null;
+		raw = null;
+		error = '';
 
-		updateSystemInfo();
+		const current = untrack(() => node);
+		if (!current) return;
+
+		const client = makeBeaconClient(current);
+		let alive = true;
+
+		const read = async () => {
+			try {
+				const answer = await client.info<unknown>();
+				if (!alive) return;
+				raw = answer;
+				info = readInfo(answer);
+				error = '';
+			} catch (caught) {
+				if (alive) error = sqlErrorMessage(caught);
+			}
+		};
+
+		const stop = poll(read, every);
 
 		return () => {
-			clearInterval(updateInterval);
+			alive = false;
+			stop();
 		};
 	});
 
-	async function updateSystemInfo() {
-		try {
-			systemInfo = await client.getSystemInfo();
+	// The function list loads once per node.
+	$effect(() => {
+		const url = nodeUrl;
+		if (!url) return;
 
-			// systemInfo = {
-			// 	beacon_version : '1.0.0',
-			// 	system_info: null
-			// }
-		} catch (error) {
-			console.error('Error fetching Beacon system info:', error);
-		}
+		functions = null;
+		functionsError = '';
+
+		const current = untrack(() => node);
+		if (!current) return;
+
+		let alive = true;
+		makeBeaconClient(current)
+			.functions<unknown>()
+			.then(
+				(answer) => {
+					if (alive) functions = parseFunctions(answer);
+				},
+				(caught) => {
+					if (alive) functionsError = sqlErrorMessage(caught);
+				}
+			);
+
+		return () => (alive = false);
+	});
+
+	function systemDetail(host: HostView): string | undefined {
+		const parts = [host.osName, host.kernel].filter(Boolean);
+		if (parts.length === 0) return undefined;
+		return parts.join(' · ');
+	}
+
+	function coresDetail(host: HostView): string | undefined {
+		if (host.physicalCores === null) return undefined;
+		return `${host.physicalCores} physical cores`;
+	}
+
+	function usageDetail(value: Usage | null): string {
+		if (!value) return '—';
+		return `${formatBytesOrDash(value.used)} of ${formatBytesOrDash(value.total)}`;
 	}
 </script>
 
@@ -66,160 +125,214 @@
 	<title>System Information - Beacon Studio</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'System Info', href: '/system-info' }]} />
+<Cookiecrumb crumbs={[{ label: 'System Info', href: resolve('/system-info') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
 		<h1>System Information</h1>
 
-		<p>
-			View detailed information about the Beacon Studio system, including version, CPU usage, memory,
-			and more.
-		</p>
+		<p>The version, health and host resources of a Beacon node.</p>
 
-		{#if systemInfo && systemInfo.system_info == null}
-			<p class="bold">
-				No system information available, enable system information by setting the
-				BEACON_ENABLE_SYS_INFO environment variable.
-			</p>
-		{/if}
+		<NodePicker />
 
-		<div class="system-info-flex">
-			<div class="system-info-grid">
-				<Card>
-					<span class="description muted">Beacon Version</span>
-					<div class="title">{systemInfo?.beacon_version}</div>
-					{#if systemInfo?.system_info != null}
-						<div>
-							System uptime: {Utils.formatSecondsToReadableTime(systemInfo.system_info.uptime)}
-						</div>
-					{/if}
-				</Card>
+		{#if !node}
+			<p>Pick a Beacon node.</p>
+		{:else}
+			{#if error}
+				<p class="error">{error}</p>
+			{/if}
 
-				{#if systemInfo?.system_info != null}
-					<Card>
-						<span class="description muted">System CPU Usage</span>
-						<div class="title">{(systemInfo.system_info.global_cpu_usage * 100).toFixed(1)}%</div>
-
-						<div class="muted">
-							{systemInfo.system_info.physical_core_count} Physical Cores
-						</div>
-					</Card>
-
-					<Card>
-						<span class="description muted">System Memory Usage</span>
-						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_memory)}</div>
-
-						<div>{Utils.formatBytes(systemInfo.system_info.total_memory)} Total</div>
-						<div class="muted">
-							{(
-								(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory) *
-								100
-							).toFixed(1)}% Used
-						</div>
-						<div class="muted">
-							{Utils.formatBytes(systemInfo.system_info.free_memory)} Free
-						</div>
-					</Card>
-
-					<Card>
-						<span class="description muted">System Swap Usage</span>
-						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_swap)}</div>
-
-						<div>{Utils.formatBytes(systemInfo.system_info.total_swap)} Total</div>
-						<div class="muted">
-							{((systemInfo.system_info.used_swap / systemInfo.system_info.total_swap) * 100).toFixed(
-								1
-							)}% Used
-						</div>
-						<div class="muted">
-							{Utils.formatBytes(systemInfo.system_info.free_swap)} Free
-						</div>
-					</Card>
-
-					<Card>
-						<span class="muted">Load Average</span>
-
-						<div class="title">
-							1 min:
-							{(
-								(systemInfo.system_info.load_average.one /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-						<div class="title">
-							5 min:
-							{(
-								(systemInfo.system_info.load_average.five /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-						<div class="title">
-							15 min:
-							{(
-								(systemInfo.system_info.load_average.fifteen /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
-						</div>
-					</Card>
-
-					<Card>
-						<span class="muted">System Information</span>
-						<div class="title">{systemInfo.system_info.name}</div>
-						<div>OS: {systemInfo.system_info.long_os_version}</div>
-						<div class="muted">Hostname: {systemInfo.system_info.host_name}</div>
-						<div class="muted">Kernel: {systemInfo.system_info.kernel_version}</div>
-						<div class="muted">Distribution: {systemInfo.system_info.distribution_id}</div>
-						<div class="muted">Version: {systemInfo.system_info.os_version}</div>
-					</Card>
-
-					<Card>
-						<span class="muted">CPUs</span>
-
-						<div class="title">
-							{systemInfo.system_info.cpus.length}× {systemInfo.system_info.cpus[0].brand}
-						</div>
-					</Card>
+			<div class="tiles">
+				<StatTile label="Beacon version" value={info?.version ?? '—'} />
+				<div class="health">
+					<span class="label">Health</span>
+					<BeaconNodeStatus health={node} variant="compact" />
+				</div>
+				{#if info?.host}
+					<StatTile
+						label="Host"
+						value={info.host.hostName ?? '—'}
+						detail={systemDetail(info.host)}
+					/>
+					<StatTile label="Uptime" value={formatUptime(info.host.uptimeSecs)} />
+					<StatTile label="CPU" value={info.host.cpuBrand ?? '—'} detail={coresDetail(info.host)} />
 				{/if}
 			</div>
-		</div>
+
+			{#if info && !info.host}
+				<p class="muted">
+					This node does not report host data. The server runs without BEACON_ENABLE_SYS_INFO.
+				</p>
+			{/if}
+
+			{#if info?.host}
+				{@const host = info.host}
+				<div class="panels">
+					<section>
+						<h2>CPU</h2>
+						<Meter label="Overall usage" percent={host.cpuPercent} />
+						<div class="cores">
+							{#each host.cores as core, index (index)}
+								<Meter label={core.name} percent={core.percent} />
+							{/each}
+						</div>
+					</section>
+
+					<section>
+						<h2>Memory</h2>
+						<Meter
+							label="Memory"
+							percent={host.memory?.percent ?? null}
+							detail={usageDetail(host.memory)}
+						/>
+						<p class="muted">Available: {formatBytesOrDash(host.availableMemory)}</p>
+						{#if host.swap}
+							<Meter label="Swap" percent={host.swap.percent} detail={usageDetail(host.swap)} />
+						{:else}
+							<p class="muted">No swap.</p>
+						{/if}
+					</section>
+
+					{#if host.load}
+						<section>
+							<h2>Load average</h2>
+							<p>
+								1 min {host.load.one.toFixed(2)} · 5 min {host.load.five.toFixed(2)} · 15 min {host.load.fifteen.toFixed(
+									2
+								)}
+							</p>
+							{#if host.physicalCores}
+								<p class="muted">
+									Per core: {formatPercent((host.load.one / host.physicalCores) * 100)} over 1 min.
+								</p>
+							{/if}
+						</section>
+					{/if}
+				</div>
+			{/if}
+
+			<AdminSummary {node} />
+
+			<section class="functions">
+				<h2>Functions</h2>
+				{#if functionsError}
+					<p class="error">{functionsError}</p>
+				{:else if !functions}
+					<p class="muted">Loading the functions...</p>
+				{:else}
+					<Input type="search" placeholder="Filter functions" bind:value={needle} />
+					<p class="muted">{matches.length} of {functions.length} functions</p>
+					<ul>
+						{#each matches as fn (fn.name)}
+							<li>
+								<span class="name">{fn.name}</span>
+								<span class="muted">{fn.description ?? ''}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</section>
+
+			{#if raw}
+				<details class="raw">
+					<summary>Raw answer</summary>
+					<pre>{JSON.stringify(raw, null, 2)}</pre>
+				</details>
+			{/if}
+		{/if}
 	</div>
 </div>
 
 <style lang="scss">
-	.page-container {
-		--gap: 1rem;
-		.muted {
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.health {
+		display: grid;
+		gap: 0.25rem;
+		padding: 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+
+		.label {
 			color: var(--muted-foreground);
-			font-weight: normal;
+			font-size: 0.8125rem;
+		}
+	}
+
+	.panels {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+		gap: 1rem;
+
+		section {
+			display: grid;
+			align-content: start;
+			gap: 0.5rem;
+			padding: 0.75rem;
+			border: 1px solid var(--border);
+			border-radius: 0.5rem;
 		}
 
-		.bold {
-			font-weight: bold;
-			color: var(--foreground);
+		h2 {
+			margin: 0;
 		}
 
-		.system-info-flex {
-			display: flex;
-			flex-direction: column;
-			gap: var(--gap);
-			.system-info-grid {
-				display: grid;
-				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-				gap: var(--gap);
-
-				.description.muted {
-					font-size: 0.8rem;
-				}
-
-				div.title {
-					font-weight: var(--font-weight-semibold);
-					font-size: 1.4rem;
-				}
-			}
+		p {
+			margin: 0;
 		}
+	}
+
+	.cores {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+		gap: 0.5rem;
+	}
+
+	.functions {
+		margin-top: 1.5rem;
+
+		ul {
+			max-height: 24rem;
+			margin: 0.5rem 0 0;
+			padding: 0;
+			overflow: auto;
+			list-style: none;
+		}
+
+		li {
+			padding: 0.25rem 0;
+			border-bottom: 1px solid var(--border);
+			font-size: 0.875rem;
+		}
+	}
+
+	.name {
+		font-family: monospace;
+	}
+
+	.raw {
+		margin-top: 1rem;
+
+		pre {
+			max-height: 24rem;
+			padding: 0.75rem;
+			overflow: auto;
+			border-radius: 0.375rem;
+			background: var(--secondary);
+			font-size: 0.75rem;
+		}
+	}
+
+	.muted {
+		color: var(--muted-foreground);
+	}
+
+	.error {
+		color: var(--destructive);
 	}
 </style>
