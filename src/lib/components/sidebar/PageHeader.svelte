@@ -74,7 +74,7 @@
 			}
 
 			.app-name {
-				font-size: 1rem;
+				font-size: var(--font-size-md);
 				font-weight: 600;
 				line-height: 1.5rem;
 				white-space: nowrap;

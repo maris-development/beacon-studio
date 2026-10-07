@@ -157,7 +157,7 @@
 			display: flex;
 			align-items: center;
 			gap: 0.375rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 
 		// Two equal columns that may shrink. A long value must not widen the box.
@@ -209,7 +209,7 @@
 						padding: 0.3rem 0.5rem;
 						border-radius: 4px;
 						white-space: nowrap;
-						font-size: 0.75rem;
+						font-size: var(--font-size-xs);
 						pointer-events: none;
 						opacity: 1;
 						z-index: 3;

@@ -286,7 +286,7 @@
 		border-radius: 0.25rem;
 		background: var(--secondary);
 		color: var(--muted-foreground);
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 
 		&.default {
 			background: var(--primary);

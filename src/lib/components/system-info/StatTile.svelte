@@ -21,12 +21,12 @@
 	.label,
 	.detail {
 		color: var(--muted-foreground);
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.value {
 		overflow: hidden;
-		font-size: 1.125rem;
+		font-size: var(--font-size-lg);
 		font-weight: 600;
 		text-overflow: ellipsis;
 		white-space: nowrap;

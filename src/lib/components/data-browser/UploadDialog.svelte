@@ -317,7 +317,7 @@
 		padding: 0;
 		overflow: auto;
 		list-style: none;
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 
 		li {
 			display: grid;

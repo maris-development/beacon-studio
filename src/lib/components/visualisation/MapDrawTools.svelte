@@ -470,7 +470,7 @@
 			flex-direction: row;
 			align-items: center;
 			gap: 0.5rem;
-			font-size: 0.85rem;
+			font-size: var(--font-size-sm);
 
 			:global(input[type='number']) {
 				width: 5rem;
@@ -486,7 +486,7 @@
 			flex-direction: row;
 			align-items: center;
 			gap: 0.15rem;
-			font-size: 0.85rem;
+			font-size: var(--font-size-sm);
 			color: var(--muted-foreground);
 			margin: 0;
 

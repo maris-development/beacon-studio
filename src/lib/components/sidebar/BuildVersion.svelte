@@ -35,9 +35,9 @@
 		left: 0;
 		z-index: 9999;
 		padding: 0;
-		font-size: 0.625rem;
+		font-size: var(--font-size-xs);
 		line-height: 1;
-		font-family: ui-monospace, monospace;
+		font-family: var(--font-family-mono);
 		pointer-events: none;
 
 		:global(.build-link) {

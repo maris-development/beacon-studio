@@ -404,7 +404,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		flex-direction: row;
 
 		.query-stat {
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 			color: var(--muted-foreground);
 			text-wrap: nowrap;
 			&:not(:last-child)::after {
@@ -534,7 +534,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 			display: flex;
 			flex-direction: column;
 			gap: 0.375rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 
 		// .query-block-line {

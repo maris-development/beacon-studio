@@ -109,7 +109,7 @@
 	.schema {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 
 		th,
 		td {
@@ -120,8 +120,8 @@
 	}
 
 	.type {
-		font-family: monospace;
-		font-size: 0.8125rem;
+		font-family: var(--font-family-mono);
+		font-size: var(--font-size-sm);
 	}
 
 	.more {

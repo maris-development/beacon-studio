@@ -89,7 +89,7 @@
 		gap: 0.5rem;
 		white-space: nowrap;
 		border-radius: var(--radius-md);
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		line-height: 1.25rem;
 		font-weight: 500;
 		outline: none;

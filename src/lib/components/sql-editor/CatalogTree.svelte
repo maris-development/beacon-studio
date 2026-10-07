@@ -208,7 +208,7 @@
 		min-height: 0;
 		height: 100%;
 		overflow: auto;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.catalog-head {
@@ -266,8 +266,8 @@
 
 	.type {
 		color: var(--muted-foreground);
-		font-family: monospace;
-		font-size: 0.75rem;
+		font-family: var(--font-family-mono);
+		font-size: var(--font-size-xs);
 	}
 
 	.more {

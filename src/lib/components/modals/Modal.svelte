@@ -91,13 +91,13 @@
 			}
 
 			header {
-				font-size: 1.25rem;
+				font-size: var(--font-size-xl);
 				margin-bottom: 1rem;
 
 				.close-button {
 					background: none;
 					border: none;
-					font-size: 1.5rem;
+					font-size: var(--font-size-icon);
 					cursor: pointer;
 					color: #333;
 					position: absolute;

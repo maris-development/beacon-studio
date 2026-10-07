@@ -308,7 +308,7 @@
 		grid-template-columns: max-content 1fr;
 		gap: 0.25rem 1rem;
 		margin: 0.75rem 0 0;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 	}
 
 	dt {
@@ -317,10 +317,6 @@
 
 	dd {
 		margin: 0;
-	}
-
-	.mono {
-		font-family: monospace;
 	}
 
 	.muted {

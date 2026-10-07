@@ -103,12 +103,12 @@
 			}
 
 			.label {
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 				font-weight: 600;
 			}
 
 			.description {
-				font-size: 0.6875rem;
+				font-size: var(--font-size-xs);
 				line-height: 1.3;
 				color: var(--muted-foreground, #6b7280);
 			}

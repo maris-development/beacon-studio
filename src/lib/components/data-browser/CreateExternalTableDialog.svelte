@@ -167,7 +167,7 @@
 
 	.hint {
 		color: var(--muted-foreground);
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.icon {
@@ -188,7 +188,7 @@
 		overflow: auto;
 		border-radius: 0.375rem;
 		background: var(--secondary);
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 	}
 
 	.error {

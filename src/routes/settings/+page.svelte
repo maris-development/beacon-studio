@@ -121,7 +121,7 @@
 
 		.build-note {
 			margin: 0 0 2rem;
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			color: var(--muted-foreground);
 			text-align: center;
 		}

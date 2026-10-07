@@ -260,7 +260,7 @@
 
 		.label {
 			color: var(--muted-foreground);
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 	}
 
@@ -307,12 +307,12 @@
 		li {
 			padding: 0.25rem 0;
 			border-bottom: 1px solid var(--border);
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 		}
 	}
 
 	.name {
-		font-family: monospace;
+		font-family: var(--font-family-mono);
 	}
 
 	.raw {
@@ -324,7 +324,7 @@
 			overflow: auto;
 			border-radius: 0.375rem;
 			background: var(--secondary);
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 		}
 	}
 

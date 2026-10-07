@@ -261,7 +261,7 @@
 	}
 
 	.subtle {
-		font-size: 0.8rem;
+		font-size: var(--font-size-sm);
 		color: #6b7280;
 	}
 
@@ -271,7 +271,7 @@
 		border-radius: 0.375rem;
 		background: #fef3c7;
 		color: #92400e;
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.stat-grid {
@@ -291,14 +291,14 @@
 	}
 
 	.stat-label {
-		font-size: 0.72rem;
+		font-size: var(--font-size-xs);
 		text-transform: uppercase;
 		letter-spacing: 0.03em;
 		color: #6b7280;
 	}
 
 	.stat-value {
-		font-size: 1.05rem;
+		font-size: var(--font-size-md);
 		font-weight: 600;
 	}
 
@@ -323,7 +323,7 @@
 	table {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 
 		th,
 		td {
@@ -360,7 +360,7 @@
 		display: inline-block;
 		margin-left: 0.4rem;
 		padding: 0.02rem 0.4rem;
-		font-size: 0.7rem;
+		font-size: var(--font-size-xs);
 		border-radius: 0.35rem;
 		background: #dbeafe;
 		color: #1d4ed8;
@@ -368,7 +368,7 @@
 	}
 
 	.empty {
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 		color: #6b7280;
 		margin: 0;
 	}

@@ -100,7 +100,7 @@
 		cursor: pointer;
 		text-align: left;
 		color: inherit;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 
 		&:hover {
 			background: var(--accent);

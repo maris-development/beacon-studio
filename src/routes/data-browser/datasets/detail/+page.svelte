@@ -203,7 +203,7 @@
 			<div>
 				<h1>{fileName(file)}</h1>
 				<p class="meta">
-					{file}
+					<span class="mono">{file}</span>
 					{#if entry.format}· {entry.format}{/if}
 					{#if entry.size !== null}· {formatSize(entry.size)}{/if}
 					{#if entry.lastModified}· {entry.lastModified}{/if}
@@ -278,7 +278,6 @@
 	.meta {
 		margin: 0.25rem 0 0;
 		color: var(--muted-foreground);
-		font-family: monospace;
 		word-break: break-all;
 	}
 

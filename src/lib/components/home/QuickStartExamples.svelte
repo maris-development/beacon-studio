@@ -152,16 +152,12 @@
 			align-items: center;
 			gap: 0.375rem;
 			color: var(--muted-foreground);
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 
 			:global(svg) {
 				width: 0.875rem;
 				height: 0.875rem;
 				flex-shrink: 0;
-			}
-
-			:global(.table-name) {
-				font-family: monospace;
 			}
 		}
 

@@ -109,7 +109,7 @@
 			border-radius: 999px;
 			background-color: var(--muted, #eef2ff);
 			color: var(--muted-foreground, #4b5563);
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 			font-weight: 600;
 		}
 
@@ -121,12 +121,12 @@
 		}
 
 		.title {
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			font-weight: 600;
 		}
 
 		.summary {
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 			color: var(--muted-foreground, #6b7280);
 			overflow: hidden;
 			text-overflow: ellipsis;

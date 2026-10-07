@@ -1,5 +1,21 @@
 @use 'font';
 
+// The only font sizes and families in the app. Tailwind `text-*` and `font-mono` map to them in tailwind.css.
+:root {
+	--font-family-base: #{font.$font-family-base};
+	--font-family-mono: ui-monospace, 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
+
+	--font-size-xs: 0.75rem;
+	--font-size-sm: 0.875rem;
+	--font-size-md: 1rem;
+	--font-size-lg: 1.125rem;
+	--font-size-xl: 1.25rem;
+	--font-size-2xl: 1.375rem;
+	--font-size-3xl: 2rem;
+	// A close glyph (×), not text.
+	--font-size-icon: 1.5rem;
+}
+
 * {
 	box-sizing: border-box;
 }
@@ -7,7 +23,8 @@
 /* base template */
 body,
 html {
-	font-family: font.$font-family-base;
+	font-family: var(--font-family-base);
+	// The rem base: every --font-size-* token scales from it.
 	font-size: 14px;
 	padding: 0;
 	margin: 0;
@@ -57,32 +74,32 @@ h6 {
 
 // --- Individual sizes ---
 h1 {
-	font-size: 2rem;
+	font-size: var(--font-size-3xl);
 	font-weight: 700;
 }
 
 h1.h2-like,
 h2 {
-	font-size: 1.375rem;
+	font-size: var(--font-size-2xl);
 	font-weight: 650;
 }
 
 h3 {
-	font-size: 1.25rem;
+	font-size: var(--font-size-xl);
 	font-weight: 550;
 }
 
 h4 {
-	font-size: 1.1rem;
+	font-size: var(--font-size-lg);
 	font-weight: 500;
 }
 
 h5 {
-	font-size: 1rem;
+	font-size: var(--font-size-md);
 }
 
 h6 {
-	font-size: 0.875rem;
+	font-size: var(--font-size-sm);
 }
 
 p {
@@ -125,5 +142,10 @@ textarea {
 }
 
 .maplibregl-popup-close-button {
-	font-size: 1.5rem;
+	font-size: var(--font-size-icon);
+}
+
+// Code-like values only: SQL, column types, storage paths. Names stay in the base font.
+.mono {
+	font-family: var(--font-family-mono);
 }

@@ -102,7 +102,7 @@
 			
 				span {
 					color: var(--muted-foreground);
-					font-size: 0.75rem;
+					font-size: var(--font-size-xs);
 					line-height: 1rem;
 				
 					overflow: hidden;

@@ -66,7 +66,7 @@
 		gap: 0.75rem;
 		margin-bottom: 0.75rem;
 		color: var(--muted-foreground);
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.bar {

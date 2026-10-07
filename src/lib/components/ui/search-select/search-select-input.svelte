@@ -80,7 +80,7 @@
 		border: 0;
 		background: transparent;
 		outline: none;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		color: inherit;
 
 		&::placeholder {

@@ -149,7 +149,7 @@
 	}
 
 	.name {
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;

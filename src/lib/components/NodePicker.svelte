@@ -92,7 +92,7 @@
 
 	.session-line {
 		margin: 0;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
 	}
 

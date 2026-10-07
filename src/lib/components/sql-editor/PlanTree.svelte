@@ -44,8 +44,8 @@
 
 <style lang="scss">
 	.plan-node {
-		font-family: monospace;
-		font-size: 0.75rem;
+		font-family: var(--font-family-mono);
+		font-size: var(--font-size-xs);
 
 		&.nested {
 			margin-left: 0.75rem;

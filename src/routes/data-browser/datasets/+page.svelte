@@ -331,13 +331,13 @@
 		flex-wrap: wrap;
 		gap: 0.25rem;
 		margin-bottom: 0.5rem;
-		font-family: monospace;
+		font-family: var(--font-family-mono);
 	}
 
 	.files {
 		width: 100%;
 		border-collapse: collapse;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 
 		th,
 		td {

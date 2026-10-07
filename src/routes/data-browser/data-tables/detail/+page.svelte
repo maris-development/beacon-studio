@@ -339,15 +339,13 @@
 		gap: 0.5rem;
 		margin: 0.25rem 0 0;
 		color: var(--muted-foreground);
-		font-family: monospace;
 	}
 
 	.badge {
 		padding: 0 0.375rem;
 		border-radius: 0.25rem;
 		background: var(--secondary);
-		font-family: inherit;
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 	}
 
 	.actions {

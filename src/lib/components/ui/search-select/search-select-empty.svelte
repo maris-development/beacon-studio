@@ -28,7 +28,7 @@
 	.search-select-empty {
 		padding: 0.75rem;
 		text-align: center;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
 	}
 </style>

@@ -325,7 +325,7 @@
 
 					.app-name {
 						flex-grow: 1;
-						font-size: 1rem;
+						font-size: var(--font-size-md);
 						font-weight: 600;
 						line-height: 1.5rem;
 						margin: 0;
@@ -386,7 +386,7 @@
 			flex-direction: column;
 
 			.menu-title {
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 				font-weight: 600;
 				line-height: 1rem;
 				text-transform: uppercase;

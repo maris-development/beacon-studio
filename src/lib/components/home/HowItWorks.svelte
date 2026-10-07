@@ -133,7 +133,7 @@
 			border-radius: var(--radius-md);
 			background-color: var(--muted);
 			color: var(--muted-foreground);
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			font-weight: 600;
 			font-variant-numeric: tabular-nums;
 		}

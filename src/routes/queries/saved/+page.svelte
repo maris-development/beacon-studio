@@ -278,7 +278,7 @@
 		border-radius: 0.375rem;
 		background: var(--background);
 		color: var(--foreground);
-		font-size: 1rem;
+		font-size: var(--font-size-md);
 		font-weight: 600;
 
 		&:focus {
@@ -292,7 +292,7 @@
 		flex-wrap: wrap;
 		gap: 0.75rem;
 		margin-top: 0.35rem;
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 		color: color-mix(in oklab, var(--foreground) 65%, transparent);
 	}
 

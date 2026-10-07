@@ -187,7 +187,7 @@
 
             p.table-description {
                 margin: 0;
-                font-size: 0.875rem;
+                font-size: var(--font-size-sm);
                 color: hsl(0, 0%, 50%);
                 // Show one line only and ellipsize the rest of the text.
                 overflow: hidden;

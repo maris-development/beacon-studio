@@ -205,6 +205,10 @@ message the change never reaches production.
 - Use SCSS for all styling; do not introduce plain CSS stylesheets or plain CSS blocks.
 - Structure styles with SCSS hierarchy (nested rules) where it improves readability and maintainability.
 - Do not override heading text styles (`h1`-`h6`) defined in `app.scss` (font family, font size, font weight). Only adjust layout/spacing properties (e.g., margins, padding, positioning) in component- or screen-specific styles.
+- Set `font-size` only with a `--font-size-*` token, and `font-family` only with a `--font-family-*` token. `:root` in `app.scss` holds them. `src/tests/typography.test.ts` fails on a literal value.
+  - Body text uses three sizes: `xs`, `sm`, `md`. The larger tokens belong to headings. `--font-size-icon` sizes a close glyph only.
+  - Use `--font-family-mono` (or the global `.mono` class) for code-like values only: SQL, column types, storage paths. Show a table, dataset or node name in the base font.
+  - Tailwind `text-xs` to `text-2xl` and `font-mono` map to the same tokens in `tailwind.css`. Do not use arbitrary values such as `text-[13px]`.
 - Prefer native CSS custom properties (`--var` syntax) for design tokens and runtime theming.
 - Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.

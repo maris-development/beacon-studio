@@ -226,7 +226,7 @@
 				padding: 0.4375rem 0.5rem;
 				background: none;
 				border: 0;
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 				max-width: 12rem;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -241,7 +241,7 @@
 				border: 1px solid var(--ring, #9ca3af);
 				border-radius: 0.25rem;
 				background: var(--background, #ffffff);
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 				outline: none;
 			}
 
@@ -290,7 +290,7 @@
 			border: 0;
 			border-radius: 0.375rem;
 			background: none;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 			color: var(--muted-foreground, #4b5563);
 			cursor: pointer;
 

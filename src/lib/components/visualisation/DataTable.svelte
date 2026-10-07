@@ -188,7 +188,7 @@
 				thead th,
 				tbody td {
 					padding: 0.5rem 0.75rem;
-					font-size: 0.875rem;
+					font-size: var(--font-size-sm);
 					border-bottom: 1px solid #ddd;
 					white-space: nowrap;
 				}
@@ -197,7 +197,7 @@
 					thead th, 
 					tbody td {
 						padding: 0.25rem 0.5rem;
-						font-size: 0.7rem;
+						font-size: var(--font-size-xs);
 					}
 				}
 
@@ -205,7 +205,7 @@
 					thead th, 
 					tbody td {
 						padding: 1rem 1.5rem;
-						font-size: 1rem;
+						font-size: var(--font-size-md);
 					}
 				}
 				
@@ -291,7 +291,7 @@
 				color: var(--primary-foreground);
 				border: none;
 				padding: 0.5rem 1rem;
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				border-radius: 4px;
 				cursor: pointer;
 				transition: filter 0.2s ease;
@@ -312,7 +312,7 @@
 			}
 
 			.page-info {
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				color: var(--foreground);
 			}
 		}

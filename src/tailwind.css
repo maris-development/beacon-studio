@@ -105,6 +105,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Type tokens live in app.scss. */
+  --font-sans: var(--font-family-base);
+  --font-mono: var(--font-family-mono);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-md);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
   /* `bg-background` needs this map. The dialog panel is transparent without it. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);

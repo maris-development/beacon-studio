@@ -86,8 +86,8 @@
 		padding: 0.5rem;
 		border: 1px solid var(--border);
 		border-radius: 0.375rem;
-		font-family: monospace;
-		font-size: 0.8125rem;
+		font-family: var(--font-family-mono);
+		font-size: var(--font-size-sm);
 		resize: vertical;
 	}
 

@@ -268,14 +268,14 @@
 
 	.hint {
 		color: var(--muted-foreground);
-		font-size: 0.8125rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.warning,
 	.error {
 		margin: 0;
 		color: var(--destructive);
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 	}
 
 	.icon {

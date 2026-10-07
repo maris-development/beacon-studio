@@ -60,7 +60,7 @@
 		padding: 0.75rem;
 		border-radius: 0.375rem;
 		background: var(--secondary);
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 
 		p {
 			margin: 0 0 0.375rem;
@@ -74,10 +74,6 @@
 			margin: 0.25rem 0 0;
 			padding-left: 1.25rem;
 		}
-	}
-
-	.name {
-		font-family: monospace;
 	}
 
 	.muted {
