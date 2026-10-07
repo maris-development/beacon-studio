@@ -434,7 +434,7 @@ export class BeaconClient {
             return true;
         }).catch(() => {
             addToast({
-                message: `Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon node.`,
+                key: 'query.toast.connectFailed',
                 type: 'error',
                 timeout: 0
             });

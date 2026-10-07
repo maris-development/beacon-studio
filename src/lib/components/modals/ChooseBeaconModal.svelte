@@ -18,6 +18,7 @@
 	import { checkAllNodes } from '@/services/beacon-node-connect';
 	import { FRESH_MS } from '@/services/beacon-node-health';
 	import { onMount } from 'svelte';
+	import { t, formatDate } from '@/i18n';
 
 	export let onClose: () => void;
 
@@ -77,16 +78,21 @@
 	function handleFormClose() {
 		showFormModal = false;
 	}
+
+	function formatUpdated(value: Date | string | undefined): string {
+		if (!value) return $t('common.unknown');
+		return $formatDate(new Date(value), { dateStyle: 'short', timeStyle: 'medium' });
+	}
 </script>
 
-<Modal title="Choose Beacon node" onClose={handleClose}>
-	<p>Here are the currently configured Beacon nodes:</p>
+<Modal title={$t('node.choose.title')} onClose={handleClose}>
+	<p>{$t('node.choose.intro')}</p>
 
 	<div class="beacon-nodes-wrapper">
 	<div class="beacon-nodes">
 		{#if $nodes.length === 0}
 			<Card>
-				<p>No Beacon nodes configured. Please add one.</p>
+				<p>{$t('node.choose.empty')}</p>
             </Card>
 		{/if}
 		{#each $nodes as node (node.id)}
@@ -96,23 +102,23 @@
 					<h3>{node.name}</h3>
 					<BeaconNodeStatus health={node} variant="compact" />
 				</div>
-				<p>URL: <ExternalLink href={node.url}>{node.url}</ExternalLink></p>
+				<p>{$t('node.choose.url')} <ExternalLink href={node.url}>{node.url}</ExternalLink></p>
 				{#if node.description && node.description.length > 0}
 					<p>{node.description}</p>
 				{/if}
-				<p>Last update: {node.updatedAt}</p>
+				<p>{$t('node.choose.lastUpdate', { time: formatUpdated(node.updatedAt) })}</p>
 				<Button onclick={(e) => openBeaconFormModal(node, e)}>
-					Edit
+					{$t('common.edit')}
 					<SquarePenIcon />
 				</Button>
 				<Button
 					onclick={(e) => pickNode(node, e)}
 					disabled={$currentNode?.id === node.id}>
 					{#if $currentNode?.id === node.id}
-						Selected
+						{$t('node.choose.selected')}
 						<SquareCheckBigIcon />
 					{:else}
-						Select
+						{$t('node.choose.select')}
 						<SquareIcon />
 					{/if}
 				</Button>
@@ -123,12 +129,12 @@
 
 	<div slot="footer" class="footer-content">
 		<Button onclick={() => openBeaconFormModal(null)}>
-			Add node
+			{$t('node.page.add')}
 			<PlusIcon />
 		</Button>
 
 		<Button variant="outline" onclick={handleClose}>
-			Done
+			{$t('node.choose.done')}
 			<CheckIcon />
 		</Button>
 	</div>

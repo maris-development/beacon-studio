@@ -46,6 +46,7 @@
 		type SpatialSelection,
 		type SpatialSelectionMode
 	} from '@/geo/spatial-selection';
+	import { t } from '@/i18n';
 
 	let {
 		map = null,
@@ -343,18 +344,22 @@
 		source.setData({ type: 'FeatureCollection', features });
 	}
 
-	const applyTitle = $derived(canApply ? 'Filter the query on this area' : disabledReason);
+	const applyTitle = $derived.by(() => {
+		if (canApply) return $t('map.draw.applyTitle');
+		return disabledReason;
+	});
 	/** The size of the drawn area. Empty while no area is usable. */
-	const areaLabel = $derived(
-		isUsableSelection(selection) ? formatAreaKm2(ringAreaKm2(selection!.ring)) : ''
-	);
+	const areaLabel = $derived.by(() => {
+		if (!isUsableSelection(selection)) return '';
+		return $t(formatAreaKm2(ringAreaKm2(selection!.ring)));
+	});
 </script>
 
 <div class="map-draw-tools">
 
 	{#if activeTool === 'cross-section' || selection?.mode === 'cross-section'}
 		<label class="width-row">
-			<span>Width</span>
+			<span>{$t('map.draw.width')}</span>
 			<input
 				class="width-slider"
 				type="range"
@@ -371,13 +376,13 @@
 				value={widthKm}
 				oninput={(event) => applyWidth(Number(event.currentTarget.value))}
 			/>
-			<span>km</span>
+			<span>{$t('map.draw.km')}</span>
 		</label>
 	{/if}
 
 	{#if selection}
 		<p class="selection-label">
-			<span>{describeSelection(selection)}</span>
+			<span>{$t(describeSelection(selection))}</span>
 
 			{#if areaLabel}
 				<span class="area">{areaLabel}</span>
@@ -386,50 +391,50 @@
 			{#if isCounting}
 				<span class="count">
 					<LoadingSpinner size="12px" ringColor="var(--muted-foreground)" />
-					counting features...
+					{$t('map.draw.counting')}
 				</span>
 			{:else if featureCount !== null}
-				<span class="count">{featureCount.toLocaleString()} features in this area</span>
+				<span class="count">{$t('map.draw.featureCount', { count: featureCount })}</span>
 			{/if}
 		</p>
 	{/if}
 	<div class="tool-row">
 		<Button
 			variant={activeTool === 'polygon' ? 'default' : 'outline'}
-			title="Draw a polygon. Click each corner. Click the first point again to finish."
+			title={$t('map.draw.polygonTitle')}
 			disabled={!ready}
 			onclick={() => selectTool('polygon')}
 		>
 			<PentagonIcon size={16} />
-			Polygon
+			{$t('map.draw.polygon')}
 		</Button>
 		<Button
 			variant={activeTool === 'box' ? 'default' : 'outline'}
-			title="Click one corner of the box, then the opposite corner."
+			title={$t('map.draw.boxTitle')}
 			disabled={!ready}
 			onclick={() => selectTool('box')}
 		>
 			<SquareIcon size={16} />
-			Box
+			{$t('map.draw.box')}
 		</Button>
 		<Button
 			variant={activeTool === 'cross-section' ? 'default' : 'outline'}
-			title="Draw a line. The line becomes a band with the width below."
+			title={$t('map.draw.crossSectionTitle')}
 			disabled={!ready}
 			onclick={() => selectTool('cross-section')}
 		>
 			<SplineIcon size={16} />
-			Cross section
+			{$t('map.draw.crossSection')}
 		</Button>
 
 		<Button
 			variant="outline"
-			title="Remove the area"
+			title={$t('map.draw.clearTitle')}
 			disabled={!selection && !activeTool}
 			onclick={clearSelection}
 		>
 			<Trash2Icon size={16} />
-			Clear
+			{$t('common.clear')}
 		</Button>
 		{#if showApply}
 			<Button
@@ -439,7 +444,7 @@
 				onclick={() => onApply?.()}
 			>
 				<FilterIcon size={16} />
-				Apply filter
+				{$t('map.draw.applyFilter')}
 			</Button>
 		{/if}
 	</div>

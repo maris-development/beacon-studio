@@ -6,12 +6,13 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { resolve } from '$app/paths';
+	import { t } from '@/i18n';
 
 	let currentNodeValue: BeaconNode | null = $state(null);
 	let client: BeaconClient;
 
-	let datasetsTitle: string = $state('Datasets');
-	let dataTablesTitle: string = $state('Data Tables');
+	let datasetCount: number = $state(0);
+	let dataTableCount: number = $state(0);
 
 	onMount(() => {
 		currentNodeValue = $currentNode;
@@ -25,9 +26,7 @@
 		client
 			.getTotalDatasets()
 			.then((count) => {
-				if (count > 0) {
-					datasetsTitle = `${count} dataset${count > 1 ? 's' : ''}`;
-				}
+				datasetCount = count;
 			})
 			.catch((error) => {
 				console.error('Error fetching dataset count:', error);
@@ -38,9 +37,7 @@
 		client
 			.getTables()
 			.then((tables) => {
-				if (tables.length > 0) {
-					dataTablesTitle = `${tables.length} data table${tables.length > 1 ? 's' : ''}`;
-				}
+				dataTableCount = tables.length;
 			})
 			.catch((error) => {
 				console.error('Error fetching data tables:', error);
@@ -49,26 +46,26 @@
 </script>
 
 <svelte:head>
-	<title>Data Browser - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.dataBrowser') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: '/data-browser' }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.dataBrowser'), href: '/data-browser' }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Data Browser</h1>
+		<h1>{$t('nav.item.dataBrowser')}</h1>
 
-		<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
+		<p>{$t('browser.intro')}</p>
 
 		<div class="data-browser-functions">
 			<Card href={resolve('/data-browser/datasets')}>
-				<h3>{datasetsTitle}</h3>
-				<p>View and manage individual datasets.</p>
+				<h3>{datasetCount > 0 ? $t('browser.datasetCount', { count: datasetCount }) : $t('nav.item.datasets')}</h3>
+				<p>{$t('browser.datasetsCard')}</p>
 			</Card>
 
 			<Card href={resolve('/data-browser/data-tables')}>
-				<h3>{dataTablesTitle}</h3>
-				<p>View and manage data tables.</p>
+				<h3>{dataTableCount > 0 ? $t('browser.tableCount', { count: dataTableCount }) : $t('nav.item.dataTables')}</h3>
+				<p>{$t('browser.tablesCard')}</p>
 			</Card>
 		</div>
 	</div>

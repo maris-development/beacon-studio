@@ -17,6 +17,7 @@
 	import { Label } from '@/components/ui/label';
 	import { dataBrowserNodeId } from '@/stores/data-browser-node';
 	import { Input } from '@/components/ui/input';
+	import { t } from '@/i18n';
 
 	type Dataset = {
 		dataset: string;
@@ -28,7 +29,7 @@
 	);
 	let client: BeaconClient;
 
-	let columns: Column[] = $state([{ key: 'dataset', header: 'Dataset', sortable: false }]);
+	let columns: Column[] = $derived([{ key: 'dataset', header: $t('browser.datasets.column'), sortable: false }]);
 	let virtualSchemaData: VirtualPaginationData<Dataset> = new VirtualPaginationData<Dataset>([]);
 	let rows: { dataset: string }[] = $state([]);
 	let upload_files_modal_open: boolean = $state(false);
@@ -146,24 +147,24 @@
 </script>
 
 <svelte:head>
-	<title>Datasets - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.datasets') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Datasets', href: resolve('/data-browser/datasets') }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.datasets'), href: resolve('/data-browser/datasets') }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Datasets</h1>
+		<h1>{$t('nav.item.datasets')}</h1>
 
-		<p>Explore and manage the datasets that are available in your Beacon node.</p>
+		<p>{$t('browser.datasets.intro')}</p>
 
 		<div class="mb-4 node-picker">
-			<Label size="sm" for="beacon-node-select">Beacon Node</Label>
+			<Label size="sm" for="beacon-node-select">{$t('browser.picker.label')}</Label>
 
 			<div class="flex items-center gap-2">
 				<Select.Root
@@ -173,11 +174,11 @@
 					onValueChange={(id) => selectedNodeId.set(id)}
 				>
 					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
-						{selectedNode?.name ?? 'Select a node'}
+						{selectedNode?.name ?? $t('browser.picker.placeholder')}
 					</Select.Trigger>
 					<Select.Content>
 						<Select.Group>
-							<Select.Label>Nodes</Select.Label>
+							<Select.Label>{$t('browser.picker.group')}</Select.Label>
 							{#each $nodes as node (node.id)}
 								<Select.Item value={node.id} label={node.name}>
 									{node.name}
@@ -194,16 +195,16 @@
 		</div>
 
 		{#if $nodes.length === 0}
-			<p>No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse datasets.</p>
+			<p>{$t('browser.datasets.noNodes')}</p>
 		{:else}
 			<div class="table-header-row">
-				<Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+				<Input type="search" id="search" placeholder={$t('browser.searchPlaceholder')} class="search-input" onchange={onSearchBoxChange} />
 
 				<Button
 					onclick={() => {
 						upload_files_modal_open = true;
 					}}
-					variant="outline">Upload Datasets</Button
+					variant="outline">{$t('upload.files.title')}</Button
 				>
 			</div>
 

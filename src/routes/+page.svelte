@@ -12,6 +12,7 @@
 	import { fade } from 'svelte/transition';
 	import Button from '@/components/buttons/Button.svelte';
 	import { addToast } from '@/stores/toasts';
+	import { t } from '@/i18n';
 
 	import { asset, resolve } from '$app/paths';
 
@@ -42,8 +43,7 @@
 			addToast({
 				type: 'info',
 				timeout: 20000,
-				message:
-					'Beacon Studio is still in Beta stage, please provide any feedback by clicking "Feedback" in the bottom left corner.'
+				key: 'home.betaToast'
 			});
 			localStorage.setItem(BETA_TOAST_STORAGE_KEY, 'true');
 		}
@@ -54,7 +54,7 @@
 </script>
 
 <svelte:head>
-	<title>Beacon Studio</title>
+	<title>{$t('app.name')}</title>
 </svelte:head>
 
 <Cookiecrumb />
@@ -63,12 +63,12 @@
 
 <div class="page-wrapper">
 	<div class="header">
-		<h1 class="title">Welcome to Beacon <span class="highlight">Studio</span></h1>
-		<p class="subtitle">Explore and query a Beacon node in your browser. The node reads the files in place and returns rows and columns, not files.</p>
+		<h1 class="title">{$t('home.title.beforeHighlight')} <span class="highlight">{$t('home.title.highlight')}</span></h1>
+		<p class="subtitle">{$t('home.subtitle')}</p>
 	</div>
 
 	<section class="home-section">
-		<h2>Connected Nodes ({$nodes.length})</h2>
+		<h2>{$t('home.nodes.title', { count: $nodes.length })}</h2>
 
 		<div class="connected-nodes">
 			<Card>
@@ -89,12 +89,12 @@
 									<BeaconNodeStatus health={displayedNode} />
 								</div>
 							{:else}
-								<p class="no-node">No Beacon node is configured.</p>
+								<p class="no-node">{$t('home.nodes.empty')}</p>
 							{/if}
 						</div>
 					{/key}
 				</div>
-				<Button href={resolve('/beacon-nodes')}>Manage Nodes</Button>
+				<Button href={resolve('/beacon-nodes')}>{$t('home.nodes.manage')}</Button>
 			</Card>
 		</div>
 	</section>
@@ -108,18 +108,18 @@
 	</section>
 
 	<section class="home-section">
-		<h2>Launchpad</h2>
+		<h2>{$t('home.launchpad.title')}</h2>
 
 		<div class="launchpad-cards">
 			<Card class="query-workbench">
-				<img class="shot" src={asset('/images/small-query-workbench.png')} alt="Query Workbench" />
+				<img class="shot" src={asset('/images/small-query-workbench.png')} alt={$t('home.launchpad.workbench.title')} />
 				<div class="body">
-					<h3>Query Workbench</h3>
-					<p class="description">Write queries, filter data and search millions of records.</p>
+					<h3>{$t('home.launchpad.workbench.title')}</h3>
+					<p class="description">{$t('home.launchpad.workbench.description')}</p>
 					<div class="actions">
 						<Button variant="outline" href={resolve('/queries/workbench')}>
 							<BracesIcon />
-							New Query
+							{$t('home.launchpad.workbench.action')}
 						</Button>
 					</div>
 				</div>

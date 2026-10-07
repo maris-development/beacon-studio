@@ -13,11 +13,12 @@
 	import type { Column, SortDirection } from '@/util-types';
     import { resolve } from '$app/paths';
 	import { Input } from '@/components/ui/input';
+	import { t, translate, type MessageKey } from '@/i18n';
     
     const tableName = page.url.searchParams.get('table_name') || '';
 
     if (!tableName) {
-        throw error(400, 'Missing `table_name` query parameter');
+        throw error(400, translate('browser.error.missingParam', { name: 'table_name' }));
     }
 
     // The node URL, and not its id. An id exists in one browser only, so a
@@ -25,19 +26,33 @@
     const nodeUrl = page.url.searchParams.get('node') || '';
 
     if (!nodeUrl) {
-        throw error(400, 'Missing `node` query parameter');
+        throw error(400, translate('browser.error.missingParam', { name: 'node' }));
     }
 
 	let client: BeaconClient;
 
+	const SCHEMA_HEADERS: Record<string, MessageKey> = {
+		name: 'browser.schema.field',
+		data_type: 'browser.schema.dataType',
+		nullable: 'browser.schema.nullable',
+		dict_id: 'browser.schema.dictId',
+		dict_is_ordered: 'browser.schema.isOrdered',
+		metadata: 'browser.schema.metadata'
+	};
+
     let columns: Column[] = $state([
-        { key: 'name', header: 'Field', sortable: true },
-        { key: 'data_type', header: 'Data Type', sortable: true },
-        { key: 'nullable', header: 'Nullable', sortable: true },
-        { key: 'dict_id', header: 'Dictionary ID', sortable: true },
-        { key: 'dict_is_ordered', header: 'Is Ordered', sortable: true },
-        { key: 'metadata', header: 'Metadata', sortable: false }
+        { key: 'name', header: '', sortable: true },
+        { key: 'data_type', header: '', sortable: true },
+        { key: 'nullable', header: '', sortable: true },
+        { key: 'dict_id', header: '', sortable: true },
+        { key: 'dict_is_ordered', header: '', sortable: true },
+        { key: 'metadata', header: '', sortable: false }
     ]);
+
+	// The headers follow the language. The objects stay, so the sort state stays.
+	$effect.pre(() => {
+		for (const column of columns) column.header = $t(SCHEMA_HEADERS[column.key]);
+	});
     let virtualSchemaData: VirtualPaginationData<SchemaField> = new VirtualPaginationData<SchemaField>([]);
 	let rows: SchemaField[] = $state([]);
 
@@ -139,22 +154,22 @@
 
 
 <svelte:head>
-	<title>Table {tableName} - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('browser.table.title', { name: tableName }) })}</title>
 </svelte:head>
 
 <Cookiecrumb crumbs={[
-    { label: 'Data Browser', href: resolve('/data-browser') }, 
-    { label: 'Data tables', href: resolve('/data-browser/data-tables') }, 
-    { label: `Table ${tableName}`, href: '' }]} 
+    { label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') }, 
+    { label: $t('nav.item.dataTables'), href: resolve('/data-browser/data-tables') }, 
+    { label: $t('browser.table.title', { name: tableName }), href: '' }]} 
 />
 
 <div class="page-wrapper">
     <div class="page-container">
-        <h1>Table '{tableName}' ({totalRows} fields)</h1>
+        <h1>{$t('browser.table.heading', { name: tableName, count: totalRows })}</h1>
 
-        <p class="node-line">Node: {nodeUrl}</p>
+        <p class="node-line">{$t('browser.nodeLine', { url: nodeUrl })}</p>
 
-        <Input type="search" id="search" placeholder="Search..." class="search-input" onchange={onSearchBoxChange} />
+        <Input type="search" id="search" placeholder={$t('browser.searchPlaceholder')} class="search-input" onchange={onSearchBoxChange} />
 
         <DataTable
             {onPageChange}

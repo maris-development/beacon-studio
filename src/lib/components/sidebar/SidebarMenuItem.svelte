@@ -6,7 +6,8 @@
 		url = undefined,
 		icon: Icon = undefined,
 		target = undefined,
-		onclick = undefined
+		onclick = undefined,
+		buttonProps = undefined
 	}: {
 		title: string;
 		url?: string;
@@ -14,6 +15,8 @@
 		icon?: any;
 		target?: string;
 		onclick?: () => void;
+		/** Props of a menu trigger. They make the item a button. */
+		buttonProps?: Record<string, unknown>;
 	} = $props();
 
 	const isActive = $derived(
@@ -21,8 +24,8 @@
 	);
 </script>
 
-{#if onclick}
-	<button class="menu-item" type="button" {onclick}>
+{#if onclick || buttonProps}
+	<button class="menu-item" type="button" {onclick} {...buttonProps}>
 		{#if Icon}
 			<span class="menu-icon"><Icon /></span>
 		{/if}

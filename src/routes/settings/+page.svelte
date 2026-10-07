@@ -6,6 +6,7 @@
 	import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
+	import { t, translate } from '@/i18n';
 	import {
 		resetSettings,
 		VISIBLE_SETTING_DEFINITIONS,
@@ -30,45 +31,42 @@
 	})();
 
 	async function onResetAll(): Promise<void> {
-		let lost = 'your query limits, your cache size and your map defaults';
+		let message = translate('settings.resetAllMessage');
 		if (TELEMETRY_BUILD_ENABLED) {
-			lost = 'your query limits, your cache size, your map defaults and your telemetry choice';
+			message = translate('settings.resetAllMessageTelemetry');
 		}
 
 		const goAhead = await askConfirm({
-			title: 'Reset all settings',
-			message: `This puts every setting of this browser back to its default. The app loses ${lost}.`,
-			note: 'You cannot undo this.',
-			confirmLabel: 'Reset all settings',
+			title: translate('settings.resetAll'),
+			message,
+			note: translate('settings.resetAllNote'),
+			confirmLabel: translate('settings.resetAll'),
 			destructive: true
 		});
 
 		if (!goAhead) return;
 
 		resetSettings();
-		addToast({ type: 'success', message: 'All settings are back to their defaults.' });
+		addToast({ type: 'success', key: 'settings.resetAllDone' });
 	}
 </script>
 
 <svelte:head>
-	<title>Settings - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('settings.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Settings', href: '/settings' }]} />
+<Cookiecrumb crumbs={[{ label: $t('settings.title'), href: '/settings' }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Settings</h1>
+		<h1>{$t('settings.title')}</h1>
 
-		<p>
-			Manage your Beacon Studio settings here. The app keeps every value in this browser. A change
-			applies to the next query, map or refresh.
-		</p>
+		<p>{$t('settings.intro')}</p>
 
 		<div class="settings-groups">
 			{#each groups as group (group.name)}
 				<Card>
-					<h3>{group.name}</h3>
+					<h3>{$t(`settings.group.${group.name}`)}</h3>
 					<div class="fields">
 						{#each group.fields as definition (definition.key)}
 							<SettingField {definition} />
@@ -79,13 +77,11 @@
 		</div>
 
 		<div class="actions">
-			<Button variant="outline" onclick={onResetAll}>Reset all settings</Button>
+			<Button variant="outline" onclick={onResetAll}>{$t('settings.resetAll')}</Button>
 		</div>
 
 		{#if !TELEMETRY_BUILD_ENABLED}
-			<p class="build-note">
-				This version of Beacon Studio is built with telemetry disabled. It sends no usage data.
-			</p>
+			<p class="build-note">{$t('settings.noTelemetryBuild')}</p>
 		{/if}
 	</div>
 </div>

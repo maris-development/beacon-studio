@@ -2,6 +2,7 @@
 	import Button from '$lib/components/buttons/Button.svelte';
     import DownloadIcon from '@lucide/svelte/icons/download';
 	import LoadingIcon from '@lucide/svelte/icons/loader-2';
+	import { t } from '@/i18n';
 
 
 	let {
@@ -31,11 +32,11 @@
 <Button onclick={handleDownloadData} disabled={isLoading || disabled} {title}>
 	{#if isLoading}
 		<LoadingIcon class="animate-spin" />
-    	Downloading...
+    	{$t('download.loading')}
 
 	{:else}
 		<DownloadIcon />
-    	Download Data
+    	{$t('download.button')}
 		
 	{/if}
 </Button>

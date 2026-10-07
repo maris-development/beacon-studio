@@ -18,6 +18,7 @@
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import { settings } from '@/stores/settings';
+	import { t } from '@/i18n';
 	
 
 
@@ -62,13 +63,13 @@
 		<DownloadDataButton
 			downloadData={queryActions.downloadData}
 			disabled={!!blockReason}
-			title={blockReason ?? ''}
+			title={blockReason ? $t(blockReason) : ''}
 		/>
 
 		{#if queryActions.editQuery}
-			<Button onclick={queryActions.editQuery} title="Edit query">
+			<Button onclick={queryActions.editQuery} title={$t('query.actions.editTitle')}>
 				<PencilIcon />
-				Edit Query
+				{$t('query.actions.edit')}
 			</Button>
 		{:else}
 			<VisualiseDataButton
@@ -76,7 +77,7 @@
 				visualiseChart={queryActions.visualiseChart}
 				visualiseMap={queryActions.visualiseMap}
 				disabled={!!blockReason}
-				title={blockReason ?? ''}
+				title={blockReason ? $t(blockReason) : ''}
 			/>
 		{/if}
 		
@@ -88,45 +89,45 @@
 				<DropdownMenu.Trigger>
 					<Button variant="outline">
 						<ShareIcon2 />
-						Share
+						{$t('query.actions.share')}
 					</Button>
 				</DropdownMenu.Trigger>
 				<DropdownMenu.Content class="w-48">
 					<DropdownMenu.Item onclick={() => QueryFunctions.copyUrl(queryActions.getShareableQuery?.() ?? null)}>
 						<UrlIcon class="text-muted-foreground" />
-						<span>Share URL</span>
+						<span>{$t('query.actions.shareUrl')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}>
 						<CopyIcon class="text-muted-foreground" />
-						<span>Copy JSON</span>
+						<span>{$t('query.actions.copyJson')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.copyPython(queryActions.compileQuery, queryActions.getNode?.() ?? null)}>
 						<CopyIcon class="text-muted-foreground" />
-						<span>Copy Python</span>
+						<span>{$t('query.actions.copyPython')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.copySQL(queryActions.compileQuery)}>
 						<CopyIcon class="text-muted-foreground" />
-						<span>Copy SQL</span>
+						<span>{$t('query.actions.copySql')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Separator />
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.downloadJSON(queryActions.compileQuery)}>
 						<JsonIcon class="text-muted-foreground" />
-						<span>Download JSON</span>
+						<span>{$t('query.actions.downloadJson')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.downloadPython(queryActions.compileQuery, queryActions.getNode?.() ?? null)}>
 						<PythonIcon class="text-muted-foreground" />
-						<span>Download Python</span>
+						<span>{$t('query.actions.downloadPython')}</span>
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item onclick={() => QueryFunctions.downloadSQL(queryActions.compileQuery)}>
 						<SQLIcon class="text-muted-foreground" />
-						<span>Download SQL</span>
+						<span>{$t('query.actions.downloadSql')}</span>
 					</DropdownMenu.Item>
 
 				</DropdownMenu.Content>
@@ -135,19 +136,19 @@
 		{/if}
 
 		{#if queryActions.saveQuery}
-			<Button variant="outline" onclick={queryActions.saveQuery} title="Save query">
+			<Button variant="outline" onclick={queryActions.saveQuery} title={$t('query.actions.saveTitle')}>
 				<SaveIcon />
-				Save Query
+				{$t('query.actions.save')}
 			</Button>
 		{/if}	
 		
 
-		<Button onclick={queryActions.resetQuery} variant="destructive" title="Reset query selection">
+		<Button onclick={queryActions.resetQuery} variant="destructive" title={$t('query.actions.resetTitle')}>
 			<ResetIcon />
-			Reset
+			{$t('common.reset')}
 		</Button>
 
-		<Button variant="outline" onclick={() => showCacheInfoModal()} title="Query caching information">
+		<Button variant="outline" onclick={() => showCacheInfoModal()} title={$t('query.actions.cacheInfo')}>
 			<InfoIcon />
 		</Button>
 	</div>
