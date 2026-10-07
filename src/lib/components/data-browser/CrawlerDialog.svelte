@@ -10,6 +10,7 @@
 	import FolderPicker from '@/components/data-browser/FolderPicker.svelte';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { DATASET_LIST_LIMIT } from '@/data-browser/datasets';
 	import {
 		CRAWLER_FORMATS,
 		crawlerErrors,
@@ -45,7 +46,9 @@
 	let paths: string[] | null = $state(null);
 
 	let empty = $derived(
-		paths !== null && form.folder.trim() !== '' && !folderHasFiles(form.folder, paths)
+		paths !== null &&
+			form.folder.trim() !== '' &&
+			!folderHasFiles(form.folder, paths, paths.length >= DATASET_LIST_LIMIT)
 	);
 
 	onMount(() => {
@@ -166,6 +169,7 @@
 					disabled={!form.scheduled}
 				/>
 				<select bind:value={form.unit} disabled={!form.scheduled}>
+					<option value="seconds">seconds</option>
 					<option value="minutes">minutes</option>
 					<option value="hours">hours</option>
 				</select>

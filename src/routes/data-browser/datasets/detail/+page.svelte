@@ -27,6 +27,7 @@
 		datasetEditorSql,
 		fileName,
 		folderOf,
+		formatFromPath,
 		formatSize,
 		parseEntries,
 		previewQuery,
@@ -54,7 +55,7 @@
 	// The list builds the detail link from a known entry. A share link has only the path.
 	let entry: DatasetEntry = $state({
 		path: file,
-		format: '',
+		format: formatFromPath(file),
 		canInspect: true,
 		size: null,
 		lastModified: null
@@ -99,12 +100,23 @@
 		void loadColumns();
 	});
 
-	async function loadSchema(): Promise<unknown> {
-		if (!client) return null;
+	let schemaLoad: Promise<unknown> | null = null;
 
-		const schema = await client.datasetSchema(file);
-		columns = parseSchema(schema).map((column) => column.name);
-		return schema;
+	// One request per page: the schema tab and the preview columns share it.
+	function loadSchema(): Promise<unknown> {
+		if (!client) return Promise.resolve(null);
+
+		if (!schemaLoad) {
+			const load = client.datasetSchema(file).then((schema) => {
+				columns = parseSchema(schema).map((column) => column.name);
+				return schema;
+			});
+			// A failure can be tried again on the next open.
+			load.catch(() => (schemaLoad = null));
+			schemaLoad = load;
+		}
+
+		return schemaLoad;
 	}
 
 	async function loadColumns() {

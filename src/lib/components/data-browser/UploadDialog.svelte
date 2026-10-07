@@ -6,9 +6,14 @@
 	import { Label } from '@/components/ui/label';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { resolve } from '$app/paths';
+	import { settings } from '@/stores/settings';
 	import { filesFromDrop, filesFromInput, type PickedFile } from './dropped-files';
 	import {
+		isHiddenPath,
 		planUpload,
+		resumeItems,
+		retarget,
 		retryItems,
 		uploadProgress,
 		uploadSummary,
@@ -32,11 +37,15 @@
 	let progress = $derived(uploadProgress(items));
 	let summary = $derived(uploadSummary(items));
 
+	let skippedHidden = $state(0);
+
 	function setPicked(files: PickedFile[]) {
-		picked = files;
+		const visible = files.filter((entry) => !isHiddenPath(entry.relativePath));
+		skippedHidden = files.length - visible.length;
+		picked = visible;
 		items = planUpload(
 			destination,
-			files.map((entry) => ({ relativePath: entry.relativePath, size: entry.file.size }))
+			visible.map((entry) => ({ relativePath: entry.relativePath, size: entry.file.size }))
 		);
 		finished = false;
 	}
@@ -63,12 +72,7 @@
 	async function start() {
 		if (running || items.length === 0) return;
 
-		// The destination can change after the pick, so the targets follow it.
-		const planned = planUpload(
-			destination,
-			picked.map((entry) => ({ relativePath: entry.relativePath, size: entry.file.size }))
-		);
-		items = planned.map((item, index) => ({ ...item, status: items[index]?.status ?? 'waiting' }));
+		items = retarget(items, destination);
 
 		running = true;
 		controller = new AbortController();
@@ -76,7 +80,8 @@
 
 		try {
 			for (const item of items) {
-				if (item.status === 'done') continue;
+				// Stopped and failed files wait for Continue or Retry failed.
+				if (item.status !== 'waiting') continue;
 				if (signal.aborted) break;
 
 				update(item.id, { status: 'uploading', uploaded: 0, error: '' });
@@ -92,14 +97,14 @@
 					);
 
 					if (result === null) {
-						update(item.id, { status: 'waiting', uploaded: 0 });
+						update(item.id, { status: 'stopped', uploaded: 0 });
 						break;
 					}
 
 					update(item.id, { status: 'done', uploaded: item.size });
 				} catch (caught) {
 					if (signal.aborted) {
-						update(item.id, { status: 'waiting', uploaded: 0 });
+						update(item.id, { status: 'stopped', uploaded: 0 });
 						break;
 					}
 					update(item.id, { status: 'failed', error: adminErrorMessage(caught) });
@@ -108,7 +113,16 @@
 		} finally {
 			running = false;
 			controller = null;
-			finished = items.length > 0 && items.every((item) => item.status !== 'waiting');
+			// The files after a stop never started, so they count as stopped too.
+			if (signal.aborted) {
+				items = items.map((item) => {
+					if (item.status !== 'waiting') return item;
+					return { ...item, status: 'stopped' };
+				});
+			}
+			finished =
+				items.length > 0 &&
+				items.every((item) => item.status === 'done' || item.status === 'failed');
 			if (uploadSummary(items).done > 0) onUploaded();
 		}
 	}
@@ -121,6 +135,13 @@
 		items = retryItems(items);
 		void start();
 	}
+
+	function resume() {
+		items = resumeItems(items);
+		void start();
+	}
+
+	let hasStopped = $derived(items.some((item) => item.status === 'stopped'));
 
 	function close() {
 		stop();
@@ -167,6 +188,10 @@
 			</div>
 		</div>
 
+		{#if skippedHidden > 0}
+			<p class="muted">Skipped {skippedHidden} hidden files.</p>
+		{/if}
+
 		<label class="check">
 			<input type="checkbox" bind:checked={overwrite} disabled={running} />
 			Replace existing files
@@ -197,7 +222,12 @@
 
 		{#if finished && summary.done > 0}
 			<p class="muted">
-				To query these files, create a table: run a crawler, or use Create external table.
+				To query these files, create a table:
+				{#if $settings.adminFeatures}
+					<a href={resolve('/data-browser/crawlers')}>run a crawler</a>, or
+				{/if}
+				use Create external table on the
+				<a href={resolve('/data-browser/data-tables')}>Data Tables</a> page.
 			</p>
 		{/if}
 	</div>
@@ -206,6 +236,8 @@
 		<Button variant="outline" onclick={close}>Close</Button>
 		{#if running}
 			<Button variant="destructive" onclick={stop}>Stop</Button>
+		{:else if hasStopped}
+			<Button onclick={resume}>Continue</Button>
 		{:else if summary.failed > 0}
 			<Button onclick={retry}>Retry failed</Button>
 		{:else}

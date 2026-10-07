@@ -80,10 +80,10 @@ describe('form round trip', () => {
 		expect(formFromCrawler({ ...crawler, scheduleSecs: null })).toMatchObject({ scheduled: false });
 	});
 
-	it('rounds a schedule of odd seconds up to whole minutes', () => {
+	it('keeps a schedule of odd seconds exact, in seconds', () => {
 		const form = formFromCrawler({ ...crawler, scheduleSecs: 90 });
-		expect(form).toMatchObject({ every: 2, unit: 'minutes' });
-		expect(crawlerRequest(form, true).schedule_secs).toBe(120);
+		expect(form).toMatchObject({ scheduled: true, every: 90, unit: 'seconds' });
+		expect(crawlerRequest(form, true).schedule_secs).toBe(90);
 	});
 });
 
@@ -119,6 +119,12 @@ describe('crawlerErrors', () => {
 		]);
 	});
 
+	it('refuses a schedule in seconds below one minute, and accepts 90 seconds', () => {
+		const form = { ...formFromCrawler(crawler), unit: 'seconds' as const, every: 1 };
+		expect(crawlerErrors(form)).toEqual(['Enter a schedule of at least 60 seconds.']);
+		expect(crawlerErrors({ ...form, every: 90 })).toEqual([]);
+	});
+
 	it('accepts a complete form', () => {
 		expect(crawlerErrors(formFromCrawler(crawler))).toEqual([]);
 	});
@@ -151,5 +157,10 @@ describe('display', () => {
 		expect(folderHasFiles('argo/', ['argo/a.nc'])).toBe(true);
 		expect(folderHasFiles('argo', ['argos/a.nc'])).toBe(false);
 		expect(folderHasFiles('', ['a.nc'])).toBe(true);
+	});
+
+	it('does not warn about an empty folder when the list is cut, and ignores a leading slash', () => {
+		expect(folderHasFiles('argo/', [], true)).toBe(true);
+		expect(folderHasFiles('argo/', ['/argo/a.nc'])).toBe(true);
 	});
 });

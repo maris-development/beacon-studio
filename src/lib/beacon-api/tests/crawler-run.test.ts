@@ -84,4 +84,10 @@ describe('runCrawlerReport', () => {
 		);
 		expect(error).toBeInstanceOf(ConnectionError);
 	});
+
+	it('gives a readable error for an empty success body', async () => {
+		await expect(
+			runCrawlerReport('https://a.org', credentials, 'x', respond(200, ''))
+		).rejects.toThrow('The Beacon node sent no run report.');
+	});
 });

@@ -1,5 +1,46 @@
 import { describe, expect, it } from 'vitest';
-import { planUpload, retryItems, uploadProgress, uploadSummary } from '../upload';
+import {
+	isHiddenPath,
+	planUpload,
+	resumeItems,
+	retarget,
+	retryItems,
+	uploadProgress,
+	uploadSummary
+} from '../upload';
+
+describe('stop, resume and retarget', () => {
+	const base = planUpload('a/', [
+		{ relativePath: 'x.nc', size: 1 },
+		{ relativePath: 'y.nc', size: 1 },
+		{ relativePath: 'z.nc', size: 1 }
+	]);
+	const mixed = [
+		{ ...base[0], status: 'done' as const },
+		{ ...base[1], status: 'stopped' as const },
+		{ ...base[2], status: 'failed' as const, error: 'boom' }
+	];
+
+	it('retries failed items only', () => {
+		expect(retryItems(mixed).map((item) => item.status)).toEqual(['done', 'stopped', 'waiting']);
+	});
+
+	it('resumes stopped items only', () => {
+		expect(resumeItems(mixed).map((item) => item.status)).toEqual(['done', 'waiting', 'failed']);
+	});
+
+	it('keeps the target of a done item when the destination changes', () => {
+		expect(retarget(mixed, 'b').map((item) => item.target)).toEqual(['a/x.nc', 'b/y.nc', 'b/z.nc']);
+	});
+});
+
+describe('isHiddenPath', () => {
+	it('finds a hidden file or a file in a hidden folder', () => {
+		expect(isHiddenPath('.DS_Store')).toBe(true);
+		expect(isHiddenPath('data/.git/config')).toBe(true);
+		expect(isHiddenPath('data/a.nc')).toBe(false);
+	});
+});
 
 describe('planUpload', () => {
 	it('puts each file under the normalized destination, with its folder path', () => {

@@ -26,19 +26,23 @@
 		if (!node) return;
 
 		const client = makeBeaconClient(node);
+		const url = node.url;
 		datasetsTitle = 'Datasets';
 		dataTablesTitle = 'Data Tables';
 
+		// A node switch during the request makes the answer stale.
 		client.totalDatasets().then(
 			(total) => {
-				if (total > 0) datasetsTitle = plural(total, 'dataset');
+				if (url === nodeUrl && total > 0) datasetsTitle = plural(total, 'dataset');
 			},
 			() => {}
 		);
 
 		client.tables().then(
 			(tables) => {
-				if (tables.length > 0) dataTablesTitle = plural(tables.length, 'data table');
+				if (url === nodeUrl && tables.length > 0) {
+					dataTablesTitle = plural(tables.length, 'data table');
+				}
 			},
 			() => {}
 		);

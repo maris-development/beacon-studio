@@ -44,7 +44,8 @@
 	let needle = $state(page.url.searchParams.get('q') ?? '');
 	let sortKey: FileSort = $state('name');
 	let sortDirection: 'asc' | 'desc' = $state('asc');
-	let requestedPage = $state(Number(page.url.searchParams.get('page') ?? '1') || 1);
+	// The page lives in the URL, so browser Back restores it with the folder.
+	let requestedPage = $derived(Number(page.url.searchParams.get('page') ?? '1') || 1);
 
 	let node = $derived($currentNode);
 	let nodeUrl = $derived(node?.url ?? null);
@@ -94,7 +95,7 @@
 		if (loadedUrl !== null && current.url !== loadedUrl) {
 			entries = [];
 			total = null;
-			requestedPage = 1;
+			if (requestedPage !== 1) goToPage(1);
 		}
 		loadedUrl = current.url;
 
@@ -140,9 +141,18 @@
 		return withBack(href, backUrl());
 	}
 
+	function goToPage(next: number) {
+		const url = new URL(page.url);
+		if (next <= 1) {
+			url.searchParams.delete('page');
+		} else {
+			url.searchParams.set('page', String(next));
+		}
+		goto(`${url.pathname}${url.search}`, { keepFocus: true, noScroll: true });
+	}
+
 	function openFolder(path: string) {
 		needle = '';
-		requestedPage = 1;
 		goto(listHref(path), { keepFocus: true, noScroll: true });
 	}
 
@@ -160,7 +170,7 @@
 	}
 
 	function onSearch() {
-		requestedPage = 1;
+		if (requestedPage !== 1) goToPage(1);
 		if (searching) {
 			track('browser.search', {
 				props: {
@@ -288,14 +298,14 @@
 							variant="outline"
 							size="sm"
 							disabled={pageIndex <= 1}
-							onclick={() => (requestedPage = pageIndex - 1)}>Previous</Button
+							onclick={() => goToPage(pageIndex - 1)}>Previous</Button
 						>
 						<span class="muted">Page {pageIndex} of {pageCount}</span>
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={pageIndex >= pageCount}
-							onclick={() => (requestedPage = pageIndex + 1)}>Next</Button
+							onclick={() => goToPage(pageIndex + 1)}>Next</Button
 						>
 					</div>
 				{/if}

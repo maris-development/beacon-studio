@@ -159,6 +159,26 @@ export function formatSize(bytes: number | null): string {
 	return `${value.toFixed(1)} ${units[unit]}`;
 }
 
+const EXTENSION_FORMATS: Record<string, string> = {
+	nc: 'nc',
+	parquet: 'parquet',
+	csv: 'csv',
+	arrow: 'arrow',
+	zarr: 'zarr',
+	tif: 'tiff',
+	tiff: 'tiff',
+	bbf: 'bbf',
+	txt: 'txt'
+};
+
+/** The format id of a path, for a share link that has no file details. */
+export function formatFromPath(path: string): string {
+	const dot = path.lastIndexOf('.');
+	if (dot === -1 || dot < path.lastIndexOf('/')) return '';
+
+	return EXTENSION_FORMATS[path.slice(dot + 1).toLowerCase()] ?? '';
+}
+
 // The query DSL names NetCDF `netcdf`. A file with no detected format reads as Parquet.
 function fromKey(format: string): string {
 	if (format === '') return 'parquet';

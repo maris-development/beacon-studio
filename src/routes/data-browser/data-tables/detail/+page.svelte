@@ -116,9 +116,20 @@
 		}
 	});
 
+	let schemaLoad: Promise<unknown> | null = null;
+
+	// One request per page: a tab switch mounts the schema table again.
 	function loadSchema(): Promise<unknown> {
 		if (!client || !ref) return Promise.resolve(null);
-		return client.tableSchema(tableName, { catalog: ref.catalog, schema: ref.schema });
+
+		if (!schemaLoad) {
+			const load = client.tableSchema(tableName, { catalog: ref.catalog, schema: ref.schema });
+			// A failure can be tried again on the next open.
+			load.catch(() => (schemaLoad = null));
+			schemaLoad = load;
+		}
+
+		return schemaLoad;
 	}
 
 	function onFilter(term: string, results: number) {

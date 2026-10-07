@@ -1,6 +1,6 @@
 import { normalizeFolder } from './folders';
 
-export type UploadStatus = 'waiting' | 'uploading' | 'done' | 'failed';
+export type UploadStatus = 'waiting' | 'uploading' | 'done' | 'failed' | 'stopped';
 
 export interface UploadItem {
 	id: number;
@@ -65,4 +65,26 @@ export function uploadSummary(items: UploadItem[]): {
 		failed: items.filter((item) => item.status === 'failed').length,
 		total: items.length
 	};
+}
+
+export function resumeItems(items: UploadItem[]): UploadItem[] {
+	return items.map((item) => {
+		if (item.status !== 'stopped') return item;
+		return { ...item, status: 'waiting', uploaded: 0 };
+	});
+}
+
+/** A done file stays where it went. Only the others follow a new destination. */
+export function retarget(items: UploadItem[], destination: string): UploadItem[] {
+	const folder = normalizeFolder(destination);
+
+	return items.map((item) => {
+		if (item.status === 'done') return item;
+		return { ...item, target: `${folder}${item.relativePath.replace(/^\/+/, '')}` };
+	});
+}
+
+/** Hidden files (`.DS_Store`, `.git/…`) are not datasets, and the server refuses them. */
+export function isHiddenPath(relativePath: string): boolean {
+	return relativePath.split('/').some((part) => part.startsWith('.'));
 }

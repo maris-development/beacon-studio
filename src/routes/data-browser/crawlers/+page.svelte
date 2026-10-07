@@ -32,7 +32,8 @@
 	let phase: Phase = $state('idle');
 	let crawlers: Crawler[] = $state([]);
 	let error = $state('');
-	let running: string | null = $state(null);
+	// The busy crawler of each node URL. A run goes on when the user looks at another node.
+	let runningByUrl: Record<string, string> = $state({});
 	let reports: Record<string, CrawlReport> = $state({});
 	let dialog: { crawler: Crawler | null } | null = $state(null);
 	let reportsUrl: string | null = null;
@@ -40,6 +41,10 @@
 	let node = $derived($currentNode);
 	let nodeUrl = $derived(node?.url ?? null);
 	let admin = $derived($settings.adminFeatures);
+	let running = $derived.by(() => {
+		if (nodeUrl === null) return null;
+		return runningByUrl[nodeUrl] ?? null;
+	});
 
 	// Opening this page counts as an admin action, so it can ask for a sign-in.
 	$effect(() => {
@@ -78,17 +83,28 @@
 		}
 	}
 
-	async function loadPaths(): Promise<string[]> {
-		if (!node) return [];
-		const raw = await makeBeaconClient(node).datasets({ limit: DATASET_LIST_LIMIT });
-		return parseEntries(raw).map((entry) => entry.path);
+	let pathsLoad: { url: string; promise: Promise<string[]> } | null = null;
+
+	// The dialog and its folder picker share one request of up to 100,000 paths.
+	function loadPaths(): Promise<string[]> {
+		if (!node) return Promise.resolve([]);
+		if (pathsLoad && pathsLoad.url === node.url) return pathsLoad.promise;
+
+		const promise = makeBeaconClient(node)
+			.datasets({ limit: DATASET_LIST_LIMIT })
+			.then((raw) => parseEntries(raw).map((entry) => entry.path));
+		promise.catch(() => (pathsLoad = null));
+		pathsLoad = { url: node.url, promise };
+
+		return promise;
 	}
 
 	async function run(crawler: Crawler) {
 		const current = node;
 		if (!current || running) return;
 
-		running = crawler.name;
+		const url = current.url;
+		runningByUrl[url] = crawler.name;
 
 		try {
 			// The credentials are read inside, so a retry after a new sign-in uses the new ones.
@@ -97,11 +113,12 @@
 				if (!credentials) throw new Error('No admin session.');
 				return runCrawlerReport(normalizeUrl(current.url), credentials, crawler.name);
 			});
-			if (report !== null) reports[crawler.name] = report;
+			// A node switch during the run makes this report belong to another node.
+			if (report !== null && current.url === nodeUrl) reports[crawler.name] = report;
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			if (current.url === nodeUrl) addToast({ type: 'error', message: adminErrorMessage(caught) });
 		} finally {
-			running = null;
+			delete runningByUrl[url];
 		}
 	}
 
@@ -189,6 +206,7 @@
 				<Button onclick={load}>Sign in</Button>
 			{:else if phase === 'error'}
 				<p class="error">{error}</p>
+				<Button variant="outline" onclick={load}>Try again</Button>
 			{:else if phase === 'ready' && crawlers.length === 0}
 				<p class="muted">No crawlers on this node, or the node could not list them.</p>
 			{:else if phase === 'ready'}

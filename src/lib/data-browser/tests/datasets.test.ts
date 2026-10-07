@@ -5,6 +5,7 @@ import {
 	fileName,
 	folderOf,
 	folderParts,
+	formatFromPath,
 	formatSize,
 	listFolder,
 	parseEntries,
@@ -160,5 +161,26 @@ describe('queries', () => {
 		expect(datasetDetailQuery('argo/a b.nc', 'https://a.org')).toBe(
 			'file=argo%2Fa+b.nc&node=https%3A%2F%2Fa.org'
 		);
+	});
+});
+
+describe('formatFromPath', () => {
+	it('reads the format from the extension', () => {
+		expect(formatFromPath('argo/a.nc')).toBe('nc');
+		expect(formatFromPath('A.PARQUET')).toBe('parquet');
+		expect(formatFromPath('x.tif')).toBe('tiff');
+		expect(formatFromPath('noext')).toBe('');
+		expect(formatFromPath('dir.v2/noext')).toBe('');
+	});
+
+	it('gives the right read function for a share link with no details', () => {
+		const entry = {
+			path: 'argo/a.nc',
+			format: formatFromPath('argo/a.nc'),
+			canInspect: true,
+			size: null,
+			lastModified: null
+		};
+		expect(datasetEditorSql(entry)).toBe("SELECT * FROM read_netcdf(['argo/a.nc']) LIMIT 100");
 	});
 });

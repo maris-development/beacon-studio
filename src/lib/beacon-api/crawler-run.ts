@@ -82,5 +82,9 @@ export async function runCrawlerReport(
 	const text = await response.text();
 	if (!response.ok) throw new ApiError(response.status, decodeBody(text), url);
 
-	return parseCrawlReport(JSON.parse(text));
+	try {
+		return parseCrawlReport(JSON.parse(text));
+	} catch {
+		throw new Error('The Beacon node sent no run report.');
+	}
 }

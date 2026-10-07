@@ -67,7 +67,9 @@ The existing paths stay, because share links use them.
 | `folders.ts` | Folder tree from a flat path list: children of one folder, file counts, path parts, sort. |
 | `preview.ts` | Preview queries and "Open in SQL Editor" queries for tables and datasets. Format to `from` key and `read_<fn>` names. |
 | `external-table.ts` | File types with hints, and the request body of "Create external table". |
-| `crawler-form.ts` | Crawler form values to and from the crawler definition. Schedule unit conversion. Table name examples. |
+| `crawlers.ts` | Crawler form values to and from the crawler definition. Schedule unit conversion. Table name examples. |
+| `datasets.ts` | Dataset entries, folder listing, search, sort, sizes, format from the file extension, preview and SQL Editor queries. |
+| `upload.ts` | Upload plan, progress, stop and resume, retarget, hidden files. |
 
 Tests go in `src/lib/data-browser/tests/`.
 
@@ -148,8 +150,11 @@ Tests go in `src/lib/data-browser/tests/`.
 - Files: pick files, pick a folder (with sub-folders, `webkitdirectory`), or drop files and folders.
 - "Replace existing files": off by default (`overwrite`). Without it, an existing file fails with "already exists" for that file.
 - Files go one after another through `admin.uploadDataset(dest + relativePath, file, { overwrite, signal, onProgress })` inside `withAdmin`.
-- Each file shows: waiting, uploading, done, or failed with the reason. One progress bar weighted by bytes.
-- "Retry failed" sends only the failed files. "Stop" aborts the running upload; a close of the dialog also stops it.
+- Each file shows: waiting, uploading, done, stopped, or failed with the reason. One progress bar weighted by bytes.
+- Byte progress shows for files above 50 MiB only (the SDK chunked path). A smaller file shows "uploading" until done.
+- Hidden files (a path part that starts with `.`) are skipped, with a count.
+- "Stop" aborts the running upload and marks the rest as stopped; a close of the dialog also stops it. "Continue" sends the stopped files. "Retry failed" sends only the failed files.
+- A destination change after a partial upload moves only the files that are not done.
 - When done: reload the list and show "To query these files, create a table: run a crawler, or use Create external table." Both are links. "run a crawler" shows only with admin features on.
 - Replaces `UploadDatasetsModal`.
 
@@ -186,7 +191,7 @@ Tests go in `src/lib/data-browser/tests/`.
 - Formats (`format_filter`): checkboxes from the beacon-web list. None checked sends `null` (all formats).
 - Table names (`table_naming`): "Folder name" (`leaf_prefix`) or "Crawler name + folder name" (`crawler_prefixed`), each with an example from the chosen folder.
 - "Find partitions in folder names" (`detect_partitions`): on by default.
-- Schedule (`schedule_secs`): "Only on Run" (`null`) or "Every N minutes/hours".
+- Schedule (`schedule_secs`): "Only on Run" (`null`) or "Every N seconds/minutes/hours". A stored value keeps its exact seconds on Edit.
 - Options: key/value rows.
 - `event_driven` is not in the form (not implemented on the server). Edit keeps the stored value.
 - Save: `admin.createCrawler(definition)` through `withAdmin`. Edit sends `replace: true`. A 409 on create shows "A crawler with this name exists."

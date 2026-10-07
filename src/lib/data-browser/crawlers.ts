@@ -75,7 +75,7 @@ export function parseCrawlers(raw: unknown): Crawler[] {
 	return result;
 }
 
-export type ScheduleUnit = 'minutes' | 'hours';
+export type ScheduleUnit = 'seconds' | 'minutes' | 'hours';
 
 export interface CrawlerForm {
 	name: string;
@@ -105,7 +105,7 @@ export function emptyCrawlerForm(): CrawlerForm {
 	};
 }
 
-// The form holds whole minutes or hours. Odd seconds round up to the next minute.
+// The form shows hours or minutes when the value divides, else seconds, so a save keeps the value.
 export function formFromCrawler(crawler: Crawler): CrawlerForm {
 	let scheduled = false;
 	let every = 1;
@@ -115,9 +115,12 @@ export function formFromCrawler(crawler: Crawler): CrawlerForm {
 		scheduled = true;
 		if (crawler.scheduleSecs % 3600 === 0) {
 			every = crawler.scheduleSecs / 3600;
-		} else {
+		} else if (crawler.scheduleSecs % 60 === 0) {
 			unit = 'minutes';
-			every = Math.ceil(crawler.scheduleSecs / 60);
+			every = crawler.scheduleSecs / 60;
+		} else {
+			unit = 'seconds';
+			every = crawler.scheduleSecs;
 		}
 	}
 
@@ -144,6 +147,7 @@ export function crawlerRequest(form: CrawlerForm, replace: boolean): Record<stri
 	if (form.scheduled) {
 		let factor = 3600;
 		if (form.unit === 'minutes') factor = 60;
+		if (form.unit === 'seconds') factor = 1;
 		scheduleSecs = form.every * factor;
 	}
 
@@ -172,6 +176,9 @@ export function crawlerErrors(form: CrawlerForm): string[] {
 	if (normalizeFolder(form.folder) === '') errors.push('Pick a folder.');
 	if (form.scheduled && (!Number.isInteger(form.every) || form.every < 1)) {
 		errors.push('Enter a schedule of at least 1.');
+	} else if (form.scheduled && form.unit === 'seconds' && form.every < 60) {
+		// Each run scans the whole folder, so a shorter period loads the node for nothing.
+		errors.push('Enter a schedule of at least 60 seconds.');
 	}
 
 	return errors;
@@ -210,7 +217,10 @@ export function tableNameExample(form: CrawlerForm): string {
 	return leaf;
 }
 
-export function folderHasFiles(folder: string, paths: string[]): boolean {
+/** A cut list can miss the folder, so it counts as "has files". */
+export function folderHasFiles(folder: string, paths: string[], listCut = false): boolean {
+	if (listCut) return true;
+
 	const prefix = normalizeFolder(folder);
-	return paths.some((path) => path.startsWith(prefix));
+	return paths.some((path) => path.replace(/^\/+/, '').startsWith(prefix));
 }
