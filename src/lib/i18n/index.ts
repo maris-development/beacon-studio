@@ -20,6 +20,7 @@ import {
 } from 'svelte-i18n';
 import { derived, get, type Readable } from 'svelte/store';
 import en from './locales/en.json';
+import nl from './locales/nl.json';
 
 /** The setting value that follows the browser language. */
 export const AUTO_LANGUAGE = 'auto';
@@ -29,7 +30,8 @@ export const FALLBACK_LOCALE = 'en';
 
 /** The languages that the app ships. The name is the native name and is never translated. */
 export const SUPPORTED_LOCALES: ReadonlyArray<{ code: string; name: string }> = [
-	{ code: 'en', name: 'English' }
+	{ code: 'en', name: 'English' },
+	{ code: 'nl', name: 'Nederlands' }
 ];
 
 type Leaves<T, Prefix extends string = ''> = {
@@ -50,6 +52,8 @@ export interface Message {
 export type Translate = (message: MessageKey | Message, values?: MessageValues) => string;
 
 addMessages(FALLBACK_LOCALE, en);
+// A key that is missing in a catalog fails the type check.
+addMessages('nl', nl satisfies typeof en);
 // The English catalog is bundled, so the formatter works from the first import.
 init({ fallbackLocale: FALLBACK_LOCALE, initialLocale: FALLBACK_LOCALE });
 
