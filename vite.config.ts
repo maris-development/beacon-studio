@@ -55,9 +55,15 @@ function telemetryFlag() {
 	return { __TELEMETRY__: JSON.stringify(enabled) };
 }
 
+function basePathFlag() {
+	const basePath = (process.env.BASE_PATH ?? '').trim();
+	console.log(`[beacon-studio] base path: ${basePath}`);
+	return { __BASE_PATH__: JSON.stringify(basePath) };
+}
+
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
-	define: { ...buildInfo(), ...telemetryFlag() },
+	define: { ...buildInfo(), ...telemetryFlag(), ...basePathFlag() },
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
 		dedupe: ['apache-arrow']
