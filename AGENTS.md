@@ -50,7 +50,7 @@ This file is a quick operational guide for coding agents working in this reposit
 ## High-Level Architecture
 - App shell and navigation:
   - `src/routes/+layout.svelte`
-  - `src/lib/components/app-sidebar.svelte`
+  - `src/lib/components/sidebar/AppSidebar.svelte`
 - Landing and top-level sections:
   - `src/routes/+page.svelte`
   - `src/routes/queries/*`
@@ -188,6 +188,20 @@ Read `src/lib/telemetry/README.md` before you add an event.
 Edit either file **only when the task needs it**. Both live in another repository, on a slow share.
 **Always tell the user which of the two you changed.** The user deploys them by hand. Without that
 message the change never reaches production.
+
+## Translations (Important)
+- svelte-i18n runs the translations. `src/lib/i18n/index.ts` wraps it. Import from `@/i18n`, never from `svelte-i18n`.
+- The catalog is `src/lib/i18n/locales/en.json`. English is the source language and the fallback. A new language is one JSON file plus one entry in `SUPPORTED_LOCALES`.
+- Every user-visible string comes from the catalog. ESLint (`no-restricted-syntax`) rejects literal words in markup, in `title`/`placeholder`/`aria-label`/`alt`/`label`, and in `addToast`/`askConfirm` text.
+- Use `$t('key')` in a component. Use `translate('key')` in plain code, at the point of use. A call at module load fixes the language of the first load.
+- `MessageKey` is the union of all catalog keys. A wrong key fails `npm run check`. A key built from a template (`settings.field.${key}.label`) is checked as well.
+- Domain code (`query/`, `geo/`, `plots/`) returns a `Message` (`message(key, values)`). The component translates it, so a stored warning follows a language change.
+- A toast takes `key` and `values`. `message` holds only raw text, for example a server error. The toast shows the key text, then the raw text.
+- Toast telemetry puts the key in `message` and the raw text in `props.detail`. The dashboard then groups one toast as one row in every language.
+- Counts and numbers go in ICU messages (`{count, plural, one {# row} other {# rows}}`). Never join `toLocaleString()` and a word. Use `$formatNumber`, `$formatDate`, `$formatRelative` for a bare value.
+- The settings page derives its text from the setting key: `settings.field.<key>.label` and `.description`, and `settings.group.<id>`. A new setting needs those keys.
+- `+layout.svelte` calls `setLanguage` at the top of its script, not in `onMount`. A child `onMount` runs first.
+- `<html lang>` follows the active locale. `app.html` holds only the start value.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.

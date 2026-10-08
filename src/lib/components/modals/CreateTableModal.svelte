@@ -7,6 +7,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import * as Select from '$lib/components/ui/select/index.js';
+	import { t, translate } from '@/i18n';
 
 	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
 		$props();
@@ -29,17 +30,17 @@
 			.filter((path) => path.length > 0);
 
 		if (!table_name) {
-			message = 'Please enter a table name.';
+			message = translate('upload.table.nameMissing');
 			return;
 		}
 
 		if (!selected_file_format) {
-			message = 'Please select a file format.';
+			message = translate('upload.table.formatMissing');
 			return;
 		}
 
 		if (seperated_glob_paths.length === 0) {
-			message = 'Please enter at least one glob path.';
+			message = translate('upload.table.pathMissing');
 			return;
 		}
 
@@ -70,13 +71,13 @@
 			if (!res.ok) {
 				const err = await res.text();
 				// console.log('Upload failed:', err);
-				throw new Error(err || 'Upload failed');
+				throw new Error(err || translate('upload.failed'));
 			}
 
 			// console.log('Response:', res);
 
 			const data = await res.json();
-			message = `✅ Created table ${table_name}`;
+			message = translate('upload.table.created', { name: table_name });
 			onCancel(true);
 		} catch (err: any) {
 			// console.log('Create error:', err);
@@ -85,50 +86,50 @@
 	}
 </script>
 
-<Modal title="Create Table" onClose={() => onCancel(false)} width="50vw">
+<Modal title={$t('upload.table.title')} onClose={() => onCancel(false)} width="50vw">
 	<div>
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="username">Admin Username</Label>
+			<Label for="username">{$t('upload.username')}</Label>
 			<Input id="username" type="text" bind:value={username} required />
 		</div>
 
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="password">Admin Password</Label>
+			<Label for="password">{$t('upload.password')}</Label>
 			<Input id="password" type="password" bind:value={password} required />
 		</div>
 
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="table_name">Table Name</Label>
+			<Label for="table_name">{$t('upload.table.name')}</Label>
 			<Input
 				id="table_name"
 				type="text"
 				bind:value={table_name}
 				required
-				placeholder="e.g. my_table"
+				placeholder={$t('upload.example', { example: 'my_table' })}
 			/>
 		</div>
 
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="glob_paths">Glob Paths</Label>
+			<Label for="glob_paths">{$t('upload.table.paths')}</Label>
 			<Input
 				id="glob_paths"
 				type="text"
 				bind:value={glob_paths}
-				placeholder="e.g. /data/example*.parquet, /more_data/*.parquet"
+				placeholder={$t('upload.example', { example: '/data/example*.parquet, /more_data/*.parquet' })}
 			/>
 			<p class="text-muted-foreground text-sm">
-				You can specify multiple paths separated by commas.
+				{$t('upload.table.pathsHint')}
 			</p>
 		</div>
 
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="file_format">File Format</Label>
+			<Label for="file_format">{$t('upload.table.format')}</Label>
 			<Select.Root type="single" name="file_format" bind:value={selected_file_format}>
 				<Select.Trigger class="w-[180px]">
-					{selected_file_format ? selected_file_format : 'Select a file format'}
+					{selected_file_format ? selected_file_format : $t('upload.table.formatPlaceholder')}
 				</Select.Trigger>
 				<Select.Content id="file_format_options">
-					<Select.Label>File Format</Select.Label>
+					<Select.Label>{$t('upload.table.format')}</Select.Label>
 					{#each file_formats as format}
 						<Select.Item label={format} value={format} />
 					{/each}
@@ -137,7 +138,7 @@
 		</div>
 
 		<Button class="mt-4" onclick={createTable}>
-			Create Table
+			{$t('upload.table.title')}
 			<HammerIcon class="mr-2 size-4" />
 		</Button>
 

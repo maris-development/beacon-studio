@@ -15,6 +15,7 @@
 	import SquarePenIcon from '@lucide/svelte/icons/square-pen';
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
+	import { t } from '@/i18n';
 
 	let editingNode: BeaconNode | null = $state(null);
 	let showFormModal = $state(false);
@@ -49,25 +50,25 @@
 </script>
 
 <svelte:head>
-	<title>Beacon Nodes - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.beaconNodes') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Beacon Nodes', href: resolve('/beacon-nodes') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.beaconNodes'), href: resolve('/beacon-nodes') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Beacon Nodes</h1>
+		<h1>{$t('nav.item.beaconNodes')}</h1>
 
 		<p>
-			Use this page to manage your connected Beacon nodes. Explore publicly available Beacon
-			nodes at <a href="https://beacon-datalake.org/public-nodes" rel="noopener noreferrer" target="_blank"
-				>Beacon datalake</a
-			>.
+			{$t('node.page.introBeforeLink')}
+			<a href="https://beacon-datalake.org/public-nodes" rel="noopener noreferrer" target="_blank"
+				>{$t('node.page.introLink')}</a
+			>{$t('node.page.introAfterLink')}
 		</p>
 
 		<div class="actions">
 			<Button onclick={() => openForm(null)}>
-				Add node
+				{$t('node.page.add')}
 				<PlusIcon />
 			</Button>
 		</div>
@@ -77,11 +78,11 @@
 				<table class="beacon-nodes-table">
 					<thead>
 						<tr>
-							<th>Node name</th>
-							<th>Description</th>
-							<th>URL</th>
-							<th>Status</th>
-							<th>Actions</th>
+							<th>{$t('node.field.name')}</th>
+							<th>{$t('node.field.description')}</th>
+							<th>{$t('node.field.url')}</th>
+							<th>{$t('node.field.status')}</th>
+							<th>{$t('node.field.actions')}</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -101,8 +102,8 @@
 												href={publicNode.info_url}
 												target="_blank"
 												rel="noopener noreferrer"
-												title="Public node information"
-												aria-label="Public node information"
+												title={$t('node.page.publicInfo')}
+												aria-label={$t('node.page.publicInfo')}
 											>
 												<InfoIcon />
 											</Button>
@@ -118,14 +119,14 @@
 								</td>
 								<td class="node-actions">
 									<Button variant="outline" onclick={() => openForm(node)}>
-										Edit
+										{$t('common.edit')}
 										<SquarePenIcon />
 									</Button>
 								</td>
 							</tr>
 						{:else}
 							<tr>
-								<td class="no-nodes" colspan="5">No Beacon nodes configured.</td>
+								<td class="no-nodes" colspan="5">{$t('node.page.empty')}</td>
 							</tr>
 						{/each}
 					</tbody>

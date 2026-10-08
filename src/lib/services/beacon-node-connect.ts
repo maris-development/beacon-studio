@@ -22,6 +22,7 @@ import {
 } from './beacon-node-health';
 import { normalizeUrl } from './beacon-node-url';
 import { getOpenNodes } from './open-nodes';
+import { translate } from '@/i18n';
 
 /**
  * Tests a candidate node. The caller does not need a record, so the form of
@@ -182,9 +183,9 @@ export async function ensureHostNode(origin: string): Promise<BeaconNode | null>
 
 	return addNode(
 		{
-			name: `Beacon - ${hostname}`,
+			name: translate('node.host.name', { host: hostname }),
 			url: origin,
-			description: `Beacon node of the current host root. (${origin})`
+			description: translate('node.host.description', { origin })
 		},
 		'host'
 	);

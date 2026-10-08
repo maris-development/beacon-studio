@@ -5,6 +5,7 @@
 	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';
 	import type { Column, SortDirection } from '@/util-types';
 	import { Utils } from '@/utils';
+	import { t } from '@/i18n';
 
 	type Props = {
 		onChangeSort?: (column: string, direction: SortDirection) => void;
@@ -105,13 +106,13 @@
 			<tbody>
 				{#if rows.length === 0 && !isLoading}
 					<tr>
-						<td colspan={columns.length} class="no-data">No data available</td>
+						<td colspan={columns.length} class="no-data">{$t('table.noData')}</td>
 					</tr>
 				{:else if rows.length === 0}
 					<tr>
 						<td colspan={columns.length} class="no-data">
 							<LoadingSpinner></LoadingSpinner>
-							<span>Loading data...</span>
+							<span>{$t('table.loadingData')}</span>
 						</td>
 					</tr>
 				{:else}
@@ -133,19 +134,19 @@
 	</div>
 	<div class="pagination">
 		<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
-			Previous
+			{$t('table.previous')}
 		</button>
 		<div class="page-info">
-			Page 
+			{$t('table.pageBeforeInput')}
 			<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
-			of {pageCount}
+			{$t('table.pageAfterInput', { count: pageCount })}
 
 			
 
 		</div>
 		<button
 			disabled={pageIndex >= pageCount}
-			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>Next</button
+			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>{$t('table.next')}</button
 		>
 	</div>
 </div>

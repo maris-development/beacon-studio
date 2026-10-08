@@ -1,6 +1,16 @@
 <script lang="ts">
-	import { dismissToast, toasts } from '@/stores/toasts';
+	import { dismissToast, toasts, type IToast } from '@/stores/toasts';
+	import { t } from '@/i18n';
 	import Toast from './ToastItem.svelte';
+
+	/** The shown text: the translated key, then the raw text. */
+	function textOf(toast: IToast): string {
+		if (!toast.key) return toast.message;
+
+		const text = $t(toast.key, toast.values);
+		if (toast.message) return `${text} ${toast.message}`;
+		return text;
+	}
 </script>
 
 {#if $toasts}
@@ -9,7 +19,7 @@
 			<Toast
 				type={toast.type}
 				dismissible={toast.dismissible}
-				on:dismiss={() => dismissToast(toast.id)}>{toast.message}</Toast
+				on:dismiss={() => dismissToast(toast.id)}>{textOf(toast)}</Toast
 			>
 		{/each}
 	</section>

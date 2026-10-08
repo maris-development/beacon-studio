@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import type { BeaconNode } from '@/beacon-api/types';
+	import { t, translate } from '@/i18n';
 
 	let { onCancel = () => {}, node }: { onCancel: (boolean) => void; node: BeaconNode } =
 		$props();
@@ -18,7 +19,7 @@
 
 	async function uploadFiles() {
 		if (!files || files.length === 0) {
-			message = 'Please select files.';
+			message = translate('upload.files.missing');
 			return;
 		}
 
@@ -45,13 +46,13 @@
 			if (!res.ok) {
 				const err = await res.text();
 				// console.log('Upload failed:', err);
-				throw new Error(err || 'Upload failed');
+				throw new Error(err || translate('upload.failed'));
 			}
 
 			// console.log('Response:', res);
 
 			const data = await res.json();
-			message = `✅ Uploaded ${data.uploaded.length} file(s)`;
+			message = translate('upload.files.done', { count: data.uploaded.length });
 		} catch (err: any) {
 			// console.log('Upload error:', err);
 			message = `❌ ${err.message}`;
@@ -61,36 +62,36 @@
 	}
 </script>
 
-<Modal title="Upload Datasets" onClose={() => onCancel(false)} width="50vw">
+<Modal title={$t('upload.files.title')} onClose={() => onCancel(false)} width="50vw">
 	<div>
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="username">Admin Username</Label>
+			<Label for="username">{$t('upload.username')}</Label>
 			<Input id="username" type="text" bind:value={username} required />
 		</div>
 
 		<div class="mb-4 grid w-full items-center gap-1.5">
-			<Label for="password">Admin Password</Label>
+			<Label for="password">{$t('upload.password')}</Label>
 			<Input id="password" type="password" bind:value={password} required />
 		</div>
 
 		<div class="grid w-full max-w-sm items-center gap-1.5">
-			<Label for="dataset">Dataset</Label>
+			<Label for="dataset">{$t('upload.files.dataset')}</Label>
 			<Input id="dataset" type="file" multiple bind:files required />
 		</div>
 
 		{#if files?.length}
 			<ul class="text-muted-foreground mt-2 list-inside list-disc text-sm">
 				{#each Array.from(files) as f}
-					<li>{f.name} ({Math.round(f.size / 1024)} KB)</li>
+					<li>{$t('upload.files.size', { name: f.name, size: Math.round(f.size / 1024) })}</li>
 				{/each}
 			</ul>
 		{/if}
 
 		<Button class="mt-4" type="submit" disabled={uploading || !files?.length} onclick={uploadFiles}>
 			{#if uploading}
-				Uploading... {progress}%
+				{$t('upload.files.uploading', { progress })}
 			{:else}
-				Upload
+				{$t('upload.files.upload')}
 			{/if}
 			<FilePlusIcon class="mr-2 size-4" />
 		</Button>

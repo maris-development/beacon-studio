@@ -15,6 +15,7 @@
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
 	import { Label } from '@/components/ui/label';
 	import { dataBrowserNodeId } from '@/stores/data-browser-node';
+	import { t, translate } from '@/i18n';
 
 	let selectedNodeId = dataBrowserNodeId;
 	let selectedNode = $derived(
@@ -22,8 +23,8 @@
 	);
 	let client: BeaconClient;
 
-	let columns: Column[] = $state([
-		{ key: 'table', header: 'Table', sortable: false, rawHtml: true }
+	let columns: Column[] = $derived([
+		{ key: 'table', header: $t('browser.tables.column'), sortable: false, rawHtml: true }
 	]);
 	let rows: { table: AffixString }[] = $state([]);
 
@@ -99,13 +100,18 @@
 			let idx = _rows.findIndex((row) => row.table.main === defaultTable);
 
 			if (_rows[idx]) {
-				_rows[idx].table.suffix = ` <span class="default-label">Default</span>`;
+				_rows[idx].table.suffix = ` <span class="default-label">${escapeHtml(translate('browser.tables.default'))}</span>`;
 			}
 
 			rows = _rows;
 
 			// console.log('Updated rows:', rows);
 		}
+	}
+
+	// The table cell renders HTML, so the label text must not hold markup.
+	function escapeHtml(text: string): string {
+		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 	}
 
 	function onCellClick(row: { table: AffixString }) {
@@ -123,23 +129,23 @@
 </script>
 
 <svelte:head>
-	<title>Data Tables - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.dataTables') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Data tables', href: resolve('/data-browser/data-tables') }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.dataTables'), href: resolve('/data-browser/data-tables') }
 	]}
 />
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Data Tables</h1>
+		<h1>{$t('nav.item.dataTables')}</h1>
 
-		<p>Explore and manage the tables that are available in your Beacon node.</p>
+		<p>{$t('browser.tables.intro')}</p>
 
 		<div class="mb-4 node-picker">
-			<Label size="sm" for="beacon-node-select">Beacon Node</Label>
+			<Label size="sm" for="beacon-node-select">{$t('browser.picker.label')}</Label>
 
 			<div class="flex items-center gap-2">
 				<Select.Root
@@ -149,11 +155,11 @@
 					onValueChange={(id) => selectedNodeId.set(id)}
 				>
 					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
-						{selectedNode?.name ?? 'Select a node'}
+						{selectedNode?.name ?? $t('browser.picker.placeholder')}
 					</Select.Trigger>
 					<Select.Content>
 						<Select.Group>
-							<Select.Label>Nodes</Select.Label>
+							<Select.Label>{$t('browser.picker.group')}</Select.Label>
 							{#each $nodes as node (node.id)}
 								<Select.Item value={node.id} label={node.name}>
 									{node.name}
@@ -171,14 +177,14 @@
 					<Button
 						class="ml-auto"
 						variant="outline"
-						onclick={() => (create_table_modal_open = true)}>Create Table</Button
+						onclick={() => (create_table_modal_open = true)}>{$t('upload.table.title')}</Button
 					>
 				{/if}
 			</div>
 		</div>
 
 		{#if $nodes.length === 0}
-			<p>No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse data tables.</p>
+			<p>{$t('browser.tables.noNodes')}</p>
 		{:else}
 			<DataTable
 				rowClass="arrow-row"

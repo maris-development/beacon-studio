@@ -24,22 +24,23 @@
 
 import { createId } from '@/stores/stored-query';
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palettes';
+import type { MessageKey } from '@/i18n';
 
 export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
 export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
 export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
-export type PlotTypeConfig = { id: PlotType; label: string; description: string };
+export type PlotTypeConfig = { id: PlotType; labelKey: MessageKey; descriptionKey: MessageKey };
 
 export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
 	{
 		id: 'scatter',
-		label: 'Scatter plot',
-		description: 'X and Y both come from a data column.'
+		labelKey: 'plot.type.scatter.label',
+		descriptionKey: 'plot.type.scatter.description'
 	},
 	{
 		id: 'cross-section',
-		label: 'Cross section',
-		description: 'X is the distance along the cross section line drawn on the map.'
+		labelKey: 'plot.type.crossSection.label',
+		descriptionKey: 'plot.type.crossSection.description'
 	},
 	// {
 	// 	id: 'line',
@@ -48,8 +49,8 @@ export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
 	// },
 	{
 		id: 'histogram',
-		label: 'Histogram',
-		description: 'One column, split into bins. The height of a bar is the row count.'
+		labelKey: 'plot.type.histogram.label',
+		descriptionKey: 'plot.type.histogram.description'
 	}
 ];
 

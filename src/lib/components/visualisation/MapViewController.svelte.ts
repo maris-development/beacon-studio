@@ -45,6 +45,7 @@ import {
 	paletteIndex
 } from '@/colors/palettes';
 import { resolveCoordinateColumns, type CoordinatePair } from '@/geo/spatial-selection';
+import { mapLibreLocale } from '@/geo/map-locale';
 import { plottableColumns } from '@/plots/plot-data';
 import type { MapCameraState, MapViewState } from '@/stores/stored-query';
 
@@ -241,7 +242,8 @@ export class MapViewController {
 			center: [0.45, 51.47],
 			zoom: 1,
 			bearing: 0,
-			pitch: 0
+			pitch: 0,
+			locale: mapLibreLocale()
 		});
 
 		map.addControl(new NavigationControl());
@@ -430,7 +432,7 @@ export class MapViewController {
 			if (this.entry.rowCount === 0) {
 				this.isLoading = false;
 				this.reportVisualise(query, node, readyAt);
-				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
+				addToast({ type: 'info', key: 'visualisation.toast.noData' });
 				return;
 			}
 
@@ -447,7 +449,8 @@ export class MapViewController {
 			console.error('Failed to execute query:', error);
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${(error as Error).message}`
+				key: 'visualisation.toast.queryFailed',
+				message: (error as Error).message
 			});
 		}
 	}
@@ -518,7 +521,7 @@ export class MapViewController {
 
 	private async prepareTable(keepCamera: boolean): Promise<void> {
 		if (!this.entry) {
-			addToast({ type: 'error', message: 'No table data available to display.' });
+			addToast({ type: 'error', key: 'table.toast.noData' });
 			return;
 		}
 
@@ -539,7 +542,8 @@ export class MapViewController {
 		} catch (error) {
 			addToast({
 				type: 'error',
-				message: `Failed to group dataset by lat/lon: ${(error as Error).message}`
+				key: 'map.toast.groupFailed',
+				message: (error as Error).message
 			});
 			return;
 		}
@@ -566,15 +570,11 @@ export class MapViewController {
 
 		if (this.selectedDataColumnName) {
 			if (this.firstNumericColumnName) {
-				addToast({
-					type: 'info',
-					message:
-						'Make sure to select the data column you want to display in the map viewer. By default, the first (numerical) data column is displayed.'
-				});
+				addToast({ type: 'info', key: 'map.toast.pickDataColumn' });
 			}
 			await this.showDataColumn(true, fitCamera);
 		} else {
-			addToast({ type: 'warning', message: 'This query has no data column to display on the map.' });
+			addToast({ type: 'warning', key: 'map.toast.noDataColumn' });
 		}
 	}
 

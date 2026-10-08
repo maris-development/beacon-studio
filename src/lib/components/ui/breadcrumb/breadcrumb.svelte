@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '@/i18n';
 	import type { WithElementRef } from '$lib/utils.js';
 	import type { Snippet } from 'svelte';
 	import type { HTMLAttributes } from 'svelte/elements';
@@ -15,7 +16,7 @@
 </script>
 
 <div class="breadcrumb-container">
-	<nav bind:this={ref} data-slot="breadcrumb" class={className} aria-label="breadcrumb" {...restProps}>
+	<nav bind:this={ref} data-slot="breadcrumb" class={className} aria-label={$t('common.breadcrumb')} {...restProps}>
 		{@render children?.()}
 	</nav>
 	{@render flexChildren?.()}

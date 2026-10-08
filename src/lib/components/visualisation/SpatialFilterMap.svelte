@@ -15,6 +15,7 @@
 	import { onDestroy } from 'svelte';
 	import { getSettings } from '@/stores/settings';
 	import type { Bounds } from '@/geo/spatial-selection';
+	import { mapLibreLocale } from '@/geo/map-locale';
 
 	let {
 		map = $bindable<maplibregl.Map | null>(null),
@@ -49,7 +50,8 @@
 			style: getSettings().mapStyleUrl,
 			center: [0.45, 51.47],
 			zoom: 1,
-			attributionControl: false
+			attributionControl: false,
+			locale: mapLibreLocale()
 		});
 
 		created.addControl(new NavigationControl());

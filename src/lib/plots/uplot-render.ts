@@ -28,6 +28,7 @@ import { colorScalePosition, colorScaleValue } from '@/colors/color-scale';
 import type { ColorScale } from './plot-config';
 import { resolveRange, type PlotSeries } from './plot-data';
 import { DEFAULT_POINT_COLOR, type PlotConfig } from './plot-config';
+import { translate } from '@/i18n';
 import type { ContourResult } from './contour';
 import type { InterpolationResult } from './interpolation';
 
@@ -470,7 +471,9 @@ export function drawGroupLegend(u: uPlot, options: GroupLegendOptions): void {
 		rows.push({ label: options.groups[i].key, color: options.colors[i % options.colors.length] });
 	}
 
-	if (overflow > 0) rows.push({ label: `+${overflow} more`, color: null });
+	if (overflow > 0) {
+		rows.push({ label: translate('plot.legend.moreGroups', { count: overflow }), color: null });
+	}
 
 	let textWidth = 0;
 	for (const row of rows) {

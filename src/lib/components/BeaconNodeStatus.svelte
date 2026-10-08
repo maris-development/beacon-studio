@@ -9,7 +9,8 @@
 	`@/services/beacon-node-connect` where the app shows the node.
 -->
 <script lang="ts">
-	import type { BeaconNodeHealth } from '@/beacon-api/types';
+	import type { BeaconNodeHealth, BeaconNodeStatus } from '@/beacon-api/types';
+	import { t, type MessageKey } from '@/i18n';
 
 	import GlobeCheckIcon from '@lucide/svelte/icons/globe-check';
 	import GlobeXIcon from '@lucide/svelte/icons/globe-x';
@@ -26,6 +27,14 @@
 
 	let { health, variant = 'full' }: Props = $props();
 
+	const STATUS_KEYS: Record<BeaconNodeStatus, MessageKey> = {
+		online: 'node.status.online',
+		offline: 'node.status.offline',
+		unknown: 'node.status.unknown'
+	};
+
+	let statusText = $derived($t(STATUS_KEYS[health.status] ?? 'node.status.unknown'));
+
 	let Icon = $derived.by(() => {
 		if (health.status === 'online') return GlobeCheckIcon;
 		if (health.status === 'offline') return GlobeXIcon;
@@ -35,16 +44,18 @@
 
 	let latencyText = $derived(health.latencyMs === null ? '-' : `${health.latencyMs}ms`);
 
-	let title = $derived(health.status === 'online' ? `online, ${latencyText}` : health.status);
+	let title = $derived(
+		health.status === 'online' ? $t('node.status.onlineLatency', { latency: latencyText }) : statusText
+	);
 </script>
 
 {#if variant === 'dot'}
-	<span class="dot {health.status}" {title} aria-label="Status: {title}"></span>
+	<span class="dot {health.status}" {title} aria-label={$t('node.status.aria', { status: title })}></span>
 {:else}
 	<div class="node-status" class:compact={variant === 'compact'}>
 		<span class="badge {health.status}">
 			<Icon size={variant === 'compact' ? 12 : 16} />
-			<span class="label">{health.status}</span>
+			<span class="label">{statusText}</span>
 			{#if variant === 'compact' && health.status === 'online'}
 				<span class="inline-latency">{latencyText}</span>
 			{/if}
@@ -52,7 +63,7 @@
 
 		{#if variant === 'full'}
 			<div class="latency">
-				<span class="latency-label">Latency</span>
+				<span class="latency-label">{$t('node.latency')}</span>
 				<span class="latency-value">{latencyText}</span>
 			</div>
 		{/if}

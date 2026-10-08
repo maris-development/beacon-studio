@@ -22,6 +22,7 @@ import {
 	type SpatialSelection
 } from '@/geo/spatial-selection';
 import { MAX_LINE_GROUPS, usesZColumn, type PlotConfig } from './plot-config';
+import { message, type Message } from '@/i18n';
 
 /** How the values of a column are read, and how a tick label is formatted. */
 export type PlotColumnKind = 'number' | 'timestamp';
@@ -82,7 +83,7 @@ export interface PlotSeries {
 export type PlotDataResult =
 	| { ok: true; series: PlotSeries }
 	/** The plot cannot draw. `message` is the reason for the user. */
-	| { ok: false; message: string };
+	| { ok: false; message: Message };
 
 /**
  * The counts that the plot puts in its caption.
@@ -104,21 +105,19 @@ export function formatSeriesCaption(
 	rowCount: number,
 	series: PlotSeries,
 	display: PlotSeries
-): string {
+): Message {
 	const total = Math.max(0, rowCount - series.skippedRows);
-	const drawn = `N = ${total.toLocaleString()}`;
-
-	if (display.sampledFrom === null) return drawn;
+	if (display.sampledFrom === null) return message('plot.caption.total', { total });
 
 	const shown = display.x.length;
 	const percent = (shown / display.sampledFrom) * 100;
 
 	// A whole number reads better, but a hard sample of a huge result lands below
 	// one percent, where rounding would show `0%`.
-	let percentText = `${Math.round(percent)}`;
-	if (percent < 1) percentText = `${Number(percent.toFixed(1))}`;
+	let rounded = Math.round(percent);
+	if (percent < 1) rounded = Number(percent.toFixed(1));
 
-	return `${drawn} · ${shown.toLocaleString()} shown (${percentText}% sample)`;
+	return message('plot.caption.sampled', { total, shown, percent: rounded });
 }
 
 /** What a cross section plot needs beyond the table: the line that the user drew. */
@@ -293,31 +292,28 @@ function crossSectionDistances(
 	table: ApacheArrow.Table,
 	selection: SpatialSelection | null | undefined,
 	coordinateColumns: CoordinatePair | null | undefined
-): { values: Float64Array } | { message: string } {
+): { values: Float64Array } | { message: Message } {
 	if (!selection || selection.mode !== 'cross-section' || !selection.line) {
-		return {
-			message:
-				'This plot needs a cross section. Draw one on the map viewer, then apply it to the query.'
-		};
+		return { message: message('plot.error.needsCrossSection') };
 	}
 
 	const projection = makeAlongLineProjection(selection.line);
 	if (!projection) {
-		return { message: 'The cross section line has less than two points.' };
+		return { message: message('plot.error.lineTooShort') };
 	}
 
 	const names = table.schema.fields.map((field) => field.name);
 	const columns = resolveCoordinateColumns(coordinateColumns, names);
 
 	if (!columns) {
-		return { message: 'The result has no latitude and longitude columns, so it has no distance.' };
+		return { message: message('plot.error.noCoordinateColumns') };
 	}
 
 	const latitude = readNumericColumn(table, columns.latitude);
 	const longitude = readNumericColumn(table, columns.longitude);
 
 	if (!latitude || !longitude) {
-		return { message: 'The latitude and longitude columns hold no numbers.' };
+		return { message: message('plot.error.coordinatesNotNumeric') };
 	}
 
 	const rows = table.numRows;
@@ -331,7 +327,7 @@ function crossSectionDistances(
 }
 
 /** The axis title of the distance axis of a cross section. */
-export const CROSS_SECTION_AXIS_LABEL = 'Distance along section (km)';
+export const CROSS_SECTION_AXIS_LABEL: Message = message('plot.axis.crossSectionDistance');
 
 // -- series ------------------------------------------------------------------
 
@@ -355,7 +351,7 @@ function settleRange(range: PlotRange): PlotRange {
 // -- histogram ---------------------------------------------------------------
 
 /** The Y axis title of a histogram. The Y axis holds no column. */
-export const HISTOGRAM_AXIS_LABEL = 'Count';
+export const HISTOGRAM_AXIS_LABEL: Message = message('plot.axis.histogramCount');
 
 /**
  * Count the rows of one column into bins.
@@ -371,12 +367,12 @@ export const HISTOGRAM_AXIS_LABEL = 'Count';
  */
 function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotDataResult {
 	if (!plot.x.column) {
-		return { ok: false, message: 'Select a column to count.' };
+		return { ok: false, message: message('plot.error.selectCountColumn') };
 	}
 
 	const column = readNumericColumn(table, plot.x.column);
 	if (!column) {
-		return { ok: false, message: `The result has no numeric column "${plot.x.column}".` };
+		return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.x.column }) };
 	}
 
 	const rows = table.numRows;
@@ -395,7 +391,7 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
 	}
 
 	if (usable === 0) {
-		return { ok: false, message: 'The column holds no numbers, so there is nothing to count.' };
+		return { ok: false, message: message('plot.error.noNumbersToCount') };
 	}
 
 	const settled = settleRange(dataRange);
@@ -403,7 +399,7 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
 	const high = plot.x.max ?? settled.max;
 
 	if (!(high > low)) {
-		return { ok: false, message: 'The X range is empty, so the bins have no width.' };
+		return { ok: false, message: message('plot.error.emptyXRange') };
 	}
 
 	const binCount = Math.max(2, Math.round(plot.histogram.binCount));
@@ -555,18 +551,18 @@ export function buildPlotSeries(
 	context: PlotDataContext = {}
 ): PlotDataResult {
 	if (!table || table.numRows === 0) {
-		return { ok: false, message: 'The query returned no rows.' };
+		return { ok: false, message: message('plot.error.noRows') };
 	}
 
 	if (plot.type === 'histogram') return buildHistogramSeries(table, plot);
 
 	if (!plot.y.column) {
-		return { ok: false, message: 'Select a column for the Y axis.' };
+		return { ok: false, message: message('plot.error.selectYColumn') };
 	}
 
 	const y = readNumericColumn(table, plot.y.column);
 	if (!y) {
-		return { ok: false, message: `The result has no numeric column "${plot.y.column}".` };
+		return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.y.column }) };
 	}
 
 	let xValues: Float64Array;
@@ -582,12 +578,12 @@ export function buildPlotSeries(
 		xValues = distances.values;
 	} else {
 		if (!plot.x.column) {
-			return { ok: false, message: 'Select a column for the X axis.' };
+			return { ok: false, message: message('plot.error.selectXColumn') };
 		}
 
 		const x = readNumericColumn(table, plot.x.column);
 		if (!x) {
-			return { ok: false, message: `The result has no numeric column "${plot.x.column}".` };
+			return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.x.column }) };
 		}
 
 		xValues = x.values;
@@ -602,7 +598,7 @@ export function buildPlotSeries(
 	if (plot.z?.column && usesZColumn(plot.type)) {
 		const z = readNumericColumn(table, plot.z.column);
 		if (!z) {
-			return { ok: false, message: `The result has no numeric column "${plot.z.column}".` };
+			return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.z.column }) };
 		}
 
 		zValues = z.values;
@@ -618,7 +614,7 @@ export function buildPlotSeries(
 		groupKeys = readGroupKeys(table, plot.line.groupColumn);
 
 		if (!groupKeys) {
-			return { ok: false, message: `The result has no column "${plot.line.groupColumn}".` };
+			return { ok: false, message: message('plot.error.noColumn', { column: plot.line.groupColumn }) };
 		}
 	}
 
@@ -686,7 +682,7 @@ export function buildPlotSeries(
 	if (kept === 0) {
 		return {
 			ok: false,
-			message: 'No row has a value on every selected axis, so the plot has nothing to draw.'
+			message: message('plot.error.nothingToDraw')
 		};
 	}
 
@@ -721,7 +717,7 @@ export function buildPlotSeries(
 	const ordered = orderLineSeries(series, keptGroups, groupNames, plot.line.sortBy);
 
 	if (ordered.x.length === 0) {
-		return { ok: false, message: 'Every group was dropped, so the plot has nothing to draw.' };
+		return { ok: false, message: message('plot.error.allGroupsDropped') };
 	}
 
 	return { ok: true, series: ordered };

@@ -32,6 +32,7 @@
 		type PlotSeries
 	} from '@/plots/plot-data';
 	import { colormapsReady, loadColormaps } from '@/colors/palettes';
+	import { t, type Message } from '@/i18n';
 	import {
 		colorBarPadding,
 		drawBackground,
@@ -66,13 +67,13 @@
 		 * One line under the plot, at the left, for example the point counts. Null
 		 * draws none, and so does `style.showCaption` when the user cleared it.
 		 */
-		caption?: string | null;
+		caption?: Message | null;
 		/** The contour lines, in data coordinates. Null while the plot draws none. */
 		contours?: ContourResult | null;
 		/** The interpolated field, in data coordinates. Null while the plot draws none. */
 		interpolation?: InterpolationResult | null;
 		/** Why the plot cannot draw. Shown in place of the canvas. */
-		message?: string | null;
+		message?: Message | null;
 		/**
 		 * Reports the drawing state. Building the points and painting them is the
 		 * slowest step of the page, so the caller shows a spinner over it.
@@ -112,7 +113,7 @@
 	// Rebuild the chart when the plot, the data, the contours or the palette
 	// change. The reads below are the dependencies of this effect.
 	$effect(() => {
-		void [plot, plot.z?.scale, series, caption, contours, interpolation, palettesLoaded];
+		void [plot, plot.z?.scale, series, caption, contours, interpolation, palettesLoaded, $t];
 		scheduleRebuild();
 	});
 
@@ -264,7 +265,7 @@
 	function xTitle(): string {
 		if (plot.type === 'cross-section') {
 			if (plot.x.label) return plot.x.label;
-			return CROSS_SECTION_AXIS_LABEL;
+			return $t(CROSS_SECTION_AXIS_LABEL);
 		}
 
 		return axisTitle(plot.x);
@@ -274,7 +275,7 @@
 	function yTitle(): string {
 		if (plot.type === 'histogram') {
 			if (plot.y.label) return plot.y.label;
-			return HISTOGRAM_AXIS_LABEL;
+			return $t(HISTOGRAM_AXIS_LABEL);
 		}
 
 		return axisTitle(plot.y);
@@ -505,7 +506,7 @@
 
 						if (showCaption && caption) {
 							drawCaption(u, {
-								text: caption,
+								text: $t(caption),
 								fontSize: captionFontSize,
 								textColor: style.textColor,
 								bottomInset: captionInset
@@ -562,7 +563,7 @@
 	/** Strip the characters that a file system refuses. */
 	function safeFileName(name: string): string {
 		const cleaned = name.replace(/[\\/:*?"<>|]/g, '-').trim();
-		return cleaned || 'plot';
+		return cleaned || $t('plot.fileName');
 	}
 </script>
 
@@ -571,7 +572,7 @@
 
 	{#if message}
 		<div class="plot-message">
-			<p>{message}</p>
+			<p>{$t(message)}</p>
 		</div>
 	{/if}
 </div>

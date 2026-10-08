@@ -2,14 +2,15 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import { resolve } from '$app/paths';
 	import logo from '$lib/assets/logo-gradient.svg';
+	import { t } from '@/i18n';
 
 	let { open, onToggle }: { open: boolean; onToggle: () => void } = $props();
 
 	const label = $derived.by(() => {
 		if (open) {
-			return 'Close menu';
+			return $t('nav.closeMenu');
 		}
-		return 'Open menu';
+		return $t('nav.openMenu');
 	});
 </script>
 
@@ -18,8 +19,8 @@
 		<MenuIcon class="toggle-icon" />
 	</button>
 	<a class="header-link" href={resolve('/')}>
-		<img src={logo} alt="Beacon Logo" class="beacon-logo" />
-		<span class="app-name">Beacon Studio</span>
+		<img src={logo} alt={$t('app.logoAlt')} class="beacon-logo" />
+		<span class="app-name">{$t('app.name')}</span>
 	</a>
 </header>
 

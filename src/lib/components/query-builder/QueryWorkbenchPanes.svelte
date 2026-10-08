@@ -24,6 +24,7 @@
 	import type { QueryActions } from './QueryActions';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import * as QueryFunctions from '@/query/functions';
+	import { t } from '@/i18n';
 
 	let { 
 		workspace, 
@@ -97,12 +98,12 @@
 	<!-- Left: builder -->
 	<section class="pane left" class:pane--collapsed={!showLeft}>
 		<header class="pane-header">
-			<h2 class="pane-title">Query builder</h2>
+			<h2 class="pane-title">{$t('workbench.panes.builder')}</h2>
 			{#if !isNarrow}
 				<Button
 					variant="ghost"
 					size="icon"
-					title={leftOpen ? 'Collapse builder' : 'Expand builder'}
+					title={leftOpen ? $t('workbench.panes.collapseBuilder') : $t('workbench.panes.expandBuilder')}
 					onclick={() => (leftOpen = !leftOpen)}
 				>
 					{#if leftOpen}
@@ -147,12 +148,12 @@
 		
 		<header class="pane-header">
 			<h2 class="pane-title ">
-				Query JSON
+				{$t('workbench.panes.json')}
 				<Button
 					class="copy-json"
 					variant="ghost"
 					size="icon"
-					title="Copy JSON to clipboard"
+					title={$t('workbench.panes.copyJson')}
 					onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}
 				>
 					<CopyIcon />
@@ -163,7 +164,7 @@
 				<Button
 					variant="ghost"
 					size="icon"
-					title={rightOpen ? 'Collapse JSON' : 'Expand JSON'}
+					title={rightOpen ? $t('workbench.panes.collapseJson') : $t('workbench.panes.expandJson')}
 					onclick={() => (rightOpen = !rightOpen)}
 				>
 					{#if rightOpen}

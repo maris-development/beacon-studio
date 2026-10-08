@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Utils } from '@/utils';
 	import { onMount } from 'svelte';
+	import { t } from '@/i18n';
 
 	/** Parent passes these in to handle save/close; optionally a record for editing */
 	export let onClose: () => void;
@@ -48,7 +49,7 @@
 		<header id="modal-title-{shortRandomString}">
 			<h2>{title}</h2>
 			{#if canCloseModal}
-				<button class="close-button" on:click={onClose} aria-label="Close modal"> &times; </button>
+				<button class="close-button" on:click={onClose} aria-label={$t('modal.close')}> &times; </button>
 			{/if}
 		</header>
 		<div id="modal-content-{shortRandomString}" class="modal-content">

@@ -12,6 +12,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import * as Select from '$lib/components/ui/select/index.js';
+	import { t } from '@/i18n';
 	import {
 		getColormap,
 		listColormaps,
@@ -94,7 +95,7 @@
 	<Select.Content>
 		{#if showGradients && gradientMaps.length > 0}
 			<Select.Group>
-				<Select.Label>Gradients</Select.Label>
+				<Select.Label>{$t('palette.gradients')}</Select.Label>
 
 				{#each gradientMaps as map (map.id)}
 					<Select.Item value={map.id} label={map.label}>
@@ -109,7 +110,7 @@
 
 		{#if showSolids && solidMaps.length > 0}
 			<Select.Group>
-				<Select.Label>Single colours</Select.Label>
+				<Select.Label>{$t('palette.solids')}</Select.Label>
 
 				{#each solidMaps as map (map.id)}
 					<Select.Item value={map.id} label={map.label}>

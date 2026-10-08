@@ -20,6 +20,7 @@
 		settings,
 		type SettingDefinition
 	} from '@/stores/settings';
+	import { t, type MessageKey } from '@/i18n';
 
 	let { definition }: { definition: SettingDefinition } = $props();
 
@@ -51,17 +52,22 @@
 		if (definition.type !== 'select') return '';
 
 		const option = definition.options.find((entry) => entry.value === selectValue);
-		if (option) return option.label;
+		if (option) return optionLabel(option);
 		return selectValue;
 	});
+
+	function optionLabel(option: { value: string; label?: string; labelKey?: MessageKey }): string {
+		if (option.labelKey) return $t(option.labelKey);
+		return option.label ?? option.value;
+	}
 
 	/** The stored value of a boolean setting. */
 	const booleanValue = $derived(stored === true);
 
 	/** The word beside the checkbox. */
 	const booleanLabel = $derived.by(() => {
-		if (booleanValue) return 'On';
-		return 'Off';
+		if (booleanValue) return $t('common.on');
+		return $t('common.off');
 	});
 
 	function onNumberChange(event: Event): void {
@@ -96,8 +102,8 @@
 
 <div class="setting-field">
 	<div class="text">
-		<label for={inputId}>{definition.label}</label>
-		<p class="description">{definition.description}</p>
+		<label for={inputId}>{$t(`settings.field.${definition.key}.label`)}</label>
+		<p class="description">{$t(`settings.field.${definition.key}.description`)}</p>
 	</div>
 
 	<div class="control">
@@ -113,7 +119,7 @@
 					onchange={onNumberChange}
 				/>
 				{#if definition.unit}
-					<span class="unit">{definition.unit}</span>
+					<span class="unit">{$t(definition.unit)}</span>
 				{/if}
 			</div>
 		{:else if definition.type === 'boolean'}
@@ -127,7 +133,7 @@
 				<Select.Content>
 					<Select.Group>
 						{#each definition.options as option (option.value)}
-							<Select.Item value={option.value} label={option.label}>{option.label}</Select.Item>
+							<Select.Item value={option.value} label={optionLabel(option)}>{optionLabel(option)}</Select.Item>
 						{/each}
 					</Select.Group>
 				</Select.Content>
@@ -146,7 +152,7 @@
 			variant="ghost"
 			size="icon"
 			disabled={!isChanged}
-			title="Put this setting back to its default"
+			title={$t('settings.resetOne')}
 			onclick={() => resetSetting(definition.key)}
 		>
 			<RotateCcwIcon size={16} />

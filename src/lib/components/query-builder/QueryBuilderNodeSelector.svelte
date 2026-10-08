@@ -25,6 +25,7 @@
 	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
 	import Button from '../buttons/Button.svelte';
 	import Card from '../card/Card.svelte';
+	import { t } from '@/i18n';
 
 	let {
 		selected = null,
@@ -81,36 +82,36 @@
 {/if}
 
 <div class="node-selector-header">
-	<h3>Select Beacon Node</h3>
+	<h3>{$t('query.node.title')}</h3>
 
 	<div class="view-controls">
-		<p class="node-count">{$nodes.length} nodes</p>
+		<p class="node-count">{$t('query.node.count', { count: $nodes.length })}</p>
 
 		<Button variant={viewMode === 'cards' ? 'default' : 'outline'} onclick={() => (viewMode = 'cards')}>
-			Cards
+			{$t('query.view.cards')}
 			<GridIcon />
 		</Button>
 
 		<Button variant={viewMode === 'list' ? 'default' : 'outline'} onclick={() => (viewMode = 'list')}>
-			List
+			{$t('query.view.list')}
 			<ListIcon />
 		</Button>
 	</div>
 </div>
 
 {#if !nodesReady && $nodes.length === 0}
-	<p class="node-loading">Load Beacon nodes...</p>
+	<p class="node-loading">{$t('query.node.loading')}</p>
 {/if}
 
 {#if missingUrl}
 	<div class="missing-node">
 		<TriangleAlertIcon size="1rem" />
 		<p>
-			This query runs on <strong>{missingUrl}</strong>. The app has no node for that
-			address. Add it, or pick another node below.
+			{$t('query.node.missingBeforeUrl')}
+			<strong>{missingUrl}</strong>{$t('query.node.missingAfterUrl')}
 		</p>
 		<Button onclick={() => (showAddModal = true)}>
-			Add node
+			{$t('query.node.add')}
 			<PlusIcon />
 		</Button>
 	</div>
@@ -138,20 +139,20 @@
 
 			<Card class="add-card" onclick={() => (showAddModal = true)}>
 				<div class="node-header">
-					<h4>Add node</h4>
+					<h4>{$t('query.node.add')}</h4>
 					<PlusIcon size="1rem" />
 				</div>
-				<p class="node-url">Connect to another Beacon node.</p>
+				<p class="node-url">{$t('query.node.addDescription')}</p>
 			</Card>
 		</div>
 	{:else}
 		<Select.Root type="single" name="beaconNode" value={selectedId} onValueChange={pickById}>
 			<Select.Trigger class="node-select-trigger">
-				{selected?.name ?? 'Select a node'}
+				{selected?.name ?? $t('query.node.placeholder')}
 			</Select.Trigger>
 			<Select.Content>
 				<Select.Group>
-					<Select.Label>Nodes</Select.Label>
+					<Select.Label>{$t('query.node.listLabel')}</Select.Label>
 					{#each $nodes as node (node.id)}
 						<Select.Item value={node.id} label={node.name}>
 							{node.name}

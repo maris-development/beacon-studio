@@ -13,6 +13,7 @@ import { ApacheArrowUtils } from './arrow-utils';
 import type { Rendered, SortDirection } from './util-types';
 export type { WithElementRef, WithoutChild, WithoutChildren, WithoutChildrenOrChild } from './util-types';
 import { get, type Readable } from "svelte/store";
+import { translate } from './i18n';
 
 // import * as aq from 'arquero';
 // Or in browser: aq.loadArrow(...)
@@ -427,10 +428,10 @@ export class Utils {
     }
 
     static formatBytes(bytes: number, decimals = 2): string {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) return `0 ${translate('misc.bytes')}`;
 
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        const sizes = [translate('misc.bytes'), 'KB', 'MB', 'GB', 'TB', 'PB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
 
         const value = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
