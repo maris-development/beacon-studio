@@ -1,0 +1,1040 @@
+{
+	"app": {
+		"name": "Beacon Studio",
+		"logoAlt": "Logotipo de Beacon",
+		"pageTitle": "{page} - Beacon Studio"
+	},
+	"common": {
+		"cancel": "Cancelar",
+		"continue": "Continuar",
+		"ok": "Aceptar",
+		"close": "Cerrar",
+		"more": "Más",
+		"on": "Activado",
+		"off": "Desactivado",
+		"breadcrumb": "ruta de navegación",
+		"save": "Guardar",
+		"delete": "Eliminar",
+		"edit": "Editar",
+		"rename": "Renombrar",
+		"refresh": "Actualizar",
+		"apply": "Aplicar",
+		"clear": "Borrar",
+		"reset": "Restablecer",
+		"loading": "Cargando…",
+		"none": "Ninguno",
+		"unknown": "Desconocido",
+		"name": "Nombre",
+		"rows": "{count, plural, one {# fila} other {# filas}}",
+		"columns": "{count, plural, one {# columna} other {# columnas}}"
+	},
+	"language": {
+		"menu": "Idioma",
+		"auto": "Automático (idioma del navegador)"
+	},
+	"nav": {
+		"openMenu": "Abrir menú",
+		"closeMenu": "Cerrar menú",
+		"group": {
+			"dataAccess": "Acceso a datos",
+			"explore": "Explorar y analizar",
+			"nodeManagement": "Gestión de nodos",
+			"studio": "Beacon Studio"
+		},
+		"item": {
+			"queries": "Consultas",
+			"queryBuilder": "Constructor de consultas",
+			"savedQueries": "Consultas guardadas",
+			"queryHistory": "Historial de consultas",
+			"workspace": "Espacio de trabajo",
+			"mapViewer": "Visor de mapas",
+			"tableExplorer": "Explorador de tablas",
+			"chartExplorer": "Explorador de gráficos",
+			"dataBrowser": "Navegador de datos",
+			"datasets": "Conjuntos de datos",
+			"dataTables": "Tablas de datos",
+			"systemInfo": "Información del sistema",
+			"beaconNodes": "Nodos Beacon",
+			"settings": "Ajustes",
+			"aboutStudio": "Más sobre Studio",
+			"documentation": "Documentación",
+			"github": "GitHub",
+			"feedback": "Comentarios"
+		},
+		"needsNode": "Esta página necesita un nodo Beacon. Añade uno en la página Nodos Beacon.",
+		"waitForNodes": "Beacon Studio lee los nodos Beacon públicos. Esto ocurre solo en la primera visita. Tu consulta empieza cuando llegan."
+	},
+	"build": {
+		"unknown": "desconocido",
+		"commit": "Commit {commit}",
+		"commitUnknown": "Commit desconocido",
+		"branch": "Rama {branch}",
+		"dirty": "Cambios sin confirmar",
+		"built": "Compilado {time}"
+	},
+	"settings": {
+		"title": "Ajustes",
+		"intro": "Gestiona aquí los ajustes de Beacon Studio. La aplicación guarda cada valor en este navegador. Un cambio se aplica a la próxima consulta, mapa o actualización.",
+		"resetAll": "Restablecer todos los ajustes",
+		"resetAllMessage": "Esto devuelve cada ajuste de este navegador a su valor predeterminado. La aplicación pierde tus límites de consulta, el tamaño de la caché y los valores predeterminados del mapa.",
+		"resetAllMessageTelemetry": "Esto devuelve cada ajuste de este navegador a su valor predeterminado. La aplicación pierde tus límites de consulta, el tamaño de la caché, los valores predeterminados del mapa y tu elección de telemetría.",
+		"resetAllNote": "No puedes deshacer esta acción.",
+		"resetAllDone": "Todos los ajustes han vuelto a sus valores predeterminados.",
+		"resetOne": "Devolver este ajuste a su valor predeterminado",
+		"noTelemetryBuild": "Esta versión de Beacon Studio está compilada con la telemetría desactivada. No envía datos de uso.",
+		"group": {
+			"general": "General",
+			"queries": "Consultas",
+			"resultCache": "Caché de resultados",
+			"map": "Mapa",
+			"system": "Sistema",
+			"plot": "Gráfico",
+			"telemetry": "Telemetría"
+		},
+		"unit": {
+			"millionCells": "millones de celdas",
+			"entries": "entradas",
+			"results": "resultados",
+			"tables": "tablas",
+			"mib": "MiB",
+			"hours": "horas",
+			"decimals": "decimales",
+			"km": "km",
+			"rows": "filas",
+			"seconds": "segundos"
+		},
+		"field": {
+			"language": {
+				"label": "Idioma",
+				"description": "El idioma de Beacon Studio. Automático sigue el idioma del navegador."
+			},
+			"defaultOutputFormat": {
+				"label": "Formato de salida predeterminado",
+				"description": "El formato de salida de un nuevo bloque de consulta."
+			},
+			"requireQueryFilters": {
+				"label": "Exigir un filtro",
+				"description": "Bloquea en el banco de trabajo una consulta sin filtros. Beacon no debe leer una tabla entera."
+			},
+			"queryCellLimit": {
+				"label": "Límite de celdas por consulta",
+				"description": "El tope del tamaño del resultado en celdas (filas × columnas). Un valor menor mantiene estable el navegador. El límite de filas es este valor dividido entre el número de columnas."
+			},
+			"queryHistoryMax": {
+				"label": "Tamaño del historial de consultas",
+				"description": "El número de filas del historial de consultas. Las ejecuciones más antiguas se eliminan primero."
+			},
+			"memoryCacheMaxEntries": {
+				"label": "Entradas de la caché en memoria",
+				"description": "El número de resultados decodificados que permanecen en memoria."
+			},
+			"workerMaxLoadedTables": {
+				"label": "Tablas del worker",
+				"description": "El número de tablas que el worker de Arrow conserva para las acciones de ordenar y agrupar."
+			},
+			"diskCacheMaxEntries": {
+				"label": "Entradas de la caché en disco",
+				"description": "El número de resultados en la caché en disco del navegador (OPFS)."
+			},
+			"diskCacheMaxTotalBytes": {
+				"label": "Tamaño de la caché en disco",
+				"description": "El tamaño total de los resultados comprimidos en disco."
+			},
+			"diskCacheMaxAgeMs": {
+				"label": "Duración de la caché en disco",
+				"description": "La antigüedad a partir de la cual un resultado en disco caduca. Un resultado caducado se elimina."
+			},
+			"mapStyleUrl": {
+				"label": "URL del estilo del mapa base",
+				"description": "La URL del estilo MapLibre del mapa base. Un cambio se aplica al próximo mapa."
+			},
+			"mapGroupByDecimals": {
+				"label": "Decimales de agrupación del mapa",
+				"description": "Los decimales por los que el mapa agrupa las coordenadas. 4 = 11 m, 3 = 111 m, 2 = 1111 m, 1 = 11111 m, 0 = 111111 m."
+			},
+			"crossSectionWidthKm": {
+				"label": "Anchura de la sección transversal",
+				"description": "La anchura de una nueva banda de sección transversal."
+			},
+			"sampleAfterRows": {
+				"label": "Umbral de muestreo del gráfico",
+				"description": "El número de filas a partir del cual un gráfico muestrea los datos. Un valor menor mantiene estable el navegador."
+			},
+			"systemInfoUpdateIntervalMs": {
+				"label": "Actualización de la información del sistema",
+				"description": "El intervalo entre dos lecturas de la página de información del sistema."
+			},
+			"telemetryEnabled": {
+				"label": "Enviar estadísticas de uso",
+				"description": "El interruptor principal. Envía eventos de uso a beacon-datalake.org: visitas a páginas, ejecuciones de consultas, descargas, búsquedas, advertencias y errores. Un identificador aleatorio agrupa los eventos de este navegador. No envía ninguna cuenta, ninguna contraseña ni datos de resultados. Desactívalo para no enviar nada."
+			},
+			"telemetryQueryDetails": {
+				"label": "Enviar telemetría de consultas",
+				"description": "Añade el contenido de una consulta a sus eventos: la tabla, las columnas, los filtros con sus valores y el área dibujada. También incluye un término de búsqueda del navegador de datos. Desactívalo para mantener las estadísticas de uso, pero sin ese contenido. La aplicación informa entonces de que se ejecutó una consulta, con su duración, su número de filas, su nodo y su número de columnas y filtros. No informa de qué tabla ni de qué valores pediste. Un mensaje de error todavía puede nombrar una tabla. Este interruptor no hace nada mientras \"Enviar estadísticas de uso\" está desactivado."
+			},
+			"telemetryConsoleLog": {
+				"label": "Incluir la salida de console.log",
+				"description": "Añade console.log a la salida de consola que se informa. Las advertencias y los errores siempre se envían. Actívalo solo para una sesión de depuración: una línea de log genera ruido y puede contener una ruta de archivo o un valor de resultado. Este interruptor no hace nada mientras \"Enviar estadísticas de uso\" está desactivado."
+			}
+		}
+	},
+	"query": {
+		"untitled": "Sin título",
+		"filterCount": "{count, plural, one {# filtro} other {# filtros}}",
+		"entry": {
+			"noColumns": "(sin columnas)",
+			"openInBuilder": "Abrir en el constructor de consultas",
+			"table": "Tabla",
+			"map": "Mapa",
+			"chart": "Gráfico"
+		},
+		"export": {
+			"jsonCopied": "Código JSON copiado al portapapeles",
+			"jsonCopyError": "Error al copiar el código JSON al portapapeles:",
+			"jsonCopyFailed": "No se pudo copiar el código JSON al portapapeles",
+			"jsonDownloadFailed": "Error al descargar el JSON:",
+			"jsonDownloaded": "JSON de la consulta descargado como beacon-studio-query.json",
+			"jsonSerializeFailed": "Error al serializar la consulta a JSON:",
+			"pythonCopied": "Código Python copiado al portapapeles",
+			"pythonCopyError": "Error al copiar el código Python al portapapeles:",
+			"pythonCopyFailed": "No se pudo copiar el código Python al portapapeles",
+			"pythonDownloadFailed": "Error al descargar el código Python como notebook:",
+			"pythonDownloaded": "Código Python descargado como beacon-studio-query.ipynb",
+			"pythonFailed": "Error al generar el código Python:",
+			"shareEmpty": "No se puede compartir una consulta vacía. Selecciona una tabla y al menos una columna.",
+			"sqlCopied": "Código SQL copiado al portapapeles",
+			"sqlCopyError": "Error al copiar el código SQL al portapapeles:",
+			"sqlCopyFailed": "No se pudo copiar el código SQL al portapapeles",
+			"sqlDownloadFailed": "Error al descargar el código SQL como archivo SQL:",
+			"sqlDownloaded": "Código SQL descargado como beacon-studio-query.sql",
+			"sqlFailed": "Error al generar el código SQL:",
+			"urlCopied": "URL de la consulta copiada al portapapeles",
+			"urlCopyError": "Error al copiar la URL de la consulta al portapapeles:",
+			"urlCopyFailed": "No se pudo copiar la URL de la consulta al portapapeles",
+			"urlFailed": "Error al generar la URL de la consulta:",
+			"shareEmptyCompileFailed": "No se puede compartir una consulta vacía. Selecciona una tabla y al menos una columna. Error al compilar la consulta:"
+		},
+		"actions": {
+			"edit": "Editar consulta",
+			"editTitle": "Editar consulta",
+			"share": "Compartir",
+			"shareUrl": "Compartir URL",
+			"copyJson": "Copiar JSON",
+			"copyPython": "Copiar Python",
+			"copySql": "Copiar SQL",
+			"downloadJson": "Descargar JSON",
+			"downloadPython": "Descargar Python",
+			"downloadSql": "Descargar SQL",
+			"save": "Guardar consulta",
+			"saveTitle": "Guardar consulta",
+			"resetTitle": "Restablecer la selección de la consulta",
+			"cacheInfo": "Información sobre la caché de consultas"
+		},
+		"share": {
+			"copyTitle": "Copiar un enlace que funciona en cualquier navegador",
+			"none": "Esta entrada no tiene ninguna consulta para compartir.",
+			"copied": "Enlace para compartir copiado al portapapeles.",
+			"copyFailed": "No se pudo copiar el enlace para compartir."
+		},
+		"guard": {
+			"noFilters": "Esta consulta no tiene filtros. Añade al menos un filtro o desactiva \"Exigir un filtro\" en los ajustes."
+		},
+		"error": {
+			"noColumns": "Elige una tabla y al menos una columna."
+		},
+		"toast": {
+			"compileFailed": "Error al compilar la consulta:",
+			"connectFailed": "Error al conectar con Beacon: comprueba tu URL y tu token, y asegúrate de que la configuración CORS del nodo Beacon es correcta.",
+			"decodeFailed": "No se pudo decodificar una consulta compartida desde la URL:",
+			"cellLimit": "El resultado de la consulta alcanzó el límite de {cellLimit, number} celdas para mantener estable tu navegador. Los datos pueden estar incompletos (se obtuvieron {rowCount, plural, one {# fila} other {# filas}}). Refina tu consulta para reducir el tamaño del resultado. También puedes ir a los ajustes y subir el \"Límite de celdas por consulta\", pero ten en cuenta que esto puede afectar al rendimiento del navegador.",
+			"bestEffort": "Consulta cargada en la medida de lo posible. {count, plural, one {# parte no se pudo representar} other {# partes no se pudieron representar}} en el constructor avanzado."
+		},
+		"parameters": {
+			"title": "Parámetros de la consulta",
+			"add": "Añadir parámetro",
+			"remove": "Quitar columna",
+			"dialogTitle": "Añadir parámetro de consulta",
+			"dialogDescription": "Busca y selecciona una columna para añadirla a la consulta.",
+			"searchPlaceholder": "Escribe una columna o busca...",
+			"emptyBeforeTable": "No se encontraron columnas para la tabla",
+			"emptyAfterTable": ".",
+			"available": "Columnas disponibles ({count, number})",
+			"empty": "No hay parámetros seleccionados. Usa el botón 'Añadir parámetro' de arriba."
+		},
+		"view": {
+			"cards": "Tarjetas",
+			"list": "Lista"
+		},
+		"node": {
+			"title": "Seleccionar nodo Beacon",
+			"count": "{count, plural, one {# nodo} other {# nodos}}",
+			"loading": "Cargando nodos Beacon...",
+			"missingBeforeUrl": "Esta consulta se ejecuta en",
+			"missingAfterUrl": ". La aplicación no tiene ningún nodo para esa dirección. Añádelo o elige otro nodo abajo.",
+			"add": "Añadir nodo",
+			"addDescription": "Conectar con otro nodo Beacon.",
+			"placeholder": "Selecciona un nodo",
+			"listLabel": "Nodos",
+			"noAnswer": "El nodo Beacon no respondió.",
+			"tablesFailed": "No se pudieron leer las tablas de \"{node}\".",
+			"retry": "Reintentar"
+		},
+		"table": {
+			"title": "Seleccionar tabla de datos",
+			"count": "{count, plural, one {# tabla} other {# tablas}}",
+			"countLoading": "Cargando tablas",
+			"noDescription": "Descripción no disponible",
+			"placeholder": "Selecciona una tabla",
+			"listLabel": "Tablas",
+			"change": {
+				"title": "Cambiar la tabla de datos",
+				"message": "Otra tabla necesita otras columnas, así que esto vacía tu selección de columnas.",
+				"confirm": "Cambiar tabla"
+			}
+		},
+		"outputFormat": {
+			"title": "Formato de salida",
+			"listLabel": "Tablas"
+		},
+		"geoFilter": {
+			"title": "Filtro geoespacial",
+			"description": "Dibuja un área y elige las dos columnas que el filtro comprueba.",
+			"tooFewColumns": "Esta consulta selecciona menos de dos columnas numéricas. Añade primero una columna de latitud y una de longitud.",
+			"needsColumns": "La consulta debe seleccionar una columna de latitud y una de longitud.",
+			"pickColumns": "Elige la columna de latitud y la de longitud.",
+			"drawArea": "Dibuja un área en el mapa.",
+			"latitude": "Columna de latitud",
+			"longitude": "Columna de longitud",
+			"notFound": "No encontrada",
+			"pickPair": "Elegir las columnas de coordenadas",
+			"remove": "Quitar filtro",
+			"apply": "Aplicar filtro",
+			"applyTitle": "Filtrar la consulta por esta área"
+		},
+		"area": {
+			"add": "Añadir filtro geoespacial",
+			"addTitle": "Dibuja un área en un mapa y filtra la consulta por ella",
+			"needsColumns": "Selecciona primero una columna de latitud y una de longitud.",
+			"label": "Área: {area}",
+			"missingColumn": "La consulta no selecciona \"{column}\", así que esta área no filtra nada.",
+			"noColumns": "La consulta no selecciona ninguna columna de latitud y longitud, así que esta área no filtra nada.",
+			"editTitle": "Editar el filtro geoespacial",
+			"removeTitle": "Quitar el filtro de área"
+		}
+	},
+	"filter": {
+		"add": "Añadir filtro",
+		"remove": "Quitar filtro",
+		"searchPlaceholder": "Buscar filtro...",
+		"empty": "No se encontraron filtros.",
+		"op": {
+			"between": "Entre",
+			"greaterThan": "Mayor que",
+			"greaterThanOrEquals": "Mayor o igual que",
+			"lessThan": "Menor que",
+			"lessThanOrEquals": "Menor o igual que",
+			"equals": "Igual a",
+			"notEquals": "Distinto de",
+			"isNull": "Es nulo",
+			"isNotNull": "No es nulo"
+		},
+		"input": {
+			"min": "Desde (mín.)",
+			"max": "Hasta (máx.)",
+			"greaterThan": "Mayor que",
+			"greaterThanOrEquals": "Mayor o igual que",
+			"lessThan": "Menor que",
+			"lessThanOrEquals": "Menor o igual que",
+			"equals": "Igual a",
+			"notEquals": "NO es igual a",
+			"isNull": "Es NULL",
+			"isNotNull": "NO es NULL"
+		}
+	},
+	"editor": {
+		"title": "Editor de consultas",
+		"crumb": "Editor de consultas",
+		"error": {
+			"noColumn": "Cada parámetro de consulta debe incluir column o column_name."
+		},
+		"toast": {
+			"executeFailed": "Error al ejecutar la consulta:",
+			"parseFailed": "No se pudo analizar el JSON de la consulta:"
+		}
+	},
+	"workbench": {
+		"title": "Banco de trabajo de consultas",
+		"untitledBlock": "Sin título ({number})",
+		"copyName": "{name} (copia)",
+		"thisNode": "este nodo",
+		"changeNode": {
+			"title": "Cambiar el nodo Beacon",
+			"message": "Otro nodo contiene otras tablas, así que esto vacía tu selección de tabla y columnas.",
+			"confirm": "Cambiar nodo"
+		},
+		"closeBlock": {
+			"title": "Cerrar esta consulta",
+			"message": "Esta consulta contiene columnas que elegiste.",
+			"note": "El bloque desaparece.",
+			"confirm": "Cerrar consulta"
+		},
+		"header": {
+			"editing": "Editando {name}",
+			"viewing": "Viendo {name}"
+		},
+		"panes": {
+			"builder": "Constructor de consultas",
+			"collapseBuilder": "Contraer el constructor",
+			"expandBuilder": "Expandir el constructor",
+			"json": "JSON de la consulta",
+			"copyJson": "Copiar el JSON al portapapeles",
+			"collapseJson": "Contraer el JSON",
+			"expandJson": "Expandir el JSON"
+		},
+		"block": {
+			"add": "Nueva consulta",
+			"nameInput": "Editar el nombre de la consulta",
+			"rename": "Editar nombre",
+			"finishRename": "Terminar de editar el nombre",
+			"duplicate": "Duplicar consulta",
+			"close": "Cerrar consulta",
+			"nodeTitle": "Nodo Beacon: {url}",
+			"nodeMissing": "Este nodo no está configurado",
+			"pickNode": "Elige un nodo para esta consulta",
+			"noNode": "Sin nodo",
+			"tableTitle": "Tabla seleccionada",
+			"noTable": "Sin tabla",
+			"columnsTitle": "Cantidad de columnas seleccionadas",
+			"filtersTitle": "Cantidad de filtros aplicados",
+			"runTitle": "Estado de ejecución / cantidad de filas devueltas",
+			"running": "Ejecutando...",
+			"notCached": "Sin caché",
+			"selectedColumns": "Columnas seleccionadas: {columns}",
+			"noColumns": "No hay columnas seleccionadas"
+		},
+		"toast": {
+			"nameEmpty": "El nombre de la consulta no puede estar vacío.",
+			"renameFailed": "No se pudo renombrar el borrador de la consulta.",
+			"addMissingNode": "Añade el nodo Beacon {url} para ejecutar esta consulta.",
+			"waitForNodes": "Espera a que se carguen los nodos Beacon.",
+			"pickNode": "Elige primero un nodo Beacon para esta consulta.",
+			"noQuery": "No se puede crear la consulta. Selecciona una tabla y al menos una columna.",
+			"runFailed": "La consulta falló:",
+			"missingNode": "Esta consulta necesita el nodo Beacon {url}. Añádelo para ejecutar la consulta.",
+			"guessedNodeNoTable": "El enlace no indicaba ningún nodo Beacon y \"{node}\" no tiene la tabla \"{table}\". La consulta se conserva. Elige el nodo de esta consulta.",
+			"guessedNodeNoColumns": "El enlace no indicaba ningún nodo Beacon y \"{node}\" no tiene ninguna columna de la consulta en \"{table}\". La consulta se conserva. Elige el nodo de esta consulta.",
+			"nodeNoTable": "\"{node}\" no tiene la tabla \"{table}\". La consulta se conserva. Elige otro nodo o edita la consulta.",
+			"nodeNoColumns": "\"{node}\" no tiene ninguna columna de la consulta en \"{table}\". La consulta se conserva. Elige otro nodo o edita la consulta."
+		}
+	},
+	"history": {
+		"title": "Historial de consultas",
+		"intro": "Consultas que has ejecutado. Vuelve a ejecutar, ver o editar cualquiera de ellas.",
+		"clear": "Borrar historial",
+		"empty": {
+			"title": "Todavía no hay consultas",
+			"text": "Cuando ejecutes una consulta, aparecerá aquí."
+		},
+		"entry": {
+			"never": "nunca",
+			"duration": "{ms, number} ms",
+			"runCount": "· ejecutada {count, number}×",
+			"remove": "Quitar del historial"
+		}
+	},
+	"saved": {
+		"title": "Consultas guardadas",
+		"intro": "Consultas que has guardado desde el constructor de consultas. Vuelve a ejecutar, visualizar o abrir cualquier consulta guardada.",
+		"clear": "Borrar guardadas",
+		"empty": {
+			"title": "Todavía no hay consultas guardadas",
+			"beforeLink": "Crea una consulta en el",
+			"beforeButton": "y haz clic en",
+			"afterButton": "para añadirla aquí."
+		},
+		"entry": {
+			"savedAgo": "guardada {time}",
+			"remove": "Quitar la consulta guardada"
+		},
+		"toast": {
+			"noQuery": "No se puede guardar: selecciona una tabla y al menos una columna.",
+			"saved": "Consulta \"{name}\" guardada.",
+			"saveFailed": "No se pudo guardar la consulta:"
+		}
+	},
+	"download": {
+		"button": "Descargar datos",
+		"loading": "Descargando...",
+		"toast": {
+			"started": "Descargando el conjunto de datos...",
+			"directDone": "Conjunto de datos descargado directamente como {extension}. Esto no llena la caché de visualización; usa Visualizar consulta para ejecutar y guardar en caché esta consulta.",
+			"failed": "La descarga falló:"
+		}
+	},
+	"visualise": {
+		"button": "Visualizar consulta",
+		"executing": "Ejecutando..."
+	},
+	"visualisation": {
+		"title": "Visualizaciones",
+		"intro": "Usa las siguientes opciones para visualizar el contenido de Beacon.",
+		"card": {
+			"map": "Visualiza tus datos en un mapa interactivo. Usa el visor de mapas para explorar patrones y conclusiones geográficas.",
+			"table": "Explora tus datos en formato de tabla. El explorador de tablas permite examinar y filtrar tu conjunto de datos en detalle.",
+			"chart": "Explora tus datos con gráficos. El explorador de gráficos permite examinar y filtrar tu conjunto de datos en detalle."
+		},
+		"tab": {
+			"table": "Tabla",
+			"chart": "Gráfico"
+		},
+		"selectColumn": "Selecciona una columna",
+		"availableColumns": "Columnas disponibles",
+		"auto": "auto",
+		"loadingRows": "Cargando filas…",
+		"rowsSelected": "{count, plural, one {# fila seleccionada} other {# filas seleccionadas}} en {duration}.",
+		"toast": {
+			"noData": "La consulta se ejecutó correctamente pero no devolvió datos.",
+			"queryFailed": "No se pudo ejecutar la consulta:"
+		}
+	},
+	"map": {
+		"title": "Visor de mapas",
+		"headTitle": "Mapa",
+		"coordinatesMissing": "Elige las columnas de latitud y longitud para mostrar las filas en el mapa.",
+		"dataColumn": "Columna de datos",
+		"pickCoordinates": "Elegir las columnas de latitud y longitud",
+		"needsCoordinates": "La consulta debe seleccionar una columna de latitud y una de longitud.",
+		"selectQuery": "Selecciona arriba una consulta válida para verla en el mapa.",
+		"toast": {
+			"groupFailed": "No se pudo agrupar el conjunto de datos por lat/lon:",
+			"pickDataColumn": "Asegúrate de seleccionar la columna de datos que quieres mostrar en el visor de mapas. Por defecto se muestra la primera columna de datos (numérica).",
+			"noDataColumn": "Esta consulta no tiene ninguna columna de datos para mostrar en el mapa."
+		},
+		"control": {
+			"toggleAttribution": "Mostrar u ocultar la atribución",
+			"mapFeedback": "Comentarios sobre el mapa",
+			"mapTitle": "Mapa",
+			"resetBearing": "Orientar al norte",
+			"zoomIn": "Acercar",
+			"zoomOut": "Alejar",
+			"closePopup": "Cerrar ventana emergente"
+		},
+		"columns": {
+			"title": "Columnas de coordenadas",
+			"description": "Elige las dos columnas que contienen la posición de cada fila.",
+			"tooFew": "Esta consulta selecciona menos de dos columnas numéricas. Añade primero una columna de latitud y una de longitud.",
+			"latitude": "Columna de latitud",
+			"longitude": "Columna de longitud",
+			"queryColumns": "Columnas de la consulta",
+			"pickBoth": "Elige la columna de latitud y la de longitud.",
+			"mustDiffer": "La columna de latitud y la de longitud deben ser distintas.",
+			"detect": "Detectar",
+			"detectTitle": "Encontrar las dos columnas por sus nombres",
+			"applyTitle": "Usar estas dos columnas"
+		},
+		"draw": {
+			"applyTitle": "Filtrar la consulta por esta área",
+			"width": "Anchura",
+			"km": "km",
+			"counting": "contando elementos...",
+			"featureCount": "{count, plural, one {# elemento en esta área} other {# elementos en esta área}}",
+			"polygon": "Polígono",
+			"polygonTitle": "Dibuja un polígono. Haz clic en cada vértice. Haz clic de nuevo en el primer punto para terminar.",
+			"box": "Rectángulo",
+			"boxTitle": "Haz clic en una esquina del rectángulo y después en la esquina opuesta.",
+			"crossSection": "Sección transversal",
+			"crossSectionTitle": "Dibuja una línea. La línea se convierte en una banda con la anchura de abajo.",
+			"clearTitle": "Quitar el área",
+			"applyFilter": "Aplicar filtro"
+		}
+	},
+	"table": {
+		"title": "Explorador de tablas",
+		"selectQuery": "Selecciona arriba una consulta válida para ver sus datos.",
+		"rowsPerPage": "Filas por página:",
+		"noData": "No hay datos disponibles",
+		"loadingData": "Cargando datos...",
+		"previous": "Anterior",
+		"next": "Siguiente",
+		"pageBeforeInput": "Página",
+		"pageAfterInput": "de {count}",
+		"toast": {
+			"noData": "No hay datos de tabla para mostrar.",
+			"sortFailed": "No se pudo ordenar la tabla:"
+		}
+	},
+	"chart": {
+		"title": "Explorador de gráficos",
+		"selectQuery": "Selecciona arriba una consulta válida para verla en un gráfico.",
+		"running": "Ejecutando la consulta…",
+		"drawing": "Dibujando el gráfico…"
+	},
+	"plot": {
+		"type": {
+			"scatter": {
+				"label": "Gráfico de dispersión",
+				"description": "X e Y proceden de una columna de datos."
+			},
+			"crossSection": {
+				"label": "Sección transversal",
+				"description": "X es la distancia a lo largo de la línea de sección transversal dibujada en el mapa.",
+				"needsLine": "Dibuja primero una sección transversal en el visor de mapas."
+			},
+			"histogram": {
+				"label": "Histograma",
+				"description": "Una columna, dividida en intervalos. La altura de una barra es el número de filas."
+			}
+		},
+		"fileName": "grafico",
+		"legend": {
+			"moreGroups": "+{count} más"
+		},
+		"tabs": {
+			"emptyName": "El nombre del gráfico no puede estar vacío.",
+			"editPlotName": "Editar el nombre del gráfico",
+			"rename": "Editar nombre",
+			"finishRename": "Terminar de editar el nombre",
+			"remove": "Quitar {name}",
+			"add": "Añadir gráfico",
+			"addTitle": "Añadir un gráfico",
+			"duplicate": "Duplicar",
+			"duplicateTitle": "Duplicar el gráfico actual",
+			"resetView": "Restablecer vista",
+			"resetViewTitle": "Restablecer la vista del gráfico",
+			"export": "Exportar PNG",
+			"exportTitle": "Exportar este gráfico como PNG"
+		},
+		"axis": {
+			"crossSectionDistance": "Distancia a lo largo de la sección (km)",
+			"histogramCount": "Recuento"
+		},
+		"caption": {
+			"total": "N = {total, number}",
+			"sampled": "N = {total, number} · {shown, number} mostrados (muestra del {percent, number}%)"
+		},
+		"error": {
+			"needsCrossSection": "Este gráfico necesita una sección transversal. Dibuja una en el visor de mapas y aplícala a la consulta.",
+			"lineTooShort": "La línea de la sección transversal tiene menos de dos puntos.",
+			"noCoordinateColumns": "El resultado no tiene columnas de latitud y longitud, así que no tiene distancia.",
+			"coordinatesNotNumeric": "Las columnas de latitud y longitud no contienen números.",
+			"selectCountColumn": "Selecciona una columna para contar.",
+			"noNumericColumn": "El resultado no tiene la columna numérica \"{column}\".",
+			"noNumbersToCount": "La columna no contiene números, así que no hay nada que contar.",
+			"emptyXRange": "El rango de X está vacío, así que los intervalos no tienen anchura.",
+			"noRows": "La consulta no devolvió filas.",
+			"selectYColumn": "Selecciona una columna para el eje Y.",
+			"selectXColumn": "Selecciona una columna para el eje X.",
+			"noColumn": "El resultado no tiene la columna \"{column}\".",
+			"nothingToDraw": "Ninguna fila tiene un valor en cada eje seleccionado, así que el gráfico no tiene nada que dibujar.",
+			"allGroupsDropped": "Se descartaron todos los grupos, así que el gráfico no tiene nada que dibujar."
+		},
+		"summary": {
+			"none": "ninguno",
+			"distance": "distancia",
+			"histogram": "{column} · {count, plural, one {# intervalo} other {# intervalos}}",
+			"line": "{x} × {y} · por {group}",
+			"notForType": "No disponible para este tipo de gráfico",
+			"needsColour": "Necesita una columna de color",
+			"gaussianBands": "{method} · {count, plural, one {# banda} other {# bandas}}",
+			"contourLines": "{count, plural, one {# línea} other {# líneas}}"
+		},
+		"panel": {
+			"step": {
+				"type": "Tipo de gráfico",
+				"bind": "Vincular datos",
+				"properties": "Propiedades",
+				"analysis": "Análisis avanzado"
+			},
+			"valueColumn": "Columna de valores",
+			"xAxis": "Eje X",
+			"yAxis": "Eje Y",
+			"invert": "Invertir",
+			"invertX": "Invertir el eje X",
+			"invertY": "Invertir el eje Y",
+			"min": "Mín.",
+			"max": "Máx.",
+			"pixels": "{size}px",
+			"histogramCountHint": "Número de filas en cada intervalo",
+			"groupBy": "Agrupar en trazos por",
+			"oneStroke": "Un trazo para cada fila",
+			"groupHint": "Elige la columna que nombra un lance o una estación. Cada valor se convierte en un trazo, con su propio color de la paleta.",
+			"zAxis": "Eje Z / Color",
+			"colourColumn": "Columna de color",
+			"bins": "Intervalos",
+			"binsHint": "Los intervalos cubren el rango de X. Fija el rango en el paso 3 para contar sobre una ventana fija.",
+			"titlesAndLabels": "Títulos y etiquetas",
+			"plotTitle": "Título del gráfico",
+			"noTitle": "Sin título",
+			"titleSize": "Tamaño del título",
+			"showCaption": "Mostrar leyenda inferior",
+			"xAxisLabel": "Etiqueta del eje X",
+			"yAxisLabel": "Etiqueta del eje Y",
+			"columnName": "Nombre de la columna",
+			"size": "Tamaño",
+			"legend": "Leyenda",
+			"legendDefault": "Usar el título de leyenda predeterminado",
+			"tickSize": "Tamaño de las etiquetas de marcas",
+			"dataAndColor": "Datos y color",
+			"strokePalette": "Cada trazo toma un color de la paleta.",
+			"groupForColours": "Agrupa el gráfico en el paso 2 para dar a cada trazo su propio color.",
+			"histogramPaletteHint": "Una paleta sólida colorea todas las barras igual. Una paleta de rango colorea cada barra según su recuento.",
+			"pointColour": "Color de los puntos",
+			"pointColourHint": "Cada punto toma este color. Vincula una columna al eje de color en el paso 2 para colorear los puntos según su valor.",
+			"colourRange": "Rango de color ({axis})",
+			"colorScale": "Escala de color",
+			"scaleLinear": "Lineal",
+			"scaleLogarithmic": "Logarítmica",
+			"logNeedsPositiveRange": "La escala logarítmica necesita un mínimo y un máximo positivos.",
+			"logNeedsPositiveData": "La escala logarítmica necesita datos positivos.",
+			"markers": "Marcadores",
+			"drawAlong": "Dibujar a lo largo de",
+			"alongX": "El eje X",
+			"alongY": "El eje Y",
+			"markRows": "Marcar cada fila con un punto",
+			"drawPoints": "Dibujar los puntos de datos",
+			"markerSize": "Tamaño del marcador",
+			"markerOpacity": "Opacidad del marcador",
+			"canvas": "Lienzo",
+			"showGridlines": "Mostrar líneas de cuadrícula",
+			"backgroundColor": "Color de fondo",
+			"textColor": "Color del texto",
+			"gridlineColor": "Color de las líneas de cuadrícula",
+			"gridlineOpacity": "Opacidad de las líneas de cuadrícula",
+			"noContoursLine": "Los contornos necesitan un valor por punto. Una línea no tiene ninguno, así que están desactivados para este tipo de gráfico.",
+			"noContoursHistogram": "Los contornos necesitan un valor por punto. Un histograma no tiene ninguno, así que están desactivados para este tipo de gráfico.",
+			"contoursNeedColour": "Los contornos leen el eje de color. Vincula una columna a él en el paso 2 para activarlos.",
+			"gridding": "Mallado e interpolación",
+			"interpolate": "Interpolar",
+			"interpolateHint": "Los valores seleccionados de X, Y y color se interpolan y se dibujan detrás de los puntos.",
+			"delaunayHint": "Delaunay dibuja dentro de la huella de los datos medidos. El mallado suavizado rellena el exterior.",
+			"method": "Método",
+			"methodGaussian": "Suavizado gaussiano",
+			"methodDelaunay": "Triangulación de Delaunay",
+			"outsideSmoothing": "Suavizado exterior",
+			"gaussianSigma": "Sigma gaussiana",
+			"gridResolution": "Resolución de la malla",
+			"clipLimits": "Límites de recorte",
+			"clipMin": "Mínimo de recorte",
+			"clipMax": "Máximo de recorte",
+			"colourBands": "Bandas de color",
+			"contourLines": "Líneas de contorno",
+			"drawContours": "Dibujar contornos",
+			"drawContourLines": "Dibujar líneas de contorno",
+			"contourHint": "Los valores se interpolan sobre una malla y las líneas se recortan al área que cubren las filas.",
+			"levels": "Niveles (número de contornos)",
+			"gridDetail": "Detalle de la malla",
+			"lineWidth": "Grosor de línea",
+			"addLabel": "Añadir etiqueta",
+			"labelSize": "Tamaño de la etiqueta",
+			"applyChanges": "Aplicar cambios",
+			"revert": "Revertir",
+			"revertTitle": "Volver a lo que el gráfico está dibujando",
+			"inputTooLow": "El valor no puede ser menor que {min}.",
+			"inputTooHigh": "El valor no puede ser mayor que {max}."
+		}
+	},
+	"palette": {
+		"label": "Paleta",
+		"reverse": "Invertir la paleta",
+		"gradients": "Degradados",
+		"solids": "Colores únicos"
+	},
+	"legend": {
+		"minimum": "Mínimo",
+		"maximum": "Máximo",
+		"minimumTitle": "El valor a la izquierda de la escala",
+		"maximumTitle": "El valor a la derecha de la escala"
+	},
+	"geo": {
+		"area": {
+			"km2Whole": "{area, number, ::precision-integer} km²",
+			"km2OneDecimal": "{area, number, ::.0} km²",
+			"km2TwoDecimals": "{area, number, ::.00} km²"
+		},
+		"selection": {
+			"box": "Rectángulo",
+			"crossSection": "Sección transversal ({width, number} km)",
+			"polygon": "{count, plural, one {Polígono (# punto)} other {Polígono (# puntos)}}"
+		},
+		"warning": {
+			"noSamples": "No hay valores de muestra, así que la unidad no está verificada.",
+			"mayBeRadians": "Los valores también encajan con radianes. Se asumen grados, lo cual es incorrecto si la extensión es realmente global.",
+			"packedDegrees": "Los valores parecen grados y minutos empaquetados (ddmm.mmm).",
+			"scaledDegrees": "Los valores parecen grados escalados por {scale}.",
+			"webMercator": "Los valores parecen metros EPSG:3857.",
+			"unknownProjection": "Los valores son metros en una proyección desconocida, probablemente UTM. La zona no se puede recuperar a partir de los datos, así que no se pueden convertir aquí.",
+			"noColumns": "No se encontraron columnas de latitud y longitud.",
+			"swapped": "Las dos columnas se intercambiaron: los rangos de valores indican que los ejes están invertidos."
+		}
+	},
+	"cache": {
+		"title": "Información de la caché",
+		"loading": "Cargando la información de la caché…",
+		"disabledNote": "La caché está desactivada: cada consulta se vuelve a ejecutar en Beacon y no se guarda nada.",
+		"hours": "{hours} h",
+		"idMissing": "n/d",
+		"notAvailable": "N/D",
+		"current": "actual",
+		"memory": {
+			"title": "Caché en memoria",
+			"subtitle": "tablas Arrow decodificadas, esta sesión",
+			"empty": "No hay conjuntos de datos en memoria."
+		},
+		"disk": {
+			"title": "Caché en disco (OPFS)",
+			"subtitle": "se conserva al recargar · caduca {duration} después de guardarse",
+			"unsupported": "No disponible en este entorno (OPFS no compatible).",
+			"empty": "No hay resultados guardados en disco."
+		},
+		"stat": {
+			"items": "Elementos",
+			"memoryUsed": "Memoria usada",
+			"cells": "Celdas",
+			"derivedTables": "Tablas derivadas",
+			"diskUsed": "Disco usado"
+		},
+		"table": {
+			"columns": "Columnas",
+			"rows": "Filas",
+			"cols": "Cols.",
+			"size": "Tamaño",
+			"queryId": "Id. de consulta",
+			"stored": "Guardado",
+			"lastUsed": "Último uso"
+		},
+		"disable": "Desactivar la caché",
+		"enable": "Activar la caché",
+		"clearAll": "Borrar todas las cachés"
+	},
+	"system": {
+		"title": "Información del sistema",
+		"noNode": {
+			"title": "Sin nodo Beacon",
+			"message": "Esta página lee un nodo. Selecciona primero un nodo."
+		},
+		"intro": "Consulta información detallada sobre el sistema de Beacon Studio, como la versión, el uso de CPU, la memoria y más.",
+		"disabled": "No hay información del sistema disponible. Actívala con la variable de entorno {variable}.",
+		"version": "Versión de Beacon",
+		"uptime": "Tiempo de actividad del sistema: {time}",
+		"cpu": {
+			"title": "Uso de CPU del sistema",
+			"cores": "{count, plural, one {# núcleo físico} other {# núcleos físicos}}"
+		},
+		"memory": {
+			"title": "Uso de memoria del sistema"
+		},
+		"swap": {
+			"title": "Uso de swap del sistema"
+		},
+		"total": "{size} en total",
+		"used": "{percent} usado",
+		"free": "{size} libre",
+		"load": {
+			"title": "Carga media",
+			"one": "1 min: {percent}",
+			"five": "5 min: {percent}",
+			"fifteen": "15 min: {percent}"
+		},
+		"os": {
+			"title": "Información del sistema",
+			"os": "SO: {value}",
+			"hostname": "Nombre de host: {value}",
+			"kernel": "Kernel: {value}",
+			"distribution": "Distribución: {value}",
+			"version": "Versión: {value}"
+		},
+		"cpus": {
+			"title": "CPU",
+			"count": "{count}× {brand}"
+		}
+	},
+	"node": {
+		"form": {
+			"addTitle": "Añadir nodo Beacon",
+			"editTitle": "Editar nodo Beacon",
+			"closeTitle": "Cerrar sin guardar",
+			"closeMessage": "Este formulario contiene cambios que la aplicación todavía no ha guardado.",
+			"closeNote": "Los cambios se pierden."
+		},
+		"delete": {
+			"title": "Eliminar nodo Beacon",
+			"message": "Esto quita el nodo \"{name}\" de este navegador.",
+			"note": "No puedes deshacer esta acción."
+		},
+		"toast": {
+			"deleted": "El nodo Beacon \"{name}\" se ha eliminado."
+		},
+		"connection": {
+			"test": "Probar conexión",
+			"valid": "Conexión válida",
+			"invalid": "Conexión no válida",
+			"testing": "Probando..."
+		},
+		"field": {
+			"name": "Nombre del nodo",
+			"url": "URL",
+			"description": "Descripción",
+			"token": "Token",
+			"status": "Estado",
+			"actions": "Acciones"
+		},
+		"page": {
+			"introBeforeLink": "Usa esta página para gestionar tus nodos Beacon conectados. Explora los nodos Beacon públicos en",
+			"introLink": "Beacon datalake",
+			"introAfterLink": ".",
+			"add": "Añadir nodo",
+			"publicInfo": "Información de nodos públicos",
+			"empty": "No hay nodos Beacon configurados."
+		},
+		"choose": {
+			"title": "Elegir nodo Beacon",
+			"intro": "Estos son los nodos Beacon configurados actualmente:",
+			"empty": "No hay nodos Beacon configurados. Añade uno.",
+			"url": "URL:",
+			"lastUpdate": "Última actualización: {time}",
+			"selected": "Seleccionado",
+			"select": "Seleccionar",
+			"done": "Hecho"
+		},
+		"status": {
+			"online": "en línea",
+			"offline": "sin conexión",
+			"unknown": "desconocido",
+			"onlineLatency": "en línea, {latency}",
+			"aria": "Estado: {status}"
+		},
+		"latency": "Latencia",
+		"host": {
+			"name": "Beacon - {host}",
+			"description": "Nodo Beacon de la raíz del host actual. ({origin})"
+		}
+	},
+	"home": {
+		"betaToast": "Beacon Studio todavía está en fase beta. Envía tus comentarios con el botón \"Comentarios\" de la esquina inferior izquierda.",
+		"title": {
+			"beforeHighlight": "Bienvenido a Beacon",
+			"highlight": "Studio"
+		},
+		"subtitle": "Explora y consulta un nodo Beacon en tu navegador. El nodo lee los archivos en su ubicación y devuelve filas y columnas, no archivos.",
+		"nodes": {
+			"title": "Nodos conectados ({count})",
+			"empty": "No hay ningún nodo Beacon configurado.",
+			"manage": "Gestionar nodos"
+		},
+		"launchpad": {
+			"title": "Plataforma de inicio",
+			"workbench": {
+				"title": "Banco de trabajo de consultas",
+				"description": "Escribe consultas, filtra datos y busca entre millones de registros.",
+				"action": "Nueva consulta"
+			}
+		},
+		"guide": {
+			"title": "Cómo funciona",
+			"lead": "Tres pasos desde una consulta vacía hasta tu subconjunto.",
+			"hide": "Ocultar guía",
+			"show": "Mostrar guía",
+			"select": {
+				"title": "Seleccionar nodo y tabla",
+				"body": "Abre el banco de trabajo de consultas. Elige un nodo conectado y después una tabla de datos de ese nodo."
+			},
+			"filter": {
+				"title": "Filtrar y consultar",
+				"body": "Añade las columnas que necesitas y fíltralas. Define un rango de profundidad y límites de tiempo. Para limitar el resultado a una región, dibuja el área con las herramientas del visor de mapas."
+			},
+			"explore": {
+				"title": "Explorar, exportar y compartir",
+				"body": "Descarga el resultado o míralo en el visor de mapas. Comprueba los valores en el explorador de tablas o crea un gráfico. Comparte la consulta para colaborar o para continuar en otro espacio de trabajo."
+			}
+		},
+		"examples": {
+			"title": "Ejemplos de inicio rápido",
+			"lead": "Tres consultas reales. Abre una para revisarla en el constructor de consultas y representarla en el mapa.",
+			"imageAlt": "El resultado de la consulta {title} en el visor de mapas",
+			"metricHint": "Medido en una ejecución de referencia. Tu ejecución puede variar.",
+			"check": "Ver consulta"
+		}
+	},
+	"errorPage": {
+		"title": "Error: {message}",
+		"hint": "Inténtalo de nuevo más tarde o contacta con soporte si el problema persiste."
+	},
+	"modal": {
+		"close": "Cerrar ventana"
+	},
+	"upload": {
+		"username": "Usuario administrador",
+		"password": "Contraseña de administrador",
+		"failed": "La subida falló",
+		"example": "p. ej. {example}",
+		"table": {
+			"title": "Crear tabla",
+			"name": "Nombre de la tabla",
+			"paths": "Rutas glob",
+			"pathsHint": "Puedes indicar varias rutas separadas por comas.",
+			"format": "Formato de archivo",
+			"formatPlaceholder": "Selecciona un formato de archivo",
+			"nameMissing": "Introduce un nombre de tabla.",
+			"formatMissing": "Selecciona un formato de archivo.",
+			"pathMissing": "Introduce al menos una ruta glob.",
+			"created": "✅ Tabla {name} creada"
+		},
+		"files": {
+			"title": "Subir conjuntos de datos",
+			"dataset": "Conjunto de datos",
+			"missing": "Selecciona archivos.",
+			"done": "✅ {count, plural, one {# archivo subido} other {# archivos subidos}}",
+			"size": "{name} ({size} KB)",
+			"uploading": "Subiendo... {progress}%",
+			"upload": "Subir"
+		}
+	},
+	"browser": {
+		"intro": "Usa las funciones del navegador de datos que aparecen abajo para explorar y gestionar el contenido de Beacon.",
+		"datasetCount": "{count, plural, one {# conjunto de datos} other {# conjuntos de datos}}",
+		"tableCount": "{count, plural, one {# tabla de datos} other {# tablas de datos}}",
+		"datasetsCard": "Ver y gestionar conjuntos de datos individuales.",
+		"tablesCard": "Ver y gestionar tablas de datos.",
+		"searchPlaceholder": "Buscar...",
+		"nodeLine": "Nodo: {url}",
+		"picker": {
+			"label": "Nodo Beacon",
+			"placeholder": "Selecciona un nodo",
+			"group": "Nodos"
+		},
+		"error": {
+			"missingParam": "Falta el parámetro de consulta `{name}`"
+		},
+		"datasets": {
+			"column": "Conjunto de datos",
+			"intro": "Explora y gestiona los conjuntos de datos disponibles en tu nodo Beacon.",
+			"noNodes": "Todavía no hay nodos Beacon guardados. Añade un nodo Beacon en la página Nodos Beacon para explorar conjuntos de datos."
+		},
+		"tables": {
+			"column": "Tabla",
+			"default": "Predeterminada",
+			"intro": "Explora y gestiona las tablas disponibles en tu nodo Beacon.",
+			"noNodes": "Todavía no hay nodos Beacon guardados. Añade un nodo Beacon en la página Nodos Beacon para explorar tablas de datos."
+		},
+		"schema": {
+			"field": "Campo",
+			"dataType": "Tipo de datos",
+			"nullable": "Admite nulos",
+			"dictId": "Id. de diccionario",
+			"isOrdered": "Ordenado",
+			"metadata": "Metadatos"
+		},
+		"table": {
+			"title": "Tabla {name}",
+			"heading": "Tabla ''{name}'' ({count, plural, one {# campo} other {# campos}})"
+		},
+		"dataset": {
+			"title": "Conjunto de datos {name}",
+			"heading": "Conjunto de datos {name} ({count, plural, one {# campo} other {# campos}})"
+		}
+	},
+	"misc": {
+		"externalLink": "Abrir el enlace en un navegador externo",
+		"bytes": "Bytes"
+	}
+}
