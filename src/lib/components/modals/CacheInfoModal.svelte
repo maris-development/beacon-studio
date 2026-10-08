@@ -1,7 +1,6 @@
 <!-- src/lib/components/modals/CacheInfoModal.svelte -->
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { formatDistanceToNow } from 'date-fns';
 	import Modal from '$lib/components/modals/Modal.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
@@ -14,6 +13,7 @@
 		type DiskCacheStats,
 		type OpfsDatasetMeta
 	} from '@/stores/opfs-arrow-cache';
+	import { t, formatNumber, formatDate, formatRelative } from '@/i18n';
 
 	let { onClose = () => {} } = $props();
 
@@ -60,12 +60,12 @@
 		return `${value.toFixed(value < 10 ? 2 : 1)} ${units[unit]}`;
 	}
 
-	function formatAge(epochMs: number): string {
-		return formatDistanceToNow(epochMs, { addSuffix: true });
+	function formatDuration(ms: number): string {
+		return $t('cache.hours', { hours: (ms / (60 * 60 * 1000)).toFixed(0) });
 	}
 
-	function formatDuration(ms: number): string {
-		return `${(ms / (60 * 60 * 1000)).toFixed(0)}h`;
+	function formatStamp(epochMs: number): string {
+		return $formatDate(new Date(epochMs), { dateStyle: 'short', timeStyle: 'medium' });
 	}
 
 	function pct(used: number, cap: number): number {
@@ -75,48 +75,48 @@
 
 	/** Beacon's query id, or `n/a` (only absent when the query failed). */
 	function displayId(entry: OpfsDatasetMeta): string {
-		return entry.queryId ?? 'n/a';
+		return entry.queryId ?? $t('cache.idMissing');
 	}
 </script>
 
-<Modal title="Cache information" onClose={() => onClose()} width="820px">
+<Modal title={$t('cache.title')} onClose={() => onClose()} width="820px">
 	{#if loading && !memory}
-		<p>Loading cache information…</p>
+		<p>{$t('cache.loading')}</p>
 	{:else}
 		<div class="cache-info">
 			{#if !cacheEnabled}
 				<p class="cache-disabled-note">
-					Caching is disabled — every query re-executes against Beacon and nothing is stored.
+					{$t('cache.disabledNote')}
 				</p>
 			{/if}
 			<!-- Memory tier -->
 			<section>
 				<div class="section-head">
-					<h3>Memory cache</h3>
-					<span class="subtle">decoded Arrow tables, this session</span>
+					<h3>{$t('cache.memory.title')}</h3>
+					<span class="subtle">{$t('cache.memory.subtitle')}</span>
 				</div>
 
 				<div class="stat-grid">
 					<div class="stat">
-						<span class="stat-label">Items</span>
+						<span class="stat-label">{$t('cache.stat.items')}</span>
 						<span class="stat-value">{memory?.entryCount} / {memory?.maxEntries}</span>
 						<div class="meter">
 							<div class="fill" style="width: {pct(memory?.entryCount ?? 0, memory?.maxEntries ?? 1)}%"></div>
 						</div>
 					</div>
 					<div class="stat">
-						<span class="stat-label">Memory used</span>
+						<span class="stat-label">{$t('cache.stat.memoryUsed')}</span>
 						<span class="stat-value">{formatBytes(memory?.totalBytes ?? 0)}</span>
 					</div>
 					<div class="stat">
-						<span class="stat-label">Cells</span>
-						<span class="stat-value">{(memory?.totalCells ?? 0).toLocaleString()}</span>
+						<span class="stat-label">{$t('cache.stat.cells')}</span>
+						<span class="stat-value">{$formatNumber(memory?.totalCells ?? 0)}</span>
 						<div class="meter">
 							<div class="fill" style="width: {pct(memory?.totalCells ?? 0, memory?.maxTotalCells ?? 1)}%"></div>
 						</div>
 					</div>
 					<div class="stat">
-						<span class="stat-label">Derived tables</span>
+						<span class="stat-label">{$t('cache.stat.derivedTables')}</span>
 						<span class="stat-value">{memory?.derivedTableCount ?? 0}</span>
 					</div>
 				</div>
@@ -126,20 +126,20 @@
 						<table>
 							<thead>
 								<tr>
-									<th>Columns</th>
-									<th class="num">Rows</th>
-									<th class="num">Cols</th>
-									<th class="num">Size</th>
+									<th>{$t('cache.table.columns')}</th>
+									<th class="num">{$t('cache.table.rows')}</th>
+									<th class="num">{$t('cache.table.cols')}</th>
+									<th class="num">{$t('cache.table.size')}</th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each memory.entries as entry (entry.key)}
 									<tr>
 										<td class="cols" title={entry.columns.join(', ')}>
-											{entry.columns.join(', ') || 'N/A'}
-											{#if entry.isCurrent}<span class="badge">current</span>{/if}
+											{entry.columns.join(', ') || $t('cache.notAvailable')}
+											{#if entry.isCurrent}<span class="badge">{$t('cache.current')}</span>{/if}
 										</td>
-										<td class="num">{entry.rowCount.toLocaleString()}</td>
+										<td class="num">{$formatNumber(entry.rowCount)}</td>
 										<td class="num">{entry.colCount}</td>
 										<td class="num">{formatBytes(entry.bytes)}</td>
 									</tr>
@@ -148,32 +148,32 @@
 						</table>
 					</div>
 				{:else}
-					<p class="empty">No datasets held in memory.</p>
+					<p class="empty">{$t('cache.memory.empty')}</p>
 				{/if}
 			</section>
 
 			<!-- Disk tier -->
 			<section>
 				<div class="section-head">
-					<h3>Disk cache (OPFS)</h3>
+					<h3>{$t('cache.disk.title')}</h3>
 					<span class="subtle">
-						persists across reloads · expires {disk ? formatDuration(disk.maxAgeMs) : 'N/A'} after storing
+						{$t('cache.disk.subtitle', { duration: disk ? formatDuration(disk.maxAgeMs) : $t('cache.notAvailable') })}
 					</span>
 				</div>
 
 				{#if disk && !disk.supported}
-					<p class="empty">Not available in this environment (OPFS unsupported).</p>
+					<p class="empty">{$t('cache.disk.unsupported')}</p>
 				{:else}
 					<div class="stat-grid">
 						<div class="stat">
-							<span class="stat-label">Items</span>
+							<span class="stat-label">{$t('cache.stat.items')}</span>
 							<span class="stat-value">{disk?.entryCount} / {disk?.maxEntries}</span>
 							<div class="meter">
 								<div class="fill" style="width: {pct(disk?.entryCount ?? 0, disk?.maxEntries ?? 1)}%"></div>
 							</div>
 						</div>
 						<div class="stat">
-							<span class="stat-label">Disk used</span>
+							<span class="stat-label">{$t('cache.stat.diskUsed')}</span>
 							<span class="stat-value">{formatBytes(disk?.totalBytes ?? 0)} / {formatBytes(disk?.maxTotalBytes ?? 0)}</span>
 							<div class="meter">
 								<div class="fill" style="width: {pct(disk?.totalBytes ?? 0, disk?.maxTotalBytes ?? 1)}%"></div>
@@ -186,28 +186,28 @@
 							<table>
 								<thead>
 									<tr>
-										<th>Query id</th>
-										<th class="num">Rows</th>
-										<th class="num">Size</th>
-										<th>Stored</th>
-										<th>Last used</th>
+										<th>{$t('cache.table.queryId')}</th>
+										<th class="num">{$t('cache.table.rows')}</th>
+										<th class="num">{$t('cache.table.size')}</th>
+										<th>{$t('cache.table.stored')}</th>
+										<th>{$t('cache.table.lastUsed')}</th>
 									</tr>
 								</thead>
 								<tbody>
 									{#each disk.entries as entry (entry.key)}
 										<tr>
 											<td class="id" class:na={!entry.queryId} title={entry.queryId ?? undefined}>{displayId(entry)}</td>
-											<td class="num">{entry.rowCount.toLocaleString()}</td>
+											<td class="num">{$formatNumber(entry.rowCount)}</td>
 											<td class="num">{formatBytes(entry.byteLength)}</td>
-											<td title={new Date(entry.createdAt).toLocaleString()}>{formatAge(entry.createdAt)}</td>
-											<td title={new Date(entry.lastAccessedAt).toLocaleString()}>{formatAge(entry.lastAccessedAt)}</td>
+											<td title={formatStamp(entry.createdAt)}>{$formatRelative(entry.createdAt)}</td>
+											<td title={formatStamp(entry.lastAccessedAt)}>{$formatRelative(entry.lastAccessedAt)}</td>
 										</tr>
 									{/each}
 								</tbody>
 							</table>
 						</div>
 					{:else}
-						<p class="empty">No results stored on disk.</p>
+						<p class="empty">{$t('cache.disk.empty')}</p>
 					{/if}
 				{/if}
 			</section>
@@ -217,19 +217,19 @@
 	<div slot="footer" class="footer-actions">
 		<Button variant="outline" size="sm" onclick={() => toggleCache()} disabled={loading}>
 			{#if cacheEnabled}
-				Disable caching
+				{$t('cache.disable')}
 				<DatabaseZapIcon />
 			{:else}
-				Enable caching
+				{$t('cache.enable')}
 				<DatabaseIcon />
 			{/if}
 		</Button>
 		<Button variant="outline" size="sm" onclick={() => load()} disabled={loading}>
-			Refresh
+			{$t('common.refresh')}
 			<RefreshCwIcon />
 		</Button>
 		<Button variant="destructive" size="sm" onclick={() => clearAll()} disabled={loading}>
-			Clear all caches
+			{$t('cache.clearAll')}
 			<Trash2Icon />
 		</Button>
 	</div>

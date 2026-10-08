@@ -2,17 +2,18 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { resolve } from '$app/paths';
 	import QueryWorkbench from '@/components/query-builder/QueryWorkbench.svelte';
+	import { t } from '@/i18n';
 
 </script>
 
 <svelte:head>
-	<title>Query workbench - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('workbench.title') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Queries', href: resolve('/queries') },
-		{ label: 'Query workbench', href: resolve('/queries/workbench') }
+		{ label: $t('nav.item.queries'), href: resolve('/queries') },
+		{ label: $t('workbench.title'), href: resolve('/queries/workbench') }
 	]}
 />
 <div class="page-wrapper">

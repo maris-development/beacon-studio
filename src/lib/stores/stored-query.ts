@@ -27,6 +27,7 @@ import { coordinateColumnsOf, type CoordinatePair } from '@/geo/spatial-selectio
 import { describeQuery, track } from '@/telemetry';
 import { Utils } from '@/utils';
 import { resolve } from '$app/paths';
+import { translate } from '@/i18n';
 
 export type { NodeRef };
 
@@ -180,7 +181,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 	return {
 		id: createId(),
 		role: input.role,
-		name: input.name ?? 'Untitled',
+		name: input.name ?? translate('query.untitled'),
 		draft,
 		compiled,
 		node: input.node ?? snapshotNode(null),

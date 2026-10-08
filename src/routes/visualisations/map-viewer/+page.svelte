@@ -23,6 +23,7 @@
 	import { addToast } from '@/stores/toasts';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
+	import { t } from '@/i18n';
 
 	let mapContainer: HTMLDivElement | null = null;
 
@@ -130,7 +131,7 @@
 			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
 			if (blockedKey !== lastBlockedKey) {
 				lastBlockedKey = blockedKey;
-				addToast({ type: 'warning', message: blocked });
+				addToast({ type: 'warning', key: blocked.key, values: blocked.values });
 			}
 
 			map.clearQueryResult();
@@ -213,13 +214,13 @@
 </script>
 
 <svelte:head>
-	<title>Map - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('map.headTitle') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Visualisations', href: '/visualisations' },
-		{ label: 'Map viewer', href: '/visualisations/map-viewer' }
+		{ label: $t('visualisation.title'), href: '/visualisations' },
+		{ label: $t('map.title'), href: '/visualisations/map-viewer' }
 	]}
 />
 
@@ -237,27 +238,28 @@
 					<div class="map-info-wrapper">
 						<div class="my-ctrl-group">
 							<p class="summary">
-								{map.rowCount} rows selected in {Utils.formatSecondsToReadableTime(
-									map.durationMs / 1000
-								)}.
+								{$t('visualisation.rowsSelected', {
+									count: map.rowCount,
+									duration: Utils.formatSecondsToReadableTime(map.durationMs / 1000)
+								})}
 							</p>
 
 							{#if map.needsCoordinateColumns}
 								<p class="coordinates-missing" role="alert">
-									Pick the latitude and longitude columns to show the rows on the map.
+									{$t('map.coordinatesMissing')}
 								</p>
 							{/if}
 
 							<div class="field">
 								<div class="label-row">
-									<Label size="sm" for="dataColumn">Data column</Label>
+									<Label size="sm" for="dataColumn">{$t('map.dataColumn')}</Label>
 
 									<Button
 										class="coordinates-button"
 										variant="ghost"
 										size="icon"
-										title="Pick the latitude and longitude columns"
-										aria-label="Pick the latitude and longitude columns"
+										title={$t('map.pickCoordinates')}
+										aria-label={$t('map.pickCoordinates')}
 										onclick={() => (isColumnsOpen = true)}
 									>
 										<SettingsIcon />
@@ -270,11 +272,11 @@
 									bind:value={map.selectedDataColumnName}
 								>
 									<Select.Trigger id="dataColumn" class="full-width"
-										>{map.selectedDataColumnName || 'Select a column'}</Select.Trigger
+										>{map.selectedDataColumnName || $t('visualisation.selectColumn')}</Select.Trigger
 									>
 									<Select.Content>
 										<Select.Group>
-											<Select.Label>Available columns</Select.Label>
+											<Select.Label>{$t('visualisation.availableColumns')}</Select.Label>
 											{#each map.dataColumnOptions as column, index (index)}
 												<Select.Item value={column} label={column}>
 													{column}
@@ -302,7 +304,7 @@
 							bind:selection
 							onApply={applyAreaFilter}
 							canApply={map.hasCoordinates}
-							disabledReason="The query must select a latitude and a longitude column."
+							disabledReason={$t('map.needsCoordinates')}
 							onDrawingChange={(drawing) => map.setPicking(!drawing)}
 							countFeatures={(ring) => map.countFeaturesInRing(ring)}
 							countKey={map.datasetKey}
@@ -312,12 +314,12 @@
 
 				{#if !compiledQuery}
 					<div class="loading-overlay">
-						<p>Select a valid query above to see it on the map.</p>
+						<p>{$t('map.selectQuery')}</p>
 					</div>
 				{:else if map.isLoading}
 					<div class="loading-overlay">
 						<LoadingSpinner></LoadingSpinner>
-						<h3>Loading...</h3>
+						<h3>{$t('common.loading')}</h3>
 					</div>
 				{/if}
 			</div>

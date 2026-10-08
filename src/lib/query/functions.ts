@@ -17,17 +17,18 @@ function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | nul
     }
 
     if(!result){
-        // let message = 'Error compiling query: compileQuery function returned null.';
-        let message = 'Cannot share an empty query. Please select a table and atleast one column.';
-
         if(error?.message){
-            message += `Error compiling query: ${error.message}`;
+            addToast({
+                key: 'query.export.shareEmptyCompileFailed',
+                message: error.message,
+                type: "error"
+            });
+        } else {
+            addToast({
+                key: 'query.export.shareEmpty',
+                type: "error"
+            });
         }
-
-        addToast({
-            message: message,
-            type: "error"
-        });
     }
 
     return result;
@@ -47,7 +48,8 @@ export async function copyJSON(compileQuery: () => CompiledQuery): Promise<void>
         console.error('Error serializing query to JSON:', error);
 
         addToast({
-            message: `Error serializing query to JSON: ${error.message}`,
+            key: 'query.export.jsonSerializeFailed',
+            message: error.message,
             type: 'error'
         });
     }
@@ -61,7 +63,7 @@ export async function copyJSON(compileQuery: () => CompiledQuery): Promise<void>
 
         if (!copied) {
             addToast({
-                message: 'Could not copy the JSON code to the clipboard',
+                key: 'query.export.jsonCopyFailed',
                 type: 'error'
             });
 
@@ -69,14 +71,15 @@ export async function copyJSON(compileQuery: () => CompiledQuery): Promise<void>
         }
 
         addToast({
-            message: 'JSON code copied to clipboard',
+            key: 'query.export.jsonCopied',
             type: 'success'
         });
     } catch (error) {
         console.error('Error copying JSON code to clipboard:', error);
 
         addToast({
-            message: `Error copying JSON code to clipboard: ${error.message}`,
+            key: 'query.export.jsonCopyError',
+            message: error.message,
             type: 'error'
         });
 
@@ -97,7 +100,8 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
         console.error('Error serializing query to JSON:', error);
 
         addToast({
-            message: `Error serializing query to JSON: ${error.message}`,
+            key: 'query.export.jsonSerializeFailed',
+            message: error.message,
             type: 'error'
         });
     }
@@ -110,7 +114,7 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
         JSONQueryExporter.downloadAsJson(queryJson);
 
         addToast({
-            message: 'Query JSON downloaded as beacon-studio-query.json',
+            key: 'query.export.jsonDownloaded',
             type: 'success'
         });
     }
@@ -118,7 +122,8 @@ export function downloadJSON(compileQuery: () => CompiledQuery): void {
         console.error('Error downloading JSON:', error);
 
         addToast({
-            message: `Error downloading JSON: ${error.message}`,
+            key: 'query.export.jsonDownloadFailed',
+            message: error.message,
             type: 'error'
         });
     }
@@ -141,7 +146,8 @@ export async function copyPython(
         console.error('Error generating Python code:', error);
         
         addToast({
-            message: `Error generating Python code: ${error.message}`,
+            key: 'query.export.pythonFailed',
+            message: error.message,
             type: 'error'
         });
         
@@ -157,7 +163,7 @@ export async function copyPython(
 
         if (!copied) {
             addToast({
-                message: 'Could not copy the Python code to the clipboard',
+                key: 'query.export.pythonCopyFailed',
                 type: 'error'
             });
 
@@ -165,14 +171,15 @@ export async function copyPython(
         }
 
         addToast({
-            message: 'Python code copied to clipboard',
+            key: 'query.export.pythonCopied',
             type: 'success'
         });
     } catch (error) {
         console.error('Error copying Python code to clipboard:', error);
 
         addToast({
-            message: `Error copying Python code to clipboard: ${error.message}`,
+            key: 'query.export.pythonCopyError',
+            message: error.message,
             type: 'error'
         });
 
@@ -196,7 +203,8 @@ export function downloadPython(
         console.error('Error generating Python code:', error);
         
         addToast({
-            message: `Error generating Python code: ${error.message}`,
+            key: 'query.export.pythonFailed',
+            message: error.message,
             type: 'error'
         });
         
@@ -211,14 +219,15 @@ export function downloadPython(
         PythonQueryExporter.downloadAsNotebook(pythonCode);
 
         addToast({
-            message: 'Python code downloaded as beacon-studio-query.ipynb',
+            key: 'query.export.pythonDownloaded',
             type: 'success'
         });
     } catch (error) {
         console.error('Error downlaoding Python code as notebook:', error);
 
         addToast({
-            message: `Error downloading Python code as notebook: ${error.message}`,
+            key: 'query.export.pythonDownloadFailed',
+            message: error.message,
             type: 'error'
         });
 
@@ -241,7 +250,8 @@ export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> 
         console.error('Error generating SQL code:', error);
         
         addToast({
-            message: `Error generating SQL code: ${error.message}`,
+            key: 'query.export.sqlFailed',
+            message: error.message,
             type: 'error'
         });
         
@@ -257,7 +267,7 @@ export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> 
 
         if (!copied) {
             addToast({
-                message: 'Could not copy the SQL code to the clipboard',
+                key: 'query.export.sqlCopyFailed',
                 type: 'error'
             });
 
@@ -265,14 +275,15 @@ export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> 
         }
 
         addToast({
-            message: 'SQL code copied to clipboard',
+            key: 'query.export.sqlCopied',
             type: 'success'
         });
     } catch (error) {
         console.error('Error copying SQL code to clipboard:', error);
 
         addToast({
-            message: `Error copying SQL code to clipboard: ${error.message}`,
+            key: 'query.export.sqlCopyError',
+            message: error.message,
             type: 'error'
         });
 
@@ -294,7 +305,8 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
         console.error('Error generating SQL code:', error);
         
         addToast({
-            message: `Error generating SQL code: ${error.message}`,
+            key: 'query.export.sqlFailed',
+            message: error.message,
             type: 'error'
         });
         
@@ -309,14 +321,15 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
         SQLQueryExporter.downloadAsSql(sqlQuery);
 
         addToast({
-            message: 'SQL code downloaded as beacon-studio-query.sql',
+            key: 'query.export.sqlDownloaded',
             type: 'success'
         });
     } catch (error) {
         console.error('Error downlaoding SQL code as SQL file:', error);
 
         addToast({
-            message: `Error downloading SQL code as SQL file: ${error.message}`,
+            key: 'query.export.sqlDownloadFailed',
+            message: error.message,
             type: 'error'
         });
 
@@ -335,7 +348,7 @@ export async function copyUrl(record: ShareableQuery | null): Promise<void> {
 
     if (!record?.compiled) {
         addToast({
-            message: 'Cannot share an empty query. Please select a table and atleast one column.',
+            key: 'query.export.shareEmpty',
             type: 'error'
         });
         return;
@@ -350,7 +363,8 @@ export async function copyUrl(record: ShareableQuery | null): Promise<void> {
         console.error('Error building Query URL:', error);
 
         addToast({
-            message: `Error building Query URL: ${error.message}`,
+            key: 'query.export.urlFailed',
+            message: error.message,
             type: 'error'
         });
     }
@@ -364,7 +378,7 @@ export async function copyUrl(record: ShareableQuery | null): Promise<void> {
 
         if (!copied) {
             addToast({
-                message: 'Could not copy the Query URL to the clipboard',
+                key: 'query.export.urlCopyFailed',
                 type: 'error'
             });
 
@@ -372,14 +386,15 @@ export async function copyUrl(record: ShareableQuery | null): Promise<void> {
         }
 
         addToast({
-            message: 'Query URL copied to clipboard',
+            key: 'query.export.urlCopied',
             type: 'success'
         });
     } catch (error) {
         console.error('Error copying Query Url to clipboard:', error);
 
         addToast({
-            message: `Error copying Query URL to clipboard: ${error.message}`,
+            key: 'query.export.urlCopyError',
+            message: error.message,
             type: 'error'
         });
 

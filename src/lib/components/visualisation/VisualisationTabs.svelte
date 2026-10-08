@@ -4,11 +4,12 @@
 	import MapIcon from '@lucide/svelte/icons/map';
 	import TableIcon from '@lucide/svelte/icons/table';
 	import ChartPieIcon from '@lucide/svelte/icons/chart-pie';
+	import { t, type MessageKey } from '@/i18n';
 
-	const tabs = $derived([
-		{ label: 'Map', path: resolve('/visualisations/map-viewer'), icon: MapIcon },
-		{ label: 'Table', path: resolve('/visualisations/table-explorer'), icon: TableIcon },
-		{ label: 'Chart', path: resolve('/visualisations/chart-explorer'), icon: ChartPieIcon }
+	const tabs: Array<{ labelKey: MessageKey; path: string; icon: typeof MapIcon }> = $derived([
+		{ labelKey: 'map.headTitle', path: resolve('/visualisations/map-viewer'), icon: MapIcon },
+		{ labelKey: 'visualisation.tab.table', path: resolve('/visualisations/table-explorer'), icon: TableIcon },
+		{ labelKey: 'visualisation.tab.chart', path: resolve('/visualisations/chart-explorer'), icon: ChartPieIcon }
 	]);
 </script>
 
@@ -20,7 +21,7 @@
 				class="tab {page.url.pathname === tab.path ? 'active' : ''}"
 			>
 				<tab.icon size="1rem" />
-				{tab.label}
+				{$t(tab.labelKey)}
 			</a>
 		{/each}
 	</div>

@@ -16,6 +16,7 @@
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import { addToast } from '@/stores/toasts';
+	import { t } from '@/i18n';
 	import type { ChartExplorerController } from './ChartExplorerController.svelte';
 
 	let {
@@ -54,7 +55,7 @@
 	function commitRename(plotId: string): void {
 		const name = editingName.trim();
 		if (!name) {
-			addToast({ message: 'Plot name cannot be empty.', type: 'warning' });
+			addToast({ key: 'plot.tabs.emptyName', type: 'warning' });
 			return;
 		}
 
@@ -101,8 +102,8 @@
 						class="name-input"
 						use:focusInput
 						value={editingName}
-						title="Edit plot name"
-						aria-label="Edit plot name"
+						title={$t('plot.tabs.editPlotName')}
+						aria-label={$t('plot.tabs.editPlotName')}
 						oninput={(event) => (editingName = event.currentTarget.value)}
 						onkeydown={(event) => handleRenameKeydown(plot.id, event)}
 						onblur={() => handleRenameBlur(plot.id)}
@@ -123,8 +124,10 @@
 				<button
 					type="button"
 					class="edit"
-					title={editingPlotId === plot.id ? 'Finish editing name' : 'Edit name'}
-					aria-label={editingPlotId === plot.id ? 'Finish editing name' : 'Edit name'}
+					title={editingPlotId === plot.id ? $t('plot.tabs.finishRename') : $t('plot.tabs.rename')}
+					aria-label={editingPlotId === plot.id
+						? $t('plot.tabs.finishRename')
+						: $t('plot.tabs.rename')}
 					onclick={(event) => {
 						event.stopPropagation();
 						if (editingPlotId === plot.id) {
@@ -146,8 +149,8 @@
 					<button
 						type="button"
 						class="close"
-						title="Remove {plot.name}"
-						aria-label="Remove {plot.name}"
+						title={$t('plot.tabs.remove', { name: plot.name })}
+						aria-label={$t('plot.tabs.remove', { name: plot.name })}
 						onclick={() => controller.removePlot(plot.id)}
 					>
 						<XIcon size={12} />
@@ -156,33 +159,43 @@
 			</div>
 		{/each}
 
-		<button type="button" class="action" title="Add a plot" onclick={() => controller.addPlot()}>
+		<button
+			type="button"
+			class="action"
+			title={$t('plot.tabs.addTitle')}
+			onclick={() => controller.addPlot()}
+		>
 			<PlusIcon size={14} />
-			<span>Add plot</span>
+			<span>{$t('plot.tabs.add')}</span>
 		</button>
 
 		<button
 			type="button"
 			class="action"
-			title="Duplicate the current plot"
+			title={$t('plot.tabs.duplicateTitle')}
 			onclick={() => controller.duplicateActivePlot()}
 		>
 			<CopyIcon size={14} />
-			<span>Duplicate</span>
+			<span>{$t('plot.tabs.duplicate')}</span>
 		</button>
 	</div>
 
 	{#if onResetView}
-		<button type="button" class="action" title="Reset the plot view" onclick={onResetView}>
+		<button type="button" class="action" title={$t('plot.tabs.resetViewTitle')} onclick={onResetView}>
 			<ResetIcon size={14} />
-			<span>Reset view</span>
+			<span>{$t('plot.tabs.resetView')}</span>
 		</button>
 	{/if}
 
 	{#if onExport}
-		<button type="button" class="action export" title="Export this plot as PNG" onclick={onExport}>
+		<button
+			type="button"
+			class="action export"
+			title={$t('plot.tabs.exportTitle')}
+			onclick={onExport}
+		>
 			<DownloadIcon size={14} />
-			<span>Export PNG</span>
+			<span>{$t('plot.tabs.export')}</span>
 		</button>
 	{/if}
 </div>

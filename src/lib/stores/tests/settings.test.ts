@@ -19,9 +19,8 @@ describe('adminFeatures setting', () => {
 	it('has a definition in the System group', () => {
 		const definition = SETTING_DEFINITIONS.find((d) => d.key === 'adminFeatures');
 		expect(definition).toMatchObject({
-			group: 'System',
-			type: 'boolean',
-			label: 'Show admin features'
+			group: 'system',
+			type: 'boolean'
 		});
 	});
 });

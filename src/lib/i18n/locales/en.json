@@ -1,0 +1,1046 @@
+{
+	"app": {
+		"name": "Beacon Studio",
+		"logoAlt": "Beacon Logo",
+		"pageTitle": "{page} - Beacon Studio"
+	},
+	"common": {
+		"cancel": "Cancel",
+		"continue": "Continue",
+		"ok": "OK",
+		"close": "Close",
+		"more": "More",
+		"on": "On",
+		"off": "Off",
+		"breadcrumb": "breadcrumb",
+		"save": "Save",
+		"delete": "Delete",
+		"edit": "Edit",
+		"rename": "Rename",
+		"refresh": "Refresh",
+		"apply": "Apply",
+		"clear": "Clear",
+		"reset": "Reset",
+		"loading": "Loading…",
+		"none": "None",
+		"unknown": "Unknown",
+		"name": "Name",
+		"rows": "{count, plural, one {# row} other {# rows}}",
+		"columns": "{count, plural, one {# column} other {# columns}}"
+	},
+	"language": {
+		"menu": "Language",
+		"auto": "Automatic (browser language)"
+	},
+	"nav": {
+		"openMenu": "Open menu",
+		"closeMenu": "Close menu",
+		"group": {
+			"dataAccess": "Data Access",
+			"explore": "Explore and Analyze",
+			"nodeManagement": "Node Management",
+			"studio": "Beacon Studio"
+		},
+		"item": {
+			"queries": "Queries",
+			"queryBuilder": "Query Builder",
+			"savedQueries": "Saved Queries",
+			"queryHistory": "Query History",
+			"workspace": "Workspace",
+			"mapViewer": "Map Viewer",
+			"tableExplorer": "Table Explorer",
+			"chartExplorer": "Chart Explorer",
+			"dataBrowser": "Data Browser",
+			"datasets": "Datasets",
+			"dataTables": "Data Tables",
+			"systemInfo": "System Info",
+			"beaconNodes": "Beacon Nodes",
+			"settings": "Settings",
+			"aboutStudio": "More about Studio",
+			"documentation": "Documentation",
+			"github": "GitHub",
+			"feedback": "Feedback",
+			"sqlEditor": "SQL Editor",
+			"crawlers": "Crawlers"
+		},
+		"needsNode": "This page needs a Beacon node. Add one on the Beacon Nodes page.",
+		"waitForNodes": "Beacon Studio reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive."
+	},
+	"build": {
+		"unknown": "unknown",
+		"commit": "Commit {commit}",
+		"commitUnknown": "Commit unknown",
+		"branch": "Branch {branch}",
+		"dirty": "Uncommitted changes",
+		"built": "Built {time}"
+	},
+	"settings": {
+		"title": "Settings",
+		"intro": "Manage your Beacon Studio settings here. The app keeps every value in this browser. A change applies to the next query, map or refresh.",
+		"resetAll": "Reset all settings",
+		"resetAllMessage": "This puts every setting of this browser back to its default. The app loses your query limits, your cache size and your map defaults.",
+		"resetAllMessageTelemetry": "This puts every setting of this browser back to its default. The app loses your query limits, your cache size, your map defaults and your telemetry choice.",
+		"resetAllNote": "You cannot undo this.",
+		"resetAllDone": "All settings are back to their defaults.",
+		"resetOne": "Put this setting back to its default",
+		"noTelemetryBuild": "This version of Beacon Studio is built with telemetry disabled. It sends no usage data.",
+		"group": {
+			"general": "General",
+			"queries": "Queries",
+			"resultCache": "Result cache",
+			"map": "Map",
+			"system": "System",
+			"plot": "Plot",
+			"telemetry": "Telemetry"
+		},
+		"unit": {
+			"millionCells": "million cells",
+			"entries": "entries",
+			"results": "results",
+			"tables": "tables",
+			"mib": "MiB",
+			"hours": "hours",
+			"decimals": "decimals",
+			"km": "km",
+			"rows": "rows",
+			"seconds": "seconds"
+		},
+		"field": {
+			"language": {
+				"label": "Language",
+				"description": "The language of Beacon Studio. Automatic follows the language of the browser."
+			},
+			"defaultOutputFormat": {
+				"label": "Default output format",
+				"description": "The output format of a new query block."
+			},
+			"requireQueryFilters": {
+				"label": "Require a filter",
+				"description": "Blocks a query with no filters in the workbench. Beacon must not read a whole table."
+			},
+			"queryCellLimit": {
+				"label": "Query cell limit",
+				"description": "The cap on result size in cells (rows × columns). A lower value keeps the browser stable. The row limit is this value divided by the number of columns."
+			},
+			"queryHistoryMax": {
+				"label": "Query history size",
+				"description": "The number of rows in the query history. The oldest runs go away first."
+			},
+			"memoryCacheMaxEntries": {
+				"label": "Memory cache entries",
+				"description": "The number of decoded results that stay in memory."
+			},
+			"workerMaxLoadedTables": {
+				"label": "Worker tables",
+				"description": "The number of tables that the Arrow worker holds for sort and group actions."
+			},
+			"diskCacheMaxEntries": {
+				"label": "Disk cache entries",
+				"description": "The number of results in the browser disk cache (OPFS)."
+			},
+			"diskCacheMaxTotalBytes": {
+				"label": "Disk cache size",
+				"description": "The total size of the compressed results on disk."
+			},
+			"diskCacheMaxAgeMs": {
+				"label": "Disk cache lifetime",
+				"description": "The age at which a result on disk becomes stale. A stale result goes away."
+			},
+			"mapStyleUrl": {
+				"label": "Base map style URL",
+				"description": "The MapLibre style URL of the base map. A change applies to the next map."
+			},
+			"mapGroupByDecimals": {
+				"label": "Map group decimals",
+				"description": "The decimals that the map groups coordinates by. 4 = 11 m, 3 = 111 m, 2 = 1111 m, 1 = 11111 m, 0 = 111111 m."
+			},
+			"crossSectionWidthKm": {
+				"label": "Cross section width",
+				"description": "The width of a new cross section band."
+			},
+			"sampleAfterRows": {
+				"label": "Plot sample threshold",
+				"description": "The number of rows after which a plot samples the data. A lower value keeps the browser stable."
+			},
+			"systemInfoUpdateIntervalMs": {
+				"label": "System info refresh",
+				"description": "The period between two reads of the system info page."
+			},
+			"telemetryEnabled": {
+				"label": "Send usage statistics",
+				"description": "The main switch. It sends usage events to beacon-datalake.org: page visits, query runs, downloads, searches, warnings and errors. A random id groups the events of this browser. It sends no account, no password and no result data. Switch this off to send nothing at all."
+			},
+			"telemetryQueryDetails": {
+				"label": "Send query telemetry",
+				"description": "Adds the content of a query to its events: the table, the columns, the filters with their values, and the drawn area. It also covers a data browser search term. Switch this off to keep the usage statistics, but without that content. The app then reports that a query ran, with its time, its row count, its node and its number of columns and filters. It does not report which table or which values you asked for. An error message can still name a table. This switch does nothing while \"Send usage statistics\" is off."
+			},
+			"telemetryConsoleLog": {
+				"label": "Include console.log output",
+				"description": "Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold a file path or a result value. This switch does nothing while \"Send usage statistics\" is off."
+			},
+			"adminFeatures": {
+				"label": "Show admin features",
+				"description": "Shows the admin pages and the admin actions, for example dataset upload. An admin action asks for the admin username and password of the Beacon node."
+			}
+		}
+	},
+	"query": {
+		"untitled": "Untitled",
+		"filterCount": "{count, plural, one {# filter} other {# filters}}",
+		"entry": {
+			"noColumns": "(no columns)",
+			"openInBuilder": "Open in Query Builder",
+			"table": "Table",
+			"map": "Map",
+			"chart": "Chart"
+		},
+		"export": {
+			"jsonCopied": "JSON code copied to clipboard",
+			"jsonCopyError": "Error copying JSON code to clipboard:",
+			"jsonCopyFailed": "Could not copy the JSON code to the clipboard",
+			"jsonDownloadFailed": "Error downloading JSON:",
+			"jsonDownloaded": "Query JSON downloaded as beacon-studio-query.json",
+			"jsonSerializeFailed": "Error serializing query to JSON:",
+			"pythonCopied": "Python code copied to clipboard",
+			"pythonCopyError": "Error copying Python code to clipboard:",
+			"pythonCopyFailed": "Could not copy the Python code to the clipboard",
+			"pythonDownloadFailed": "Error downloading Python code as notebook:",
+			"pythonDownloaded": "Python code downloaded as beacon-studio-query.ipynb",
+			"pythonFailed": "Error generating Python code:",
+			"shareEmpty": "Cannot share an empty query. Please select a table and atleast one column.",
+			"sqlCopied": "SQL code copied to clipboard",
+			"sqlCopyError": "Error copying SQL code to clipboard:",
+			"sqlCopyFailed": "Could not copy the SQL code to the clipboard",
+			"sqlDownloadFailed": "Error downloading SQL code as SQL file:",
+			"sqlDownloaded": "SQL code downloaded as beacon-studio-query.sql",
+			"sqlFailed": "Error generating SQL code:",
+			"urlCopied": "Query URL copied to clipboard",
+			"urlCopyError": "Error copying Query URL to clipboard:",
+			"urlCopyFailed": "Could not copy the Query URL to the clipboard",
+			"urlFailed": "Error building Query URL:",
+			"shareEmptyCompileFailed": "Cannot share an empty query. Please select a table and atleast one column. Error compiling query:"
+		},
+		"actions": {
+			"edit": "Edit Query",
+			"editTitle": "Edit query",
+			"share": "Share",
+			"shareUrl": "Share URL",
+			"copyJson": "Copy JSON",
+			"copyPython": "Copy Python",
+			"copySql": "Copy SQL",
+			"downloadJson": "Download JSON",
+			"downloadPython": "Download Python",
+			"downloadSql": "Download SQL",
+			"save": "Save Query",
+			"saveTitle": "Save query",
+			"resetTitle": "Reset query selection",
+			"cacheInfo": "Query caching information"
+		},
+		"share": {
+			"copyTitle": "Copy a link that works in any browser",
+			"none": "This entry has no shareable query.",
+			"copied": "Share link copied to clipboard.",
+			"copyFailed": "Could not copy the share link."
+		},
+		"guard": {
+			"noFilters": "This query has no filters. Add at least one filter, or turn off \"Require a filter\" in the settings."
+		},
+		"error": {
+			"noColumns": "Pick a table and at least one column."
+		},
+		"toast": {
+			"compileFailed": "Error compiling query:",
+			"connectFailed": "Error connecting to Beacon: Please check your URL and token, make sure the CORS settings are configured correctly on the Beacon node.",
+			"decodeFailed": "Failed to decode a shared query from the URL:",
+			"cellLimit": "The query result reached the {cellLimit, number} cell limit to keep your browser stable. Data may be incomplete (retrieved {rowCount, plural, one {# row} other {# rows}}). Refine your query to reduce the result size. You can also go to settings and change the \"Query cell limit\" to a higher limit, but note that this might impact browser performance.",
+			"bestEffort": "Loaded query with best effort. {count, plural, one {# part} other {# parts}} could not be represented in Advanced Builder."
+		},
+		"parameters": {
+			"title": "Query Parameters",
+			"add": "Add Parameter",
+			"remove": "Remove column",
+			"dialogTitle": "Add Query Parameter",
+			"dialogDescription": "Search and select a column to add it to the query.",
+			"searchPlaceholder": "Type a column or search...",
+			"emptyBeforeTable": "No columns found for table",
+			"emptyAfterTable": ".",
+			"available": "Available Columns ({count, number})",
+			"empty": "No parameters selected, use the 'Add Parameter' button above."
+		},
+		"view": {
+			"cards": "Cards",
+			"list": "List"
+		},
+		"node": {
+			"title": "Select Beacon Node",
+			"count": "{count, plural, one {# node} other {# nodes}}",
+			"loading": "Load Beacon nodes...",
+			"missingBeforeUrl": "This query runs on",
+			"missingAfterUrl": ". The app has no node for that address. Add it, or pick another node below.",
+			"add": "Add node",
+			"addDescription": "Connect to another Beacon node.",
+			"placeholder": "Select a node",
+			"listLabel": "Nodes",
+			"noAnswer": "The Beacon node did not answer.",
+			"tablesFailed": "Could not read the tables of \"{node}\".",
+			"retry": "Try again"
+		},
+		"table": {
+			"title": "Select Data Table",
+			"count": "{count, plural, one {# table} other {# tables}}",
+			"countLoading": "Loading tables",
+			"noDescription": "Description not available",
+			"placeholder": "Select a table",
+			"listLabel": "Tables",
+			"change": {
+				"title": "Change the data table",
+				"message": "Another table needs other columns, so this empties your column selection.",
+				"confirm": "Change table"
+			}
+		},
+		"outputFormat": {
+			"title": "Output Format",
+			"listLabel": "Tables"
+		},
+		"geoFilter": {
+			"title": "Geospatial filter",
+			"description": "Draw an area, and pick the two columns that the filter tests.",
+			"tooFewColumns": "This query selects less than two number columns. Add a latitude and a longitude column first.",
+			"needsColumns": "The query must select a latitude and a longitude column.",
+			"pickColumns": "Pick the latitude and the longitude column.",
+			"drawArea": "Draw an area on the map.",
+			"latitude": "Latitude column",
+			"longitude": "Longitude column",
+			"notFound": "Not found",
+			"pickPair": "Pick the coordinate columns",
+			"remove": "Remove filter",
+			"apply": "Apply filter",
+			"applyTitle": "Filter the query on this area"
+		},
+		"area": {
+			"add": "Add Geospatial Filter",
+			"addTitle": "Draw an area on a map, and filter the query on it",
+			"needsColumns": "Select a latitude and a longitude column first.",
+			"label": "Area: {area}",
+			"missingColumn": "The query does not select \"{column}\", so this area filters nothing.",
+			"noColumns": "The query selects no latitude and longitude column, so this area filters nothing.",
+			"editTitle": "Edit the geospatial filter",
+			"removeTitle": "Remove the area filter"
+		}
+	},
+	"filter": {
+		"add": "Add filter",
+		"remove": "Remove filter",
+		"searchPlaceholder": "Search filter...",
+		"empty": "No filters found.",
+		"op": {
+			"between": "Between",
+			"greaterThan": "Greater Than",
+			"greaterThanOrEquals": "Greater Than or Equals",
+			"lessThan": "Less Than",
+			"lessThanOrEquals": "Less Than or Equals",
+			"equals": "Equals",
+			"notEquals": "Not Equals",
+			"isNull": "Is Null",
+			"isNotNull": "Is Not Null"
+		},
+		"input": {
+			"min": "From (min)",
+			"max": "To (max)",
+			"greaterThan": "Greater than",
+			"greaterThanOrEquals": "Greater or Equal than",
+			"lessThan": "Less than",
+			"lessThanOrEquals": "Less or Equal than",
+			"equals": "Equals",
+			"notEquals": "Does NOT Equal",
+			"isNull": "Is NULL",
+			"isNotNull": "Is NOT NULL"
+		}
+	},
+	"editor": {
+		"title": "Query editor",
+		"crumb": "Query Editor",
+		"error": {
+			"noColumn": "Every query parameter must include column or column_name."
+		},
+		"toast": {
+			"executeFailed": "Error executing query:",
+			"parseFailed": "Failed to parse query JSON:"
+		}
+	},
+	"workbench": {
+		"title": "Query workbench",
+		"untitledBlock": "Untitled ({number})",
+		"copyName": "{name} (copy)",
+		"thisNode": "this node",
+		"changeNode": {
+			"title": "Change the Beacon node",
+			"message": "Another node holds other tables, so this empties your table and column selection.",
+			"confirm": "Change node"
+		},
+		"closeBlock": {
+			"title": "Close this query",
+			"message": "This query holds columns that you picked.",
+			"note": "The block goes away.",
+			"confirm": "Close query"
+		},
+		"header": {
+			"editing": "Editing {name}",
+			"viewing": "Viewing {name}"
+		},
+		"panes": {
+			"builder": "Query builder",
+			"collapseBuilder": "Collapse builder",
+			"expandBuilder": "Expand builder",
+			"json": "Query JSON",
+			"copyJson": "Copy JSON to clipboard",
+			"collapseJson": "Collapse JSON",
+			"expandJson": "Expand JSON"
+		},
+		"block": {
+			"add": "New query",
+			"nameInput": "Edit query name",
+			"rename": "Edit name",
+			"finishRename": "Finish editing name",
+			"duplicate": "Duplicate query",
+			"close": "Close query",
+			"nodeTitle": "Beacon node: {url}",
+			"nodeMissing": "This node is not configured",
+			"pickNode": "Pick a node for this query",
+			"noNode": "No node",
+			"tableTitle": "Selected table",
+			"noTable": "No table",
+			"columnsTitle": "Amount of selected columns",
+			"filtersTitle": "Amount of applied filters",
+			"runTitle": "Run status / amount of rows returned",
+			"running": "Running...",
+			"notCached": "Not cached",
+			"selectedColumns": "Selected columns: {columns}",
+			"noColumns": "No columns selected"
+		},
+		"toast": {
+			"nameEmpty": "Query name cannot be empty.",
+			"renameFailed": "Could not rename query draft.",
+			"addMissingNode": "Add the Beacon node {url} to run this query.",
+			"waitForNodes": "Wait for the Beacon nodes to load.",
+			"pickNode": "Pick a Beacon node for this query first.",
+			"noQuery": "Can not create query, please select a table and at least one column.",
+			"runFailed": "Query failed:",
+			"missingNode": "This query needs the Beacon node {url}. Add it to run the query.",
+			"guessedNodeNoTable": "The link named no Beacon node, and \"{node}\" has no table \"{table}\". The query is kept. Pick the node of this query.",
+			"guessedNodeNoColumns": "The link named no Beacon node, and \"{node}\" has no columns of the query in \"{table}\". The query is kept. Pick the node of this query.",
+			"nodeNoTable": "\"{node}\" has no table \"{table}\". The query is kept. Pick another node, or edit the query.",
+			"nodeNoColumns": "\"{node}\" has no columns of the query in \"{table}\". The query is kept. Pick another node, or edit the query."
+		}
+	},
+	"history": {
+		"title": "Query History",
+		"intro": "Queries you've executed. Re-run, view, or edit any of them.",
+		"clear": "Clear history",
+		"empty": {
+			"title": "No queries yet",
+			"text": "Once you execute a query, it will show up here."
+		},
+		"entry": {
+			"never": "never",
+			"duration": "{ms, number} ms",
+			"runCount": "· run {count, number}×",
+			"remove": "Remove from history"
+		}
+	},
+	"saved": {
+		"title": "Saved Queries",
+		"intro": "Queries you've saved from the query builder. Re-run, visualise, or open any saved query.",
+		"clear": "Clear saved",
+		"empty": {
+			"title": "No saved queries yet",
+			"beforeLink": "Build a query in the",
+			"beforeButton": "and click",
+			"afterButton": "to add it here."
+		},
+		"entry": {
+			"savedAgo": "saved {time}",
+			"remove": "Remove saved query"
+		},
+		"toast": {
+			"noQuery": "Can not save: please select a table and at least one column.",
+			"saved": "Query \"{name}\" saved.",
+			"saveFailed": "Failed to save query:"
+		}
+	},
+	"download": {
+		"button": "Download Data",
+		"loading": "Downloading...",
+		"toast": {
+			"started": "Downloading dataset...",
+			"directDone": "Dataset downloaded directly as {extension}. This does not populate the visualisation cache; use Visualise Query to run and cache this query.",
+			"failed": "Download failed:"
+		}
+	},
+	"visualise": {
+		"button": "Visualise Query",
+		"executing": "Executing..."
+	},
+	"visualisation": {
+		"title": "Visualisations",
+		"intro": "Use the following ways to visualise your Beacon contents.",
+		"card": {
+			"map": "Visualise your data on an interactive map. Use the map viewer to explore geographical patterns and insights.",
+			"table": "Explore your data in a tabular format. The table explorer allows for detailed examination and filtering of your dataset.",
+			"chart": "Explore your data using charts. The chart explorer allows for detailed examination and filtering of your dataset."
+		},
+		"tab": {
+			"table": "Table",
+			"chart": "Chart"
+		},
+		"selectColumn": "Select a column",
+		"availableColumns": "Available columns",
+		"auto": "auto",
+		"loadingRows": "Loading rows…",
+		"rowsSelected": "{count, plural, one {# row} other {# rows}} selected in {duration}.",
+		"toast": {
+			"noData": "Query executed successfully but returned no data.",
+			"queryFailed": "Failed to execute query:"
+		}
+	},
+	"map": {
+		"title": "Map viewer",
+		"headTitle": "Map",
+		"coordinatesMissing": "Pick the latitude and longitude columns to show the rows on the map.",
+		"dataColumn": "Data column",
+		"pickCoordinates": "Pick the latitude and longitude columns",
+		"needsCoordinates": "The query must select a latitude and a longitude column.",
+		"selectQuery": "Select a valid query above to see it on the map.",
+		"toast": {
+			"groupFailed": "Failed to group dataset by lat/lon:",
+			"pickDataColumn": "Make sure to select the data column you want to display in the map viewer. By default, the first (numerical) data column is displayed.",
+			"noDataColumn": "This query has no data column to display on the map."
+		},
+		"control": {
+			"toggleAttribution": "Toggle attribution",
+			"mapFeedback": "Map feedback",
+			"mapTitle": "Map",
+			"resetBearing": "Reset bearing to north",
+			"zoomIn": "Zoom in",
+			"zoomOut": "Zoom out",
+			"closePopup": "Close popup"
+		},
+		"columns": {
+			"title": "Coordinate columns",
+			"description": "Pick the two columns that hold the position of each row.",
+			"tooFew": "This query selects less than two number columns. Add a latitude and a longitude column first.",
+			"latitude": "Latitude column",
+			"longitude": "Longitude column",
+			"queryColumns": "Query columns",
+			"pickBoth": "Pick the latitude and the longitude column.",
+			"mustDiffer": "The latitude and the longitude column must differ.",
+			"detect": "Detect",
+			"detectTitle": "Find the two columns by their names",
+			"applyTitle": "Use these two columns"
+		},
+		"draw": {
+			"applyTitle": "Filter the query on this area",
+			"width": "Width",
+			"km": "km",
+			"counting": "counting features...",
+			"featureCount": "{count, plural, one {# feature in this area} other {# features in this area}}",
+			"polygon": "Polygon",
+			"polygonTitle": "Draw a polygon. Click each corner. Click the first point again to finish.",
+			"box": "Box",
+			"boxTitle": "Click one corner of the box, then the opposite corner.",
+			"crossSection": "Cross section",
+			"crossSectionTitle": "Draw a line. The line becomes a band with the width below.",
+			"clearTitle": "Remove the area",
+			"applyFilter": "Apply filter"
+		}
+	},
+	"table": {
+		"title": "Table explorer",
+		"selectQuery": "Select a valid query above to see its data.",
+		"rowsPerPage": "Rows per page:",
+		"noData": "No data available",
+		"loadingData": "Loading data...",
+		"previous": "Previous",
+		"next": "Next",
+		"pageBeforeInput": "Page",
+		"pageAfterInput": "of {count}",
+		"toast": {
+			"noData": "No table data available to display.",
+			"sortFailed": "Failed to sort table:"
+		}
+	},
+	"chart": {
+		"title": "Chart explorer",
+		"selectQuery": "Select a valid query above to see it on a chart.",
+		"running": "Running the query…",
+		"drawing": "Drawing the plot…"
+	},
+	"plot": {
+		"type": {
+			"scatter": {
+				"label": "Scatter plot",
+				"description": "X and Y both come from a data column."
+			},
+			"crossSection": {
+				"label": "Cross section",
+				"description": "X is the distance along the cross section line drawn on the map.",
+				"needsLine": "Draw a cross section on the map viewer first."
+			},
+			"histogram": {
+				"label": "Histogram",
+				"description": "One column, split into bins. The height of a bar is the row count."
+			}
+		},
+		"fileName": "plot",
+		"legend": {
+			"moreGroups": "+{count} more"
+		},
+		"tabs": {
+			"emptyName": "Plot name cannot be empty.",
+			"editPlotName": "Edit plot name",
+			"rename": "Edit name",
+			"finishRename": "Finish editing name",
+			"remove": "Remove {name}",
+			"add": "Add plot",
+			"addTitle": "Add a plot",
+			"duplicate": "Duplicate",
+			"duplicateTitle": "Duplicate the current plot",
+			"resetView": "Reset view",
+			"resetViewTitle": "Reset the plot view",
+			"export": "Export PNG",
+			"exportTitle": "Export this plot as PNG"
+		},
+		"axis": {
+			"crossSectionDistance": "Distance along section (km)",
+			"histogramCount": "Count"
+		},
+		"caption": {
+			"total": "N = {total, number}",
+			"sampled": "N = {total, number} · {shown, number} shown ({percent, number}% sample)"
+		},
+		"error": {
+			"needsCrossSection": "This plot needs a cross section. Draw one on the map viewer, then apply it to the query.",
+			"lineTooShort": "The cross section line has less than two points.",
+			"noCoordinateColumns": "The result has no latitude and longitude columns, so it has no distance.",
+			"coordinatesNotNumeric": "The latitude and longitude columns hold no numbers.",
+			"selectCountColumn": "Select a column to count.",
+			"noNumericColumn": "The result has no numeric column \"{column}\".",
+			"noNumbersToCount": "The column holds no numbers, so there is nothing to count.",
+			"emptyXRange": "The X range is empty, so the bins have no width.",
+			"noRows": "The query returned no rows.",
+			"selectYColumn": "Select a column for the Y axis.",
+			"selectXColumn": "Select a column for the X axis.",
+			"noColumn": "The result has no column \"{column}\".",
+			"nothingToDraw": "No row has a value on every selected axis, so the plot has nothing to draw.",
+			"allGroupsDropped": "Every group was dropped, so the plot has nothing to draw."
+		},
+		"summary": {
+			"none": "none",
+			"distance": "distance",
+			"histogram": "{column} · {count, plural, one {# bin} other {# bins}}",
+			"line": "{x} × {y} · by {group}",
+			"notForType": "Not for this plot type",
+			"needsColour": "Needs a colour column",
+			"gaussianBands": "{method} · {count, plural, one {# band} other {# bands}}",
+			"contourLines": "{count, plural, one {# line} other {# lines}}"
+		},
+		"panel": {
+			"step": {
+				"type": "Plot type",
+				"bind": "Bind data",
+				"properties": "Properties",
+				"analysis": "Advanced Analysis"
+			},
+			"valueColumn": "Value column",
+			"xAxis": "X axis",
+			"yAxis": "Y axis",
+			"invert": "Invert",
+			"invertX": "Invert X axis",
+			"invertY": "Invert Y axis",
+			"min": "Min",
+			"max": "Max",
+			"pixels": "{size}px",
+			"histogramCountHint": "Count of the rows in each bin",
+			"groupBy": "Group into strokes by",
+			"oneStroke": "One stroke for every row",
+			"groupHint": "Pick the column that names a cast or a station. Each value becomes one stroke, in its own colour from the palette.",
+			"zAxis": "Z axis / Color",
+			"colourColumn": "Colour column",
+			"bins": "Bins",
+			"binsHint": "The bins span the X range. Pin the range in step 3 to count over a fixed window.",
+			"titlesAndLabels": "Titles & Labels",
+			"plotTitle": "Plot title",
+			"noTitle": "No title",
+			"titleSize": "Title size",
+			"showCaption": "Show caption",
+			"xAxisLabel": "X-axis label",
+			"yAxisLabel": "Y-axis label",
+			"columnName": "Column name",
+			"size": "Size",
+			"legend": "Legend",
+			"legendDefault": "Use the default legend title",
+			"tickSize": "Tick label size",
+			"dataAndColor": "Data & Color",
+			"strokePalette": "Every stroke takes one colour from the palette.",
+			"groupForColours": "Group the plot in step 2 to give each stroke its own colour.",
+			"histogramPaletteHint": "A solid palette colours every bar the same. A range palette colours each bar by its count.",
+			"pointColour": "Point colour",
+			"pointColourHint": "Every point takes this colour. Bind a column to the colour axis in step 2 to paint the points by value.",
+			"colourRange": "Colour range ({axis})",
+			"colorScale": "Color scale",
+			"scaleLinear": "Linear",
+			"scaleLogarithmic": "Logarithmic",
+			"logNeedsPositiveRange": "Logarithmic scale needs a positive minimum and maximum.",
+			"logNeedsPositiveData": "Logarithmic scale needs positive data.",
+			"markers": "Markers",
+			"drawAlong": "Draw along",
+			"alongX": "The X axis",
+			"alongY": "The Y axis",
+			"markRows": "Mark every row with a dot",
+			"drawPoints": "Draw data points",
+			"markerSize": "Marker size",
+			"markerOpacity": "Marker opacity",
+			"canvas": "Canvas",
+			"showGridlines": "Show gridlines",
+			"backgroundColor": "Background color",
+			"textColor": "Text color",
+			"gridlineColor": "Gridline color",
+			"gridlineOpacity": "Gridline opacity",
+			"noContoursLine": "Contours need a value per point. A line has none, so they are off for this plot type.",
+			"noContoursHistogram": "Contours need a value per point. A histogram has none, so they are off for this plot type.",
+			"contoursNeedColour": "Contours read the colour axis. Bind a column to it in step 2 to switch them on.",
+			"gridding": "Gridding & Interpolation",
+			"interpolate": "Interpolate",
+			"interpolateHint": "The selected X, Y and colour values are interpolated and drawn behind the points.",
+			"delaunayHint": "Delaunay draws inside the measured data footprint. Smoothed gridding fills the outside.",
+			"method": "Method",
+			"methodGaussian": "Gaussian smoothing",
+			"methodDelaunay": "Delaunay triangulation",
+			"outsideSmoothing": "Outside smoothing",
+			"gaussianSigma": "Gaussian sigma",
+			"gridResolution": "Grid resolution",
+			"clipLimits": "Clip limits",
+			"clipMin": "Clip minimum",
+			"clipMax": "Clip maximum",
+			"colourBands": "Colour bands",
+			"contourLines": "Contour Lines",
+			"drawContours": "Draw contours",
+			"drawContourLines": "Draw contour lines",
+			"contourHint": "The values are interpolated onto a grid, and the lines are clipped to the area the rows cover.",
+			"levels": "Levels (number of contours)",
+			"gridDetail": "Grid detail",
+			"lineWidth": "Line width",
+			"addLabel": "Add label",
+			"labelSize": "Label size",
+			"applyChanges": "Apply changes",
+			"revert": "Revert",
+			"revertTitle": "Go back to what the chart is drawing",
+			"inputTooLow": "Input cannot be less than {min}.",
+			"inputTooHigh": "Input cannot be greater than {max}."
+		}
+	},
+	"palette": {
+		"label": "Palette",
+		"reverse": "Reverse the palette",
+		"gradients": "Gradients",
+		"solids": "Single colours"
+	},
+	"legend": {
+		"minimum": "Minimum",
+		"maximum": "Maximum",
+		"minimumTitle": "The value at the left of the scale",
+		"maximumTitle": "The value at the right of the scale"
+	},
+	"geo": {
+		"area": {
+			"km2Whole": "{area, number, ::precision-integer} km²",
+			"km2OneDecimal": "{area, number, ::.0} km²",
+			"km2TwoDecimals": "{area, number, ::.00} km²"
+		},
+		"selection": {
+			"box": "Box",
+			"crossSection": "Cross section ({width, number} km)",
+			"polygon": "{count, plural, one {Polygon (# point)} other {Polygon (# points)}}"
+		},
+		"warning": {
+			"noSamples": "No sample values, so the unit is unverified.",
+			"mayBeRadians": "Values also fit radians. Degrees assumed, which is wrong if the extent is really global.",
+			"packedDegrees": "Values look like packed degrees and minutes (ddmm.mmm).",
+			"scaledDegrees": "Values look like degrees scaled by {scale}.",
+			"webMercator": "Values look like EPSG:3857 metres.",
+			"unknownProjection": "Values are metres in an unknown projection, probably UTM. The zone is not recoverable from the data, so these cannot be converted here.",
+			"noColumns": "No latitude and longitude columns found.",
+			"swapped": "The two columns were swapped: the value ranges say the axes are reversed."
+		}
+	},
+	"cache": {
+		"title": "Cache information",
+		"loading": "Loading cache information…",
+		"disabledNote": "Caching is disabled — every query re-executes against Beacon and nothing is stored.",
+		"hours": "{hours}h",
+		"idMissing": "n/a",
+		"notAvailable": "N/A",
+		"current": "current",
+		"memory": {
+			"title": "Memory cache",
+			"subtitle": "decoded Arrow tables, this session",
+			"empty": "No datasets held in memory."
+		},
+		"disk": {
+			"title": "Disk cache (OPFS)",
+			"subtitle": "persists across reloads · expires {duration} after storing",
+			"unsupported": "Not available in this environment (OPFS unsupported).",
+			"empty": "No results stored on disk."
+		},
+		"stat": {
+			"items": "Items",
+			"memoryUsed": "Memory used",
+			"cells": "Cells",
+			"derivedTables": "Derived tables",
+			"diskUsed": "Disk used"
+		},
+		"table": {
+			"columns": "Columns",
+			"rows": "Rows",
+			"cols": "Cols",
+			"size": "Size",
+			"queryId": "Query id",
+			"stored": "Stored",
+			"lastUsed": "Last used"
+		},
+		"disable": "Disable caching",
+		"enable": "Enable caching",
+		"clearAll": "Clear all caches"
+	},
+	"system": {
+		"title": "System Information",
+		"noNode": {
+			"title": "No Beacon node",
+			"message": "This page reads one node. Select a node first."
+		},
+		"intro": "View detailed information about the Beacon Studio system, including version, CPU usage, memory, and more.",
+		"disabled": "No system information available, enable system information by setting the {variable} environment variable.",
+		"version": "Beacon Version",
+		"uptime": "System uptime: {time}",
+		"cpu": {
+			"title": "System CPU Usage",
+			"cores": "{count, plural, one {# Physical Core} other {# Physical Cores}}"
+		},
+		"memory": {
+			"title": "System Memory Usage"
+		},
+		"swap": {
+			"title": "System Swap Usage"
+		},
+		"total": "{size} Total",
+		"used": "{percent} Used",
+		"free": "{size} Free",
+		"load": {
+			"title": "Load Average",
+			"one": "1 min: {percent}",
+			"five": "5 min: {percent}",
+			"fifteen": "15 min: {percent}"
+		},
+		"os": {
+			"title": "System Information",
+			"os": "OS: {value}",
+			"hostname": "Hostname: {value}",
+			"kernel": "Kernel: {value}",
+			"distribution": "Distribution: {value}",
+			"version": "Version: {value}"
+		},
+		"cpus": {
+			"title": "CPUs",
+			"count": "{count}× {brand}"
+		}
+	},
+	"node": {
+		"form": {
+			"addTitle": "Add Beacon node",
+			"editTitle": "Edit Beacon node",
+			"closeTitle": "Close without saving",
+			"closeMessage": "This form holds changes that the app did not save yet.",
+			"closeNote": "The changes go away."
+		},
+		"delete": {
+			"title": "Delete Beacon node",
+			"message": "This removes the node \"{name}\" from this browser.",
+			"note": "You cannot undo this."
+		},
+		"toast": {
+			"deleted": "The Beacon node \"{name}\" has been deleted."
+		},
+		"connection": {
+			"test": "Test connection",
+			"valid": "Connection valid",
+			"invalid": "Connection invalid",
+			"testing": "Testing..."
+		},
+		"field": {
+			"name": "Node name",
+			"url": "URL",
+			"description": "Description",
+			"token": "Token",
+			"status": "Status",
+			"actions": "Actions"
+		},
+		"page": {
+			"introBeforeLink": "Use this page to manage your connected Beacon nodes. Explore publicly available Beacon nodes at",
+			"introLink": "Beacon datalake",
+			"introAfterLink": ".",
+			"add": "Add node",
+			"publicInfo": "Public node information",
+			"empty": "No Beacon nodes configured."
+		},
+		"choose": {
+			"title": "Choose Beacon node",
+			"intro": "Here are the currently configured Beacon nodes:",
+			"empty": "No Beacon nodes configured. Please add one.",
+			"url": "URL:",
+			"lastUpdate": "Last update: {time}",
+			"selected": "Selected",
+			"select": "Select",
+			"done": "Done"
+		},
+		"status": {
+			"online": "online",
+			"offline": "offline",
+			"unknown": "unknown",
+			"onlineLatency": "online, {latency}",
+			"aria": "Status: {status}"
+		},
+		"latency": "Latency",
+		"host": {
+			"name": "Beacon - {host}",
+			"description": "Beacon node of the current host root. ({origin})"
+		}
+	},
+	"home": {
+		"betaToast": "Beacon Studio is still in Beta stage, please provide any feedback by clicking \"Feedback\" in the bottom left corner.",
+		"title": {
+			"beforeHighlight": "Welcome to Beacon",
+			"highlight": "Studio"
+		},
+		"subtitle": "Explore and query a Beacon node in your browser. The node reads the files in place and returns rows and columns, not files.",
+		"nodes": {
+			"title": "Connected Nodes ({count})",
+			"empty": "No Beacon node is configured.",
+			"manage": "Manage Nodes"
+		},
+		"launchpad": {
+			"title": "Launchpad",
+			"workbench": {
+				"title": "Query Workbench",
+				"description": "Write queries, filter data and search millions of records.",
+				"action": "New Query"
+			}
+		},
+		"guide": {
+			"title": "How it works",
+			"lead": "Three steps from an empty query to your subset.",
+			"hide": "Hide guide",
+			"show": "Show guide",
+			"select": {
+				"title": "Select node and table",
+				"body": "Open the Query Workbench. Pick a connected node, then pick one data table on that node."
+			},
+			"filter": {
+				"title": "Filter and query",
+				"body": "Add the columns you need, then filter them. Set a depth range and time bounds. To limit the result to a region, draw the area with the Map Viewer tools."
+			},
+			"explore": {
+				"title": "Explore, export and share",
+				"body": "Download the result or view it in the Map Viewer. Check the values in the Table Explorer, or build a chart. Share the query to collaborate or to continue in another workspace."
+			}
+		},
+		"examples": {
+			"title": "Quick start examples",
+			"lead": "Three real queries. Open one to review the query in the query builder and plot it on the map.",
+			"imageAlt": "The result of the {title} query in the Map Viewer",
+			"metricHint": "Measured on a reference run. Your run can differ.",
+			"check": "Check query"
+		}
+	},
+	"errorPage": {
+		"title": "Error: {message}",
+		"hint": "Please try again later or contact support if the issue persists."
+	},
+	"modal": {
+		"close": "Close modal"
+	},
+	"upload": {
+		"username": "Admin Username",
+		"password": "Admin Password",
+		"failed": "Upload failed",
+		"example": "e.g. {example}",
+		"table": {
+			"title": "Create Table",
+			"name": "Table Name",
+			"paths": "Glob Paths",
+			"pathsHint": "You can specify multiple paths separated by commas.",
+			"format": "File Format",
+			"formatPlaceholder": "Select a file format",
+			"nameMissing": "Please enter a table name.",
+			"formatMissing": "Please select a file format.",
+			"pathMissing": "Please enter at least one glob path.",
+			"created": "✅ Created table {name}"
+		},
+		"files": {
+			"title": "Upload Datasets",
+			"dataset": "Dataset",
+			"missing": "Please select files.",
+			"done": "✅ Uploaded {count, plural, one {# file} other {# files}}",
+			"size": "{name} ({size} KB)",
+			"uploading": "Uploading... {progress}%",
+			"upload": "Upload"
+		}
+	},
+	"browser": {
+		"intro": "Use the data browser functions listed below to explore and manage your Beacon contents.",
+		"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
+		"tableCount": "{count, plural, one {# data table} other {# data tables}}",
+		"datasetsCard": "View and manage individual datasets.",
+		"tablesCard": "View and manage data tables.",
+		"searchPlaceholder": "Search...",
+		"nodeLine": "Node: {url}",
+		"picker": {
+			"label": "Beacon Node",
+			"placeholder": "Select a node",
+			"group": "Nodes"
+		},
+		"error": {
+			"missingParam": "Missing `{name}` query parameter"
+		},
+		"datasets": {
+			"column": "Dataset",
+			"intro": "Explore and manage the datasets that are available in your Beacon node.",
+			"noNodes": "No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse datasets."
+		},
+		"tables": {
+			"column": "Table",
+			"default": "Default",
+			"intro": "Explore and manage the tables that are available in your Beacon node.",
+			"noNodes": "No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse data tables."
+		},
+		"schema": {
+			"field": "Field",
+			"dataType": "Data Type",
+			"nullable": "Nullable",
+			"dictId": "Dictionary ID",
+			"isOrdered": "Is Ordered",
+			"metadata": "Metadata"
+		},
+		"table": {
+			"title": "Table {name}",
+			"heading": "Table ''{name}'' ({count, plural, one {# field} other {# fields}})"
+		},
+		"dataset": {
+			"title": "Dataset {name}",
+			"heading": "Dataset {name} ({count, plural, one {# field} other {# fields}})"
+		}
+	},
+	"misc": {
+		"externalLink": "Open link in external browser",
+		"bytes": "Bytes"
+	}
+}

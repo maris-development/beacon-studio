@@ -1,0 +1,1046 @@
+{
+	"app": {
+		"name": "Beacon Studio",
+		"logoAlt": "Beacon-logo",
+		"pageTitle": "{page} - Beacon Studio"
+	},
+	"common": {
+		"cancel": "Annuleren",
+		"continue": "Doorgaan",
+		"ok": "OK",
+		"close": "Sluiten",
+		"more": "Meer",
+		"on": "Aan",
+		"off": "Uit",
+		"breadcrumb": "kruimelpad",
+		"save": "Opslaan",
+		"delete": "Verwijderen",
+		"edit": "Bewerken",
+		"rename": "Naam wijzigen",
+		"refresh": "Vernieuwen",
+		"apply": "Toepassen",
+		"clear": "Wissen",
+		"reset": "Terugzetten",
+		"loading": "Laden…",
+		"none": "Geen",
+		"unknown": "Onbekend",
+		"name": "Naam",
+		"rows": "{count, plural, one {# rij} other {# rijen}}",
+		"columns": "{count, plural, one {# kolom} other {# kolommen}}"
+	},
+	"language": {
+		"menu": "Taal",
+		"auto": "Automatisch (browsertaal)"
+	},
+	"nav": {
+		"openMenu": "Menu openen",
+		"closeMenu": "Menu sluiten",
+		"group": {
+			"dataAccess": "Datatoegang",
+			"explore": "Verkennen en analyseren",
+			"nodeManagement": "Nodebeheer",
+			"studio": "Beacon Studio"
+		},
+		"item": {
+			"queries": "Queries",
+			"queryBuilder": "Querybouwer",
+			"savedQueries": "Opgeslagen queries",
+			"queryHistory": "Querygeschiedenis",
+			"workspace": "Werkruimte",
+			"mapViewer": "Kaartviewer",
+			"tableExplorer": "Tabelverkenner",
+			"chartExplorer": "Grafiekverkenner",
+			"dataBrowser": "Databrowser",
+			"datasets": "Datasets",
+			"dataTables": "Datatabellen",
+			"systemInfo": "Systeeminfo",
+			"beaconNodes": "Beacon-nodes",
+			"settings": "Instellingen",
+			"aboutStudio": "Meer over Studio",
+			"documentation": "Documentatie",
+			"github": "GitHub",
+			"feedback": "Feedback",
+			"sqlEditor": "SQL-editor",
+			"crawlers": "Crawlers"
+		},
+		"needsNode": "Deze pagina heeft een Beacon-node nodig. Voeg er een toe op de pagina Beacon-nodes.",
+		"waitForNodes": "Beacon Studio leest de openbare Beacon-nodes. Dit gebeurt alleen bij het eerste bezoek. Je query start zodra ze binnen zijn."
+	},
+	"build": {
+		"unknown": "onbekend",
+		"commit": "Commit {commit}",
+		"commitUnknown": "Commit onbekend",
+		"branch": "Branch {branch}",
+		"dirty": "Niet-gecommitte wijzigingen",
+		"built": "Gebouwd {time}"
+	},
+	"settings": {
+		"title": "Instellingen",
+		"intro": "Beheer hier je instellingen van Beacon Studio. De app bewaart elke waarde in deze browser. Een wijziging geldt voor de volgende query, kaart of vernieuwing.",
+		"resetAll": "Alle instellingen terugzetten",
+		"resetAllMessage": "Dit zet elke instelling van deze browser terug naar de standaardwaarde. De app verliest je querylimieten, je cachegrootte en je kaartstandaarden.",
+		"resetAllMessageTelemetry": "Dit zet elke instelling van deze browser terug naar de standaardwaarde. De app verliest je querylimieten, je cachegrootte, je kaartstandaarden en je telemetriekeuze.",
+		"resetAllNote": "Je kunt dit niet ongedaan maken.",
+		"resetAllDone": "Alle instellingen staan weer op hun standaardwaarde.",
+		"resetOne": "Zet deze instelling terug naar de standaardwaarde",
+		"noTelemetryBuild": "Deze versie van Beacon Studio is gebouwd zonder telemetrie. Ze verstuurt geen gebruiksgegevens.",
+		"group": {
+			"general": "Algemeen",
+			"queries": "Queries",
+			"resultCache": "Resultaatcache",
+			"map": "Kaart",
+			"system": "Systeem",
+			"plot": "Plot",
+			"telemetry": "Telemetrie"
+		},
+		"unit": {
+			"millionCells": "miljoen cellen",
+			"entries": "items",
+			"results": "resultaten",
+			"tables": "tabellen",
+			"mib": "MiB",
+			"hours": "uur",
+			"decimals": "decimalen",
+			"km": "km",
+			"rows": "rijen",
+			"seconds": "seconden"
+		},
+		"field": {
+			"language": {
+				"label": "Taal",
+				"description": "De taal van Beacon Studio. Automatisch volgt de taal van de browser."
+			},
+			"defaultOutputFormat": {
+				"label": "Standaard uitvoerformaat",
+				"description": "Het uitvoerformaat van een nieuw queryblok."
+			},
+			"requireQueryFilters": {
+				"label": "Filter verplicht",
+				"description": "Blokkeert een query zonder filters in de werkbank. Beacon mag niet een hele tabel lezen."
+			},
+			"queryCellLimit": {
+				"label": "Querycellimiet",
+				"description": "De maximale resultaatgrootte in cellen (rijen × kolommen). Een lagere waarde houdt de browser stabiel. De rijlimiet is deze waarde gedeeld door het aantal kolommen."
+			},
+			"queryHistoryMax": {
+				"label": "Grootte querygeschiedenis",
+				"description": "Het aantal rijen in de querygeschiedenis. De oudste runs verdwijnen eerst."
+			},
+			"memoryCacheMaxEntries": {
+				"label": "Items in geheugencache",
+				"description": "Het aantal gedecodeerde resultaten dat in het geheugen blijft."
+			},
+			"workerMaxLoadedTables": {
+				"label": "Workertabellen",
+				"description": "Het aantal tabellen dat de Arrow-worker vasthoudt voor sorteer- en groepeeracties."
+			},
+			"diskCacheMaxEntries": {
+				"label": "Items in schijfcache",
+				"description": "Het aantal resultaten in de schijfcache van de browser (OPFS)."
+			},
+			"diskCacheMaxTotalBytes": {
+				"label": "Grootte schijfcache",
+				"description": "De totale grootte van de gecomprimeerde resultaten op schijf."
+			},
+			"diskCacheMaxAgeMs": {
+				"label": "Levensduur schijfcache",
+				"description": "De leeftijd waarop een resultaat op schijf verouderd is. Een verouderd resultaat verdwijnt."
+			},
+			"mapStyleUrl": {
+				"label": "Stijl-URL basiskaart",
+				"description": "De MapLibre-stijl-URL van de basiskaart. Een wijziging geldt voor de volgende kaart."
+			},
+			"mapGroupByDecimals": {
+				"label": "Groeperingsdecimalen kaart",
+				"description": "Het aantal decimalen waarop de kaart coördinaten groepeert. 4 = 11 m, 3 = 111 m, 2 = 1111 m, 1 = 11111 m, 0 = 111111 m."
+			},
+			"crossSectionWidthKm": {
+				"label": "Breedte doorsnede",
+				"description": "De breedte van een nieuwe doorsnedeband."
+			},
+			"sampleAfterRows": {
+				"label": "Steekproefdrempel plot",
+				"description": "Het aantal rijen waarboven een plot een steekproef van de data neemt. Een lagere waarde houdt de browser stabiel."
+			},
+			"systemInfoUpdateIntervalMs": {
+				"label": "Vernieuwing systeeminfo",
+				"description": "De tijd tussen twee uitlezingen van de systeeminfopagina."
+			},
+			"telemetryEnabled": {
+				"label": "Gebruiksstatistieken versturen",
+				"description": "De hoofdschakelaar. Deze verstuurt gebruiksgebeurtenissen naar beacon-datalake.org: paginabezoeken, queryruns, downloads, zoekopdrachten, waarschuwingen en fouten. Een willekeurige id groepeert de gebeurtenissen van deze browser. Er gaat geen account, geen wachtwoord en geen resultaatdata mee. Zet dit uit om helemaal niets te versturen."
+			},
+			"telemetryQueryDetails": {
+				"label": "Querytelemetrie versturen",
+				"description": "Voegt de inhoud van een query toe aan de gebeurtenissen: de tabel, de kolommen, de filters met hun waarden en het getekende gebied. Dit geldt ook voor een zoekterm in de databrowser. Zet dit uit om de gebruiksstatistieken te houden, maar zonder die inhoud. De app meldt dan dat een query is uitgevoerd, met de tijd, het aantal rijen, de node en het aantal kolommen en filters. De app meldt niet welke tabel of welke waarden je opvroeg. Een foutmelding kan nog wel een tabel noemen. Deze schakelaar doet niets zolang \"Gebruiksstatistieken versturen\" uit staat."
+			},
+			"telemetryConsoleLog": {
+				"label": "Uitvoer van console.log meesturen",
+				"description": "Voegt console.log toe aan de gemelde console-uitvoer. Waarschuwingen en fouten gaan altijd mee. Zet dit alleen aan voor een debugsessie: een logregel geeft ruis en kan een bestandspad of een resultaatwaarde bevatten. Deze schakelaar doet niets zolang \"Gebruiksstatistieken versturen\" uit staat."
+			},
+			"adminFeatures": {
+				"label": "Beheerfuncties tonen",
+				"description": "Toont de beheerpagina's en de beheeracties, bijvoorbeeld het uploaden van datasets. Een beheeractie vraagt om de gebruikersnaam en het wachtwoord van de beheerder van de Beacon-node."
+			}
+		}
+	},
+	"query": {
+		"untitled": "Naamloos",
+		"filterCount": "{count, plural, one {# filter} other {# filters}}",
+		"entry": {
+			"noColumns": "(geen kolommen)",
+			"openInBuilder": "Openen in Querybouwer",
+			"table": "Tabel",
+			"map": "Kaart",
+			"chart": "Grafiek"
+		},
+		"export": {
+			"jsonCopied": "JSON-code gekopieerd naar klembord",
+			"jsonCopyError": "Fout bij kopiëren van JSON-code naar klembord:",
+			"jsonCopyFailed": "Kan de JSON-code niet naar het klembord kopiëren",
+			"jsonDownloadFailed": "Fout bij downloaden van JSON:",
+			"jsonDownloaded": "Query-JSON gedownload als beacon-studio-query.json",
+			"jsonSerializeFailed": "Fout bij omzetten van query naar JSON:",
+			"pythonCopied": "Python-code gekopieerd naar klembord",
+			"pythonCopyError": "Fout bij kopiëren van Python-code naar klembord:",
+			"pythonCopyFailed": "Kan de Python-code niet naar het klembord kopiëren",
+			"pythonDownloadFailed": "Fout bij downloaden van Python-code als notebook:",
+			"pythonDownloaded": "Python-code gedownload als beacon-studio-query.ipynb",
+			"pythonFailed": "Fout bij genereren van Python-code:",
+			"shareEmpty": "Een lege query kan niet gedeeld worden. Kies een tabel en minstens één kolom.",
+			"sqlCopied": "SQL-code gekopieerd naar klembord",
+			"sqlCopyError": "Fout bij kopiëren van SQL-code naar klembord:",
+			"sqlCopyFailed": "Kan de SQL-code niet naar het klembord kopiëren",
+			"sqlDownloadFailed": "Fout bij downloaden van SQL-code als SQL-bestand:",
+			"sqlDownloaded": "SQL-code gedownload als beacon-studio-query.sql",
+			"sqlFailed": "Fout bij genereren van SQL-code:",
+			"urlCopied": "Query-URL gekopieerd naar klembord",
+			"urlCopyError": "Fout bij kopiëren van query-URL naar klembord:",
+			"urlCopyFailed": "Kan de query-URL niet naar het klembord kopiëren",
+			"urlFailed": "Fout bij maken van query-URL:",
+			"shareEmptyCompileFailed": "Een lege query kan niet gedeeld worden. Kies een tabel en minstens één kolom. Fout bij compileren van query:"
+		},
+		"actions": {
+			"edit": "Query bewerken",
+			"editTitle": "Query bewerken",
+			"share": "Delen",
+			"shareUrl": "URL delen",
+			"copyJson": "JSON kopiëren",
+			"copyPython": "Python kopiëren",
+			"copySql": "SQL kopiëren",
+			"downloadJson": "JSON downloaden",
+			"downloadPython": "Python downloaden",
+			"downloadSql": "SQL downloaden",
+			"save": "Query opslaan",
+			"saveTitle": "Query opslaan",
+			"resetTitle": "Queryselectie terugzetten",
+			"cacheInfo": "Informatie over querycaching"
+		},
+		"share": {
+			"copyTitle": "Kopieer een link die in elke browser werkt",
+			"none": "Dit item heeft geen deelbare query.",
+			"copied": "Deellink gekopieerd naar klembord.",
+			"copyFailed": "Kan de deellink niet kopiëren."
+		},
+		"guard": {
+			"noFilters": "Deze query heeft geen filters. Voeg minstens één filter toe, of zet \"Filter verplicht\" uit in de instellingen."
+		},
+		"error": {
+			"noColumns": "Kies een tabel en minstens één kolom."
+		},
+		"toast": {
+			"compileFailed": "Fout bij compileren van query:",
+			"connectFailed": "Fout bij verbinden met Beacon: controleer je URL en token, en zorg dat de CORS-instellingen op de Beacon-node juist zijn.",
+			"decodeFailed": "Kan een gedeelde query uit de URL niet decoderen:",
+			"cellLimit": "Het queryresultaat heeft de limiet van {cellLimit, number} cellen bereikt om je browser stabiel te houden. De data kan onvolledig zijn ({rowCount, plural, one {# rij} other {# rijen}} opgehaald). Verfijn je query om het resultaat kleiner te maken. Je kunt ook in de instellingen de \"Querycellimiet\" verhogen, maar dat kan de prestaties van de browser beïnvloeden.",
+			"bestEffort": "Query zo goed mogelijk geladen. {count, plural, one {# onderdeel kon} other {# onderdelen konden}} niet worden weergegeven in de geavanceerde bouwer."
+		},
+		"parameters": {
+			"title": "Queryparameters",
+			"add": "Parameter toevoegen",
+			"remove": "Kolom verwijderen",
+			"dialogTitle": "Queryparameter toevoegen",
+			"dialogDescription": "Zoek en kies een kolom om die aan de query toe te voegen.",
+			"searchPlaceholder": "Typ een kolom of zoek...",
+			"emptyBeforeTable": "Geen kolommen gevonden voor tabel",
+			"emptyAfterTable": ".",
+			"available": "Beschikbare kolommen ({count, number})",
+			"empty": "Geen parameters gekozen. Gebruik de knop \"Parameter toevoegen\" hierboven."
+		},
+		"view": {
+			"cards": "Tegels",
+			"list": "Lijst"
+		},
+		"node": {
+			"title": "Beacon-node kiezen",
+			"count": "{count, plural, one {# node} other {# nodes}}",
+			"loading": "Beacon-nodes laden...",
+			"missingBeforeUrl": "Deze query draait op",
+			"missingAfterUrl": ". De app heeft geen node voor dat adres. Voeg die toe, of kies hieronder een andere node.",
+			"add": "Node toevoegen",
+			"addDescription": "Maak verbinding met een andere Beacon-node.",
+			"placeholder": "Kies een node",
+			"listLabel": "Nodes",
+			"noAnswer": "De Beacon-node gaf geen antwoord.",
+			"tablesFailed": "Kan de tabellen van \"{node}\" niet lezen.",
+			"retry": "Opnieuw proberen"
+		},
+		"table": {
+			"title": "Datatabel kiezen",
+			"count": "{count, plural, one {# tabel} other {# tabellen}}",
+			"countLoading": "Tabellen laden",
+			"noDescription": "Geen beschrijving beschikbaar",
+			"placeholder": "Kies een tabel",
+			"listLabel": "Tabellen",
+			"change": {
+				"title": "Datatabel wijzigen",
+				"message": "Een andere tabel heeft andere kolommen, dus dit maakt je kolomselectie leeg.",
+				"confirm": "Tabel wijzigen"
+			}
+		},
+		"outputFormat": {
+			"title": "Uitvoerformaat",
+			"listLabel": "Tabellen"
+		},
+		"geoFilter": {
+			"title": "Geografisch filter",
+			"description": "Teken een gebied en kies de twee kolommen die het filter test.",
+			"tooFewColumns": "Deze query kiest minder dan twee numerieke kolommen. Voeg eerst een breedtegraad- en een lengtegraadkolom toe.",
+			"needsColumns": "De query moet een breedtegraad- en een lengtegraadkolom bevatten.",
+			"pickColumns": "Kies de breedtegraad- en de lengtegraadkolom.",
+			"drawArea": "Teken een gebied op de kaart.",
+			"latitude": "Breedtegraadkolom",
+			"longitude": "Lengtegraadkolom",
+			"notFound": "Niet gevonden",
+			"pickPair": "Kies de coördinaatkolommen",
+			"remove": "Filter verwijderen",
+			"apply": "Filter toepassen",
+			"applyTitle": "Filter de query op dit gebied"
+		},
+		"area": {
+			"add": "Geografisch filter toevoegen",
+			"addTitle": "Teken een gebied op een kaart en filter de query daarop",
+			"needsColumns": "Kies eerst een breedtegraad- en een lengtegraadkolom.",
+			"label": "Gebied: {area}",
+			"missingColumn": "De query bevat \"{column}\" niet, dus dit gebied filtert niets.",
+			"noColumns": "De query bevat geen breedtegraad- en lengtegraadkolom, dus dit gebied filtert niets.",
+			"editTitle": "Het geografische filter bewerken",
+			"removeTitle": "Het gebiedsfilter verwijderen"
+		}
+	},
+	"filter": {
+		"add": "Filter toevoegen",
+		"remove": "Filter verwijderen",
+		"searchPlaceholder": "Filter zoeken...",
+		"empty": "Geen filters gevonden.",
+		"op": {
+			"between": "Tussen",
+			"greaterThan": "Groter dan",
+			"greaterThanOrEquals": "Groter dan of gelijk aan",
+			"lessThan": "Kleiner dan",
+			"lessThanOrEquals": "Kleiner dan of gelijk aan",
+			"equals": "Gelijk aan",
+			"notEquals": "Niet gelijk aan",
+			"isNull": "Is null",
+			"isNotNull": "Is niet null"
+		},
+		"input": {
+			"min": "Van (min)",
+			"max": "Tot (max)",
+			"greaterThan": "Groter dan",
+			"greaterThanOrEquals": "Groter dan of gelijk aan",
+			"lessThan": "Kleiner dan",
+			"lessThanOrEquals": "Kleiner dan of gelijk aan",
+			"equals": "Gelijk aan",
+			"notEquals": "Is NIET gelijk aan",
+			"isNull": "Is NULL",
+			"isNotNull": "Is NIET NULL"
+		}
+	},
+	"editor": {
+		"title": "Query-editor",
+		"crumb": "Query-editor",
+		"error": {
+			"noColumn": "Elke queryparameter moet column of column_name bevatten."
+		},
+		"toast": {
+			"executeFailed": "Fout bij uitvoeren van query:",
+			"parseFailed": "Kan de query-JSON niet parsen:"
+		}
+	},
+	"workbench": {
+		"title": "Query-werkbank",
+		"untitledBlock": "Naamloos ({number})",
+		"copyName": "{name} (kopie)",
+		"thisNode": "deze node",
+		"changeNode": {
+			"title": "Beacon-node wijzigen",
+			"message": "Een andere node heeft andere tabellen, dus dit maakt je tabel- en kolomselectie leeg.",
+			"confirm": "Node wijzigen"
+		},
+		"closeBlock": {
+			"title": "Deze query sluiten",
+			"message": "Deze query bevat kolommen die je hebt gekozen.",
+			"note": "Het blok verdwijnt.",
+			"confirm": "Query sluiten"
+		},
+		"header": {
+			"editing": "{name} bewerken",
+			"viewing": "{name} bekijken"
+		},
+		"panes": {
+			"builder": "Querybouwer",
+			"collapseBuilder": "Bouwer inklappen",
+			"expandBuilder": "Bouwer uitklappen",
+			"json": "Query-JSON",
+			"copyJson": "JSON naar klembord kopiëren",
+			"collapseJson": "JSON inklappen",
+			"expandJson": "JSON uitklappen"
+		},
+		"block": {
+			"add": "Nieuwe query",
+			"nameInput": "Querynaam bewerken",
+			"rename": "Naam bewerken",
+			"finishRename": "Naam bewerken voltooien",
+			"duplicate": "Query dupliceren",
+			"close": "Query sluiten",
+			"nodeTitle": "Beacon-node: {url}",
+			"nodeMissing": "Deze node is niet geconfigureerd",
+			"pickNode": "Kies een node voor deze query",
+			"noNode": "Geen node",
+			"tableTitle": "Gekozen tabel",
+			"noTable": "Geen tabel",
+			"columnsTitle": "Aantal gekozen kolommen",
+			"filtersTitle": "Aantal toegepaste filters",
+			"runTitle": "Status van de run / aantal teruggegeven rijen",
+			"running": "Bezig...",
+			"notCached": "Niet in cache",
+			"selectedColumns": "Gekozen kolommen: {columns}",
+			"noColumns": "Geen kolommen gekozen"
+		},
+		"toast": {
+			"nameEmpty": "De querynaam mag niet leeg zijn.",
+			"renameFailed": "Kan de naam van het queryconcept niet wijzigen.",
+			"addMissingNode": "Voeg de Beacon-node {url} toe om deze query uit te voeren.",
+			"waitForNodes": "Wacht tot de Beacon-nodes geladen zijn.",
+			"pickNode": "Kies eerst een Beacon-node voor deze query.",
+			"noQuery": "Kan geen query maken. Kies een tabel en minstens één kolom.",
+			"runFailed": "Query mislukt:",
+			"missingNode": "Deze query heeft de Beacon-node {url} nodig. Voeg die toe om de query uit te voeren.",
+			"guessedNodeNoTable": "De link noemde geen Beacon-node, en \"{node}\" heeft geen tabel \"{table}\". De query blijft bewaard. Kies de node van deze query.",
+			"guessedNodeNoColumns": "De link noemde geen Beacon-node, en \"{node}\" heeft geen kolommen van de query in \"{table}\". De query blijft bewaard. Kies de node van deze query.",
+			"nodeNoTable": "\"{node}\" heeft geen tabel \"{table}\". De query blijft bewaard. Kies een andere node, of bewerk de query.",
+			"nodeNoColumns": "\"{node}\" heeft geen kolommen van de query in \"{table}\". De query blijft bewaard. Kies een andere node, of bewerk de query."
+		}
+	},
+	"history": {
+		"title": "Querygeschiedenis",
+		"intro": "Queries die je hebt uitgevoerd. Voer ze opnieuw uit, bekijk ze of bewerk ze.",
+		"clear": "Geschiedenis wissen",
+		"empty": {
+			"title": "Nog geen queries",
+			"text": "Zodra je een query uitvoert, verschijnt die hier."
+		},
+		"entry": {
+			"never": "nooit",
+			"duration": "{ms, number} ms",
+			"runCount": "· {count, number}× uitgevoerd",
+			"remove": "Uit geschiedenis verwijderen"
+		}
+	},
+	"saved": {
+		"title": "Opgeslagen queries",
+		"intro": "Queries die je hebt opgeslagen vanuit de querybouwer. Voer ze opnieuw uit, visualiseer ze of open ze.",
+		"clear": "Opgeslagen wissen",
+		"empty": {
+			"title": "Nog geen opgeslagen queries",
+			"beforeLink": "Bouw een query in de",
+			"beforeButton": "en klik op",
+			"afterButton": "om die hier toe te voegen."
+		},
+		"entry": {
+			"savedAgo": "opgeslagen {time}",
+			"remove": "Opgeslagen query verwijderen"
+		},
+		"toast": {
+			"noQuery": "Kan niet opslaan: kies een tabel en minstens één kolom.",
+			"saved": "Query \"{name}\" opgeslagen.",
+			"saveFailed": "Kan query niet opslaan:"
+		}
+	},
+	"download": {
+		"button": "Data downloaden",
+		"loading": "Downloaden...",
+		"toast": {
+			"started": "Dataset downloaden...",
+			"directDone": "Dataset direct gedownload als {extension}. Dit vult de visualisatiecache niet. Gebruik Query visualiseren om deze query uit te voeren en in de cache te zetten.",
+			"failed": "Download mislukt:"
+		}
+	},
+	"visualise": {
+		"button": "Query visualiseren",
+		"executing": "Uitvoeren..."
+	},
+	"visualisation": {
+		"title": "Visualisaties",
+		"intro": "Gebruik de volgende manieren om je Beacon-inhoud te visualiseren.",
+		"card": {
+			"map": "Visualiseer je data op een interactieve kaart. Gebruik de kaartviewer om geografische patronen en inzichten te verkennen.",
+			"table": "Verken je data in tabelvorm. Met de tabelverkenner bekijk en filter je je dataset in detail.",
+			"chart": "Verken je data met grafieken. Met de grafiekverkenner bekijk en filter je je dataset in detail."
+		},
+		"tab": {
+			"table": "Tabel",
+			"chart": "Grafiek"
+		},
+		"selectColumn": "Kies een kolom",
+		"availableColumns": "Beschikbare kolommen",
+		"auto": "auto",
+		"loadingRows": "Rijen laden…",
+		"rowsSelected": "{count, plural, one {# rij} other {# rijen}} geselecteerd in {duration}.",
+		"toast": {
+			"noData": "De query is uitgevoerd, maar gaf geen data terug.",
+			"queryFailed": "Kan query niet uitvoeren:"
+		}
+	},
+	"map": {
+		"title": "Kaartviewer",
+		"headTitle": "Kaart",
+		"coordinatesMissing": "Kies de breedtegraad- en lengtegraadkolom om de rijen op de kaart te tonen.",
+		"dataColumn": "Datakolom",
+		"pickCoordinates": "Kies de breedtegraad- en lengtegraadkolom",
+		"needsCoordinates": "De query moet een breedtegraad- en een lengtegraadkolom bevatten.",
+		"selectQuery": "Kies hierboven een geldige query om die op de kaart te zien.",
+		"toast": {
+			"groupFailed": "Kan dataset niet groeperen op lat/lon:",
+			"pickDataColumn": "Kies de datakolom die je in de kaartviewer wilt tonen. Standaard toont de kaart de eerste (numerieke) datakolom.",
+			"noDataColumn": "Deze query heeft geen datakolom om op de kaart te tonen."
+		},
+		"control": {
+			"toggleAttribution": "Bronvermelding tonen of verbergen",
+			"mapFeedback": "Kaartfeedback",
+			"mapTitle": "Kaart",
+			"resetBearing": "Richting terugzetten naar noord",
+			"zoomIn": "Inzoomen",
+			"zoomOut": "Uitzoomen",
+			"closePopup": "Pop-up sluiten"
+		},
+		"columns": {
+			"title": "Coördinaatkolommen",
+			"description": "Kies de twee kolommen die de positie van elke rij bevatten.",
+			"tooFew": "Deze query kiest minder dan twee numerieke kolommen. Voeg eerst een breedtegraad- en een lengtegraadkolom toe.",
+			"latitude": "Breedtegraadkolom",
+			"longitude": "Lengtegraadkolom",
+			"queryColumns": "Querykolommen",
+			"pickBoth": "Kies de breedtegraad- en de lengtegraadkolom.",
+			"mustDiffer": "De breedtegraad- en de lengtegraadkolom moeten verschillen.",
+			"detect": "Detecteren",
+			"detectTitle": "Zoek de twee kolommen op hun naam",
+			"applyTitle": "Gebruik deze twee kolommen"
+		},
+		"draw": {
+			"applyTitle": "Filter de query op dit gebied",
+			"width": "Breedte",
+			"km": "km",
+			"counting": "objecten tellen...",
+			"featureCount": "{count, plural, one {# object in dit gebied} other {# objecten in dit gebied}}",
+			"polygon": "Polygoon",
+			"polygonTitle": "Teken een polygoon. Klik op elke hoek. Klik nogmaals op het eerste punt om af te sluiten.",
+			"box": "Rechthoek",
+			"boxTitle": "Klik op één hoek van de rechthoek, daarna op de tegenoverliggende hoek.",
+			"crossSection": "Doorsnede",
+			"crossSectionTitle": "Teken een lijn. De lijn wordt een band met de breedte hieronder.",
+			"clearTitle": "Het gebied verwijderen",
+			"applyFilter": "Filter toepassen"
+		}
+	},
+	"table": {
+		"title": "Tabelverkenner",
+		"selectQuery": "Kies hierboven een geldige query om de data te zien.",
+		"rowsPerPage": "Rijen per pagina:",
+		"noData": "Geen data beschikbaar",
+		"loadingData": "Data laden...",
+		"previous": "Vorige",
+		"next": "Volgende",
+		"pageBeforeInput": "Pagina",
+		"pageAfterInput": "van {count}",
+		"toast": {
+			"noData": "Geen tabeldata om te tonen.",
+			"sortFailed": "Kan tabel niet sorteren:"
+		}
+	},
+	"chart": {
+		"title": "Grafiekverkenner",
+		"selectQuery": "Kies hierboven een geldige query om die in een grafiek te zien.",
+		"running": "De query wordt uitgevoerd…",
+		"drawing": "De plot wordt getekend…"
+	},
+	"plot": {
+		"type": {
+			"scatter": {
+				"label": "Spreidingsdiagram",
+				"description": "X en Y komen allebei uit een datakolom."
+			},
+			"crossSection": {
+				"label": "Doorsnede",
+				"description": "X is de afstand langs de doorsnedelijn die op de kaart is getekend.",
+				"needsLine": "Teken eerst een doorsnede in de kaartviewer."
+			},
+			"histogram": {
+				"label": "Histogram",
+				"description": "Eén kolom, verdeeld in klassen. De hoogte van een staaf is het aantal rijen."
+			}
+		},
+		"fileName": "plot",
+		"legend": {
+			"moreGroups": "+{count} meer"
+		},
+		"tabs": {
+			"emptyName": "De plotnaam mag niet leeg zijn.",
+			"editPlotName": "Plotnaam bewerken",
+			"rename": "Naam bewerken",
+			"finishRename": "Naam bewerken voltooien",
+			"remove": "{name} verwijderen",
+			"add": "Plot toevoegen",
+			"addTitle": "Een plot toevoegen",
+			"duplicate": "Dupliceren",
+			"duplicateTitle": "De huidige plot dupliceren",
+			"resetView": "Weergave terugzetten",
+			"resetViewTitle": "De plotweergave terugzetten",
+			"export": "PNG exporteren",
+			"exportTitle": "Deze plot als PNG exporteren"
+		},
+		"axis": {
+			"crossSectionDistance": "Afstand langs doorsnede (km)",
+			"histogramCount": "Aantal"
+		},
+		"caption": {
+			"total": "N = {total, number}",
+			"sampled": "N = {total, number} · {shown, number} getoond ({percent, number}% steekproef)"
+		},
+		"error": {
+			"needsCrossSection": "Deze plot heeft een doorsnede nodig. Teken er een in de kaartviewer en pas die toe op de query.",
+			"lineTooShort": "De doorsnedelijn heeft minder dan twee punten.",
+			"noCoordinateColumns": "Het resultaat heeft geen breedtegraad- en lengtegraadkolom, dus het heeft geen afstand.",
+			"coordinatesNotNumeric": "De breedtegraad- en lengtegraadkolom bevatten geen getallen.",
+			"selectCountColumn": "Kies een kolom om te tellen.",
+			"noNumericColumn": "Het resultaat heeft geen numerieke kolom \"{column}\".",
+			"noNumbersToCount": "De kolom bevat geen getallen, dus er valt niets te tellen.",
+			"emptyXRange": "Het X-bereik is leeg, dus de klassen hebben geen breedte.",
+			"noRows": "De query gaf geen rijen terug.",
+			"selectYColumn": "Kies een kolom voor de Y-as.",
+			"selectXColumn": "Kies een kolom voor de X-as.",
+			"noColumn": "Het resultaat heeft geen kolom \"{column}\".",
+			"nothingToDraw": "Geen enkele rij heeft een waarde op elke gekozen as, dus de plot heeft niets te tekenen.",
+			"allGroupsDropped": "Elke groep is weggevallen, dus de plot heeft niets te tekenen."
+		},
+		"summary": {
+			"none": "geen",
+			"distance": "afstand",
+			"histogram": "{column} · {count, plural, one {# klasse} other {# klassen}}",
+			"line": "{x} × {y} · per {group}",
+			"notForType": "Niet voor dit plottype",
+			"needsColour": "Heeft een kleurkolom nodig",
+			"gaussianBands": "{method} · {count, plural, one {# band} other {# banden}}",
+			"contourLines": "{count, plural, one {# lijn} other {# lijnen}}"
+		},
+		"panel": {
+			"step": {
+				"type": "Plottype",
+				"bind": "Data koppelen",
+				"properties": "Eigenschappen",
+				"analysis": "Geavanceerde analyse"
+			},
+			"valueColumn": "Waardekolom",
+			"xAxis": "X-as",
+			"yAxis": "Y-as",
+			"invert": "Omkeren",
+			"invertX": "X-as omkeren",
+			"invertY": "Y-as omkeren",
+			"min": "Min",
+			"max": "Max",
+			"pixels": "{size}px",
+			"histogramCountHint": "Aantal rijen in elke klasse",
+			"groupBy": "Groeperen in lijnen op",
+			"oneStroke": "Eén lijn voor elke rij",
+			"groupHint": "Kies de kolom die een cast of een station benoemt. Elke waarde wordt één lijn, in een eigen kleur uit het palet.",
+			"zAxis": "Z-as / Kleur",
+			"colourColumn": "Kleurkolom",
+			"bins": "Klassen",
+			"binsHint": "De klassen beslaan het X-bereik. Zet het bereik vast in stap 3 om over een vast venster te tellen.",
+			"titlesAndLabels": "Titels en labels",
+			"plotTitle": "Plottitel",
+			"noTitle": "Geen titel",
+			"titleSize": "Titelgrootte",
+			"showCaption": "Bijschrift tonen",
+			"xAxisLabel": "Label X-as",
+			"yAxisLabel": "Label Y-as",
+			"columnName": "Kolomnaam",
+			"size": "Grootte",
+			"legend": "Legenda",
+			"legendDefault": "Gebruik de standaardtitel van de legenda",
+			"tickSize": "Grootte aslabels",
+			"dataAndColor": "Data en kleur",
+			"strokePalette": "Elke lijn krijgt één kleur uit het palet.",
+			"groupForColours": "Groepeer de plot in stap 2 om elke lijn een eigen kleur te geven.",
+			"histogramPaletteHint": "Een effen palet geeft elke staaf dezelfde kleur. Een bereikpalet kleurt elke staaf naar het aantal.",
+			"pointColour": "Puntkleur",
+			"pointColourHint": "Elk punt krijgt deze kleur. Koppel in stap 2 een kolom aan de kleuras om de punten op waarde te kleuren.",
+			"colourRange": "Kleurbereik ({axis})",
+			"colorScale": "Kleurschaal",
+			"scaleLinear": "Lineair",
+			"scaleLogarithmic": "Logaritmisch",
+			"logNeedsPositiveRange": "Een logaritmische schaal heeft een positief minimum en maximum nodig.",
+			"logNeedsPositiveData": "Een logaritmische schaal heeft positieve data nodig.",
+			"markers": "Markeringen",
+			"drawAlong": "Tekenen langs",
+			"alongX": "De X-as",
+			"alongY": "De Y-as",
+			"markRows": "Markeer elke rij met een stip",
+			"drawPoints": "Datapunten tekenen",
+			"markerSize": "Grootte markering",
+			"markerOpacity": "Dekking markering",
+			"canvas": "Canvas",
+			"showGridlines": "Rasterlijnen tonen",
+			"backgroundColor": "Achtergrondkleur",
+			"textColor": "Tekstkleur",
+			"gridlineColor": "Kleur rasterlijnen",
+			"gridlineOpacity": "Dekking rasterlijnen",
+			"noContoursLine": "Contouren hebben een waarde per punt nodig. Een lijn heeft die niet, dus ze staan uit voor dit plottype.",
+			"noContoursHistogram": "Contouren hebben een waarde per punt nodig. Een histogram heeft die niet, dus ze staan uit voor dit plottype.",
+			"contoursNeedColour": "Contouren lezen de kleuras. Koppel er in stap 2 een kolom aan om ze aan te zetten.",
+			"gridding": "Rastering en interpolatie",
+			"interpolate": "Interpoleren",
+			"interpolateHint": "De gekozen X-, Y- en kleurwaarden worden geïnterpoleerd en achter de punten getekend.",
+			"delaunayHint": "Delaunay tekent binnen de voetafdruk van de gemeten data. Afgevlakte rastering vult de buitenkant.",
+			"method": "Methode",
+			"methodGaussian": "Gaussische afvlakking",
+			"methodDelaunay": "Delaunay-triangulatie",
+			"outsideSmoothing": "Afvlakking buitenkant",
+			"gaussianSigma": "Gaussische sigma",
+			"gridResolution": "Rasterresolutie",
+			"clipLimits": "Afkaplimieten",
+			"clipMin": "Afkapminimum",
+			"clipMax": "Afkapmaximum",
+			"colourBands": "Kleurbanden",
+			"contourLines": "Contourlijnen",
+			"drawContours": "Contouren tekenen",
+			"drawContourLines": "Contourlijnen tekenen",
+			"contourHint": "De waarden worden op een raster geïnterpoleerd, en de lijnen worden afgekapt op het gebied dat de rijen beslaan.",
+			"levels": "Niveaus (aantal contouren)",
+			"gridDetail": "Rasterdetail",
+			"lineWidth": "Lijndikte",
+			"addLabel": "Label toevoegen",
+			"labelSize": "Labelgrootte",
+			"applyChanges": "Wijzigingen toepassen",
+			"revert": "Terugdraaien",
+			"revertTitle": "Terug naar wat de grafiek nu tekent",
+			"inputTooLow": "Invoer mag niet kleiner zijn dan {min}.",
+			"inputTooHigh": "Invoer mag niet groter zijn dan {max}."
+		}
+	},
+	"palette": {
+		"label": "Palet",
+		"reverse": "Het palet omkeren",
+		"gradients": "Kleurverlopen",
+		"solids": "Effen kleuren"
+	},
+	"legend": {
+		"minimum": "Minimum",
+		"maximum": "Maximum",
+		"minimumTitle": "De waarde links op de schaal",
+		"maximumTitle": "De waarde rechts op de schaal"
+	},
+	"geo": {
+		"area": {
+			"km2Whole": "{area, number, ::precision-integer} km²",
+			"km2OneDecimal": "{area, number, ::.0} km²",
+			"km2TwoDecimals": "{area, number, ::.00} km²"
+		},
+		"selection": {
+			"box": "Rechthoek",
+			"crossSection": "Doorsnede ({width, number} km)",
+			"polygon": "{count, plural, one {Polygoon (# punt)} other {Polygoon (# punten)}}"
+		},
+		"warning": {
+			"noSamples": "Geen voorbeeldwaarden, dus de eenheid is niet gecontroleerd.",
+			"mayBeRadians": "De waarden passen ook bij radialen. De app gaat uit van graden. Dat is fout als het bereik echt wereldwijd is.",
+			"packedDegrees": "De waarden lijken op samengevoegde graden en minuten (ddmm.mmm).",
+			"scaledDegrees": "De waarden lijken op graden, geschaald met {scale}.",
+			"webMercator": "De waarden lijken op EPSG:3857-meters.",
+			"unknownProjection": "De waarden zijn meters in een onbekende projectie, waarschijnlijk UTM. De zone is niet uit de data af te leiden, dus de app kan deze waarden hier niet omzetten.",
+			"noColumns": "Geen breedtegraad- en lengtegraadkolom gevonden.",
+			"swapped": "De twee kolommen zijn verwisseld: de waardebereiken geven aan dat de assen omgekeerd zijn."
+		}
+	},
+	"cache": {
+		"title": "Cache-informatie",
+		"loading": "Cache-informatie laden…",
+		"disabledNote": "Caching staat uit. Elke query wordt opnieuw op Beacon uitgevoerd, en de app bewaart niets.",
+		"hours": "{hours} u",
+		"idMissing": "n.v.t.",
+		"notAvailable": "N.v.t.",
+		"current": "huidig",
+		"memory": {
+			"title": "Geheugencache",
+			"subtitle": "gedecodeerde Arrow-tabellen, deze sessie",
+			"empty": "Geen datasets in het geheugen."
+		},
+		"disk": {
+			"title": "Schijfcache (OPFS)",
+			"subtitle": "blijft bewaard na herladen · verloopt {duration} na opslaan",
+			"unsupported": "Niet beschikbaar in deze omgeving (OPFS wordt niet ondersteund).",
+			"empty": "Geen resultaten op schijf opgeslagen."
+		},
+		"stat": {
+			"items": "Items",
+			"memoryUsed": "Gebruikt geheugen",
+			"cells": "Cellen",
+			"derivedTables": "Afgeleide tabellen",
+			"diskUsed": "Gebruikte schijfruimte"
+		},
+		"table": {
+			"columns": "Kolommen",
+			"rows": "Rijen",
+			"cols": "Kol.",
+			"size": "Grootte",
+			"queryId": "Query-id",
+			"stored": "Opgeslagen",
+			"lastUsed": "Laatst gebruikt"
+		},
+		"disable": "Caching uitzetten",
+		"enable": "Caching aanzetten",
+		"clearAll": "Alle caches wissen"
+	},
+	"system": {
+		"title": "Systeeminformatie",
+		"noNode": {
+			"title": "Geen Beacon-node",
+			"message": "Deze pagina leest één node. Kies eerst een node."
+		},
+		"intro": "Bekijk gedetailleerde informatie over het systeem van Beacon Studio, zoals versie, CPU-gebruik, geheugen en meer.",
+		"disabled": "Geen systeeminformatie beschikbaar. Zet systeeminformatie aan met de omgevingsvariabele {variable}.",
+		"version": "Beacon-versie",
+		"uptime": "Systeem actief: {time}",
+		"cpu": {
+			"title": "CPU-gebruik systeem",
+			"cores": "{count, plural, one {# fysieke kern} other {# fysieke kernen}}"
+		},
+		"memory": {
+			"title": "Geheugengebruik systeem"
+		},
+		"swap": {
+			"title": "Swapgebruik systeem"
+		},
+		"total": "{size} totaal",
+		"used": "{percent} gebruikt",
+		"free": "{size} vrij",
+		"load": {
+			"title": "Gemiddelde belasting",
+			"one": "1 min: {percent}",
+			"five": "5 min: {percent}",
+			"fifteen": "15 min: {percent}"
+		},
+		"os": {
+			"title": "Systeeminformatie",
+			"os": "OS: {value}",
+			"hostname": "Hostnaam: {value}",
+			"kernel": "Kernel: {value}",
+			"distribution": "Distributie: {value}",
+			"version": "Versie: {value}"
+		},
+		"cpus": {
+			"title": "Processors",
+			"count": "{count}× {brand}"
+		}
+	},
+	"node": {
+		"form": {
+			"addTitle": "Beacon-node toevoegen",
+			"editTitle": "Beacon-node bewerken",
+			"closeTitle": "Sluiten zonder opslaan",
+			"closeMessage": "Dit formulier bevat wijzigingen die de app nog niet heeft opgeslagen.",
+			"closeNote": "De wijzigingen gaan verloren."
+		},
+		"delete": {
+			"title": "Beacon-node verwijderen",
+			"message": "Dit verwijdert de node \"{name}\" uit deze browser.",
+			"note": "Je kunt dit niet ongedaan maken."
+		},
+		"toast": {
+			"deleted": "De Beacon-node \"{name}\" is verwijderd."
+		},
+		"connection": {
+			"test": "Verbinding testen",
+			"valid": "Verbinding geldig",
+			"invalid": "Verbinding ongeldig",
+			"testing": "Testen..."
+		},
+		"field": {
+			"name": "Nodenaam",
+			"url": "URL",
+			"description": "Beschrijving",
+			"token": "Token",
+			"status": "Status",
+			"actions": "Acties"
+		},
+		"page": {
+			"introBeforeLink": "Beheer op deze pagina je verbonden Beacon-nodes. Ontdek openbaar beschikbare Beacon-nodes op",
+			"introLink": "Beacon datalake",
+			"introAfterLink": ".",
+			"add": "Node toevoegen",
+			"publicInfo": "Informatie over openbare node",
+			"empty": "Geen Beacon-nodes geconfigureerd."
+		},
+		"choose": {
+			"title": "Beacon-node kiezen",
+			"intro": "Dit zijn de geconfigureerde Beacon-nodes:",
+			"empty": "Geen Beacon-nodes geconfigureerd. Voeg er een toe.",
+			"url": "URL:",
+			"lastUpdate": "Laatste update: {time}",
+			"selected": "Gekozen",
+			"select": "Kiezen",
+			"done": "Klaar"
+		},
+		"status": {
+			"online": "online",
+			"offline": "offline",
+			"unknown": "onbekend",
+			"onlineLatency": "online, {latency}",
+			"aria": "Status: {status}"
+		},
+		"latency": "Latentie",
+		"host": {
+			"name": "Beacon - {host}",
+			"description": "Beacon-node van de huidige host-root. ({origin})"
+		}
+	},
+	"home": {
+		"betaToast": "Beacon Studio is nog in bèta. Geef je feedback via \"Feedback\" linksonder.",
+		"title": {
+			"beforeHighlight": "Welkom bij Beacon",
+			"highlight": "Studio"
+		},
+		"subtitle": "Verken en bevraag een Beacon-node in je browser. De node leest de bestanden ter plekke en geeft rijen en kolommen terug, geen bestanden.",
+		"nodes": {
+			"title": "Verbonden nodes ({count})",
+			"empty": "Er is geen Beacon-node geconfigureerd.",
+			"manage": "Nodes beheren"
+		},
+		"launchpad": {
+			"title": "Startpunt",
+			"workbench": {
+				"title": "Query-werkbank",
+				"description": "Schrijf queries, filter data en doorzoek miljoenen records.",
+				"action": "Nieuwe query"
+			}
+		},
+		"guide": {
+			"title": "Hoe het werkt",
+			"lead": "Drie stappen van een lege query naar je subset.",
+			"hide": "Uitleg verbergen",
+			"show": "Uitleg tonen",
+			"select": {
+				"title": "Kies node en tabel",
+				"body": "Open de Query-werkbank. Kies een verbonden node, en kies daarna één datatabel op die node."
+			},
+			"filter": {
+				"title": "Filteren en bevragen",
+				"body": "Voeg de kolommen toe die je nodig hebt, en filter ze. Stel een dieptebereik en tijdgrenzen in. Teken het gebied met de tools van de Kaartviewer om het resultaat tot een regio te beperken."
+			},
+			"explore": {
+				"title": "Verkennen, exporteren en delen",
+				"body": "Download het resultaat of bekijk het in de Kaartviewer. Controleer de waarden in de Tabelverkenner, of maak een grafiek. Deel de query om samen te werken of om verder te gaan in een andere werkruimte."
+			}
+		},
+		"examples": {
+			"title": "Voorbeelden om snel te starten",
+			"lead": "Drie echte queries. Open er een om de query in de querybouwer te bekijken en op de kaart te plotten.",
+			"imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
+			"metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
+			"check": "Query bekijken"
+		}
+	},
+	"errorPage": {
+		"title": "Fout: {message}",
+		"hint": "Probeer het later opnieuw, of neem contact op met support als het probleem blijft."
+	},
+	"modal": {
+		"close": "Venster sluiten"
+	},
+	"upload": {
+		"username": "Gebruikersnaam beheerder",
+		"password": "Wachtwoord beheerder",
+		"failed": "Uploaden mislukt",
+		"example": "bijv. {example}",
+		"table": {
+			"title": "Tabel maken",
+			"name": "Tabelnaam",
+			"paths": "Glob-paden",
+			"pathsHint": "Je kunt meerdere paden opgeven, gescheiden door een komma.",
+			"format": "Bestandsformaat",
+			"formatPlaceholder": "Kies een bestandsformaat",
+			"nameMissing": "Voer een tabelnaam in.",
+			"formatMissing": "Kies een bestandsformaat.",
+			"pathMissing": "Voer minstens één glob-pad in.",
+			"created": "✅ Tabel {name} gemaakt"
+		},
+		"files": {
+			"title": "Datasets uploaden",
+			"dataset": "Dataset",
+			"missing": "Kies bestanden.",
+			"done": "✅ {count, plural, one {# bestand} other {# bestanden}} geüpload",
+			"size": "{name} ({size} KB)",
+			"uploading": "Uploaden... {progress}%",
+			"upload": "Uploaden"
+		}
+	},
+	"browser": {
+		"intro": "Gebruik de databrowserfuncties hieronder om je Beacon-inhoud te verkennen en te beheren.",
+		"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
+		"tableCount": "{count, plural, one {# datatabel} other {# datatabellen}}",
+		"datasetsCard": "Bekijk en beheer afzonderlijke datasets.",
+		"tablesCard": "Bekijk en beheer datatabellen.",
+		"searchPlaceholder": "Zoeken...",
+		"nodeLine": "Node: {url}",
+		"picker": {
+			"label": "Beacon-node",
+			"placeholder": "Kies een node",
+			"group": "Nodes"
+		},
+		"error": {
+			"missingParam": "Queryparameter `{name}` ontbreekt"
+		},
+		"datasets": {
+			"column": "Dataset",
+			"intro": "Verken en beheer de datasets die beschikbaar zijn op je Beacon-node.",
+			"noNodes": "Nog geen opgeslagen Beacon-nodes. Voeg een Beacon-node toe op de pagina Beacon-nodes om datasets te bekijken."
+		},
+		"tables": {
+			"column": "Tabel",
+			"default": "Standaard",
+			"intro": "Verken en beheer de tabellen die beschikbaar zijn op je Beacon-node.",
+			"noNodes": "Nog geen opgeslagen Beacon-nodes. Voeg een Beacon-node toe op de pagina Beacon-nodes om datatabellen te bekijken."
+		},
+		"schema": {
+			"field": "Veld",
+			"dataType": "Datatype",
+			"nullable": "Nullable",
+			"dictId": "Dictionary-ID",
+			"isOrdered": "Is geordend",
+			"metadata": "Metadata"
+		},
+		"table": {
+			"title": "Tabel {name}",
+			"heading": "Tabel ''{name}'' ({count, plural, one {# veld} other {# velden}})"
+		},
+		"dataset": {
+			"title": "Dataset {name}",
+			"heading": "Dataset {name} ({count, plural, one {# veld} other {# velden}})"
+		}
+	},
+	"misc": {
+		"externalLink": "Link openen in externe browser",
+		"bytes": "Bytes"
+	}
+}

@@ -9,6 +9,8 @@
 	import { FRESH_MS } from '@/services/beacon-node-health';
 	import { syncOpenNodes } from '@/services/open-nodes-import';
 	import { initTelemetry, setRoute, track } from '@/telemetry';
+	import { setLanguage } from '@/i18n';
+	import { getSettings, settings } from '@/stores/settings';
 	import { afterNavigate } from '$app/navigation';
 	import { onMount, type Snippet } from 'svelte';
 	import '../app.scss';
@@ -22,6 +24,10 @@
 	// The sidebar and the page header both read these, so the layout owns them.
 	let isMobile = $state(false);
 	let collapsed = $state(false);
+
+	// The script runs before any page script, so the first paint has the right language.
+	setLanguage(getSettings().language);
+	$effect(() => setLanguage($settings.language));
 
 	// One monitor for the whole app. It checks every node each hour.
 	onMount(() => {

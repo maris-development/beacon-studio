@@ -38,6 +38,7 @@ export type ParameterFilterType =
 
 /** A filter plus the label the dropdown shows for it. */
 export type SelectedFilterType = {
+	/** The catalog key of the label. An old record holds English text, so show `filterLabel` instead. */
 	label: string;
 	filter_value: ParameterFilterType;
 };

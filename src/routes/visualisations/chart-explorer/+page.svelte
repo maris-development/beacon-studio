@@ -17,6 +17,7 @@
 	import { addToast } from '@/stores/toasts';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
+	import { t } from '@/i18n';
 
 	const workspace = $state(new QueryWorkspace());
 
@@ -92,7 +93,7 @@
 			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
 			if (blockedKey !== lastBlockedKey) {
 				lastBlockedKey = blockedKey;
-				addToast({ type: 'warning', message: blocked });
+				addToast({ type: 'warning', key: blocked.key, values: blocked.values });
 			}
 
 			charts.clearQueryResult();
@@ -209,13 +210,13 @@
 </script>
 
 <svelte:head>
-	<title>Chart explorer - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('chart.title') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Visualisations', href: '/visualisations' },
-		{ label: 'Chart explorer', href: '/visualisations/chart-explorer' }
+		{ label: $t('visualisation.title'), href: '/visualisations' },
+		{ label: $t('chart.title'), href: '/visualisations/chart-explorer' }
 	]}
 />
 
@@ -227,7 +228,7 @@
 
 		<div class="content page-container">
 			{#if !compiledQuery}
-				<p>Select a valid query above to see it on a chart.</p>
+				<p>{$t('chart.selectQuery')}</p>
 			{:else}
 
 				<PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
@@ -254,9 +255,9 @@
 								<LoadingSpinner></LoadingSpinner>
 
 								{#if charts.isLoading}
-									<h3>Running the query…</h3>
+									<h3>{$t('chart.running')}</h3>
 								{:else}
-									<h3>Drawing the plot…</h3>
+									<h3>{$t('chart.drawing')}</h3>
 								{/if}
 							</div>
 						{/if}

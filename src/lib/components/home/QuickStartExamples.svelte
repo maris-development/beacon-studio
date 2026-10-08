@@ -15,8 +15,7 @@
 	import { homeExamples, type HomeExample } from '@/data/home-examples';
 	import { track } from '@/telemetry';
 	import { SHARE_LINK_PATH } from '@/stores/stored-query';
-
-	const METRIC_HINT = 'Measured on a reference run. Your run can differ.';
+	import { t, formatNumber } from '@/i18n';
 
 	/** The share link of one example. */
 	function exampleHref(example: HomeExample): string {
@@ -25,8 +24,8 @@
 </script>
 
 <div class="section-head">
-	<h2>Quick start examples</h2>
-	<p class="lead">Three real queries. Open one to review the query in the query builder and plot it on the map.</p>
+	<h2>{$t('home.examples.title')}</h2>
+	<p class="lead">{$t('home.examples.lead')}</p>
 	<!-- <span class="pending" title={PENDING_HINT}>
 		<Button variant="link" disabled>View all examples</Button>
 	</span> -->
@@ -38,7 +37,7 @@
 			<img
 				class="shot"
 				src={asset(`/images/${example.image}`)}
-				alt="The result of the {example.title} query in the Map Viewer"
+				alt={$t('home.examples.imageAlt', { title: example.title })}
 				width="1382"
 				height="760"
 				loading="lazy"
@@ -55,9 +54,9 @@
 				<h3>{example.title}</h3>
 				<p class="description">{example.description}</p>
 
-				<div class="metrics" title={METRIC_HINT}>
-					<Badge variant="outline" class="rows">{example.rows.toLocaleString()} rows</Badge>
-					<Badge variant="outline">{example.seconds} s</Badge>
+				<div class="metrics" title={$t('home.examples.metricHint')}>
+					<Badge variant="outline" class="rows">{$t('common.rows', { count: example.rows })}</Badge>
+					<Badge variant="outline">{$formatNumber(example.seconds)} s</Badge>
 					<Badge variant="outline">{example.format}</Badge>
 				</div>
 
@@ -71,7 +70,7 @@
 							})}
 					>
 						<BracesIcon />
-						Check query
+						{$t('home.examples.check')}
 					</Button>
 
 				</div>

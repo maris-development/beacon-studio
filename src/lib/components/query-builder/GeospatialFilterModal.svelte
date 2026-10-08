@@ -24,6 +24,7 @@
 	import maplibregl from 'maplibre-gl';
 	import { untrack } from 'svelte';
 	import { Utils } from '@/utils';
+	import { t } from '@/i18n';
 	import type { SelectedField } from '@/query/draft';
 	import {
 		isUsableSelection,
@@ -112,15 +113,15 @@
 	/** The reason that Apply must stay off, or null. */
 	const applyReason = $derived.by(() => {
 		if (candidates.length < 2) {
-			return 'The query must select a latitude and a longitude column.';
+			return $t('query.geoFilter.needsColumns');
 		}
 
 		if (!columns) {
-			return 'Pick the latitude and the longitude column.';
+			return $t('query.geoFilter.pickColumns');
 		}
 
 		if (!hasArea) {
-			return 'Draw an area on the map.';
+			return $t('query.geoFilter.drawArea');
 		}
 
 		return null;
@@ -145,45 +146,44 @@
 		must not throw the whole edit away. The Cancel button below always works.
 	-->
 	<Modal
-		title="Geospatial filter"
+		title={$t('query.geoFilter.title')}
 		width="90vw"
 		canCloseModal={!isDrawing && !isColumnsOpen}
 		onClose={() => (open = false)}
 	>
 		<div class="geo-filter-content">
 			<p class="geo-filter-description">
-				Draw an area, and pick the two columns that the filter tests.
+				{$t('query.geoFilter.description')}
 			</p>
 
 			{#if candidates.length < 2}
 				<p class="geo-filter-warning" role="alert">
 					<TriangleAlertIcon size={16} />
-					This query selects less than two number columns. Add a latitude and a longitude column
-					first.
+					{$t('query.geoFilter.tooFewColumns')}
 				</p>
 			{:else}
 				<!-- The fields show the pair only. A click opens the dialog that changes it. -->
 				<div class="geo-filter-columns">
 					<div class="field">
-						<Label size="sm" for="geoFilterLatitude">Latitude column</Label>
+						<Label size="sm" for="geoFilterLatitude">{$t('query.geoFilter.latitude')}</Label>
 						<Input
 							id="geoFilterLatitude"
 							readonly
 							value={columns?.latitude ?? ''}
-							placeholder="Not found"
-							title="Pick the coordinate columns"
+							placeholder={$t('query.geoFilter.notFound')}
+							title={$t('query.geoFilter.pickPair')}
 							onclick={() => (isColumnsOpen = true)}
 						/>
 					</div>
 
 					<div class="field">
-						<Label size="sm" for="geoFilterLongitude">Longitude column</Label>
+						<Label size="sm" for="geoFilterLongitude">{$t('query.geoFilter.longitude')}</Label>
 						<Input
 							id="geoFilterLongitude"
 							readonly
 							value={columns?.longitude ?? ''}
-							placeholder="Not found"
-							title="Pick the coordinate columns"
+							placeholder={$t('query.geoFilter.notFound')}
+							title={$t('query.geoFilter.pickPair')}
 							onclick={() => (isColumnsOpen = true)}
 						/>
 					</div>
@@ -191,8 +191,8 @@
 					<Button
 						variant="outline"
 						size="icon"
-						title="Pick the coordinate columns"
-						aria-label="Pick the coordinate columns"
+						title={$t('query.geoFilter.pickPair')}
+						aria-label={$t('query.geoFilter.pickPair')}
 						onclick={() => (isColumnsOpen = true)}
 					>
 						<SettingsIcon />
@@ -223,18 +223,18 @@
 			<span class="geo-filter-hint">{applyReason ?? ''}</span>
 
 			{#if selection}
-				<Button variant="outline" onclick={remove}>Remove filter</Button>
+				<Button variant="outline" onclick={remove}>{$t('query.geoFilter.remove')}</Button>
 			{/if}
 
-			<Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
+			<Button variant="outline" onclick={() => (open = false)}>{$t('common.cancel')}</Button>
 
 			<Button
 				variant="default"
-				title={applyReason ?? 'Filter the query on this area'}
+				title={applyReason ?? $t('query.geoFilter.applyTitle')}
 				disabled={!!applyReason}
 				onclick={apply}
 			>
-				Apply filter
+				{$t('query.geoFilter.apply')}
 			</Button>
 		</div>
 	</Modal>

@@ -7,6 +7,7 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import Modal from '@/components/modals/Modal.svelte';
 	import { answerConfirm, confirmRequest } from '@/stores/confirm';
+	import { t } from '@/i18n';
 
 	/**
 	 * Answers the question on Escape, and stops that key there.
@@ -45,7 +46,7 @@
 			<div slot="footer" class="confirm-actions">
 				{#if $confirmRequest.cancelLabel !== null}
 					<Button variant="outline" onclick={() => answerConfirm(false)}>
-						{$confirmRequest.cancelLabel ?? 'Cancel'}
+						{$confirmRequest.cancelLabel ?? $t('common.cancel')}
 					</Button>
 				{/if}
 
@@ -53,7 +54,7 @@
 					variant={$confirmRequest.destructive ? 'destructive' : 'default'}
 					onclick={() => answerConfirm(true)}
 				>
-					{$confirmRequest.confirmLabel ?? 'Continue'}
+					{$confirmRequest.confirmLabel ?? $t('common.continue')}
 				</Button>
 			</div>
 		</Modal>

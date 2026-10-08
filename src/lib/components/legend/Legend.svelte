@@ -16,6 +16,7 @@
 	import { loadColormaps, samplePalette } from '@/colors/palettes';
 	import { COLOR_SCALE_BLIPS } from './legend-defaults';
 	import { onMount } from 'svelte';
+	import { t } from '@/i18n';
 
 	let {
 		colorScaleMin = $bindable(null),
@@ -81,7 +82,7 @@
 
 <div class="legend">
 	<div class="field">
-		<Label size="sm" for="legendPalette">Palette</Label>
+		<Label size="sm" for="legendPalette">{$t('palette.label')}</Label>
 		<PalettePicker
 			id="legendPalette"
 			value={palette}
@@ -92,35 +93,35 @@
 
 	<div class="reverse">
 		<input id="legendReverse" type="checkbox" bind:checked={paletteReverse} />
-		<Label for="legendReverse">Reverse the palette</Label>
+		<Label for="legendReverse">{$t('palette.reverse')}</Label>
 	</div>
 
 	<div class="range">
 		<div class="field">
-			<Label size="sm" for="colorScaleMin">Minimum</Label>
+			<Label size="sm" for="colorScaleMin">{$t('legend.minimum')}</Label>
 			<Input
 				type="number"
 				step="any"
 				name="colorScaleMin"
 				id="colorScaleMin"
 				value={colorScaleMin ?? ''}
-				placeholder="auto"
+				placeholder={$t('visualisation.auto')}
 				oninput={(event) => (colorScaleMin = numberOrNull(event.currentTarget.value))}
-				title="The value at the left of the scale"
+				title={$t('legend.minimumTitle')}
 			/>
 		</div>
 
 		<div class="field">
-			<Label size="sm" for="colorScaleMax">Maximum</Label>
+			<Label size="sm" for="colorScaleMax">{$t('legend.maximum')}</Label>
 			<Input
 				type="number"
 				step="any"
 				name="colorScaleMax"
 				id="colorScaleMax"
 				value={colorScaleMax ?? ''}
-				placeholder="auto"
+				placeholder={$t('visualisation.auto')}
 				oninput={(event) => (colorScaleMax = numberOrNull(event.currentTarget.value))}
-				title="The value at the right of the scale"
+				title={$t('legend.maximumTitle')}
 			/>
 		</div>
 	</div>

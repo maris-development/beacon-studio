@@ -10,31 +10,32 @@
 	import ArrowRightIcon from '@lucide/svelte/icons/arrow-right';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '@/components/buttons/Button.svelte';
+	import { t, type MessageKey } from '@/i18n';
 
 	const STORAGE_KEY = 'beacon-studio.home.guide-open';
 
 	type Step = {
 		/** The step number, as the card shows it. */
 		number: string;
-		title: string;
-		body: string;
+		title: MessageKey;
+		body: MessageKey;
 	};
 
 	const STEPS: Step[] = [
 		{
 			number: '01',
-			title: 'Select node and table',
-			body: 'Open the Query Workbench. Pick a connected node, then pick one data table on that node.'
+			title: 'home.guide.select.title',
+			body: 'home.guide.select.body'
 		},
 		{
 			number: '02',
-			title: 'Filter and query',
-			body: 'Add the columns you need, then filter them. Set a depth range and time bounds. To limit the result to a region, draw the area with the Map Viewer tools.'
+			title: 'home.guide.filter.title',
+			body: 'home.guide.filter.body'
 		},
 		{
 			number: '03',
-			title: 'Explore, export and share',
-			body: 'Download the result or view it in the Map Viewer. Check the values in the Table Explorer, or build a chart. Share the query to collaborate or to continue in another workspace.'
+			title: 'home.guide.explore.title',
+			body: 'home.guide.explore.body'
 		}
 	];
 
@@ -54,9 +55,9 @@
 </script>
 
 <div class="section-head">
-	<h2>How it works</h2>
-	<p class="lead">Three steps from an empty query to your subset.</p>
-	<Button variant="link" onclick={toggle}>{open ? 'Hide guide' : 'Show guide'}</Button>
+	<h2>{$t('home.guide.title')}</h2>
+	<p class="lead">{$t('home.guide.lead')}</p>
+	<Button variant="link" onclick={toggle}>{open ? $t('home.guide.hide') : $t('home.guide.show')}</Button>
 </div>
 
 {#if open}
@@ -65,9 +66,9 @@
 			<Card class="step">
 				<div class="step-head">
 					<span class="step-number">{step.number}</span>
-					<h3>{step.title}</h3>
+					<h3>{$t(step.title)}</h3>
 				</div>
-				<p>{step.body}</p>
+				<p>{$t(step.body)}</p>
 			</Card>
 
 			{#if index < STEPS.length - 1}

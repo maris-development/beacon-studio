@@ -16,6 +16,7 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
+	import { t, translate } from '@/i18n';
 
 	/**
 	 * The modal writes to the node service itself. `onSave` tells the parent
@@ -65,10 +66,10 @@
 		// Reset form fields
 		if (input) {
 			const goAhead = await askConfirm({
-				title: 'Close without saving',
-				message: 'This form holds changes that the app did not save yet.',
-				note: 'The changes go away.',
-				confirmLabel: 'Close',
+				title: translate('node.form.closeTitle'),
+				message: translate('node.form.closeMessage'),
+				note: translate('node.form.closeNote'),
+				confirmLabel: translate('common.close'),
 				destructive: true
 			});
 
@@ -112,10 +113,10 @@
 		if (!node) return;
 
 		const goAhead = await askConfirm({
-			title: 'Delete Beacon node',
-			message: `This removes the node "${node.name}" from this browser.`,
-			note: 'You cannot undo this.',
-			confirmLabel: 'Delete',
+			title: translate('node.delete.title'),
+			message: translate('node.delete.message', { name: node.name }),
+			note: translate('node.delete.note'),
+			confirmLabel: translate('common.delete'),
 			destructive: true
 		});
 
@@ -124,7 +125,8 @@
 		removeNode(node.id);
 
 		addToast({
-			message: `The Beacon node "${node.name}" has been deleted.`,
+			key: 'node.toast.deleted',
+			values: { name: node.name },
 			type: 'info'
 		});
 
@@ -156,25 +158,25 @@
 	}
 </script>
 
-<Modal title={node ? 'Edit Beacon node' : 'Add Beacon node'} onClose={closeModal}>
+<Modal title={node ? $t('node.form.editTitle') : $t('node.form.addTitle')} onClose={closeModal}>
 	<form on:submit|preventDefault={submitForm}>
 		<div class="form-row">
-			<label for="name" class="required">Name</label>
+			<label for="name" class="required">{$t('common.name')}</label>
 			<input type="text" id="name" bind:value={name} required />
 		</div>
 
 		<div class="form-row">
-			<label for="url" class="required">URL</label>
+			<label for="url" class="required">{$t('node.field.url')}</label>
 			<input type="url" id="url" bind:value={url} required />
 		</div>
 
 		<div class="form-row">
-			<label for="description">Description</label>
+			<label for="description">{$t('node.field.description')}</label>
 			<textarea id="description" rows="2" bind:value={description}></textarea>
 		</div>
 
 		<div class="form-row">
-			<label for="token" class="optional">Token</label>
+			<label for="token" class="optional">{$t('node.field.token')}</label>
 			<input type="text" id="token" bind:value={token} />
 		</div>
 	</form>
@@ -182,12 +184,12 @@
 	<div slot="footer" class="footer">
 		<div class="buttons-left">
 			<Button type="button" variant="outline" onclick={closeModal}>
-				Cancel
+				{$t('common.cancel')}
 				<CircleXIcon />
 			</Button>
 
 			<Button type="button" variant="destructive" onclick={confirmRemove} disabled={!node}>
-				Delete
+				{$t('common.delete')}
 				<Trash2Icon />
 			</Button>
 		</div>
@@ -195,21 +197,21 @@
 		<div class="buttons-right">
 			<Button variant="outline" onclick={testConnection}>
 				{#if connectionCheckState === 'untested'}
-					Test connection
+					{$t('node.connection.test')}
 					<span class="connection-{connectionCheckState}"><LinkIcon /></span>
 				{:else if connectionCheckState === 'valid'}
-					Connection valid
+					{$t('node.connection.valid')}
 					<span class="connection-{connectionCheckState}"><CheckIcon /></span>
 				{:else if connectionCheckState === 'invalid'}
-					Connection invalid
+					{$t('node.connection.invalid')}
 					<span class="connection-{connectionCheckState}"><TriangleAlertIcon /></span>
 				{:else if connectionCheckState === 'testing'}
-					Testing...
+					{$t('node.connection.testing')}
 					<span class="connection-{connectionCheckState}"><LoaderCircle /></span>
 				{/if}
 			</Button>
 			<Button type="submit" onclick={submitForm}>
-				Save
+				{$t('common.save')}
 				<SaveIcon />
 			</Button>
 		</div>

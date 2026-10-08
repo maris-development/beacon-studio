@@ -53,6 +53,7 @@
 	import { CROSS_SECTION_AXIS_LABEL, HISTOGRAM_AXIS_LABEL } from '@/plots/plot-data';
 	import { DEFAULT_SOLID_PALETTE_ID, getColormap } from '@/colors/palettes';
 	import { Utils } from '@/utils';
+	import { t, type MessageKey } from '@/i18n';
 
 	let { controller }: { controller: ChartExplorerController } = $props();
 
@@ -213,7 +214,10 @@
 	}
 
 	/** The label over the X column selector. A histogram counts one column. */
-	const xFieldLabel = $derived(draft?.type === 'histogram' ? 'Value column' : 'X axis');
+	const xFieldLabel = $derived.by(() => {
+		if (draft?.type === 'histogram') return $t('plot.panel.valueColumn');
+		return $t('plot.panel.xAxis');
+	});
 
 	/**
 	 * The value of the "no colour column" entry. An empty string means "nothing
@@ -253,7 +257,7 @@
 			(min === undefined || max === undefined || min <= 0 || max <= 0 || max <= min)
 		) {
 			addToast({
-				message: 'Logarithmic scale needs a positive minimum and maximum.',
+				key: 'plot.panel.logNeedsPositiveRange',
 				type: 'error'
 			});
 		}
@@ -261,14 +265,14 @@
 		patchAxis('z', { scale });
 	}
 
-	function interpolationMethodLabel(method: PlotInterpolationMethod): string {
-		if (method === 'delaunay-barycentric') return 'Delaunay triangulation';
-		return 'Gaussian smoothing';
+	function interpolationMethodLabel(method: PlotInterpolationMethod): MessageKey {
+		if (method === 'delaunay-barycentric') return 'plot.panel.methodDelaunay';
+		return 'plot.panel.methodGaussian';
 	}
 
-	function interpolationSmoothingLabel(method: PlotInterpolationMethod): string {
-		if (method === 'delaunay-barycentric') return 'Outside smoothing';
-		return 'Gaussian sigma';
+	function interpolationSmoothingLabel(method: PlotInterpolationMethod): MessageKey {
+		if (method === 'delaunay-barycentric') return 'plot.panel.outsideSmoothing';
+		return 'plot.panel.gaussianSigma';
 	}
 
 	const MIN_GRID_RESOLUTION = 20;
@@ -291,7 +295,8 @@
 
 		if (parsed < MIN_GRID_RESOLUTION) {
 			addToast({
-				message: `Input cannot be less than ${MIN_GRID_RESOLUTION}.`,
+				key: 'plot.panel.inputTooLow',
+				values: { min: MIN_GRID_RESOLUTION },
 				type: 'error'
 			});
 			return MIN_GRID_RESOLUTION;
@@ -299,7 +304,8 @@
 
 		if (parsed > MAX_GRID_RESOLUTION) {
 			addToast({
-				message: `Input cannot be greater than ${MAX_GRID_RESOLUTION}.`,
+				key: 'plot.panel.inputTooHigh',
+				values: { max: MAX_GRID_RESOLUTION },
 				type: 'error'
 			});
 			return MAX_GRID_RESOLUTION;
@@ -325,23 +331,27 @@
 	// -- summaries -----------------------------------------------------------
 
 	const typeSummary = $derived(
-		PLOT_TYPES.find((type) => type.id === draft?.type)?.label ?? 'Scatter plot'
+		$t(PLOT_TYPES.find((type) => type.id === draft?.type)?.labelKey ?? 'plot.type.scatter.label')
 	);
 
 	const bindingSummary = $derived.by(() => {
 		if (!draft) return '';
 
-		let x = draft.x.column ?? 'none';
-		if (draft.type === 'cross-section') x = 'distance';
+		const none = $t('plot.summary.none');
+		let x = draft.x.column ?? none;
+		if (draft.type === 'cross-section') x = $t('plot.summary.distance');
 
 		if (draft.type === 'histogram') {
-			return `${x} · ${draft.histogram.binCount} bins`;
+			return $t('plot.summary.histogram', { column: x, count: draft.histogram.binCount });
 		}
 
-		let summary = `${x} × ${draft.y.column ?? 'none'}`;
+		const y = draft.y.column ?? none;
+		let summary = `${x} × ${y}`;
 
 		if (draft.type === 'line') {
-			if (draft.line.groupColumn) summary += ` · by ${draft.line.groupColumn}`;
+			if (draft.line.groupColumn) {
+				summary = $t('plot.summary.line', { x, y, group: draft.line.groupColumn });
+			}
 			return summary;
 		}
 
@@ -367,25 +377,28 @@
 		let palette = draft.style.palette;
 		if (usesZColumn(draft.type) && !draft.z?.column) palette = solidPalette;
 
-		return `${palette} · ${draft.style.pointRadius}px`;
+		return `${palette} · ${$t('plot.panel.pixels', { size: draft.style.pointRadius })}`;
 	});
 
 	const advancedAnalysisSummary = $derived.by(() => {
-		if (draft && !usesZColumn(draft.type)) return 'Not for this plot type';
-		if (!draft?.z?.column) return 'Needs a colour column';
-		if (!draft.interpolation.enabled && !draft.contour.enabled) return 'Off';
+		if (draft && !usesZColumn(draft.type)) return $t('plot.summary.notForType');
+		if (!draft?.z?.column) return $t('plot.summary.needsColour');
+		if (!draft.interpolation.enabled && !draft.contour.enabled) return $t('common.off');
 
 		const parts: string[] = [];
 		if (draft.interpolation.enabled) {
+			const method = $t(interpolationMethodLabel(draft.interpolation.method));
 			if (draft.interpolation.method === 'gaussian') {
 				parts.push(
-					`${interpolationMethodLabel(draft.interpolation.method)} · ${draft.interpolation.bandCount} bands`
+					$t('plot.summary.gaussianBands', { method, count: draft.interpolation.bandCount })
 				);
 			} else {
-				parts.push(interpolationMethodLabel(draft.interpolation.method));
+				parts.push(method);
 			}
 		}
-		if (draft.contour.enabled) parts.push(`${draft.contour.levelCount} lines`);
+		if (draft.contour.enabled) {
+			parts.push($t('plot.summary.contourLines', { count: draft.contour.levelCount }));
+		}
 		return parts.join(' · ');
 	});
 
@@ -393,9 +406,9 @@
 		if (!draft?.z || draft.z.scale !== 'logarithmic') return '';
 		const min = draft.z.min ?? controller.series?.zRange?.min;
 		const max = draft.z.max ?? controller.series?.zRange?.max;
-		if (min === undefined || max === undefined) return 'Logarithmic scale needs positive data.';
+		if (min === undefined || max === undefined) return $t('plot.panel.logNeedsPositiveData');
 		if (!(min > 0) || !(max > 0) || !(max > min)) {
-			return 'Logarithmic scale needs a positive minimum and maximum.';
+			return $t('plot.panel.logNeedsPositiveRange');
 		}
 		return '';
 	});
@@ -405,7 +418,7 @@
 	<aside class="plot-config-panel">
 		<PlotSection
 			step={1}
-			title="Plot type"
+			title={$t('plot.panel.step.type')}
 			summary={typeSummary}
 			open={openSection === 1}
 			onOpenChange={(isOpen) => openConfigSection(1, isOpen)}
@@ -419,7 +432,7 @@
 
 		<PlotSection
 			step={2}
-			title="Bind data"
+			title={$t('plot.panel.step.bind')}
 			summary={bindingSummary}
 			open={openSection === 2}
 			onOpenChange={(isOpen) => openConfigSection(2, isOpen)}
@@ -428,13 +441,13 @@
 				<div class="axis-header">
 					<span class="axis-title">{xFieldLabel}</span>
 					<label class="switch-field">
-						<span>Invert</span>
+						<span>{$t('plot.panel.invert')}</span>
 						<input
 							type="checkbox"
 							class="switch-input"
 							checked={draft.x.reverse}
 							onchange={(event) => patchAxis('x', { reverse: event.currentTarget.checked })}
-							aria-label="Invert X axis"
+							aria-label={$t('plot.panel.invertX')}
 						/>
 						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
 					</label>
@@ -442,18 +455,19 @@
 
 				<div class="field">
 					{#if draft.type === 'cross-section'}
-						<p class="fixed-value">{CROSS_SECTION_AXIS_LABEL}</p>
+						<p class="fixed-value">{$t(CROSS_SECTION_AXIS_LABEL)}</p>
 					{:else}
 						<Select.Root
 							type="single"
 							value={draft.x.column ?? ''}
 							onValueChange={(value) => setAxisColumn('x', value)}
 						>
-							<Select.Trigger id="plotXColumn">{draft.x.column || 'Select a column'}</Select.Trigger
+							<Select.Trigger id="plotXColumn"
+								>{draft.x.column || $t('visualisation.selectColumn')}</Select.Trigger
 							>
 							<Select.Content>
 								<Select.Group>
-									<Select.Label>Available columns</Select.Label>
+									<Select.Label>{$t('visualisation.availableColumns')}</Select.Label>
 									{#each controller.columns as column (column.name)}
 										<Select.Item value={column.name} label={column.name}>
 											{column.name}
@@ -467,20 +481,20 @@
 
 				<div class="pair" role="group" aria-labelledby="xRangeLabel">
 					<label class="range-field" id="xRangeLabel">
-						<span>Min</span>
+						<span>{$t('plot.panel.min')}</span>
 						<Input
 							type="number"
 							value={draft.x.min ?? ''}
-							placeholder="auto"
+							placeholder={$t('visualisation.auto')}
 							oninput={(event) => patchAxis('x', { min: numberOrNull(event.currentTarget.value) })}
 						/>
 					</label>
 					<label class="range-field">
-						<span>Max</span>
+						<span>{$t('plot.panel.max')}</span>
 						<Input
 							type="number"
 							value={draft.x.max ?? ''}
-							placeholder="auto"
+							placeholder={$t('visualisation.auto')}
 							oninput={(event) => patchAxis('x', { max: numberOrNull(event.currentTarget.value) })}
 						/>
 					</label>
@@ -489,15 +503,15 @@
 
 			<div class="axis-group">
 				<div class="axis-header">
-					<span class="axis-title">Y axis</span>
+					<span class="axis-title">{$t('plot.panel.yAxis')}</span>
 					<label class="switch-field">
-						<span>Invert</span>
+						<span>{$t('plot.panel.invert')}</span>
 						<input
 							type="checkbox"
 							class="switch-input"
 							checked={draft.y.reverse}
 							onchange={(event) => patchAxis('y', { reverse: event.currentTarget.checked })}
-							aria-label="Invert Y axis"
+							aria-label={$t('plot.panel.invertY')}
 						/>
 						<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
 					</label>
@@ -505,18 +519,19 @@
 
 				<div class="field">
 					{#if !usesYColumn(draft.type)}
-						<p class="fixed-value">{HISTOGRAM_AXIS_LABEL} of the rows in each bin</p>
+						<p class="fixed-value">{$t('plot.panel.histogramCountHint')}</p>
 					{:else}
 						<Select.Root
 							type="single"
 							value={draft.y.column ?? ''}
 							onValueChange={(value) => setAxisColumn('y', value)}
 						>
-							<Select.Trigger id="plotYColumn">{draft.y.column || 'Select a column'}</Select.Trigger
+							<Select.Trigger id="plotYColumn"
+								>{draft.y.column || $t('visualisation.selectColumn')}</Select.Trigger
 							>
 							<Select.Content>
 								<Select.Group>
-									<Select.Label>Available columns</Select.Label>
+									<Select.Label>{$t('visualisation.availableColumns')}</Select.Label>
 									{#each controller.columns as column (column.name)}
 										<Select.Item value={column.name} label={column.name}>
 											{column.name}
@@ -530,20 +545,20 @@
 
 				<div class="pair" role="group" aria-labelledby="yRangeLabel">
 					<label class="range-field" id="yRangeLabel">
-						<span>Min</span>
+						<span>{$t('plot.panel.min')}</span>
 						<Input
 							type="number"
 							value={draft.y.min ?? ''}
-							placeholder="auto"
+							placeholder={$t('visualisation.auto')}
 							oninput={(event) => patchAxis('y', { min: numberOrNull(event.currentTarget.value) })}
 						/>
 					</label>
 					<label class="range-field">
-						<span>Max</span>
+						<span>{$t('plot.panel.max')}</span>
 						<Input
 							type="number"
 							value={draft.y.max ?? ''}
-							placeholder="auto"
+							placeholder={$t('visualisation.auto')}
 							oninput={(event) => patchAxis('y', { max: numberOrNull(event.currentTarget.value) })}
 						/>
 					</label>
@@ -552,18 +567,20 @@
 
 			{#if draft.type === 'line'}
 				<div class="field">
-					<Label for="plotGroupColumn">Group into strokes by</Label>
+					<Label for="plotGroupColumn">{$t('plot.panel.groupBy')}</Label>
 					<Select.Root
 						type="single"
 						value={draft.line.groupColumn ?? NO_COLUMN}
 						onValueChange={setGroupColumn}
 					>
 						<Select.Trigger id="plotGroupColumn">
-							{draft.line.groupColumn || 'One stroke for every row'}
+							{draft.line.groupColumn || $t('plot.panel.oneStroke')}
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Group>
-								<Select.Item value={NO_COLUMN} label="None">One stroke for every row</Select.Item>
+								<Select.Item value={NO_COLUMN} label={$t('common.none')}
+									>{$t('plot.panel.oneStroke')}</Select.Item
+								>
 								{#each controller.groupColumns as column (column.name)}
 									<Select.Item value={column.name} label={column.name}>
 										{column.name}
@@ -574,26 +591,26 @@
 					</Select.Root>
 				</div>
 
-				<p class="hint">
-					Pick the column that names a cast or a station. Each value becomes one stroke, in its own
-					colour from the palette.
-				</p>
+				<p class="hint">{$t('plot.panel.groupHint')}</p>
 			{/if}
 
 			{#if usesZColumn(draft.type)}
 				<div class="axis-group z-group">
-					<h4 class="axis-heading">Z axis / Color</h4>
+					<h4 class="axis-heading">{$t('plot.panel.zAxis')}</h4>
 					<div class="field">
-						<Label for="plotZColumn">Colour column</Label>
+						<Label for="plotZColumn">{$t('plot.panel.colourColumn')}</Label>
 						<Select.Root
 							type="single"
 							value={draft.z?.column ?? NO_COLUMN}
 							onValueChange={(value) => setAxisColumn('z', value)}
 						>
-							<Select.Trigger id="plotZColumn">{draft.z?.column || 'None'}</Select.Trigger>
+							<Select.Trigger id="plotZColumn">{draft.z?.column || $t('common.none')}</Select.Trigger
+							>
 							<Select.Content>
 								<Select.Group>
-									<Select.Item value={NO_COLUMN} label="None">None</Select.Item>
+									<Select.Item value={NO_COLUMN} label={$t('common.none')}
+										>{$t('common.none')}</Select.Item
+									>
 									{#each controller.columns as column (column.name)}
 										<Select.Item value={column.name} label={column.name}>
 											{column.name}
@@ -609,7 +626,7 @@
 			{#if draft.type === 'histogram'}
 				<PlotSlider
 					id="histogramBins"
-					label="Bins"
+					label={$t('plot.panel.bins')}
 					min={2}
 					max={120}
 					step={1}
@@ -617,44 +634,42 @@
 					onCommit={(value) => patchHistogram({ binCount: value })}
 				/>
 
-				<p class="hint">
-					The bins span the X range. Pin the range in step 3 to count over a fixed window.
-				</p>
+				<p class="hint">{$t('plot.panel.binsHint')}</p>
 			{/if}
 		</PlotSection>
 
 		<PlotSection
 			step={3}
-			title="Properties"
+			title={$t('plot.panel.step.properties')}
 			summary={styleSummary}
 			open={openSection === 3}
 			onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
 		>
 			<details class="property-subsection" open>
-				<summary>Titles &amp; Labels</summary>
+				<summary>{$t('plot.panel.titlesAndLabels')}</summary>
 				<div class="subsection-body">
 					<div class="property-row">
 						<label class="field">
-							<span>Plot title</span>
+							<span>{$t('plot.panel.plotTitle')}</span>
 							<Input
 								type="text"
 								value={draft.title}
-								placeholder="No title"
+								placeholder={$t('plot.panel.noTitle')}
 								oninput={(event) => patchDraft({ title: event.currentTarget.value })}
 							/>
 						</label>
 						<div class="field">
-							<span>Title size</span>
+							<span>{$t('plot.panel.titleSize')}</span>
 							<Select.Root
 								type="single"
 								value={String(draft.style.titleFontSize)}
 								onValueChange={(value) => patchStyle({ titleFontSize: Number(value) })}
 							>
-								<Select.Trigger id="plotTitleSize">{draft.style.titleFontSize}px</Select.Trigger>
+								<Select.Trigger id="plotTitleSize">{$t('plot.panel.pixels', { size: draft.style.titleFontSize })}</Select.Trigger>
 								<Select.Content>
 									<Select.Group>
 										{#each sizeOptions(8, 40) as size (size)}
-											<Select.Item value={String(size)} label={`${size}px`}>{size}px</Select.Item>
+											<Select.Item value={String(size)} label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item>
 										{/each}
 									</Select.Group>
 								</Select.Content>
@@ -667,7 +682,7 @@
 									checked={draft.style.showCaption}
 									onCheckedChange={(checked) => patchStyle({ showCaption: !!checked })}
 								/>
-								<span>Show caption</span>
+								<span>{$t('plot.panel.showCaption')}</span>
 							</label>
 						</div>
 					</div>
@@ -675,28 +690,28 @@
 
 					<div class="property-row">
 						<label class="field"
-							><span>X-axis label</span><Input
+							><span>{$t('plot.panel.xAxisLabel')}</span><Input
 								type="text"
 								value={draft.x.label ?? ''}
 								placeholder={draft.type === 'cross-section'
-									? CROSS_SECTION_AXIS_LABEL
-									: (draft.x.column ?? 'Column name')}
+									? $t(CROSS_SECTION_AXIS_LABEL)
+									: (draft.x.column ?? $t('plot.panel.columnName'))}
 								oninput={(event) =>
 									patchAxis('x', { label: textOrNull(event.currentTarget.value) })}
 							/></label
 						>
 						<div class="field">
-							<span>Size</span><Select.Root
+							<span>{$t('plot.panel.size')}</span><Select.Root
 								type="single"
 								value={String(draft.style.xAxisTitleFontSize)}
 								onValueChange={(value) => patchStyle({ xAxisTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotXAxisTitleSize"
-									>{draft.style.xAxisTitleFontSize}px</Select.Trigger
+									>{$t('plot.panel.pixels', { size: draft.style.xAxisTitleFontSize })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={`${size}px`}>{size}px</Select.Item
+												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -705,28 +720,28 @@
 					</div>
 					<div class="property-row">
 						<label class="field"
-							><span>Y-axis label</span><Input
+							><span>{$t('plot.panel.yAxisLabel')}</span><Input
 								type="text"
 								value={draft.y.label ?? ''}
 								placeholder={draft.type === 'histogram'
-									? HISTOGRAM_AXIS_LABEL
-									: (draft.y.column ?? 'Column name')}
+									? $t(HISTOGRAM_AXIS_LABEL)
+									: (draft.y.column ?? $t('plot.panel.columnName'))}
 								oninput={(event) =>
 									patchAxis('y', { label: textOrNull(event.currentTarget.value) })}
 							/></label
 						>
 						<div class="field">
-							<span>Size</span><Select.Root
+							<span>{$t('plot.panel.size')}</span><Select.Root
 								type="single"
 								value={String(draft.style.yAxisTitleFontSize)}
 								onValueChange={(value) => patchStyle({ yAxisTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotYAxisTitleSize"
-									>{draft.style.yAxisTitleFontSize}px</Select.Trigger
+									>{$t('plot.panel.pixels', { size: draft.style.yAxisTitleFontSize })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={`${size}px`}>{size}px</Select.Item
+												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -735,25 +750,25 @@
 					</div>
 					<div class="property-row">
 						<label class="field"
-							><span>Legend</span><Input
+							><span>{$t('plot.panel.legend')}</span><Input
 								type="text"
 								value={draft.style.legendTitle}
-								placeholder="Use the default legend title"
+								placeholder={$t('plot.panel.legendDefault')}
 								oninput={(event) => patchStyle({ legendTitle: event.currentTarget.value })}
 							/></label
 						>
 						<div class="field">
-							<span>Size</span><Select.Root
+							<span>{$t('plot.panel.size')}</span><Select.Root
 								type="single"
 								value={String(draft.style.legendTitleFontSize)}
 								onValueChange={(value) => patchStyle({ legendTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotLegendTitleSize"
-									>{draft.style.legendTitleFontSize}px</Select.Trigger
+									>{$t('plot.panel.pixels', { size: draft.style.legendTitleFontSize })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={`${size}px`}>{size}px</Select.Item
+												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -761,16 +776,16 @@
 						</div>
 					</div>
 					<div class="field">
-						<span>Tick label size</span><Select.Root
+						<span>{$t('plot.panel.tickSize')}</span><Select.Root
 							type="single"
 							value={String(draft.style.tickFontSize)}
 							onValueChange={(value) => patchStyle({ tickFontSize: Number(value) })}
-							><Select.Trigger id="plotTickSize">{draft.style.tickFontSize}px</Select.Trigger
+							><Select.Trigger id="plotTickSize">{$t('plot.panel.pixels', { size: draft.style.tickFontSize })}</Select.Trigger
 							><Select.Content
 								><Select.Group
 									>{#each sizeOptions(6, 32) as size}<Select.Item
 											value={String(size)}
-											label={`${size}px`}>{size}px</Select.Item
+											label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 										>{/each}</Select.Group
 								></Select.Content
 							></Select.Root
@@ -780,11 +795,11 @@
 			</details>
 
 			<details class="property-subsection" open>
-				<summary>Data &amp; Color</summary>
+				<summary>{$t('plot.panel.dataAndColor')}</summary>
 				<div class="subsection-body">
 					{#if draft.type === 'line' || draft.type === 'histogram' || draft.z?.column}
 						<div class="field">
-							<Label for="plotPalette">Palette</Label><PalettePicker
+							<Label for="plotPalette">{$t('palette.label')}</Label><PalettePicker
 								id="plotPalette"
 								value={draft.style.palette}
 								reverse={draft.z?.column ? draft.z.reverse : false}
@@ -793,14 +808,13 @@
 						</div>
 						{#if draft.type === 'line'}<p class="hint">
 								{draft.line.groupColumn
-									? 'Every stroke takes one colour from the palette.'
-									: 'Group the plot in step 2 to give each stroke its own colour.'}
+									? $t('plot.panel.strokePalette')
+									: $t('plot.panel.groupForColours')}
 							</p>{:else if draft.type === 'histogram'}<p class="hint">
-								A solid palette colours every bar the same. A range palette colours each bar by
-								its count.
+								{$t('plot.panel.histogramPaletteHint')}
 							</p>{/if}
 					{:else}<div class="field">
-							<Label for="plotPointColor">Point colour</Label><PalettePicker
+							<Label for="plotPointColor">{$t('plot.panel.pointColour')}</Label><PalettePicker
 								id="plotPointColor"
 								value={solidPalette}
 								showGradients={false}
@@ -808,46 +822,49 @@
 							/>
 						</div>
 						<p class="hint">
-							Every point takes this colour. Bind a column to the colour axis in step 2 to paint
-							the points by value.
+							{$t('plot.panel.pointColourHint')}
 						</p>{/if}
 					{#if draft.z?.column}
 						<label class="checkbox-field"
 							><Checkbox
 								checked={draft.z.reverse}
 								onCheckedChange={(checked) => patchAxis('z', { reverse: !!checked })}
-							/><span>Reverse the palette</span></label
+							/><span>{$t('palette.reverse')}</span></label
 						>
 						<div class="field">
-							<span id="zRangeLabel">Colour range ({axisTitle(draft.z)})</span>
+							<span id="zRangeLabel">{$t('plot.panel.colourRange', { axis: axisTitle(draft.z) })}</span>
 							<div class="pair" role="group" aria-labelledby="zRangeLabel">
 								<Input
 									type="number"
 									value={draft.z.min ?? ''}
-									placeholder="auto"
+									placeholder={$t('visualisation.auto')}
 									oninput={(event) =>
 										patchAxis('z', { min: numberOrNull(event.currentTarget.value) })}
 								/><Input
 									type="number"
 									value={draft.z.max ?? ''}
-									placeholder="auto"
+									placeholder={$t('visualisation.auto')}
 									oninput={(event) =>
 										patchAxis('z', { max: numberOrNull(event.currentTarget.value) })}
 								/>
 							</div>
 						</div>
 						<div class="field">
-							<Label for="plotColorScale">Color scale</Label><Select.Root
+							<Label for="plotColorScale">{$t('plot.panel.colorScale')}</Label><Select.Root
 								type="single"
 								value={draft.z.scale}
 								onValueChange={(value) => setColorScale(value as ColorScale)}
 								><Select.Trigger id="plotColorScale"
-									>{draft.z.scale === 'logarithmic' ? 'Logarithmic' : 'Linear'}</Select.Trigger
+									>{draft.z.scale === 'logarithmic'
+										? $t('plot.panel.scaleLogarithmic')
+										: $t('plot.panel.scaleLinear')}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										><Select.Item value="linear" label="Linear">Linear</Select.Item><Select.Item
+										><Select.Item value="linear" label={$t('plot.panel.scaleLinear')}
+											>{$t('plot.panel.scaleLinear')}</Select.Item
+										><Select.Item
 											value="logarithmic"
-											label="Logarithmic">Logarithmic</Select.Item
+											label={$t('plot.panel.scaleLogarithmic')}>{$t('plot.panel.scaleLogarithmic')}</Select.Item
 										></Select.Group
 									></Select.Content
 								></Select.Root
@@ -859,21 +876,24 @@
 			</details>
 
 			<details class="property-subsection" open>
-				<summary>Markers</summary>
+				<summary>{$t('plot.panel.markers')}</summary>
 				<div class="subsection-body">
 					{#if draft.type === 'line'}
 						<div class="field">
-							<Label for="plotLineSort">Draw along</Label><Select.Root
+							<Label for="plotLineSort">{$t('plot.panel.drawAlong')}</Label><Select.Root
 								type="single"
 								value={draft.line.sortBy}
 								onValueChange={(value) => patchLine({ sortBy: value === 'y' ? 'y' : 'x' })}
 								><Select.Trigger id="plotLineSort"
-									>{draft.line.sortBy === 'y' ? 'The Y axis' : 'The X axis'}</Select.Trigger
+									>{draft.line.sortBy === 'y'
+										? $t('plot.panel.alongY')
+										: $t('plot.panel.alongX')}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										><Select.Item value="x" label="The X axis">The X axis</Select.Item><Select.Item
-											value="y"
-											label="The Y axis">The Y axis</Select.Item
+										><Select.Item value="x" label={$t('plot.panel.alongX')}
+											>{$t('plot.panel.alongX')}</Select.Item
+										><Select.Item value="y" label={$t('plot.panel.alongY')}
+											>{$t('plot.panel.alongY')}</Select.Item
 										></Select.Group
 									></Select.Content
 								></Select.Root
@@ -883,26 +903,26 @@
 							><Checkbox
 								checked={draft.line.showPoints}
 								onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
-							/><span>Mark every row with a dot</span></label
+							/><span>{$t('plot.panel.markRows')}</span></label
 						>
 					{:else if draft.type !== 'histogram'}<label class="checkbox-field"
 							><Checkbox
 								checked={draft.style.showPoints}
 								onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
-							/><span>Draw data points</span></label
+							/><span>{$t('plot.panel.drawPoints')}</span></label
 						>{/if}
 					{#if draft.type !== 'histogram' && (draft.type === 'line' ? draft.line.showPoints : draft.style.showPoints)}
 						<div class="field">
-							<span>Marker size</span><Select.Root
+							<span>{$t('plot.panel.markerSize')}</span><Select.Root
 								type="single"
 								value={String(draft.style.pointRadius)}
 								onValueChange={(value) => patchStyle({ pointRadius: Number(value) })}
-								><Select.Trigger id="plotPointRadius">{draft.style.pointRadius}px</Select.Trigger
+								><Select.Trigger id="plotPointRadius">{$t('plot.panel.pixels', { size: draft.style.pointRadius })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(0.5, 12, 0.5) as size}<Select.Item
 												value={String(size)}
-												label={`${size}px`}>{size}px</Select.Item
+												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -911,7 +931,7 @@
 					{/if}
 					<PlotSlider
 						id="plotPointOpacity"
-						label="Marker opacity"
+						label={$t('plot.panel.markerOpacity')}
 						min={0.05}
 						max={1}
 						step={0.05}
@@ -922,44 +942,44 @@
 			</details>
 
 			<details class="property-subsection" open>
-				<summary>Canvas</summary>
+				<summary>{$t('plot.panel.canvas')}</summary>
 				<div class="subsection-body">
 					<label class="checkbox-field"
 						><Checkbox
 							checked={draft.style.gridlines}
 							onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
-						/><span>Show gridlines</span></label
+						/><span>{$t('plot.panel.showGridlines')}</span></label
 					>
 					<div class="field color-field">
-						<span>Background color</span><input
+						<span>{$t('plot.panel.backgroundColor')}</span><input
 							id="plotBackgroundColour"
 							type="color"
 							value={draft.style.backgroundColor}
-							aria-label="Background color"
+							aria-label={$t('plot.panel.backgroundColor')}
 							onchange={(event) => patchStyle({ backgroundColor: event.currentTarget.value })}
 						/>
 					</div>
 					<div class="field color-field">
-						<span>Text color</span><input
+						<span>{$t('plot.panel.textColor')}</span><input
 							id="plotTextColour"
 							type="color"
 							value={draft.style.textColor}
-							aria-label="Text color"
+							aria-label={$t('plot.panel.textColor')}
 							onchange={(event) => patchStyle({ textColor: event.currentTarget.value })}
 						/>
 					</div>
 					<div class="field color-field">
-						<span>Gridline color</span><input
+						<span>{$t('plot.panel.gridlineColor')}</span><input
 							id="plotGridlineColour"
 							type="color"
 							value={draft.style.gridlineColor}
-							aria-label="Gridline color"
+							aria-label={$t('plot.panel.gridlineColor')}
 							onchange={(event) => patchStyle({ gridlineColor: event.currentTarget.value })}
 						/>
 					</div>
 					<PlotSlider
 						id="plotGridlineOpacity"
-						label="Gridline opacity"
+						label={$t('plot.panel.gridlineOpacity')}
 						min={0}
 						max={1}
 						step={0.05}
@@ -973,52 +993,46 @@
 		<!-- Contours rename to Advanced analysis -->
 		<PlotSection
 			step={4}
-			title="Advanced Analysis"
+			title={$t('plot.panel.step.analysis')}
 			summary={advancedAnalysisSummary}
 			open={openSection === 4}
 			onOpenChange={(isOpen) => openConfigSection(4, isOpen)}
 		>
 			{#if !usesZColumn(draft.type)}
 				<p class="hint">
-					Contours need a value per point. A {draft.type === 'line' ? 'line' : 'histogram'} has none,
-					so they are off for this plot type.
+					{draft.type === 'line'
+						? $t('plot.panel.noContoursLine')
+						: $t('plot.panel.noContoursHistogram')}
 				</p>
 			{:else if !draft.z?.column}
-				<p class="hint">
-					Contours read the colour axis. Bind a column to it in step 2 to switch them on.
-				</p>
+				<p class="hint">{$t('plot.panel.contoursNeedColour')}</p>
 			{:else}
 				<details class="analysis-subsection">
 					<summary class="analysis-header">
-						<span>Gridding &amp; Interpolation</span>
+						<span>{$t('plot.panel.gridding')}</span>
 					</summary>
 
 					<div class="analysis-body">
 						<label class="switch-field">
-							<span>Interpolate</span>
+							<span>{$t('plot.panel.interpolate')}</span>
 							<input
 								type="checkbox"
 								class="switch-input"
 								checked={draft.interpolation.enabled}
 								onchange={(event) => patchInterpolation({ enabled: event.currentTarget.checked })}
-								aria-label="Interpolate"
+								aria-label={$t('plot.panel.interpolate')}
 							/>
 							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
 							>
 						</label>
-						<p class="hint">
-							The selected X, Y and colour values are interpolated and drawn behind the points.
-						</p>
+						<p class="hint">{$t('plot.panel.interpolateHint')}</p>
 
 						{#if draft.interpolation.method === 'delaunay-barycentric'}
-							<p class="hint">
-								Delaunay draws inside the measured data footprint. Smoothed gridding fills the
-								outside.
-							</p>
+							<p class="hint">{$t('plot.panel.delaunayHint')}</p>
 						{/if}
 
 						<div class="field">
-							<Label for="interpolationMethod">Method</Label>
+							<Label for="interpolationMethod">{$t('plot.panel.method')}</Label>
 							<Select.Root
 								type="single"
 								value={draft.interpolation.method}
@@ -1026,15 +1040,15 @@
 									patchInterpolation({ method: value as PlotInterpolationMethod })}
 							>
 								<Select.Trigger id="interpolationMethod">
-									{interpolationMethodLabel(draft.interpolation.method)}
+									{$t(interpolationMethodLabel(draft.interpolation.method))}
 								</Select.Trigger>
 								<Select.Content>
 									<Select.Group>
-										<Select.Item value="gaussian" label="Gaussian smoothing">
-											Gaussian smoothing
+										<Select.Item value="gaussian" label={$t('plot.panel.methodGaussian')}>
+											{$t('plot.panel.methodGaussian')}
 										</Select.Item>
-										<Select.Item value="delaunay-barycentric" label="Delaunay triangulation">
-											Delaunay triangulation
+										<Select.Item value="delaunay-barycentric" label={$t('plot.panel.methodDelaunay')}>
+											{$t('plot.panel.methodDelaunay')}
 										</Select.Item>
 									</Select.Group>
 								</Select.Content>
@@ -1042,8 +1056,8 @@
 						</div>
 
 						<div class="field">
-							<span>Grid resolution</span>
-							<div class="pair" role="group" aria-label="Grid resolution">
+							<span>{$t('plot.panel.gridResolution')}</span>
+							<div class="pair" role="group" aria-label={$t('plot.panel.gridResolution')}>
 								<label class="range-field" for="interpolationGridX">
 									<span>x:</span>
 									<Input
@@ -1085,7 +1099,7 @@
 
 						<PlotSlider
 							id="interpolationSigma"
-							label={interpolationSmoothingLabel(draft.interpolation.method)}
+							label={$t(interpolationSmoothingLabel(draft.interpolation.method))}
 							min={0}
 							max={8}
 							step={0.1}
@@ -1095,7 +1109,7 @@
 
 						<div class="clip-range field">
 							<div class="clip-range-header">
-								<span>Clip limits</span><span
+								<span>{$t('plot.panel.clipLimits')}</span><span
 									>{draft.interpolation.percentileMin}% - {draft.interpolation.percentileMax}%</span
 								>
 							</div>
@@ -1117,7 +1131,7 @@
 												draft.interpolation.percentileMax
 											)
 										})}
-									aria-label="Clip minimum"
+									aria-label={$t('plot.panel.clipMin')}
 								/>
 								<input
 									id="interpolationPercentileMax"
@@ -1133,7 +1147,7 @@
 												draft.interpolation.percentileMin
 											)
 										})}
-									aria-label="Clip maximum"
+									aria-label={$t('plot.panel.clipMax')}
 								/>
 							</div>
 							<div class="clip-range-labels">
@@ -1146,7 +1160,7 @@
 						{#if draft.interpolation.method === 'gaussian'}
 							<PlotSlider
 								id="interpolationBands"
-								label="Colour bands"
+								label={$t('plot.panel.colourBands')}
 								min={2}
 								max={50}
 								step={1}
@@ -1159,30 +1173,27 @@
 
 				<details class="analysis-subsection">
 					<summary class="analysis-header">
-						<span>Contour Lines</span>
+						<span>{$t('plot.panel.contourLines')}</span>
 					</summary>
 
 					<div class="analysis-body">
 						<label class="switch-field">
-							<span>Draw contours</span>
+							<span>{$t('plot.panel.drawContours')}</span>
 							<input
 								type="checkbox"
 								class="switch-input"
 								checked={draft.contour.enabled}
 								onchange={(event) => patchContour({ enabled: event.currentTarget.checked })}
-								aria-label="Draw contour lines"
+								aria-label={$t('plot.panel.drawContourLines')}
 							/>
 							<span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span
 							>
 						</label>
-						<p class="hint">
-							The values are interpolated onto a grid, and the lines are clipped to the area the
-							rows cover.
-						</p>
+						<p class="hint">{$t('plot.panel.contourHint')}</p>
 
 						<PlotSlider
 							id="contourLevels"
-							label="Levels (number of contours)"
+							label={$t('plot.panel.levels')}
 							min={2}
 							max={30}
 							step={1}
@@ -1192,7 +1203,7 @@
 
 						<PlotSlider
 							id="contourGrid"
-							label="Grid detail"
+							label={$t('plot.panel.gridDetail')}
 							min={20}
 							max={300}
 							step={10}
@@ -1201,16 +1212,16 @@
 						/>
 
 						<div class="field">
-							<span>Line width</span><Select.Root
+							<span>{$t('plot.panel.lineWidth')}</span><Select.Root
 								type="single"
 								value={String(draft.contour.lineWidth)}
 								onValueChange={(value) => patchContour({ lineWidth: Number(value) })}
-								><Select.Trigger id="contourLineWidth">{draft.contour.lineWidth}px</Select.Trigger
+								><Select.Trigger id="contourLineWidth">{$t('plot.panel.pixels', { size: draft.contour.lineWidth })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(0.25, 5, 0.25) as size}<Select.Item
 												value={String(size)}
-												label={`${size}px`}>{size}px</Select.Item
+												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -1222,22 +1233,22 @@
 								checked={draft.contour.showLabels}
 								onCheckedChange={(checked) => patchContour({ showLabels: !!checked })}
 							/>
-							<span>Add label</span>
+							<span>{$t('plot.panel.addLabel')}</span>
 						</label>
 
 						{#if draft.contour.showLabels}
 							<div class="field">
-								<span>Label size</span><Select.Root
+								<span>{$t('plot.panel.labelSize')}</span><Select.Root
 									type="single"
 									value={String(draft.contour.labelFontSize)}
 									onValueChange={(value) => patchContour({ labelFontSize: Number(value) })}
 									><Select.Trigger id="contourLabelSize"
-										>{draft.contour.labelFontSize}px</Select.Trigger
+										>{$t('plot.panel.pixels', { size: draft.contour.labelFontSize })}</Select.Trigger
 									><Select.Content
 										><Select.Group
 											>{#each sizeOptions(6, 24) as size}<Select.Item
 													value={String(size)}
-													label={`${size}px`}>{size}px</Select.Item
+													label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
 												>{/each}</Select.Group
 										></Select.Content
 									></Select.Root
@@ -1271,18 +1282,18 @@
 		<footer class="apply-bar" class:dirty={isDirty}>
 			<button type="button" class="apply" disabled={!isDirty || !!colorScaleError} onclick={apply}>
 				<CheckIcon size={15} />
-				<span>Apply changes</span>
+				<span>{$t('plot.panel.applyChanges')}</span>
 			</button>
 
 			<button
 				type="button"
 				class="revert"
 				disabled={!isDirty}
-				title="Go back to what the chart is drawing"
+				title={$t('plot.panel.revertTitle')}
 				onclick={revert}
 			>
 				<Undo2Icon size={15} />
-				<span>Revert</span>
+				<span>{$t('plot.panel.revert')}</span>
 			</button>
 		</footer>
 	</aside>

@@ -172,7 +172,8 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
 			console.error('Failed to decode a shared query from the URL.', error);
 
 			addToast({
-				message: `Failed to decode a shared query from the URL: ${error?.message ?? error}`,
+				key: 'query.toast.decodeFailed',
+				message: String(error?.message ?? error),
 				type: 'error'
 			});
 

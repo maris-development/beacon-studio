@@ -21,6 +21,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	import type { StoredQuery } from '@/stores/stored-query';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
+	import { t, type Message } from '@/i18n';
 
 	// All state lives in the workspace; this component only reads/acts on it.
 	let { 
@@ -42,7 +43,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	 * settings, so without this read the cards keep the triangle after the user
 	 * turns the safeguard off on the settings page.
 	 */
-	function blockReasonFor(block: StoredQuery): string | null {
+	function blockReasonFor(block: StoredQuery): Message | null {
 		if (!$settings.requireQueryFilters) return null;
 		return runBlockReason(QueryWorkspace.getQuery(block));
 	}
@@ -82,13 +83,13 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		console.log('commitRenameBlock', editingName, trimmedName);
 
 		if (!trimmedName) {
-			addToast({ message: 'Query name cannot be empty.', type: 'warning' });
+			addToast({ key: 'workbench.toast.nameEmpty', type: 'warning' });
 			return;
 		}
 
 		const didRename = workspace.renameBlock(id, trimmedName);
 		if (!didRename) {
-			addToast({ message: 'Could not rename query draft.', type: 'error' });
+			addToast({ key: 'workbench.toast.renameFailed', type: 'error' });
 			return;
 		}
 
@@ -215,8 +216,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 									class="query-block-name-input"
 									value={editingName}
 									use:focusAndSelect
-									title="Edit query name"
-									aria-label="Edit query name"
+									title={$t('workbench.block.nameInput')}
+									aria-label={$t('workbench.block.nameInput')}
 									oninput={(event) => (editingName = event.currentTarget.value)}
 									onkeydown={(event) => handleRenameInputKeydown(block.id, event)}
 									onblur={() => handleRenameBlur(block.id)}
@@ -234,8 +235,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								variant="ghost"
 								size="icon"
 								class="query-block-icon-button"
-								title={editingBlockId === block.id ? 'Finish editing name' : 'Edit name'}
-								aria-label={editingBlockId === block.id ? 'Finish editing name' : 'Edit name'}
+								title={editingBlockId === block.id ? $t('workbench.block.finishRename') : $t('workbench.block.rename')}
+								aria-label={editingBlockId === block.id ? $t('workbench.block.finishRename') : $t('workbench.block.rename')}
 								onmousedown={(event: MouseEvent) => {
 									// Keep focus on the input so this click can't trigger a blur-commit
 									// followed by the click handler re-opening the editor (two-click bug).
@@ -262,8 +263,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								variant="ghost"
 								size="icon"
 								class="query-block-icon-button"
-								title="Duplicate query"
-								aria-label="Duplicate query"
+								title={$t('workbench.block.duplicate')}
+								aria-label={$t('workbench.block.duplicate')}
 								onclick={(event) => {
 									event.stopPropagation();
 									workspace.duplicateBlock(block.id);
@@ -276,8 +277,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								variant="ghost"
 								size="icon"
 								class="query-block-icon-button"
-								title="Close query"
-								aria-label="Close query"
+								title={$t('workbench.block.close')}
+								aria-label={$t('workbench.block.close')}
 								disabled={workspace.blocks.length === 1}
 								onclick={(event) => {
 									event.stopPropagation();
@@ -299,44 +300,43 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 						<div class="query-stats">
 							{#if node}
-								<span class="query-stat node-stat" title="Beacon node: {node.url}">
+								<span class="query-stat node-stat" title={$t('workbench.block.nodeTitle', { url: node.url })}>
 									<BeaconNodeStatus health={node} variant="dot" />
 									{node.name || node.url}
 								</span>
 							{:else if missingUrl}
-								<span class="query-stat node-stat missing" title="This node is not configured">
+								<span class="query-stat node-stat missing" title={$t('workbench.block.nodeMissing')}>
 									<TriangleAlertIcon size="0.75rem" />
 									{missingUrl}
 								</span>
 							{:else}
-								<span class="query-stat node-stat missing" title="Pick a node for this query">
-									No node
+								<span class="query-stat node-stat missing" title={$t('workbench.block.pickNode')}>
+									{$t('workbench.block.noNode')}
 								</span>
 							{/if}
-							<span class="query-stat" title="Selected table">
-								{status.dataTable || 'No table'}
+							<span class="query-stat" title={$t('workbench.block.tableTitle')}>
+								{status.dataTable || $t('workbench.block.noTable')}
 							</span>
-							<span class="query-stat" title="Amount of selected columns">
-								{status.columns} columns
+							<span class="query-stat" title={$t('workbench.block.columnsTitle')}>
+								{$t('common.columns', { count: status.columns })}
 							</span>
 							<span
 								class="query-stat filter-stat"
 								class:missing={blockReason}
-								title={blockReason ?? 'Amount of applied filters'}
+								title={blockReason ? $t(blockReason) : $t('workbench.block.filtersTitle')}
 							>
 								{#if blockReason}
 									<TriangleAlertIcon size="0.75rem" />
 								{/if}
-								{status.filters}
-								{status.filters == 1 ? 'filter' : 'filters'}
+								{$t('query.filterCount', { count: status.filters })}
 							</span>
-							<span class="query-stat" title="Run status / amount of rows returned">
+							<span class="query-stat" title={$t('workbench.block.runTitle')}>
 								{#if run.isRunning}
-									Running...
+									{$t('workbench.block.running')}
 								{:else if run.hasRun}
-									{run.rows} {run.rows == 1 ? 'row' : 'rows'}
+									{$t('common.rows', { count: run.rows ?? 0 })}
 								{:else}
-									Not cached
+									{$t('workbench.block.notCached')}
 								{/if}
 							</span>
 						</div>
@@ -348,7 +348,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 						<div
 							class="query-block-columns"
-							title="Selected columns: {'\n\t' + columns.join(', \n\t')}"
+							title={$t('workbench.block.selectedColumns', { columns: '\n\t' + columns.join(', \n\t') })}
 						>
 							{#if columns.length > 0}
 								{#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
@@ -360,7 +360,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 									</Badge>
 								{/if}
 							{:else}
-								<span class="query-block-muted">No columns selected</span>
+								<span class="query-block-muted">{$t('workbench.block.noColumns')}</span>
 							{/if}
 						</div>
 
@@ -389,8 +389,8 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		<button
 			type="button"
 			class="query-block-add"
-			title="New query"
-			aria-label="New query"
+			title={$t('workbench.block.add')}
+			aria-label={$t('workbench.block.add')}
 			onclick={() => workspace.addBlock()}
 		>
 			<CirclePlusIcon />

@@ -1,7 +1,9 @@
-export type SubItem = { title: string; url: string; adminOnly?: boolean };
+import type { MessageKey } from '@/i18n';
+
+export type SubItem = { title: MessageKey; url: string; adminOnly?: boolean };
 
 export type MenuItem = {
-	title: string;
+	title: MessageKey;
 	url: string;
 	/** Section root the item highlights on. Defaults to `url`. */
 	match?: string;
@@ -12,7 +14,7 @@ export type MenuItem = {
 	adminOnly?: boolean;
 };
 
-export type Group = { title: string; items: MenuItem[] };
+export type Group = { title: MessageKey; items: MenuItem[] };
 
 /** The menu without admin items while admin features are off. A group with no items goes too. */
 export function visibleGroups(groups: Group[], adminFeatures: boolean): Group[] {

@@ -15,6 +15,7 @@
 	import Button from '../buttons/Button.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
+	import { t, translate } from '@/i18n';
 		
 
     let {
@@ -135,7 +136,7 @@
 		} catch (error) {
 			if (node?.url !== requestedUrl) return;
 			console.error('Could not read the tables of the Beacon node.', error);
-			loadError = (error as Error)?.message || 'The Beacon node did not answer.';
+			loadError = (error as Error)?.message || translate('query.node.noAnswer');
 			loaded = true;
 			return;
 		}
@@ -242,9 +243,9 @@
 		above stays, so the user can also pick another node.
 	-->
 	<div class="load-error" role="alert">
-		<p class="load-error-title">Could not read the tables of "{node.name || node.url}".</p>
+		<p class="load-error-title">{$t('query.node.tablesFailed', { node: node.name || node.url })}</p>
 		<p class="load-error-reason">{loadError}</p>
-		<Button variant="secondary" onclick={() => loadTables()}>Try again</Button>
+		<Button variant="secondary" onclick={() => loadTables()}>{$t('query.node.retry')}</Button>
 	</div>
 
 	<hr>

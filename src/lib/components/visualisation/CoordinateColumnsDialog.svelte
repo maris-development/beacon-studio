@@ -15,6 +15,7 @@
 	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
 	import { untrack } from 'svelte';
 	import type { CoordinatePair } from '@/geo/spatial-selection';
+	import { t, type MessageKey } from '@/i18n';
 
 	let {
 		open = $bindable(false),
@@ -47,17 +48,17 @@
 	const sameColumn = $derived(!!latitude && latitude === longitude);
 
 	/** The reason that Apply must stay off, or null. */
-	const applyReason = $derived.by(() => {
+	const applyReason = $derived.by((): MessageKey | null => {
 		if (candidates.length < 2) {
-			return 'The query must select a latitude and a longitude column.';
+			return 'map.needsCoordinates';
 		}
 
 		if (!latitude || !longitude) {
-			return 'Pick the latitude and the longitude column.';
+			return 'map.columns.pickBoth';
 		}
 
 		if (sameColumn) {
-			return 'The latitude and the longitude column must differ.';
+			return 'map.columns.mustDiffer';
 		}
 
 		return null;
@@ -77,27 +78,26 @@
 </script>
 
 {#if open}
-	<Modal title="Coordinate columns" width="420px" onClose={() => (open = false)}>
+	<Modal title={$t('map.columns.title')} width="420px" onClose={() => (open = false)}>
 		<div class="coordinate-columns">
-			<p class="description">Pick the two columns that hold the position of each row.</p>
+			<p class="description">{$t('map.columns.description')}</p>
 
 			{#if candidates.length < 2}
 				<p class="warning" role="alert">
 					<TriangleAlertIcon size={16} />
-					This query selects less than two number columns. Add a latitude and a longitude column
-					first.
+					{$t('map.columns.tooFew')}
 				</p>
 			{:else}
 				<div class="field">
-					<Label size="sm" for="coordinateLatitude">Latitude column</Label>
+					<Label size="sm" for="coordinateLatitude">{$t('map.columns.latitude')}</Label>
 
 					<Select.Root type="single" name="coordinateLatitude" bind:value={latitude}>
 						<Select.Trigger id="coordinateLatitude" class="full-width">
-							{latitude || 'Select a column'}
+							{latitude || $t('visualisation.selectColumn')}
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Group>
-								<Select.Label>Query columns</Select.Label>
+								<Select.Label>{$t('map.columns.queryColumns')}</Select.Label>
 								{#each candidates as column (column)}
 									<Select.Item value={column} label={column}>{column}</Select.Item>
 								{/each}
@@ -107,15 +107,15 @@
 				</div>
 
 				<div class="field">
-					<Label size="sm" for="coordinateLongitude">Longitude column</Label>
+					<Label size="sm" for="coordinateLongitude">{$t('map.columns.longitude')}</Label>
 
 					<Select.Root type="single" name="coordinateLongitude" bind:value={longitude}>
 						<Select.Trigger id="coordinateLongitude" class="full-width">
-							{longitude || 'Select a column'}
+							{longitude || $t('visualisation.selectColumn')}
 						</Select.Trigger>
 						<Select.Content>
 							<Select.Group>
-								<Select.Label>Query columns</Select.Label>
+								<Select.Label>{$t('map.columns.queryColumns')}</Select.Label>
 								{#each candidates as column (column)}
 									<Select.Item value={column} label={column}>{column}</Select.Item>
 								{/each}
@@ -127,7 +127,7 @@
 				{#if sameColumn}
 					<p class="warning" role="alert">
 						<TriangleAlertIcon size={16} />
-						The latitude and the longitude column must differ.
+						{$t('map.columns.mustDiffer')}
 					</p>
 				{/if}
 			{/if}
@@ -136,23 +136,23 @@
 		<div slot="footer" class="footer">
 			<Button
 				variant="ghost"
-				title="Find the two columns by their names"
+				title={$t('map.columns.detectTitle')}
 				onclick={detect}
 			>
-				Detect
+				{$t('map.columns.detect')}
 			</Button>
 
 			<span class="spacer"></span>
 
-			<Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
+			<Button variant="outline" onclick={() => (open = false)}>{$t('common.cancel')}</Button>
 
 			<Button
 				variant="default"
-				title={applyReason ?? 'Use these two columns'}
+				title={$t(applyReason ?? 'map.columns.applyTitle')}
 				disabled={!!applyReason}
 				onclick={apply}
 			>
-				Apply
+				{$t('common.apply')}
 			</Button>
 		</div>
 	</Modal>

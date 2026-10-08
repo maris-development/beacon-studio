@@ -16,6 +16,7 @@
  */
 
 import { readonly, writable, type Readable } from 'svelte/store';
+import { translate } from '@/i18n';
 
 export interface ConfirmOptions {
 	title: string;
@@ -63,7 +64,7 @@ export function askConfirm(options: ConfirmOptions): Promise<boolean> {
 
 /** Shows one message with a single button. It replaces a native `alert`. */
 export function askAlert(options: Omit<ConfirmOptions, 'cancelLabel' | 'destructive'>): Promise<void> {
-	return askConfirm({ ...options, cancelLabel: null, confirmLabel: options.confirmLabel ?? 'OK' }).then(
+	return askConfirm({ ...options, cancelLabel: null, confirmLabel: options.confirmLabel ?? translate('common.ok') }).then(
 		() => undefined
 	);
 }

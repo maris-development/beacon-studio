@@ -23,11 +23,16 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
 import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
+import { AUTO_LANGUAGE, SUPPORTED_LOCALES, type MessageKey } from '@/i18n';
 
 /** The localStorage key of the settings object. */
 const STORAGE_KEY = 'beacon-studio.settings';
 
 export interface BeaconStudioSettings {
+	// -- general --------------------------------------------------------------
+	/** The language code of the app, or `auto` for the browser language. */
+	language: string;
+
 	// -- query ----------------------------------------------------------------
 	/** The output format of a new query block. */
 	defaultOutputFormat: string;
@@ -81,6 +86,8 @@ export interface BeaconStudioSettings {
 }
 
 export const DEFAULT_SETTINGS: BeaconStudioSettings = {
+	language: AUTO_LANGUAGE,
+
 	defaultOutputFormat: 'parquet',
 	queryCellLimit: 10_000_000,
 	requireQueryFilters: true,
@@ -109,13 +116,20 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 /** The keys of one settings object. */
 export type SettingKey = keyof BeaconStudioSettings;
 
-export type SettingGroup = 'Queries' | 'Result cache' | 'Map' | 'System' | 'Plot' | 'Telemetry';
+/** The id of a group. The page shows `settings.group.<id>`. */
+export type SettingGroup =
+	| 'general'
+	| 'queries'
+	| 'resultCache'
+	| 'map'
+	| 'system'
+	| 'plot'
+	| 'telemetry';
 
+/** The page shows `settings.field.<key>.label` and `.description` for each definition. */
 interface BaseDefinition {
 	key: SettingKey;
 	group: SettingGroup;
-	label: string;
-	description: string;
 }
 
 export interface NumberSettingDefinition extends BaseDefinition {
@@ -125,7 +139,7 @@ export interface NumberSettingDefinition extends BaseDefinition {
 	/** The step of the input, in display units. */
 	step?: number;
 	/** The unit of the display value. */
-	unit?: string;
+	unit?: MessageKey;
 	/**
 	 * The factor between the stored value and the display value. The page divides
 	 * by it for display, and multiplies by it on write. Default 1.
@@ -144,7 +158,8 @@ export interface BooleanSettingDefinition extends BaseDefinition {
 
 export interface SelectSettingDefinition extends BaseDefinition {
 	type: 'select';
-	options: Array<{ label: string; value: string }>;
+	/** `label` is a proper name and stays as it is. `labelKey` is translated. */
+	options: Array<{ value: string; label?: string; labelKey?: MessageKey }>;
 }
 
 export type SettingDefinition =
@@ -156,11 +171,18 @@ export type SettingDefinition =
 /** One entry per setting. The settings page builds its form from this list. */
 export const SETTING_DEFINITIONS: SettingDefinition[] = [
 	{
-		key: 'defaultOutputFormat',
-		group: 'Queries',
+		key: 'language',
+		group: 'general',
 		type: 'select',
-		label: 'Default output format',
-		description: 'The output format of a new query block.',
+		options: [
+			{ value: AUTO_LANGUAGE, labelKey: 'language.auto' },
+			...SUPPORTED_LOCALES.map((entry) => ({ value: entry.code, label: entry.name }))
+		]
+	},
+	{
+		key: 'defaultOutputFormat',
+		group: 'queries',
+		type: 'select',
 		options: [
 			{ label: 'Parquet', value: 'parquet' },
 			{ label: 'CSV', value: 'csv' },
@@ -170,184 +192,143 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
 	},
 	{
 		key: 'requireQueryFilters',
-		group: 'Queries',
-		type: 'boolean',
-		label: 'Require a filter',
-		description:
-			'Blocks a query with no filters in the workbench. Beacon must not read a whole table.'
+		group: 'queries',
+		type: 'boolean'
 	},
 	{
 		key: 'queryCellLimit',
-		group: 'Queries',
+		group: 'queries',
 		type: 'number',
-		label: 'Query cell limit',
-		description:
-			'The cap on result size in cells (rows × columns). A lower value keeps the browser stable. The row limit is this value divided by the number of columns.',
 		min: 1,
 		max: 1000,
 		step: 1,
-		unit: 'million cells',
+		unit: 'settings.unit.millionCells',
 		scale: 1_000_000
 	},
 	{
 		key: 'queryHistoryMax',
-		group: 'Queries',
+		group: 'queries',
 		type: 'number',
-		label: 'Query history size',
-		description: 'The number of rows in the query history. The oldest runs go away first.',
 		min: 1,
 		max: 1000,
 		step: 1,
-		unit: 'entries'
+		unit: 'settings.unit.entries'
 	},
 	{
 		key: 'memoryCacheMaxEntries',
-		group: 'Result cache',
+		group: 'resultCache',
 		type: 'number',
-		label: 'Memory cache entries',
-		description: 'The number of decoded results that stay in memory.',
 		min: 1,
 		max: 32,
 		step: 1,
-		unit: 'results'
+		unit: 'settings.unit.results'
 	},
 	{
 		key: 'workerMaxLoadedTables',
-		group: 'Result cache',
+		group: 'resultCache',
 		type: 'number',
-		label: 'Worker tables',
-		description: 'The number of tables that the Arrow worker holds for sort and group actions.',
 		min: 1,
 		max: 8,
 		step: 1,
-		unit: 'tables'
+		unit: 'settings.unit.tables'
 	},
 	{
 		key: 'diskCacheMaxEntries',
-		group: 'Result cache',
+		group: 'resultCache',
 		type: 'number',
-		label: 'Disk cache entries',
-		description: 'The number of results in the browser disk cache (OPFS).',
 		min: 1,
 		max: 500,
 		step: 1,
-		unit: 'results'
+		unit: 'settings.unit.results'
 	},
 	{
 		key: 'diskCacheMaxTotalBytes',
-		group: 'Result cache',
+		group: 'resultCache',
 		type: 'number',
-		label: 'Disk cache size',
-		description: 'The total size of the compressed results on disk.',
 		min: 64,
 		max: 65_536,
 		step: 64,
-		unit: 'MiB',
+		unit: 'settings.unit.mib',
 		scale: 1024 * 1024
 	},
 	{
 		key: 'diskCacheMaxAgeMs',
-		group: 'Result cache',
+		group: 'resultCache',
 		type: 'number',
-		label: 'Disk cache lifetime',
-		description: 'The age at which a result on disk becomes stale. A stale result goes away.',
 		min: 1,
 		max: 720,
 		step: 1,
-		unit: 'hours',
+		unit: 'settings.unit.hours',
 		scale: 60 * 60 * 1000
 	},
 	{
 		key: 'mapStyleUrl',
-		group: 'Map',
+		group: 'map',
 		type: 'text',
-		label: 'Base map style URL',
-		description: 'The MapLibre style URL of the base map. A change applies to the next map.',
 		placeholder: 'https://example.com/style.json'
 	},
 	{
 		key: 'mapGroupByDecimals',
-		group: 'Map',
+		group: 'map',
 		type: 'number',
-		label: 'Map group decimals',
-		description:
-			'The decimals that the map groups coordinates by. 4 = 11 m, 3 = 111 m, 2 = 1111 m, 1 = 11111 m, 0 = 111111 m.',
 		min: 0,
 		max: 6,
 		step: 1,
-		unit: 'decimals'
+		unit: 'settings.unit.decimals'
 	},
 	{
 		key: 'crossSectionWidthKm',
-		group: 'Map',
+		group: 'map',
 		type: 'number',
-		label: 'Cross section width',
-		description: 'The width of a new cross section band.',
 		min: 0.1,
 		max: 500,
 		step: 0.1,
-		unit: 'km'
+		unit: 'settings.unit.km'
 	},
 	{
 		key: 'sampleAfterRows',
-		group: 'Plot',
+		group: 'plot',
 		type: 'number',
-		label: 'Plot sample threshold',
-		description: 'The number of rows after which a plot samples the data. A lower value keeps the browser stable.',
 		min: 10_000,
 		max: 10_000_000,
 		step: 10_000,
-		unit: 'rows'
+		unit: 'settings.unit.rows'
 	},
 	{
 		key: 'systemInfoUpdateIntervalMs',
-		group: 'System',
+		group: 'system',
 		type: 'number',
-		label: 'System info refresh',
-		description: 'The period between two reads of the system info page.',
 		min: 0.5,
 		max: 60,
 		step: 0.5,
-		unit: 'seconds',
+		unit: 'settings.unit.seconds',
 		scale: 1000
 	},
 	{
 		key: 'adminFeatures',
-		group: 'System',
-		type: 'boolean',
-		label: 'Show admin features',
-		description:
-			'Shows the admin pages and the admin actions, for example dataset upload. An admin action asks for the admin username and password of the Beacon node.'
+		group: 'system',
+		type: 'boolean'
 	},
 	{
 		key: 'telemetryEnabled',
-		group: 'Telemetry',
-		type: 'boolean',
-		label: 'Send usage statistics',
-		description:
-			'The main switch. It sends usage events to beacon-datalake.org: page visits, query runs, downloads, searches, warnings and errors. A random id groups the events of this browser. It sends no account, no password and no result data. Switch this off to send nothing at all.'
+		group: 'telemetry',
+		type: 'boolean'
 	},
 	{
 		key: 'telemetryQueryDetails',
-		group: 'Telemetry',
-		type: 'boolean',
-		label: 'Send query telemetry',
-		description:
-			'Adds the content of a query to its events: the table, the columns, the filters with their values, and the drawn area. It also covers a data browser search term. Switch this off to keep the usage statistics, but without that content. The app then reports that a query ran, with its time, its row count, its node and its number of columns and filters. It does not report which table or which values you asked for. An error message can still name a table. This switch does nothing while "Send usage statistics" is off.'
+		group: 'telemetry',
+		type: 'boolean'
 	},
 	{
 		key: 'telemetryConsoleLog',
-		group: 'Telemetry',
-		type: 'boolean',
-		label: 'Include console.log output',
-		description:
-			'Adds console.log to the reported console output. Warnings and errors always go. Switch this on for a debug session only: a log line is noisy and it can hold a file path or a result value. This switch does nothing while "Send usage statistics" is off.'
+		group: 'telemetry',
+		type: 'boolean'
 	}
 ];
 
 /** The definitions that the settings page shows. A build without telemetry hides that group. */
 export const VISIBLE_SETTING_DEFINITIONS: SettingDefinition[] = SETTING_DEFINITIONS.filter(
-	(definition) => TELEMETRY_BUILD_ENABLED || definition.group !== 'Telemetry'
+	(definition) => TELEMETRY_BUILD_ENABLED || definition.group !== 'telemetry'
 );
 
 /** The definition of one key, or undefined for an unknown key. */

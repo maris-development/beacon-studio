@@ -12,6 +12,7 @@
 	import WavesIcon from '@lucide/svelte/icons/waves';
 	import type { Component } from 'svelte';
 	import { PLOT_TYPES, type PlotType } from '@/plots/plot-config';
+	import { t, type MessageKey } from '@/i18n';
 
 	let {
 		value,
@@ -35,9 +36,9 @@
 		return type === 'cross-section' && !crossSectionAvailable;
 	}
 
-	function hintFor(type: PlotType): string | null {
+	function hintFor(type: PlotType): MessageKey | null {
 		if (isDisabled(type)) {
-			return 'Draw a cross section on the map viewer first.';
+			return 'plot.type.crossSection.needsLine';
 		}
 		return null;
 	}
@@ -55,13 +56,13 @@
 			class:selected={value === type.id}
 			aria-pressed={value === type.id}
 			{disabled}
-			title={hint ?? type.description}
+			title={$t(hint ?? type.descriptionKey)}
 			onclick={() => onSelect(type.id)}
 		>
 			<Icon size={20} />
 
-			<span class="label">{type.label}</span>
-			<span class="description">{hint ?? type.description}</span>
+			<span class="label">{$t(type.labelKey)}</span>
+			<span class="description">{$t(hint ?? type.descriptionKey)}</span>
 		</button>
 	{/each}
 </div>

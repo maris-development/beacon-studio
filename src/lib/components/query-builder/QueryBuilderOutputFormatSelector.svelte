@@ -2,6 +2,7 @@
     import * as Select from '$lib/components/ui/select/index.js';
     import { BeaconClient } from '@/beacon-api/client';
     import { defaultOutputFormat } from '@/query/draft';
+    import { t } from '@/i18n';
 
     let {
         selected_output_format = $bindable(defaultOutputFormat())
@@ -11,7 +12,7 @@
     } = $props();
 </script>
 
-<h3>Output Format</h3>
+<h3>{$t('query.outputFormat.title')}</h3>
 
 <Select.Root type="single" name="outputFormat" bind:value={selected_output_format}>
     <Select.Trigger class="output-format-trigger">
@@ -19,7 +20,7 @@
     </Select.Trigger>
     <Select.Content>
         <Select.Group>
-            <Select.Label>Tables</Select.Label>
+            <Select.Label>{$t('query.outputFormat.listLabel')}</Select.Label>
             {#each Object.entries(BeaconClient.output_formats) as [label, value], index (index)}
                 <Select.Item {label} {value} />
             {/each}

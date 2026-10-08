@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDistanceToNow } from 'date-fns';
+	import { t, formatDate, formatRelative } from '@/i18n';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
@@ -27,7 +27,7 @@
 	/** Comma-separated selected columns, for a compact query summary. */
 	function columnSummary(entry: StoredQuery): string {
 		const columns = (entry.compiled?.query_parameters ?? []).map((p) => p.alias ?? p.column);
-		if (!columns.length) return '(no columns)';
+		if (!columns.length) return $t('query.entry.noColumns');
 		return columns.join(', ');
 	}
 
@@ -36,8 +36,8 @@
 	}
 
 	function lastExecuted(entry: StoredQuery): string {
-		if (!entry.lastExecutedAt) return 'never';
-		return formatDistanceToNow(entry.lastExecutedAt, { addSuffix: true });
+		if (!entry.lastExecutedAt) return $t('history.entry.never');
+		return $formatRelative(entry.lastExecutedAt);
 	}
 
 	/**
@@ -69,14 +69,14 @@
 		const link = buildShareLink(entry);
 
 		if (!link) {
-			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
+			addToast({ type: 'warning', key: 'query.share.none' });
 			return;
 		}
 
 		if (await Utils.copyToClipboard(link)) {
-			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
+			addToast({ type: 'success', key: 'query.share.copied' });
 		} else {
-			addToast({ type: 'error', message: 'Could not copy the share link.' });
+			addToast({ type: 'error', key: 'query.share.copyFailed' });
 		}
 	}
 
@@ -92,21 +92,21 @@
 </script>
 
 <svelte:head>
-	<title>Query History - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('history.title') })}</title>
 </svelte:head>
 
 {#if showInfoModal}
 	<CacheInfoModal onClose={() => closeInfo()} />
 {/if}
 
-<Cookiecrumb crumbs={[{ label: 'Queries', href: resolve('/queries') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.queries'), href: resolve('/queries') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
 		<div class="header">
 			<div>
-				<h1>Query History</h1>
-				<p>Queries you've executed. Re-run, view, or edit any of them.</p>
+				<h1>{$t('history.title')}</h1>
+				<p>{$t('history.intro')}</p>
 			</div>
 			<div class="buttons">
 				<Button variant="outline" onclick={() => showInfo()}>
@@ -115,7 +115,7 @@
 
 				{#if entries.length > 0}
 					<Button variant="outline" onclick={() => clearHistory()}>
-						Clear history
+						{$t('history.clear')}
 						<Trash2Icon />
 					</Button>
 				{/if}
@@ -124,8 +124,8 @@
 
 		{#if entries.length === 0}
 			<Card>
-				<h2>No queries yet</h2>
-				<p>Once you execute a query, it will show up here.</p>
+				<h2>{$t('history.empty.title')}</h2>
+				<p>{$t('history.empty.text')}</p>
 			</Card>
 		{:else}
 			<ul class="executed-queries">
@@ -137,14 +137,14 @@
 									<div class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</div>
 									<div class="meta">
 										<span class="badge">{entry.node.name || entry.node.url}</span>
-										<span>{(entry.rowCount ?? 0).toLocaleString()} rows</span>
-										<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-										<span>{Math.round(entry.duration ?? 0).toLocaleString()} ms</span>
-										<span title={entry.lastExecutedAt ? new Date(entry.lastExecutedAt).toLocaleString() : ''}>
+										<span>{$t('common.rows', { count: entry.rowCount ?? 0 })}</span>
+										<span>{$t('query.filterCount', { count: filterCount(entry) })}</span>
+										<span>{$t('history.entry.duration', { ms: Math.round(entry.duration ?? 0) })}</span>
+										<span title={entry.lastExecutedAt ? $formatDate(new Date(entry.lastExecutedAt), { dateStyle: 'short', timeStyle: 'medium' }) : ''}>
 											{lastExecuted(entry)}
 										</span>
 										{#if entry.executionCount > 1}
-											<span>· run {entry.executionCount}×</span>
+											<span>{$t('history.entry.runCount', { count: entry.executionCount })}</span>
 										{/if}
 									</div>
 								</div>
@@ -154,17 +154,17 @@
 										size="sm"
 										variant="outline"
 										onclick={() => openInWorkbench(entry)}
-										title="Open in Query Builder"
+										title={$t('query.entry.openInBuilder')}
 									>
 										<WorkbenchIcon />
-										Query Builder
+										{$t('nav.item.queryBuilder')}
 									</Button>
 									<Button
 										size="sm"
 										variant="outline"
 										onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
 									>
-										Table
+										{$t('query.entry.table')}
 										<TableIcon />
 									</Button>
 									<Button
@@ -172,7 +172,7 @@
 										variant="outline"
 										onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
 									>
-										Map
+										{$t('query.entry.map')}
 										<MapIcon />
 									</Button>
 									<Button
@@ -180,7 +180,7 @@
 										variant="outline"
 										onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
 									>
-										Chart
+										{$t('query.entry.chart')}
 										<ChartPieIcon />
 									</Button>
 									<!-- <Button
@@ -195,7 +195,7 @@
 										size="sm"
 										variant="ghost"
 										onclick={() => copyShareLink(entry)}
-										title="Copy a link that works in any browser"
+										title={$t('query.share.copyTitle')}
 									>
 										<Share2Icon />
 									</Button>
@@ -203,7 +203,7 @@
 										size="sm"
 										variant="ghost"
 										onclick={() => queryHistory.remove(entry.id)}
-										title="Remove from history"
+										title={$t('history.entry.remove')}
 									>
 										<Trash2Icon />
 									</Button>

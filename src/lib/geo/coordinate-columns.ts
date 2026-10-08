@@ -20,6 +20,8 @@
  * assuming degrees.
  */
 
+import { message, type Message } from '@/i18n';
+
 /** How the numbers in a coordinate column are encoded. */
 export type CoordinateSystem =
 	/** Plain WGS84 decimal degrees. The only system the geo filter accepts. */
@@ -56,7 +58,7 @@ export type CoordinateDetection = {
 	 * Callers must gate the geo filter on this, not on the two names.
 	 */
 	usableForGeoFilter: boolean;
-	warnings: string[];
+	warnings: Message[];
 };
 
 /** Sample values for one column. Strings are fine; they get coerced. */
@@ -207,11 +209,11 @@ function looksLikeDegreesMinutes(values: number[], limit: number): boolean {
 export function detectCoordinateSystem(
 	latValues: number[],
 	lonValues: number[]
-): { system: CoordinateSystem; scale: number; warnings: string[] } {
-	const warnings: string[] = [];
+): { system: CoordinateSystem; scale: number; warnings: Message[] } {
+	const warnings: Message[] = [];
 
 	if (latValues.length === 0 || lonValues.length === 0) {
-		return { system: 'unknown', scale: 1, warnings: ['No sample values, so the unit is unverified.'] };
+		return { system: 'unknown', scale: 1, warnings: [message('geo.warning.noSamples')] };
 	}
 
 	const maxLat = Math.max(...latValues.map(Math.abs));
@@ -222,9 +224,7 @@ export function detectCoordinateSystem(
 		 * equator produces the same range. Degrees is far more common, so it
 		 * wins, but a caller showing a map should surface the note. */
 		if (maxLat <= Math.PI / 2 && maxLon <= Math.PI) {
-			warnings.push(
-				'Values also fit radians. Degrees assumed, which is wrong if the extent is really global.'
-			);
+			warnings.push(message('geo.warning.mayBeRadians'));
 		}
 		return { system: 'degrees', scale: 1, warnings };
 	}
@@ -236,7 +236,7 @@ export function detectCoordinateSystem(
 		return {
 			system: 'degrees-minutes',
 			scale: 1,
-			warnings: ['Values look like packed degrees and minutes (ddmm.mmm).']
+			warnings: [message('geo.warning.packedDegrees')]
 		};
 	}
 
@@ -254,7 +254,7 @@ export function detectCoordinateSystem(
 				return {
 					system: 'scaled-degrees',
 					scale,
-					warnings: [`Values look like degrees scaled by ${scale.toExponential(0)}.`]
+					warnings: [message('geo.warning.scaledDegrees', { scale: scale.toExponential(0) })]
 				};
 			}
 		}
@@ -268,16 +268,14 @@ export function detectCoordinateSystem(
 		return {
 			system: 'web-mercator',
 			scale: 1,
-			warnings: ['Values look like EPSG:3857 metres.']
+			warnings: [message('geo.warning.webMercator')]
 		};
 	}
 
 	return {
 		system: 'projected-metres',
 		scale: 1,
-		warnings: [
-			'Values are metres in an unknown projection, probably UTM. The zone is not recoverable from the data, so these cannot be converted here.'
-		]
+		warnings: [message('geo.warning.unknownProjection')]
 	};
 }
 
@@ -398,7 +396,7 @@ export function detectCoordinateColumns(
 			system: 'unknown',
 			scale: 1,
 			usableForGeoFilter: false,
-			warnings: ['No latitude and longitude columns found.']
+			warnings: [message('geo.warning.noColumns')]
 		};
 	}
 
@@ -420,7 +418,7 @@ export function detectCoordinateColumns(
 	let latValues = toNumbers(samples?.[latitude.name]);
 	let lonValues = toNumbers(samples?.[longitude.name]);
 
-	const warnings: string[] = [];
+	const warnings: Message[] = [];
 
 	/* A latitude beyond 90 next to a longitude within it means the two are the
 	 * wrong way round. Only trust this when the ranges disagree clearly. */
@@ -431,7 +429,7 @@ export function detectCoordinateColumns(
 		if (maxLat > 90 && maxLat <= 180 && maxLon <= 90) {
 			[latitude, longitude] = [longitude, latitude];
 			[latValues, lonValues] = [lonValues, latValues];
-			warnings.push('The two columns were swapped: the value ranges say the axes are reversed.');
+			warnings.push(message('geo.warning.swapped'));
 		}
 	}
 

@@ -8,6 +8,7 @@
 	import ParameterFilter from './ParameterFilter.svelte';
 	import type { SelectedFilterType } from '@/query/filter-types';
 	import { Utils } from '@/utils';
+	import { t } from '@/i18n';
 
 	let {
 		column = $bindable(),
@@ -33,8 +34,8 @@
 					// console.log('Removing column.');
 					remove_column(column.name);
 				}}
-				title="Remove column"
-				aria-label="Remove column"
+				title={$t('query.parameters.remove')}
+				aria-label={$t('query.parameters.remove')}
 				variant="outline"
 			>
 				<CircleXIcon />
@@ -58,7 +59,7 @@
 
 					<Button variant="ghost" size="xs"
 						 class="remove-filter" 
-						 title="Remove filter" aria-label="Remove filter"
+						 title={$t('filter.remove')} aria-label={$t('filter.remove')}
 						 onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
 						<CircleXIcon class="circle-x" />
 					</Button>

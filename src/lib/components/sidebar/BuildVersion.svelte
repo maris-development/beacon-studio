@@ -9,16 +9,22 @@
 		commitUrl
 	} from '$lib/build-info';
 
-	const label: string = GIT_COMMIT_SHORT || 'unknown';
-	const builtAt: string = new Date(BUILD_TIME).toLocaleString();
-	const tooltip: string = [
-		GIT_COMMIT ? `Commit ${GIT_COMMIT}` : 'Commit unknown',
-		GIT_BRANCH ? `Branch ${GIT_BRANCH}` : null,
-		GIT_DIRTY ? 'Uncommitted changes' : null,
-		`Built ${builtAt}`
-	]
-		.filter(Boolean)
-		.join('\n');
+	import { formatDate, formatTime, t } from '@/i18n';
+
+	const label: string = $derived(GIT_COMMIT_SHORT || $t('build.unknown'));
+	const builtAt: string = $derived(
+		`${$formatDate(new Date(BUILD_TIME))} ${$formatTime(new Date(BUILD_TIME))}`
+	);
+	const tooltip: string = $derived(
+		[
+			GIT_COMMIT ? $t('build.commit', { commit: GIT_COMMIT }) : $t('build.commitUnknown'),
+			GIT_BRANCH ? $t('build.branch', { branch: GIT_BRANCH }) : null,
+			GIT_DIRTY ? $t('build.dirty') : null,
+			$t('build.built', { time: builtAt })
+		]
+			.filter(Boolean)
+			.join('\n')
+	);
 </script>
 
 <div class="build-version">

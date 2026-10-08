@@ -20,6 +20,7 @@
 	import { Input } from '@/components/ui/input';
 	import { runBlockReason } from '@/query/query-guard';
 	import { settings } from '@/stores/settings';
+	import { t } from '@/i18n';
 
 	let entry = $state.raw<DatasetEntry | null>(null);
 	let table: ApacheArrow.Table | null = $derived(entry?.table ?? null);
@@ -107,7 +108,7 @@
 			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
 			if (blockedKey !== lastBlockedKey) {
 				lastBlockedKey = blockedKey;
-				addToast({ type: 'warning', message: blocked });
+				addToast({ type: 'warning', key: blocked.key, values: blocked.values });
 			}
 
 			entry = null;
@@ -181,7 +182,7 @@
 				reportVisualise();
 				addToast({
 					type: 'info',
-					message: `Query executed successfully but returned no data.`
+					key: 'visualisation.toast.noData'
 				});
 				return;
 			}
@@ -199,7 +200,8 @@
 			console.error('Failed to execute query:', error);
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${error.message}`
+				key: 'visualisation.toast.queryFailed',
+				message: error.message
 			});
 		}
 	}
@@ -208,7 +210,7 @@
 		if (!table) {
 			addToast({
 				type: 'error',
-				message: 'No table data available to display.'
+				key: 'table.toast.noData'
 			});
 			return;
 		}
@@ -248,7 +250,8 @@
 			console.error('Error sorting table:', error);
 			addToast({
 				type: 'error',
-				message: `Failed to sort table: ${error.message}`
+				key: 'table.toast.sortFailed',
+				message: error.message
 			});
 		}
 	}
@@ -271,13 +274,13 @@
 </script>
 
 <svelte:head>
-	<title>Table explorer - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('table.title') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Visualisations', href: '/visualisations' },
-		{ label: 'Table explorer', href: '/visualisations/table-explorer' }
+		{ label: $t('visualisation.title'), href: '/visualisations' },
+		{ label: $t('table.title'), href: '/visualisations/table-explorer' }
 	]}
 />
 
@@ -289,21 +292,22 @@
 
 		<div class="content page-container">
 			{#if !compiledQuery}
-				<p>Select a valid query above to see its data.</p>
+				<p>{$t('table.selectQuery')}</p>
 			{:else}
 				<div class="top-bar">
 					<p>
 						{#if table?.numRows == null}
-							Loading rows…
+							{$t('visualisation.loadingRows')}
 						{:else}
-							{table.numRows} rows selected in {Utils.formatSecondsToReadableTime(
-								queryDurationMs / 1000
-							)}.
+							{$t('visualisation.rowsSelected', {
+								count: table.numRows,
+								duration: Utils.formatSecondsToReadableTime(queryDurationMs / 1000)
+							})}
 						{/if}
 					</p>
 
 					<div class="page-size-input">
-						<label for="page-size">Rows per page:</label>
+						<label for="page-size">{$t('table.rowsPerPage')}</label>
 						<Input
 							id="page-size"
 							type="number"

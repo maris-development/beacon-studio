@@ -12,6 +12,7 @@
 	import { page } from '$app/state';
 	import { addToast, dismissToast } from '@/stores/toasts';
 	import { openFeedback } from '$lib/feedback';
+	import { t, type MessageKey } from '@/i18n';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -32,84 +33,84 @@
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
+	import LanguageMenu from './LanguageMenu.svelte';
 	import { settings } from '@/stores/settings';
 	import { visibleGroups, type Group, type MenuItem } from './menu';
 
-
 	const groups: Group[] = [
 		{
-			title: 'Data Access',
+			title: 'nav.group.dataAccess',
 			items: [
 				{
-					title: 'Queries',
+					title: 'nav.item.queries',
 					url: resolve('/queries/workbench'),
 					match: resolve('/queries'),
 					icon: TextSearchIcon,
 					children: [
-						{ title: 'Query Builder', url: resolve('/queries/workbench') },
-						{ title: 'Saved Queries', url: resolve('/queries/saved') },
-						{ title: 'Query History', url: resolve('/queries/history') }
+						{ title: 'nav.item.queryBuilder', url: resolve('/queries/workbench') },
+						{ title: 'nav.item.savedQueries', url: resolve('/queries/saved') },
+						{ title: 'nav.item.queryHistory', url: resolve('/queries/history') }
 					]
 				},
-				{ title: 'SQL Editor', url: resolve('/sql-editor'), icon: SquareTerminalIcon }
+				{ title: 'nav.item.sqlEditor', url: resolve('/sql-editor'), icon: SquareTerminalIcon }
 			]
 		},
 		{
-			title: 'Explore and Analyze',
+			title: 'nav.group.explore',
 			items: [
 				{
-					title: 'Workspace',
+					title: 'nav.item.workspace',
 					url: resolve('/visualisations/map-viewer'),
 					match: resolve('/visualisations'),
 					icon: EyeIcon,
 					children: [
-						{ title: 'Map Viewer', url: resolve('/visualisations/map-viewer') },
-						{ title: 'Table Explorer', url: resolve('/visualisations/table-explorer') },
-						{ title: 'Chart Explorer', url: resolve('/visualisations/chart-explorer') }
+						{ title: 'nav.item.mapViewer', url: resolve('/visualisations/map-viewer') },
+						{ title: 'nav.item.tableExplorer', url: resolve('/visualisations/table-explorer') },
+						{ title: 'nav.item.chartExplorer', url: resolve('/visualisations/chart-explorer') }
 					]
 				}
 			]
 		},
 		{
-			title: 'Node Management',
+			title: 'nav.group.nodeManagement',
 			items: [
 				{
-					title: 'Data Browser',
+					title: 'nav.item.dataBrowser',
 					url: resolve('/data-browser'),
 					icon: Table2Icon,
 					children: [
-						{ title: 'Datasets', url: resolve('/data-browser/datasets') },
-						{ title: 'Data Tables', url: resolve('/data-browser/data-tables') },
-						{ title: 'Crawlers', url: resolve('/data-browser/crawlers'), adminOnly: true }
+						{ title: 'nav.item.datasets', url: resolve('/data-browser/datasets') },
+						{ title: 'nav.item.dataTables', url: resolve('/data-browser/data-tables') },
+						{ title: 'nav.item.crawlers', url: resolve('/data-browser/crawlers'), adminOnly: true }
 					]
 				},
-				{ title: 'System Info', url: resolve('/system-info'), icon: CpuIcon }
+				{ title: 'nav.item.systemInfo', url: resolve('/system-info'), icon: CpuIcon }
 			]
 		},
 		{
-			title: 'Beacon Studio',
+			title: 'nav.group.studio',
 			items: [
-				{ title: 'Beacon Nodes', url: resolve('/beacon-nodes'), icon: LinkIcon },
-				{ title: 'Settings', url: resolve('/settings'), icon: Settings2Icon }
+				{ title: 'nav.item.beaconNodes', url: resolve('/beacon-nodes'), icon: LinkIcon },
+				{ title: 'nav.item.settings', url: resolve('/settings'), icon: Settings2Icon }
 			]
 		}
 	];
 
 	const footer: MenuItem[] = [
 		{
-			title: 'More about Studio',
+			title: 'nav.item.aboutStudio',
 			url: 'https://beacon-datalake.org/ecosystem/studio',
 			icon: InfoIcon,
 			target: '_blank'
 		},
 		{
-			title: 'Documentation',
+			title: 'nav.item.documentation',
 			url: 'https://maris-development.github.io/beacon/',
 			icon: BookOpenIcon,
 			target: '_blank'
 		},
 		{
-			title: 'GitHub',
+			title: 'nav.item.github',
 			url: 'https://github.com/maris-development/beacon',
 			icon: LifeBuoyIcon,
 			target: '_blank'
@@ -140,10 +141,7 @@
 	}
 
 	function warnNoNode(): void {
-		addToast({
-			type: 'error',
-			message: 'This page needs a Beacon node. Add one on the Beacon Nodes page.'
-		});
+		addToast({ type: 'error', key: 'nav.needsNode' });
 	}
 
 	// The app needs at least one node for every route but the two above: this
@@ -200,8 +198,7 @@
 		waitToastId = addToast({
 			type: 'info',
 			timeout: 0,
-			message:
-				'Beacon Studio reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive.'
+			key: 'nav.waitForNodes'
 		});
 	});
 
@@ -213,7 +210,7 @@
 
 {#if isMobile && !collapsed}
 	<button class="sidebar-backdrop" 
-			aria-label="Close menu" 
+			aria-label={$t('nav.closeMenu')} 
 			onclick={() => (collapsed = true)}></button>
 {/if}
 
@@ -221,8 +218,8 @@
 	<div class="sidebar-header">
 		<div class="logo-wrapper">
 			<a class="header-link" href={resolve('/')}>
-				<img src={logo} alt="Beacon Logo" class="beacon-logo" />
-				<span class="app-name">Beacon Studio</span>
+				<img src={logo} alt={$t('app.logoAlt')} class="beacon-logo" />
+				<span class="app-name">{$t('app.name')}</span>
 			</a>
 			<button
 				class="collapse-toggle"
@@ -244,18 +241,18 @@
 	<div class="sidebar-content">
 		{#each shownGroups as group (group.title)}
 			<div class="menu-group">
-				<span class="menu-title">{group.title}</span>
+				<span class="menu-title">{$t(group.title)}</span>
 				{#each group.items as item (item.url)}
 					{#if item.children?.length}
 						<SidebarCollapsibleMenu
-							title={item.title}
+							title={$t(item.title)}
 							url={item.url}
 							match={item.match}
 							icon={item.icon}
-							items={item.children}
+							items={item.children.map((child) => ({ title: $t(child.title), url: child.url }))}
 						/>
 					{:else}
-						<SidebarMenuItem title={item.title} url={item.url} icon={item.icon} />
+						<SidebarMenuItem title={$t(item.title)} url={item.url} icon={item.icon} />
 					{/if}
 				{/each}
 			</div>
@@ -265,10 +262,16 @@
 	<div class="sidebar-footer">
 		<div class="menu-group">
 			{#each footer as item (item.url)}
-				<SidebarMenuItem title={item.title} url={item.url} icon={item.icon} target={item.target} />
+				<SidebarMenuItem
+					title={$t(item.title)}
+					url={item.url}
+					icon={item.icon}
+					target={item.target}
+				/>
 			{/each}
+			<LanguageMenu />
 			<SidebarMenuItem
-				title="Feedback"
+				title={$t('nav.item.feedback')}
 				icon={SendIcon}
 				onclick={() => openFeedback(page.route.id)}
 			/>
