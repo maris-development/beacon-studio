@@ -2,7 +2,7 @@
 name = "app"
 version = "0.1.0"
 description = "Beacon Studio: explore environmental data from Beacon nodes. Build queries, and show the results on maps, in tables and in charts."
-authors = ["MARIS B.V.", "Paul Weerheim"]
+authors = ["MARIS B.V.", "Paul Weerheim", "Jasper van den Barg"]
 license = "Apache-2.0"
 repository = "https://github.com/maris-development/beacon-studio"
 edition = "2021"
