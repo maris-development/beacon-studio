@@ -1,6 +1,7 @@
 // TEMPORARY: SDK `admin.runCrawler()` returns void and drops the crawl report. Delete this file when the SDK returns it.
 
 import { ApiError, ConnectionError, basicAuthHeader } from '@maris-development/beacon-client';
+import { translate } from '@/i18n';
 
 export interface CrawlReport {
 	crawler: string;
@@ -85,6 +86,6 @@ export async function runCrawlerReport(
 	try {
 		return parseCrawlReport(JSON.parse(text));
 	} catch {
-		throw new Error('The Beacon node sent no run report.');
+		throw new Error(translate('dataBrowser.crawlers.noReport'));
 	}
 }

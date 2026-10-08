@@ -5,6 +5,7 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import XIcon from '@lucide/svelte/icons/x';
 	import type { TabsState } from '@/sql/tabs';
+	import { t } from '@/i18n';
 
 	type Props = {
 		state: TabsState;
@@ -55,7 +56,7 @@
 			<button
 				type="button"
 				class="close"
-				aria-label="Close {tab.title}"
+				aria-label={$t('sqlEditor.tabs.close', { title: tab.title })}
 				onclick={() => onClose(tab.id)}
 			>
 				<XIcon class="size-3" />
@@ -63,7 +64,7 @@
 		</div>
 	{/each}
 
-	<button type="button" class="add" aria-label="New tab" onclick={onAdd}>
+	<button type="button" class="add" aria-label={$t('sqlEditor.tabs.add')} onclick={onAdd}>
 		<PlusIcon class="size-4" />
 	</button>
 </div>

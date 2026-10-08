@@ -11,6 +11,7 @@
 	import { ensureFresh } from '@/services/beacon-node-connect';
 	import { signedInNodeIds, signOut } from '@/services/admin-session';
 	import { settings } from '@/stores/settings';
+	import { t } from '@/i18n';
 
 	let { actions }: { actions?: Snippet } = $props();
 
@@ -25,7 +26,7 @@
 </script>
 
 <div class="node-picker">
-	<Label size="sm" for="beacon-node-select">Beacon Node</Label>
+	<Label size="sm" for="beacon-node-select">{$t('admin.nodePicker.label')}</Label>
 
 	<div class="picker-row">
 		<Select.Root
@@ -35,11 +36,11 @@
 			onValueChange={(id) => selectNode(id)}
 		>
 			<Select.Trigger id="beacon-node-select" class="node-select-trigger">
-				{$currentNode?.name ?? 'Select a node'}
+				{$currentNode?.name ?? $t('admin.nodePicker.placeholder')}
 			</Select.Trigger>
 			<Select.Content>
 				<Select.Group>
-					<Select.Label>Nodes</Select.Label>
+					<Select.Label>{$t('admin.nodePicker.group')}</Select.Label>
 					{#each $nodes as node (node.id)}
 						<Select.Item value={node.id} label={node.name}>
 							{node.name}
@@ -62,9 +63,9 @@
 
 	{#if signedIn && $currentNode}
 		<p class="session-line">
-			Signed in ·
+			{$t('admin.nodePicker.signedIn')} ·
 			<button type="button" class="sign-out" onclick={() => signOut($currentNode.id)}>
-				Sign out
+				{$t('admin.nodePicker.signOut')}
 			</button>
 		</p>
 	{/if}

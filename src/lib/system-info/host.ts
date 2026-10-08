@@ -1,4 +1,5 @@
-import { formatSize } from '@/data-browser/datasets';
+import { formatSize, type NumberFormatter } from '@/data-browser/datasets';
+import { message, type Message } from '@/i18n';
 
 export interface Usage {
 	used: number;
@@ -114,24 +115,27 @@ export function readInfo(raw: unknown): InfoView {
 	return { version: text(record.beacon_version), host };
 }
 
-export function formatUptime(secs: number | null): string {
-	if (secs === null) return '—';
+/** Null for no value. The catalog holds the unit letters, so each language picks its own. */
+export function formatUptime(secs: number | null): Message | null {
+	if (secs === null) return null;
 
 	const days = Math.floor(secs / 86400);
 	const hours = Math.floor((secs % 86400) / 3600);
 	const minutes = Math.floor((secs % 3600) / 60);
 
-	if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-	if (hours > 0) return `${hours}h ${minutes}m`;
-	return `${minutes}m`;
+	if (days > 0) return message('systemInfo.uptime.days', { days, hours, minutes });
+	if (hours > 0) return message('systemInfo.uptime.hours', { hours, minutes });
+	return message('systemInfo.uptime.minutes', { minutes });
 }
 
-export function formatPercent(value: number | null): string {
-	if (value === null) return '—';
-	return `${value.toFixed(1)}%`;
-}
+/** Options for `$formatNumber(percent / 100, PERCENT_FORMAT)`. */
+export const PERCENT_FORMAT: Intl.NumberFormatOptions = {
+	style: 'percent',
+	minimumFractionDigits: 1,
+	maximumFractionDigits: 1
+};
 
-export function formatBytesOrDash(bytes: number | null): string {
+export function formatBytesOrDash(bytes: number | null, format: NumberFormatter): string {
 	if (bytes === null) return '—';
-	return formatSize(bytes);
+	return formatSize(bytes, format);
 }

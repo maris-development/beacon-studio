@@ -1,3 +1,4 @@
+import { message, type Message } from '@/i18n';
 import { normalizeFolder } from './folders';
 
 export const CRAWLER_FORMATS = [
@@ -169,41 +170,42 @@ export function crawlerRequest(form: CrawlerForm, replace: boolean): Record<stri
 	};
 }
 
-export function crawlerErrors(form: CrawlerForm): string[] {
-	const errors: string[] = [];
+const MIN_SCHEDULE_SECS = 60;
 
-	if (form.name.trim() === '') errors.push('Enter a crawler name.');
-	if (normalizeFolder(form.folder) === '') errors.push('Pick a folder.');
+export function crawlerErrors(form: CrawlerForm): Message[] {
+	const errors: Message[] = [];
+
+	if (form.name.trim() === '') errors.push(message('dataBrowser.crawlers.error.name'));
+	if (normalizeFolder(form.folder) === '') errors.push(message('dataBrowser.crawlers.error.folder'));
 	if (form.scheduled && (!Number.isInteger(form.every) || form.every < 1)) {
-		errors.push('Enter a schedule of at least 1.');
-	} else if (form.scheduled && form.unit === 'seconds' && form.every < 60) {
+		errors.push(message('dataBrowser.crawlers.error.scheduleMin'));
+	} else if (form.scheduled && form.unit === 'seconds' && form.every < MIN_SCHEDULE_SECS) {
 		// Each run scans the whole folder, so a shorter period loads the node for nothing.
-		errors.push('Enter a schedule of at least 60 seconds.');
+		errors.push(message('dataBrowser.crawlers.error.scheduleSeconds', { min: MIN_SCHEDULE_SECS }));
 	}
 
 	return errors;
 }
 
-export function describeSchedule(secs: number | null): string {
-	if (secs === null || secs <= 0) return 'Only on Run';
-	if (secs === 3600) return 'Every hour';
-	if (secs % 3600 === 0) return `Every ${secs / 3600} hours`;
-	if (secs === 60) return 'Every minute';
-	if (secs % 60 === 0) return `Every ${secs / 60} minutes`;
-	return `Every ${secs} seconds`;
+export function describeSchedule(secs: number | null): Message {
+	if (secs === null || secs <= 0) return message('dataBrowser.crawlers.schedule.never');
+	if (secs % 3600 === 0) return message('dataBrowser.crawlers.schedule.hours', { count: secs / 3600 });
+	if (secs % 60 === 0) return message('dataBrowser.crawlers.schedule.minutes', { count: secs / 60 });
+	return message('dataBrowser.crawlers.schedule.seconds', { count: secs });
 }
 
-export function describeFormats(filter: string[] | null): string {
-	if (filter === null || filter.length === 0) return 'All formats';
+export function describeFormats(filter: string[] | null): Message {
+	if (filter === null || filter.length === 0) return message('dataBrowser.crawlers.formats.all');
 
-	return filter
+	const formats = filter
 		.map((value) => CRAWLER_FORMATS.find((format) => format.value === value)?.label ?? value)
 		.join(', ');
+	return message('dataBrowser.crawlers.formats.list', { formats });
 }
 
-export function describeNaming(naming: TableNaming): string {
-	if (naming === 'crawler_prefixed') return 'Crawler name + folder name';
-	return 'Folder name';
+export function describeNaming(naming: TableNaming): Message {
+	if (naming === 'crawler_prefixed') return message('dataBrowser.crawlers.naming.prefixed');
+	return message('dataBrowser.crawlers.naming.leaf');
 }
 
 /** The name of a table from the chosen folder. The crawler uses each sub-folder the same way. */

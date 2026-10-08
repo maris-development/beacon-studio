@@ -1,44 +1,35 @@
+import { message, type Message } from '@/i18n';
+
 export interface FileTypeInfo {
 	value: string;
+	/** The product name of the format. It is not translated. */
 	label: string;
-	hint: string;
+	hint: Message;
 }
 
 export const FILE_TYPES: FileTypeInfo[] = [
-	{ value: 'PARQUET', label: 'Parquet', hint: 'A path or glob, for example data/**/*.parquet.' },
+	{ value: 'PARQUET', label: 'Parquet', hint: message('dataBrowser.tables.external.hint.parquet') },
 	{
 		value: 'GEOPARQUET',
 		label: 'GeoParquet',
-		hint: 'Parquet with a geometry column. Beacon reads the geometry as GeoArrow.'
+		hint: message('dataBrowser.tables.external.hint.geoparquet')
 	},
-	{ value: 'CSV', label: 'CSV', hint: 'Options can set the delimiter and the header.' },
-	{ value: 'ARROW', label: 'Arrow IPC', hint: 'Arrow IPC files (.arrow).' },
-	{ value: 'NC', label: 'NetCDF', hint: 'NetCDF files, for example argo/**/*.nc.' },
-	{ value: 'HDF5', label: 'HDF5', hint: 'HDF5 files, for example data/**/*.h5. NetCDF-4 is HDF5.' },
-	{ value: 'ZARR', label: 'Zarr', hint: 'The path of a Zarr v3 store, with its zarr.json file.' },
+	{ value: 'CSV', label: 'CSV', hint: message('dataBrowser.tables.external.hint.csv') },
+	{ value: 'ARROW', label: 'Arrow IPC', hint: message('dataBrowser.tables.external.hint.arrow') },
+	{ value: 'NC', label: 'NetCDF', hint: message('dataBrowser.tables.external.hint.nc') },
+	{ value: 'HDF5', label: 'HDF5', hint: message('dataBrowser.tables.external.hint.hdf5') },
+	{ value: 'ZARR', label: 'Zarr', hint: message('dataBrowser.tables.external.hint.zarr') },
+	{ value: 'ATLAS', label: 'Atlas', hint: message('dataBrowser.tables.external.hint.atlas') },
+	{ value: 'TIFF', label: 'GeoTIFF', hint: message('dataBrowser.tables.external.hint.tiff') },
 	{
-		value: 'ATLAS',
-		label: 'Atlas',
-		hint: 'The path of an Atlas collection, with its data.atlas file.'
+		value: 'BBF',
+		label: 'Beacon Binary Format',
+		hint: message('dataBrowser.tables.external.hint.bbf')
 	},
-	{ value: 'TIFF', label: 'GeoTIFF', hint: 'GeoTIFF or COG files.' },
-	{ value: 'BBF', label: 'Beacon Binary Format', hint: 'Beacon Binary Format files (.bbf).' },
-	{ value: 'ODV', label: 'ODV', hint: 'Ocean Data View spreadsheet files.' },
-	{
-		value: 'DELTA',
-		label: 'Delta Lake',
-		hint: 'The folder of a Delta table, or a URL with a scheme.'
-	},
-	{
-		value: 'ICEBERG',
-		label: 'Iceberg',
-		hint: 'The folder of an Iceberg table, or a URL with a scheme.'
-	},
-	{
-		value: 'REMOTE',
-		label: 'Remote',
-		hint: 'A location with a scheme, for example s3://bucket/path.'
-	}
+	{ value: 'ODV', label: 'ODV', hint: message('dataBrowser.tables.external.hint.odv') },
+	{ value: 'DELTA', label: 'Delta Lake', hint: message('dataBrowser.tables.external.hint.delta') },
+	{ value: 'ICEBERG', label: 'Iceberg', hint: message('dataBrowser.tables.external.hint.iceberg') },
+	{ value: 'REMOTE', label: 'Remote', hint: message('dataBrowser.tables.external.hint.remote') }
 ];
 
 export interface ExternalTableForm {
@@ -75,12 +66,14 @@ export function externalTableSpec(form: ExternalTableForm): Record<string, unkno
 	return spec;
 }
 
-export function externalTableErrors(form: ExternalTableForm): string[] {
-	const errors: string[] = [];
+export function externalTableErrors(form: ExternalTableForm): Message[] {
+	const errors: Message[] = [];
 
-	if (form.name.trim() === '') errors.push('Enter a table name.');
-	if (form.location.trim() === '') errors.push('Enter a location.');
-	if (form.fileType === '') errors.push('Pick a file type.');
+	if (form.name.trim() === '') errors.push(message('dataBrowser.tables.external.nameMissing'));
+	if (form.location.trim() === '') {
+		errors.push(message('dataBrowser.tables.external.locationMissing'));
+	}
+	if (form.fileType === '') errors.push(message('dataBrowser.tables.external.typeMissing'));
 
 	return errors;
 }

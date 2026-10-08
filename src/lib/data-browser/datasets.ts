@@ -143,9 +143,12 @@ export function folderOf(path: string): string {
 	return path.slice(0, path.lastIndexOf('/') + 1);
 }
 
-export function formatSize(bytes: number | null): string {
+export type NumberFormatter = (value: number, options: Intl.NumberFormatOptions) => string;
+
+/** A component passes `$formatNumber`, so the decimal mark follows the locale. */
+export function formatSize(bytes: number | null, format: NumberFormatter): string {
 	if (bytes === null) return '';
-	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024) return `${format(bytes, { maximumFractionDigits: 0 })} B`;
 
 	const units = ['KB', 'MB', 'GB', 'TB'];
 	let value = bytes / 1024;
@@ -156,7 +159,8 @@ export function formatSize(bytes: number | null): string {
 		unit += 1;
 	}
 
-	return `${value.toFixed(1)} ${units[unit]}`;
+	const digits = { minimumFractionDigits: 1, maximumFractionDigits: 1 };
+	return `${format(value, digits)} ${units[unit]}`;
 }
 
 const EXTENSION_FORMATS: Record<string, string> = {

@@ -25,13 +25,22 @@ describe('plan view', () => {
 	it('builds the view of one node', () => {
 		const view = viewOf(planRoot(plan)!);
 		expect(view.type).toBe('ProjectionExec');
-		expect(view.badges).toEqual(['42 rows', 'compute 1.5 ms']);
+		expect(view.badges).toEqual([
+			{ key: 'common.rows', values: { count: 42 } },
+			{ key: 'sqlEditor.plan.compute', values: { time: '1.5' } }
+		]);
 		expect(view.fields).toEqual([['Output', '["n"]']]);
 		expect(view.details).toBe('expr=[n]');
 		expect(view.children).toHaveLength(1);
 	});
 
-	it('names a node with no type', () => {
-		expect(viewOf({}).type).toBe('Node');
+	it('gives no type for a node with no type', () => {
+		expect(viewOf({}).type).toBeNull();
+	});
+
+	it('keeps a row count that is not a number as text', () => {
+		expect(viewOf({ 'Actual Rows': '7' }).badges).toEqual([
+			{ key: 'sqlEditor.plan.rows', values: { rows: '7' } }
+		]);
 	});
 });

@@ -34,15 +34,20 @@
 		type DatasetEntry
 	} from '@/data-browser/datasets';
 	import { parseSchema } from '@/sql/catalog';
+	import { formatNumber, t, translate } from '@/i18n';
 
 	const LIST = resolve('/data-browser/datasets');
 
 	const file = page.url.searchParams.get('file') ?? '';
-	if (!file) throw kitError(400, 'Missing `file` query parameter');
+	if (!file) {
+		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'file' }));
+	}
 
 	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
 	const nodeUrl = page.url.searchParams.get('node') ?? '';
-	if (!nodeUrl) throw kitError(400, 'Missing `node` query parameter');
+	if (!nodeUrl) {
+		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'node' }));
+	}
 
 	const FOLDER_LIST = `${LIST}?folder=${encodeURIComponent(folderOf(file))}`;
 	// The base path without its trailing slash.
@@ -142,7 +147,11 @@
 			const blob = await withAdmin(savedNode, (admin) => admin.admin.downloadDataset(file));
 			if (blob !== null) saveBlob(blob, fileName(file));
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.datasets.detail.downloadFailed',
+				message: adminErrorMessage(caught)
+			});
 		} finally {
 			busy = false;
 		}
@@ -152,10 +161,13 @@
 		if (!savedNode) return;
 
 		const sure = await askConfirm({
-			title: `Delete ${fileName(file)}`,
-			message: `Delete "${file}" from ${savedNode.name}?`,
-			note: 'A table that reads this file stops working.',
-			confirmLabel: 'Delete',
+			title: translate('dataBrowser.datasets.detail.deleteTitle', { name: fileName(file) }),
+			message: translate('dataBrowser.datasets.detail.deleteMessage', {
+				path: file,
+				node: savedNode.name
+			}),
+			note: translate('dataBrowser.datasets.detail.deleteNote'),
+			confirmLabel: translate('common.delete'),
 			destructive: true
 		});
 		if (!sure) return;
@@ -168,11 +180,19 @@
 				return true;
 			});
 			if (done) {
-				addToast({ type: 'success', message: `Deleted ${fileName(file)}.` });
+				addToast({
+					type: 'success',
+					key: 'dataBrowser.datasets.detail.deleted',
+					values: { name: fileName(file) }
+				});
 				goto(folderList);
 			}
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.datasets.detail.deleteFailed',
+				message: adminErrorMessage(caught)
+			});
 		} finally {
 			busy = false;
 		}
@@ -184,20 +204,24 @@
 </script>
 
 <svelte:head>
-	<title>Dataset {fileName(file)} - Beacon Studio</title>
+	<title>
+		{$t('app.pageTitle', {
+			page: $t('dataBrowser.datasets.detail.title', { name: fileName(file) })
+		})}
+	</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Datasets', href: LIST },
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.datasets'), href: LIST },
 		{ label: fileName(file), href: '' }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<BackLink label="Datasets" fallback={FOLDER_LIST} />
+		<BackLink label={$t('nav.item.datasets')} fallback={FOLDER_LIST} />
 
 		<header class="head">
 			<div>
@@ -205,7 +229,7 @@
 				<p class="meta">
 					<span class="mono">{file}</span>
 					{#if entry.format}· {entry.format}{/if}
-					{#if entry.size !== null}· {formatSize(entry.size)}{/if}
+					{#if entry.size !== null}· {formatSize(entry.size, $formatNumber)}{/if}
 					{#if entry.lastModified}· {entry.lastModified}{/if}
 					· {savedNode?.name ?? nodeUrl}
 				</p>
@@ -214,21 +238,21 @@
 			<div class="actions">
 				<Button variant="outline" onclick={openInEditor}>
 					<SquareTerminalIcon />
-					Open in SQL Editor
+					{$t('dataBrowser.datasets.detail.openInEditor')}
 				</Button>
 
 				{#if savedNode}
 					<AdminAction>
 						{#snippet children({ disabled })}
 							<Button variant="outline" disabled={disabled || busy} onclick={download}>
-								Download
+								{$t('dataBrowser.datasets.detail.download')}
 							</Button>
 						{/snippet}
 					</AdminAction>
 					<AdminAction>
 						{#snippet children({ disabled })}
 							<Button variant="destructive" disabled={disabled || busy} onclick={remove}>
-								Delete
+								{$t('common.delete')}
 							</Button>
 						{/snippet}
 					</AdminAction>
@@ -238,23 +262,23 @@
 
 		<DetailTabs
 			tabs={[
-				{ id: 'schema', label: 'Schema' },
-				{ id: 'preview', label: 'Preview' }
+				{ id: 'schema', label: $t('dataBrowser.datasets.detail.schema') },
+				{ id: 'preview', label: $t('dataBrowser.datasets.detail.preview') }
 			]}
 			active={tab}
 			onSelect={selectTab}
 		/>
 
 		{#if !client}
-			<p class="muted">Loading the file...</p>
+			<p class="muted">{$t('dataBrowser.datasets.detail.loadingFile')}</p>
 		{:else if !entry.canInspect}
-			<p class="muted">Beacon cannot read this file format.</p>
+			<p class="muted">{$t('dataBrowser.datasets.detail.cannotRead')}</p>
 		{:else if tab === 'schema'}
 			<SchemaTable load={loadSchema} />
 		{:else if columns === null}
-			<p class="muted">Loading the columns...</p>
+			<p class="muted">{$t('dataBrowser.datasets.detail.loadingColumns')}</p>
 		{:else if columns.length === 0}
-			<p class="muted">This file has no columns to preview.</p>
+			<p class="muted">{$t('dataBrowser.datasets.detail.noColumns')}</p>
 		{:else}
 			<PreviewGrid source={client} query={previewQuery(entry, columns)} />
 		{/if}

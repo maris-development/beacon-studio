@@ -6,6 +6,7 @@
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { createViewSql } from '@/data-browser/tables';
 	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { message, t, type Message } from '@/i18n';
 
 	type Props = {
 		node: BeaconNode;
@@ -19,16 +20,17 @@
 	let name = $state('');
 	let query = $state('SELECT ');
 	let busy = $state(false);
-	let error = $state('');
+	// A Message, or the raw text of a server error.
+	let error: Message | string = $state('');
 
 	let title = $derived.by(() => {
-		if (materialized) return 'Create materialized view';
-		return 'Create view';
+		if (materialized) return $t('dataBrowser.tables.view.titleMaterialized');
+		return $t('dataBrowser.tables.view.title');
 	});
 
 	async function create() {
 		if (name.trim() === '' || query.trim() === '') {
-			error = 'Enter a name and a query.';
+			error = message('dataBrowser.tables.view.missing');
 			return;
 		}
 
@@ -50,23 +52,25 @@
 <Modal {title} {onClose} canCloseModal={!busy} width="640px">
 	<div class="form">
 		<div class="field">
-			<Label for="view-name">Name</Label>
+			<Label for="view-name">{$t('common.name')}</Label>
 			<Input id="view-name" bind:value={name} />
 		</div>
 
 		<div class="field">
-			<Label for="view-query">Query</Label>
+			<Label for="view-query">{$t('dataBrowser.tables.view.query')}</Label>
 			<textarea id="view-query" rows="8" bind:value={query} spellcheck="false"></textarea>
 		</div>
 
-		{#if error}
+		{#if typeof error !== 'string'}
+			<p class="error" role="alert">{$t(error)}</p>
+		{:else if error}
 			<p class="error" role="alert">{error}</p>
 		{/if}
 	</div>
 
 	<div slot="footer" class="actions">
-		<Button variant="outline" onclick={onClose} disabled={busy}>Cancel</Button>
-		<Button onclick={create} disabled={busy}>Create</Button>
+		<Button variant="outline" onclick={onClose} disabled={busy}>{$t('common.cancel')}</Button>
+		<Button onclick={create} disabled={busy}>{$t('dataBrowser.tables.create')}</Button>
 	</div>
 </Modal>
 

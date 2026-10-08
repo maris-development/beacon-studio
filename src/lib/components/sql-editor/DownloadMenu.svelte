@@ -4,6 +4,7 @@
 	import DownloadIcon from '@lucide/svelte/icons/download';
 	import LoadingIcon from '@lucide/svelte/icons/loader-2';
 	import { DOWNLOAD_FORMATS, type DownloadFormat } from '@/sql/download';
+	import { t } from '@/i18n';
 
 	let {
 		disabled,
@@ -20,7 +21,7 @@
 			{:else}
 				<DownloadIcon />
 			{/if}
-			Download
+			{$t('sqlEditor.toolbar.download')}
 		</Button>
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content class="w-40">

@@ -123,10 +123,20 @@ describe('names and paths', () => {
 	});
 
 	it('writes a size', () => {
-		expect(formatSize(null)).toBe('');
-		expect(formatSize(512)).toBe('512 B');
-		expect(formatSize(1536)).toBe('1.5 KB');
-		expect(formatSize(5 * 1024 * 1024)).toBe('5.0 MB');
+		const english = (value: number, options: Intl.NumberFormatOptions) =>
+			new Intl.NumberFormat('en', options).format(value);
+		expect(formatSize(null, english)).toBe('');
+		expect(formatSize(512, english)).toBe('512 B');
+		expect(formatSize(1536, english)).toBe('1.5 KB');
+		expect(formatSize(5 * 1024 * 1024, english)).toBe('5.0 MB');
+	});
+
+	it('writes a size with the decimal mark of a locale', () => {
+		const dutch = (value: number, options: Intl.NumberFormatOptions) =>
+			new Intl.NumberFormat('nl', options).format(value);
+		expect(formatSize(1536, dutch)).toBe('1,5 KB');
+		expect(formatSize(5 * 1024 * 1024, dutch)).toBe('5,0 MB');
+		expect(formatSize(1023, dutch)).toBe('1.023 B');
 	});
 });
 

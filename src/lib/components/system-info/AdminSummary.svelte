@@ -7,6 +7,7 @@
 	import StatTile from '@/components/system-info/StatTile.svelte';
 	import { credentialsOf, makeAdminClient, signedInNodeIds } from '@/services/admin-session';
 	import { settings } from '@/stores/settings';
+	import { formatNumber, t } from '@/i18n';
 
 	let { node }: { node: BeaconNode } = $props();
 
@@ -49,21 +50,21 @@
 
 	function show(value: number | null): string {
 		if (value === null) return '—';
-		return value.toLocaleString();
+		return $formatNumber(value);
 	}
 </script>
 
 {#if active}
 	<section class="admin">
-		<h2>Admin</h2>
+		<h2>{$t('systemInfo.admin.title')}</h2>
 		<StorageBar {node} />
 		{#if counts}
 			<div class="tiles">
 				<a href={resolve('/data-browser/crawlers')}>
-					<StatTile label="Crawlers" value={show(counts.crawlers)} />
+					<StatTile label={$t('nav.item.crawlers')} value={show(counts.crawlers)} />
 				</a>
-				<StatTile label="Users" value={show(counts.users)} />
-				<StatTile label="Roles" value={show(counts.roles)} />
+				<StatTile label={$t('systemInfo.admin.users')} value={show(counts.users)} />
+				<StatTile label={$t('systemInfo.admin.roles')} value={show(counts.roles)} />
 			</div>
 		{/if}
 	</section>

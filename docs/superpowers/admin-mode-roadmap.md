@@ -35,6 +35,7 @@ Rules from the user for this work:
 - Put tests in a `tests/` folder next to the code (`src/lib/sql/tests/x.test.ts`), not beside the file. Older plans show the beside form; follow this rule instead.
 - Edit files with the Edit tool. Never with `sed`, `perl` or `echo`: they break backslashes.
 - Wrap each page in `<div class="page-wrapper"><div class="page-container">`, as `routes/queries/history/+page.svelte` does.
+- Translate every user-visible string (AGENTS.md, "Translations"). Add each key to `en.json`, `nl.json` and `it.json`. Admin keys live under `admin`, `sqlEditor`, `dataBrowser` and `systemInfo`.
 - Check a fact in the code before you state it. An earlier wrong guess: "the node picker changes the node of query blocks". It does not. A block keeps its own node.
 
 ## Decisions

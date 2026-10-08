@@ -20,6 +20,7 @@
 		type UploadItem
 	} from '@/data-browser/upload';
 	import { formatSize } from '@/data-browser/datasets';
+	import { formatNumber, t } from '@/i18n';
 
 	type Props = { node: BeaconNode; folder: string; onClose: () => void; onUploaded: () => void };
 
@@ -151,14 +152,14 @@
 	onDestroy(stop);
 </script>
 
-<Modal title="Upload datasets" onClose={close} width="680px">
+<Modal title={$t('dataBrowser.upload.title')} onClose={close} width="680px">
 	<div class="form">
 		<div class="field">
-			<Label for="upload-dest">Destination folder</Label>
+			<Label for="upload-dest">{$t('dataBrowser.upload.destination')}</Label>
 			<Input
 				id="upload-dest"
 				bind:value={destination}
-				placeholder="argo/2024/"
+				placeholder={$t('dataBrowser.upload.destinationPlaceholder')}
 				disabled={running}
 			/>
 		</div>
@@ -167,7 +168,7 @@
 			class="drop"
 			class:over={dragOver}
 			role="region"
-			aria-label="Drop files or folders here"
+			aria-label={$t('dataBrowser.upload.dropRegion')}
 			ondragover={(event) => {
 				event.preventDefault();
 				dragOver = true;
@@ -175,44 +176,50 @@
 			ondragleave={() => (dragOver = false)}
 			ondrop={onDrop}
 		>
-			<p>Drop files or folders here, or</p>
+			<p>{$t('dataBrowser.upload.dropText')}</p>
 			<div class="pickers">
 				<label class="pick">
-					Pick files
+					{$t('dataBrowser.upload.pickFiles')}
 					<input type="file" multiple disabled={running} onchange={onPick} />
 				</label>
 				<label class="pick">
-					Pick a folder
+					{$t('dataBrowser.upload.pickFolder')}
 					<input type="file" webkitdirectory disabled={running} onchange={onPick} />
 				</label>
 			</div>
 		</div>
 
 		{#if skippedHidden > 0}
-			<p class="muted">Skipped {skippedHidden} hidden files.</p>
+			<p class="muted">{$t('dataBrowser.upload.skippedHidden', { count: skippedHidden })}</p>
 		{/if}
 
 		<label class="check">
 			<input type="checkbox" bind:checked={overwrite} disabled={running} />
-			Replace existing files
+			{$t('dataBrowser.upload.replace')}
 		</label>
 
 		{#if items.length > 0}
-			<div class="bar" aria-label="Progress"><span style="width: {progress}%"></span></div>
+			<div class="bar" aria-label={$t('dataBrowser.upload.progress')}>
+				<span style="width: {progress}%"></span>
+			</div>
 			<p class="muted">
-				{summary.done} of {summary.total} done{#if summary.failed > 0}, {summary.failed} failed{/if}
+				{#if summary.failed > 0}
+					{$t('dataBrowser.upload.summaryFailed', summary)}
+				{:else}
+					{$t('dataBrowser.upload.summary', summary)}
+				{/if}
 			</p>
 
 			<ul class="items">
 				{#each items as item (item.id)}
 					<li class={item.status}>
 						<span class="path">{item.target}</span>
-						<span class="size">{formatSize(item.size)}</span>
+						<span class="size">{formatSize(item.size, $formatNumber)}</span>
 						<span class="status">
 							{#if item.status === 'failed'}
 								{item.error}
 							{:else}
-								{item.status}
+								{$t(`dataBrowser.upload.status.${item.status}`)}
 							{/if}
 						</span>
 					</li>
@@ -221,27 +228,37 @@
 		{/if}
 
 		{#if finished && summary.done > 0}
-			<p class="muted">
-				To query these files, create a table:
-				{#if $settings.adminFeatures}
-					<a href={resolve('/data-browser/crawlers')}>run a crawler</a>, or
-				{/if}
-				use Create external table on the
-				<a href={resolve('/data-browser/data-tables')}>Data Tables</a> page.
-			</p>
+			<div class="muted next">
+				<p>{$t('dataBrowser.upload.next.intro')}</p>
+				<ul>
+					{#if $settings.adminFeatures}
+						<li>
+							<a href={resolve('/data-browser/crawlers')}>{$t('dataBrowser.upload.next.crawler')}</a>
+						</li>
+					{/if}
+					<li>
+						{$t('dataBrowser.upload.next.tableBefore')}
+						<!-- The text after the link holds its own leading space, so a language can end on "." -->
+						<a href={resolve('/data-browser/data-tables')}>{$t('nav.item.dataTables')}</a
+						>{$t('dataBrowser.upload.next.tableAfter')}
+					</li>
+				</ul>
+			</div>
 		{/if}
 	</div>
 
 	<div slot="footer" class="actions">
-		<Button variant="outline" onclick={close}>Close</Button>
+		<Button variant="outline" onclick={close}>{$t('common.close')}</Button>
 		{#if running}
-			<Button variant="destructive" onclick={stop}>Stop</Button>
+			<Button variant="destructive" onclick={stop}>{$t('dataBrowser.upload.stop')}</Button>
 		{:else if hasStopped}
-			<Button onclick={resume}>Continue</Button>
+			<Button onclick={resume}>{$t('common.continue')}</Button>
 		{:else if summary.failed > 0}
-			<Button onclick={retry}>Retry failed</Button>
+			<Button onclick={retry}>{$t('dataBrowser.upload.retry')}</Button>
 		{:else}
-			<Button onclick={start} disabled={items.length === 0 || finished}>Upload</Button>
+			<Button onclick={start} disabled={items.length === 0 || finished}>
+				{$t('dataBrowser.upload.start')}
+			</Button>
 		{/if}
 	</div>
 </Modal>
@@ -343,6 +360,18 @@
 	.size,
 	.muted {
 		color: var(--muted-foreground);
+	}
+
+	.next {
+		p {
+			margin: 0;
+		}
+
+		ul {
+			margin: 0.25rem 0 0;
+			padding-left: 1.25rem;
+			list-style: disc;
+		}
 	}
 
 	.actions {

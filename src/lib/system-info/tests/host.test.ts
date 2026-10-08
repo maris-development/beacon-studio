@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
 	clampPercent,
 	formatBytesOrDash,
-	formatPercent,
 	formatUptime,
 	readInfo,
 	usage
@@ -101,16 +100,25 @@ describe('formatting', () => {
 	});
 
 	it('writes the uptime', () => {
-		expect(formatUptime(273120)).toBe('3d 3h 52m');
-		expect(formatUptime(18000)).toBe('5h 0m');
-		expect(formatUptime(720)).toBe('12m');
-		expect(formatUptime(null)).toBe('—');
+		expect(formatUptime(273120)).toEqual({
+			key: 'systemInfo.uptime.days',
+			values: { days: 3, hours: 3, minutes: 52 }
+		});
+		expect(formatUptime(18000)).toEqual({
+			key: 'systemInfo.uptime.hours',
+			values: { hours: 5, minutes: 0 }
+		});
+		expect(formatUptime(720)).toEqual({
+			key: 'systemInfo.uptime.minutes',
+			values: { minutes: 12 }
+		});
+		expect(formatUptime(null)).toBeNull();
 	});
 
-	it('writes a percentage and bytes, with a dash for no value', () => {
-		expect(formatPercent(12.54)).toBe('12.5%');
-		expect(formatPercent(null)).toBe('—');
-		expect(formatBytesOrDash(null)).toBe('—');
-		expect(formatBytesOrDash(1536)).toBe('1.5 KB');
+	it('writes bytes, with a dash for no value', () => {
+		const english = (value: number, options: Intl.NumberFormatOptions) =>
+			new Intl.NumberFormat('en', options).format(value);
+		expect(formatBytesOrDash(null, english)).toBe('—');
+		expect(formatBytesOrDash(1536, english)).toBe('1.5 KB');
 	});
 });

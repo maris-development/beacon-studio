@@ -4,7 +4,8 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import { Input } from '@/components/ui/input';
 	import { allFolders } from '@/data-browser/folders';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { t, type Message } from '@/i18n';
 
 	let {
 		loadPaths,
@@ -13,18 +14,18 @@
 
 	let open = $state(false);
 	let folders: string[] | null = $state(null);
-	let error = $state('');
+	let error: Message | null = $state(null);
 	let needle = $state('');
 
 	async function toggle() {
 		open = !open;
 		if (!open || folders) return;
 
-		error = '';
+		error = null;
 		try {
 			folders = allFolders(await loadPaths());
 		} catch (caught) {
-			error = sqlErrorMessage(caught);
+			error = sqlError(caught);
 		}
 	}
 
@@ -44,19 +45,23 @@
 <div class="folder-picker">
 	<Button type="button" variant="outline" size="sm" onclick={toggle}>
 		<FolderIcon />
-		Pick folder
+		{$t('dataBrowser.common.folder.pick')}
 	</Button>
 
 	{#if open}
 		<div class="panel">
 			{#if error}
-				<p class="error">{error}</p>
+				<p class="error">{$t(error)}</p>
 			{:else if !folders}
-				<p class="muted">Loading the folders...</p>
+				<p class="muted">{$t('dataBrowser.common.folder.loading')}</p>
 			{:else if folders.length === 0}
-				<p class="muted">This node has no folders.</p>
+				<p class="muted">{$t('dataBrowser.common.folder.none')}</p>
 			{:else}
-				<Input type="search" placeholder="Filter folders" bind:value={needle} />
+				<Input
+					type="search"
+					placeholder={$t('dataBrowser.common.folder.filter')}
+					bind:value={needle}
+				/>
 				<ul>
 					{#each matches as folder (folder)}
 						<li><button type="button" onclick={() => pick(folder)}>{folder}</button></li>

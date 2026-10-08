@@ -567,7 +567,8 @@
 		"toast": {
 			"noData": "No table data available to display.",
 			"sortFailed": "Failed to sort table:"
-		}
+		},
+		"nullValue": "NULL"
 	},
 	"chart": {
 		"title": "Chart explorer",
@@ -812,48 +813,6 @@
 		"enable": "Enable caching",
 		"clearAll": "Clear all caches"
 	},
-	"system": {
-		"title": "System Information",
-		"noNode": {
-			"title": "No Beacon node",
-			"message": "This page reads one node. Select a node first."
-		},
-		"intro": "View detailed information about the Beacon Studio system, including version, CPU usage, memory, and more.",
-		"disabled": "No system information available, enable system information by setting the {variable} environment variable.",
-		"version": "Beacon Version",
-		"uptime": "System uptime: {time}",
-		"cpu": {
-			"title": "System CPU Usage",
-			"cores": "{count, plural, one {# Physical Core} other {# Physical Cores}}"
-		},
-		"memory": {
-			"title": "System Memory Usage"
-		},
-		"swap": {
-			"title": "System Swap Usage"
-		},
-		"total": "{size} Total",
-		"used": "{percent} Used",
-		"free": "{size} Free",
-		"load": {
-			"title": "Load Average",
-			"one": "1 min: {percent}",
-			"five": "5 min: {percent}",
-			"fifteen": "15 min: {percent}"
-		},
-		"os": {
-			"title": "System Information",
-			"os": "OS: {value}",
-			"hostname": "Hostname: {value}",
-			"kernel": "Kernel: {value}",
-			"distribution": "Distribution: {value}",
-			"version": "Version: {value}"
-		},
-		"cpus": {
-			"title": "CPUs",
-			"count": "{count}× {brand}"
-		}
-	},
 	"node": {
 		"form": {
 			"addTitle": "Add Beacon node",
@@ -968,79 +927,388 @@
 	"modal": {
 		"close": "Close modal"
 	},
-	"upload": {
-		"username": "Admin Username",
-		"password": "Admin Password",
-		"failed": "Upload failed",
-		"example": "e.g. {example}",
-		"table": {
-			"title": "Create Table",
-			"name": "Table Name",
-			"paths": "Glob Paths",
-			"pathsHint": "You can specify multiple paths separated by commas.",
-			"format": "File Format",
-			"formatPlaceholder": "Select a file format",
-			"nameMissing": "Please enter a table name.",
-			"formatMissing": "Please select a file format.",
-			"pathMissing": "Please enter at least one glob path.",
-			"created": "✅ Created table {name}"
-		},
-		"files": {
-			"title": "Upload Datasets",
-			"dataset": "Dataset",
-			"missing": "Please select files.",
-			"done": "✅ Uploaded {count, plural, one {# file} other {# files}}",
-			"size": "{name} ({size} KB)",
-			"uploading": "Uploading... {progress}%",
-			"upload": "Upload"
-		}
-	},
-	"browser": {
-		"intro": "Use the data browser functions listed below to explore and manage your Beacon contents.",
-		"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
-		"tableCount": "{count, plural, one {# data table} other {# data tables}}",
-		"datasetsCard": "View and manage individual datasets.",
-		"tablesCard": "View and manage data tables.",
-		"searchPlaceholder": "Search...",
-		"nodeLine": "Node: {url}",
-		"picker": {
-			"label": "Beacon Node",
-			"placeholder": "Select a node",
-			"group": "Nodes"
-		},
-		"error": {
-			"missingParam": "Missing `{name}` query parameter"
-		},
-		"datasets": {
-			"column": "Dataset",
-			"intro": "Explore and manage the datasets that are available in your Beacon node.",
-			"noNodes": "No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse datasets."
-		},
-		"tables": {
-			"column": "Table",
-			"default": "Default",
-			"intro": "Explore and manage the tables that are available in your Beacon node.",
-			"noNodes": "No saved Beacon nodes yet. Please add a Beacon node on the Beacon Nodes page to browse data tables."
-		},
-		"schema": {
-			"field": "Field",
-			"dataType": "Data Type",
-			"nullable": "Nullable",
-			"dictId": "Dictionary ID",
-			"isOrdered": "Is Ordered",
-			"metadata": "Metadata"
-		},
-		"table": {
-			"title": "Table {name}",
-			"heading": "Table ''{name}'' ({count, plural, one {# field} other {# fields}})"
-		},
-		"dataset": {
-			"title": "Dataset {name}",
-			"heading": "Dataset {name} ({count, plural, one {# field} other {# fields}})"
-		}
-	},
 	"misc": {
 		"externalLink": "Open link in external browser",
 		"bytes": "Bytes"
+	},
+	"systemInfo": {
+		"title": "System Information",
+		"intro": "The version, health and host resources of a Beacon node.",
+		"noNode": "Pick a Beacon node.",
+		"version": "Beacon version",
+		"health": "Health",
+		"host": "Host",
+		"noHost": "This node does not report host data. The server runs without {variable}.",
+		"uptime": {
+			"label": "Uptime",
+			"days": "{days}d {hours}h {minutes}m",
+			"hours": "{hours}h {minutes}m",
+			"minutes": "{minutes}m"
+		},
+		"cpu": {
+			"title": "CPU",
+			"overall": "Overall usage",
+			"physicalCores": "{count, plural, one {# physical core} other {# physical cores}}"
+		},
+		"memory": {
+			"title": "Memory",
+			"available": "Available: {size}",
+			"swap": "Swap",
+			"noSwap": "No swap.",
+			"usage": "{used} of {total}"
+		},
+		"load": {
+			"title": "Load average",
+			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
+			"perCore": "Per core: {percent} over 1 min."
+		},
+		"admin": {
+			"title": "Admin",
+			"users": "Users",
+			"roles": "Roles"
+		},
+		"functions": {
+			"title": "Functions",
+			"loading": "Loading the functions…",
+			"filter": "Filter functions",
+			"count": "{shown} of {total, plural, one {# function} other {# functions}}"
+		},
+		"raw": "Raw answer"
+	},
+	"admin": {
+		"signIn": {
+			"title": "Sign in to Beacon node {name}",
+			"username": "Username",
+			"password": "Password",
+			"submit": "Sign in",
+			"busy": "Signing in…",
+			"wrongCredentials": "Wrong username or password."
+		},
+		"error": {
+			"forbidden": "You have no permission for this action on this Beacon node.",
+			"status": "The Beacon node answered with status {status}.",
+			"unreachable": "The Beacon node cannot be reached."
+		},
+		"offHint": "Turn on \"Show admin features\" in Settings",
+		"onlyNotice": {
+			"beforeLink": "This page needs admin features. Turn on \"Show admin features\" in",
+			"afterLink": "."
+		},
+		"nodePicker": {
+			"label": "Beacon Node",
+			"placeholder": "Select a node",
+			"group": "Nodes",
+			"signedIn": "Signed in",
+			"signOut": "Sign out"
+		}
+	},
+	"sqlEditor": {
+		"pickNode": "Pick a Beacon node.",
+		"toolbar": {
+			"tables": "Tables",
+			"stop": "Stop",
+			"run": "Run",
+			"runShortcut": "Ctrl+Enter",
+			"explain": "Explain",
+			"analyze": "Analyze",
+			"download": "Download",
+			"hint": "Ctrl+Enter runs the selection, or the whole tab."
+		},
+		"result": {
+			"noPlan": "No plan to show.",
+			"stoppedPartial": "Stopped. The grid shows the rows received before the stop.",
+			"stopped": "Stopped.",
+			"truncated": "{count, plural, one {First # row.} other {First # rows.}} Download for the full result.",
+			"cancelled": "Cancelled.",
+			"sqlDisabled": "SQL is turned off on this Beacon node."
+		},
+		"error": {
+			"raw": "{text}"
+		},
+		"catalog": {
+			"filter": "Filter tables",
+			"loading": "Loading tables…",
+			"noMatch": "No tables match.",
+			"showColumns": "Show columns",
+			"loadingColumns": "Loading columns…",
+			"showMore": "{count, plural, one {Show # more column} other {Show # more columns}}"
+		},
+		"plan": {
+			"fold": "Fold",
+			"unfold": "Unfold",
+			"node": "Node",
+			"rows": "{rows} rows",
+			"compute": "compute {time} ms"
+		},
+		"tabs": {
+			"defaultTitle": "Query {number}",
+			"close": "Close {title}",
+			"add": "New tab"
+		}
+	},
+	"dataBrowser": {
+		"home": {
+			"intro": "Use the data browser functions below to explore and manage the contents of your Beacon node.",
+			"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
+			"tableCount": "{count, plural, one {# data table} other {# data tables}}",
+			"datasetsCard": "View and manage individual datasets.",
+			"tablesCard": "View and manage data tables."
+		},
+		"common": {
+			"missingParam": "The URL has no `{name}` parameter.",
+			"pickNode": "Pick a Beacon node.",
+			"tab": {
+				"schema": "Schema",
+				"preview": "Preview",
+				"definition": "Definition"
+			},
+			"schema": {
+				"loading": "Loading the columns…",
+				"filter": "Filter columns",
+				"count": "{shown, number} of {total, plural, one {# column} other {# columns}}",
+				"column": "Column",
+				"type": "Type",
+				"nullable": "Nullable",
+				"yes": "yes",
+				"no": "no",
+				"showMore": "Show more ({count, number} left)"
+			},
+			"preview": {
+				"loading": "Loading the first {count, plural, one {# row} other {# rows}}…",
+				"none": "No rows.",
+				"first": "First {count, plural, one {# row} other {# rows}}."
+			},
+			"folder": {
+				"pick": "Pick folder",
+				"loading": "Loading the folders…",
+				"none": "This node has no folders.",
+				"filter": "Filter folders"
+			}
+		},
+		"tables": {
+			"intro": "Explore the tables of your Beacon node.",
+			"create": "Create",
+			"createView": "View",
+			"createMaterialized": "Materialized view",
+			"createExternal": "External table",
+			"search": "Search tables",
+			"loading": "Loading the tables…",
+			"noMatch": "No tables match.",
+			"kindView": "View",
+			"kindTable": "Table",
+			"default": "Default",
+			"otherSchemas": "Other schemas",
+			"detail": {
+				"pageTitle": "Table {name}",
+				"back": "Tables",
+				"notFound": "The node has no table \"{name}\" in {schema}.",
+				"openInEditor": "Open in SQL Editor",
+				"drop": "Drop",
+				"loading": "Loading the table…",
+				"refreshed": "Refreshed {name}.",
+				"refreshFailed": "Could not refresh {name}.",
+				"dropped": "Dropped {name}.",
+				"dropFailed": "Could not drop {name}.",
+				"dropTitle": "Drop {name}",
+				"dropMessage": "Drop the table \"{name}\" from {node}?",
+				"dropNote": "The files stay in place.",
+				"copy": "Copy",
+				"copied": "Copied the definition.",
+				"definitionSignIn": "Sign in to see the definition. Open this tab again to sign in.",
+				"definitionNeedsAdmin": "The definition needs admin features. Turn on \"Show admin features\" in Settings.",
+				"definitionNeedsNode": "Add this node on the Beacon Nodes page to see the definition.",
+				"definitionLoading": "Loading the definition…",
+				"definitionNone": "Beacon stores no definition for this table. A crawler made it, or it is an older table."
+			},
+			"view": {
+				"title": "Create view",
+				"titleMaterialized": "Create materialized view",
+				"query": "Query",
+				"missing": "Enter a name and a query."
+			},
+			"external": {
+				"title": "Create external table",
+				"fileType": "File type",
+				"location": "Location",
+				"locationHint": "A path or glob in the datasets store. A picked folder ends in **/*.",
+				"partitions": "Partition columns",
+				"partitionsPlaceholder": "year, month",
+				"options": "Options",
+				"optionKey": "key",
+				"optionValue": "value",
+				"removeOption": "Remove option",
+				"addOption": "Add option",
+				"ifNotExists": "Only if it does not exist",
+				"request": "Request",
+				"nameMissing": "Enter a table name.",
+				"locationMissing": "Enter a location.",
+				"typeMissing": "Pick a file type.",
+				"hint": {
+					"parquet": "A path or glob, for example data/**/*.parquet.",
+					"geoparquet": "Parquet with a geometry column. Beacon reads the geometry as GeoArrow.",
+					"csv": "Options can set the delimiter and the header.",
+					"arrow": "Arrow IPC files (.arrow).",
+					"nc": "NetCDF files, for example argo/**/*.nc.",
+					"hdf5": "HDF5 files, for example data/**/*.h5. NetCDF-4 is HDF5.",
+					"zarr": "The path of a Zarr v3 store, with its zarr.json file.",
+					"atlas": "The path of an Atlas collection, with its data.atlas file.",
+					"tiff": "GeoTIFF or COG files.",
+					"bbf": "Beacon Binary Format files (.bbf).",
+					"odv": "Ocean Data View spreadsheet files.",
+					"delta": "The folder of a Delta table, or a URL with a scheme.",
+					"iceberg": "The folder of an Iceberg table, or a URL with a scheme.",
+					"remote": "A location with a scheme, for example s3://bucket/path."
+				}
+			}
+		},
+		"datasets": {
+			"intro": "Explore the files of your Beacon node.",
+			"upload": "Upload",
+			"pickNode": "Pick a Beacon node.",
+			"search": "Search all folders",
+			"fileCount": "{count, plural, one {# file} other {# files}}",
+			"listCut": "This node has more than {limit, number} files. The list is incomplete.",
+			"folderNav": "Folder",
+			"all": "All",
+			"loading": "Loading the files…",
+			"empty": "No files here.",
+			"column": {
+				"format": "Format",
+				"size": "Size",
+				"modified": "Modified"
+			},
+			"previous": "Previous",
+			"next": "Next",
+			"pageOf": "Page {page} of {count}",
+			"storage": {
+				"usedOf": "{used} used of {total}, {free} free",
+				"objects": "{used} in {count, plural, one {# object} other {# objects}} ({location})"
+			},
+			"detail": {
+				"title": "Dataset {name}",
+				"missingParam": "The `{name}` query parameter is missing.",
+				"openInEditor": "Open in SQL Editor",
+				"download": "Download",
+				"downloadFailed": "Beacon could not send the file.",
+				"schema": "Schema",
+				"preview": "Preview",
+				"loadingFile": "Loading the file…",
+				"cannotRead": "Beacon cannot read this file format.",
+				"loadingColumns": "Loading the columns…",
+				"noColumns": "This file has no columns to preview.",
+				"deleteTitle": "Delete {name}",
+				"deleteMessage": "Delete \"{path}\" from {node}?",
+				"deleteNote": "A table that reads this file stops working.",
+				"deleted": "Deleted {name}.",
+				"deleteFailed": "Beacon could not delete the file."
+			}
+		},
+		"upload": {
+			"title": "Upload datasets",
+			"destination": "Destination folder",
+			"destinationPlaceholder": "argo/2024/",
+			"dropRegion": "Drop files or folders here",
+			"dropText": "Drop files or folders here, or",
+			"pickFiles": "Pick files",
+			"pickFolder": "Pick a folder",
+			"skippedHidden": "{count, plural, one {Skipped # hidden file.} other {Skipped # hidden files.}}",
+			"replace": "Replace existing files",
+			"progress": "Progress",
+			"summary": "{done} of {total} done",
+			"summaryFailed": "{done} of {total} done, {failed} failed",
+			"status": {
+				"waiting": "In queue",
+				"uploading": "In progress",
+				"done": "Done",
+				"failed": "Failed",
+				"stopped": "Stopped"
+			},
+			"next": {
+				"intro": "To query these files, create a table:",
+				"crawler": "Run a crawler.",
+				"tableBefore": "Use Create external table on the",
+				"tableAfter": " page."
+			},
+			"stop": "Stop",
+			"retry": "Retry failed",
+			"start": "Upload"
+		},
+		"crawlers": {
+			"intro": "A crawler scans a folder of the node and creates a table for each group of files.",
+			"newCrawler": "New crawler",
+			"pickNode": "Pick a Beacon node.",
+			"loading": "Loading the crawlers…",
+			"needsSignIn": "Sign in to see the crawlers of {node}.",
+			"signIn": "Sign in",
+			"tryAgain": "Try again",
+			"empty": "No crawlers on this node, or the node could not list them.",
+			"busy": "Busy…",
+			"run": "Run",
+			"runFailed": "The crawler run failed.",
+			"noSession": "No admin session.",
+			"noReport": "The Beacon node sent no run report.",
+			"field": {
+				"folder": "Folder",
+				"formats": "Formats",
+				"naming": "Table names",
+				"partitions": "Partitions",
+				"schedule": "Schedule",
+				"options": "Options"
+			},
+			"delete": {
+				"title": "Delete crawler {name}",
+				"message": "Delete the crawler \"{name}\" from {node}?",
+				"note": "Tables that this crawler made stay. Delete them on the Tables page.",
+				"done": "Deleted the crawler {name}.",
+				"failed": "Beacon could not delete the crawler."
+			},
+			"schedule": {
+				"never": "Only on Run",
+				"hours": "{count, plural, one {Every hour} other {Every # hours}}",
+				"minutes": "{count, plural, one {Every minute} other {Every # minutes}}",
+				"seconds": "{count, plural, one {Every second} other {Every # seconds}}"
+			},
+			"formats": {
+				"all": "All formats",
+				"list": "{formats}"
+			},
+			"naming": {
+				"leaf": "Folder name",
+				"prefixed": "Crawler name + folder name"
+			},
+			"error": {
+				"name": "Enter a crawler name.",
+				"folder": "Pick a folder.",
+				"scheduleMin": "Enter a schedule of at least 1.",
+				"scheduleSeconds": "Enter a schedule of at least {min} seconds.",
+				"exists": "A crawler with this name exists."
+			},
+			"dialog": {
+				"editTitle": "Edit crawler {name}",
+				"folderPlaceholder": "argo/",
+				"emptyFolder": "This folder holds no files. The crawler creates no tables.",
+				"formatsHint": "None checked means all formats.",
+				"example": "Example: {name}",
+				"partitions": "Find partitions in folder names (key=value/)",
+				"every": "Every",
+				"unit": {
+					"seconds": "seconds",
+					"minutes": "minutes",
+					"hours": "hours"
+				},
+				"optionKey": "key",
+				"optionValue": "value",
+				"removeOption": "Remove option",
+				"addOption": "Add option"
+			},
+			"report": {
+				"found": "{count, plural, one {Found # table.} other {Found # tables.}}",
+				"created": "Created:",
+				"updated": "Updated:",
+				"skipped": "Skipped (owned by another crawler or made by hand):",
+				"failed": "Failed:",
+				"skippedFiles": "{count, plural, one {# file matched no format.} other {# files matched no format.}}"
+			}
+		}
 	}
 }

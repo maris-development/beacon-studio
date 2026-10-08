@@ -1,4 +1,5 @@
 import { ApiError, ConnectionError } from '@maris-development/beacon-client';
+import { message, type Message } from '@/i18n';
 
 const SUPER_USER_TEXT = 'requires super-user privileges';
 const SQL_DISABLED_TEXT = 'SQL queries are not enabled';
@@ -23,13 +24,15 @@ export function isSqlDisabled(error: unknown): boolean {
 	return isBadRequestWith(error, SQL_DISABLED_TEXT);
 }
 
-export function sqlErrorMessage(error: unknown): string {
+/** A server error text stays raw, inside `sqlEditor.error.raw`. */
+export function sqlError(error: unknown): Message {
 	if (error instanceof ApiError) {
-		return error.body || `The Beacon node answered with status ${error.status}.`;
+		if (error.body) return message('sqlEditor.error.raw', { text: error.body });
+		return message('admin.error.status', { status: error.status });
 	}
 
-	if (error instanceof ConnectionError) return 'The Beacon node cannot be reached.';
-	if (error instanceof Error) return error.message;
+	if (error instanceof ConnectionError) return message('admin.error.unreachable');
+	if (error instanceof Error) return message('sqlEditor.error.raw', { text: error.message });
 
-	return String(error);
+	return message('sqlEditor.error.raw', { text: String(error) });
 }

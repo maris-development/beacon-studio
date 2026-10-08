@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { translate } from '@/i18n';
 import {
 	crawlerErrors,
 	crawlerRequest,
@@ -112,7 +113,7 @@ describe('crawlerRequest', () => {
 describe('crawlerErrors', () => {
 	it('asks for a name, a folder and a schedule above zero', () => {
 		const form = { ...emptyCrawlerForm(), scheduled: true, every: 0 };
-		expect(crawlerErrors(form)).toEqual([
+		expect(crawlerErrors(form).map((error) => translate(error))).toEqual([
 			'Enter a crawler name.',
 			'Pick a folder.',
 			'Enter a schedule of at least 1.'
@@ -121,7 +122,9 @@ describe('crawlerErrors', () => {
 
 	it('refuses a schedule in seconds below one minute, and accepts 90 seconds', () => {
 		const form = { ...formFromCrawler(crawler), unit: 'seconds' as const, every: 1 };
-		expect(crawlerErrors(form)).toEqual(['Enter a schedule of at least 60 seconds.']);
+		expect(crawlerErrors(form).map((error) => translate(error))).toEqual([
+			'Enter a schedule of at least 60 seconds.'
+		]);
 		expect(crawlerErrors({ ...form, every: 90 })).toEqual([]);
 	});
 
@@ -132,18 +135,18 @@ describe('crawlerErrors', () => {
 
 describe('display', () => {
 	it('describes a schedule', () => {
-		expect(describeSchedule(null)).toBe('Only on Run');
-		expect(describeSchedule(3600)).toBe('Every hour');
-		expect(describeSchedule(21600)).toBe('Every 6 hours');
-		expect(describeSchedule(60)).toBe('Every minute');
-		expect(describeSchedule(900)).toBe('Every 15 minutes');
-		expect(describeSchedule(90)).toBe('Every 90 seconds');
+		expect(translate(describeSchedule(null))).toBe('Only on Run');
+		expect(translate(describeSchedule(3600))).toBe('Every hour');
+		expect(translate(describeSchedule(21600))).toBe('Every 6 hours');
+		expect(translate(describeSchedule(60))).toBe('Every minute');
+		expect(translate(describeSchedule(900))).toBe('Every 15 minutes');
+		expect(translate(describeSchedule(90))).toBe('Every 90 seconds');
 	});
 
 	it('describes formats with labels', () => {
-		expect(describeFormats(null)).toBe('All formats');
-		expect(describeFormats(['nc', 'parquet'])).toBe('NetCDF, Parquet');
-		expect(describeFormats(['xyz'])).toBe('xyz');
+		expect(translate(describeFormats(null))).toBe('All formats');
+		expect(translate(describeFormats(['nc', 'parquet']))).toBe('NetCDF, Parquet');
+		expect(translate(describeFormats(['xyz']))).toBe('xyz');
 	});
 
 	it('gives a table name example for both naming modes', () => {

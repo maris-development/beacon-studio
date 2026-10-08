@@ -22,6 +22,7 @@
 		type Crawler,
 		type CrawlerForm
 	} from '@/data-browser/crawlers';
+	import { message, t, type Message } from '@/i18n';
 
 	type Props = {
 		node: BeaconNode;
@@ -41,7 +42,9 @@
 	let editing = $derived(crawler !== null);
 
 	let form: CrawlerForm = $state(initialForm());
-	let errors: string[] = $state([]);
+	let errors: Message[] = $state([]);
+	// The raw server text of a failed save.
+	let failure = $state('');
 	let busy = $state(false);
 	let paths: string[] | null = $state(null);
 
@@ -68,6 +71,7 @@
 
 	async function save() {
 		errors = crawlerErrors(form);
+		failure = '';
 		if (errors.length > 0) return;
 
 		busy = true;
@@ -81,9 +85,9 @@
 			if (done) onSaved();
 		} catch (caught) {
 			if (caught instanceof ApiError && caught.status === 409) {
-				errors = ['A crawler with this name exists.'];
+				errors = [message('dataBrowser.crawlers.error.exists')];
 			} else {
-				errors = [adminErrorMessage(caught)];
+				failure = adminErrorMessage(caught);
 			}
 		} finally {
 			busy = false;
@@ -92,30 +96,36 @@
 </script>
 
 <Modal
-	title={editing ? `Edit crawler ${form.name}` : 'New crawler'}
+	title={editing
+		? $t('dataBrowser.crawlers.dialog.editTitle', { name: form.name })
+		: $t('dataBrowser.crawlers.newCrawler')}
 	{onClose}
 	canCloseModal={!busy}
 	width="640px"
 >
 	<div class="form">
 		<div class="field">
-			<Label for="crawler-name">Name</Label>
+			<Label for="crawler-name">{$t('common.name')}</Label>
 			<Input id="crawler-name" bind:value={form.name} disabled={editing} />
 		</div>
 
 		<div class="field">
-			<Label for="crawler-folder">Folder</Label>
+			<Label for="crawler-folder">{$t('dataBrowser.crawlers.field.folder')}</Label>
 			<div class="row">
-				<Input id="crawler-folder" bind:value={form.folder} placeholder="argo/" />
+				<Input
+					id="crawler-folder"
+					bind:value={form.folder}
+					placeholder={$t('dataBrowser.crawlers.dialog.folderPlaceholder')}
+				/>
 				<FolderPicker {loadPaths} onPick={(folder) => (form.folder = folder)} />
 			</div>
 			{#if empty}
-				<span class="warning">This folder holds no files. The crawler creates no tables.</span>
+				<span class="warning">{$t('dataBrowser.crawlers.dialog.emptyFolder')}</span>
 			{/if}
 		</div>
 
 		<fieldset class="field">
-			<legend>Formats</legend>
+			<legend>{$t('dataBrowser.crawlers.field.formats')}</legend>
 			<div class="checks">
 				{#each CRAWLER_FORMATS as format (format.value)}
 					<label>
@@ -128,37 +138,39 @@
 					</label>
 				{/each}
 			</div>
-			<span class="hint">None checked means all formats.</span>
+			<span class="hint">{$t('dataBrowser.crawlers.dialog.formatsHint')}</span>
 		</fieldset>
 
 		<fieldset class="field">
-			<legend>Table names</legend>
+			<legend>{$t('dataBrowser.crawlers.field.naming')}</legend>
 			<label>
 				<input type="radio" bind:group={form.naming} value="leaf_prefix" />
-				Folder name
+				{$t('dataBrowser.crawlers.naming.leaf')}
 			</label>
 			<label>
 				<input type="radio" bind:group={form.naming} value="crawler_prefixed" />
-				Crawler name + folder name
+				{$t('dataBrowser.crawlers.naming.prefixed')}
 			</label>
-			<span class="hint">Example: {tableNameExample(form)}</span>
+			<span class="hint">
+				{$t('dataBrowser.crawlers.dialog.example', { name: tableNameExample(form) })}
+			</span>
 		</fieldset>
 
 		<label class="check">
 			<input type="checkbox" bind:checked={form.detectPartitions} />
-			Find partitions in folder names (key=value/)
+			{$t('dataBrowser.crawlers.dialog.partitions')}
 		</label>
 
 		<fieldset class="field">
-			<legend>Schedule</legend>
+			<legend>{$t('dataBrowser.crawlers.field.schedule')}</legend>
 			<label>
 				<input type="radio" bind:group={form.scheduled} value={false} />
-				Only on Run
+				{$t('dataBrowser.crawlers.schedule.never')}
 			</label>
 			<div class="row">
 				<label>
 					<input type="radio" bind:group={form.scheduled} value={true} />
-					Every
+					{$t('dataBrowser.crawlers.dialog.every')}
 				</label>
 				<input
 					class="every"
@@ -169,23 +181,26 @@
 					disabled={!form.scheduled}
 				/>
 				<select bind:value={form.unit} disabled={!form.scheduled}>
-					<option value="seconds">seconds</option>
-					<option value="minutes">minutes</option>
-					<option value="hours">hours</option>
+					<option value="seconds">{$t('dataBrowser.crawlers.dialog.unit.seconds')}</option>
+					<option value="minutes">{$t('dataBrowser.crawlers.dialog.unit.minutes')}</option>
+					<option value="hours">{$t('dataBrowser.crawlers.dialog.unit.hours')}</option>
 				</select>
 			</div>
 		</fieldset>
 
 		<div class="field">
-			<Label>Options</Label>
+			<Label>{$t('dataBrowser.crawlers.field.options')}</Label>
 			{#each form.options as option, index (index)}
 				<div class="row">
-					<Input placeholder="key" bind:value={option.key} />
-					<Input placeholder="value" bind:value={option.value} />
+					<Input placeholder={$t('dataBrowser.crawlers.dialog.optionKey')} bind:value={option.key} />
+					<Input
+						placeholder={$t('dataBrowser.crawlers.dialog.optionValue')}
+						bind:value={option.value}
+					/>
 					<button
 						type="button"
 						class="icon"
-						aria-label="Remove option"
+						aria-label={$t('dataBrowser.crawlers.dialog.removeOption')}
 						onclick={() => form.options.splice(index, 1)}
 					>
 						<XIcon class="size-4" />
@@ -199,18 +214,21 @@
 				onclick={() => form.options.push({ key: '', value: '' })}
 			>
 				<PlusIcon />
-				Add option
+				{$t('dataBrowser.crawlers.dialog.addOption')}
 			</Button>
 		</div>
 
-		{#each errors as message (message)}
-			<p class="error" role="alert">{message}</p>
+		{#each errors as error (error.key)}
+			<p class="error" role="alert">{$t(error)}</p>
 		{/each}
+		{#if failure}
+			<p class="error" role="alert">{failure}</p>
+		{/if}
 	</div>
 
 	<div slot="footer" class="actions">
-		<Button variant="outline" onclick={onClose} disabled={busy}>Cancel</Button>
-		<Button onclick={save} disabled={busy}>Save</Button>
+		<Button variant="outline" onclick={onClose} disabled={busy}>{$t('common.cancel')}</Button>
+		<Button onclick={save} disabled={busy}>{$t('common.save')}</Button>
 	</div>
 </Modal>
 

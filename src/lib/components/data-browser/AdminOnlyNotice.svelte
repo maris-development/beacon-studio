@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import { t } from '@/i18n';
 </script>
 
 <p class="notice">
-	This page needs admin features. Turn on "Show admin features" in
-	<a href={resolve('/settings')}>Settings</a>.
+	{$t('admin.onlyNotice.beforeLink')}
+	<a href={resolve('/settings')}>{$t('nav.item.settings')}</a>{$t('admin.onlyNotice.afterLink')}
 </p>
 
 <style lang="scss">

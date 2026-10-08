@@ -12,11 +12,12 @@
 	import { currentNode } from '@/services/beacon-node';
 	import { settings } from '@/stores/settings';
 	import { parseFunctions, type FnMeta } from '@/sql/completion';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { formatNumber, t, type Message } from '@/i18n';
 	import {
 		formatBytesOrDash,
-		formatPercent,
 		formatUptime,
+		PERCENT_FORMAT,
 		readInfo,
 		type HostView,
 		type InfoView,
@@ -26,9 +27,9 @@
 
 	let info: InfoView | null = $state(null);
 	let raw: unknown = $state(null);
-	let error = $state('');
+	let error: Message | null = $state(null);
 	let functions: FnMeta[] | null = $state(null);
-	let functionsError = $state('');
+	let functionsError: Message | null = $state(null);
 	let needle = $state('');
 
 	let node = $derived($currentNode);
@@ -50,7 +51,7 @@
 
 		info = null;
 		raw = null;
-		error = '';
+		error = null;
 
 		const current = untrack(() => node);
 		if (!current) return;
@@ -64,9 +65,9 @@
 				if (!alive) return;
 				raw = answer;
 				info = readInfo(answer);
-				error = '';
+				error = null;
 			} catch (caught) {
-				if (alive) error = sqlErrorMessage(caught);
+				if (alive) error = sqlError(caught);
 			}
 		};
 
@@ -84,7 +85,7 @@
 		if (!url) return;
 
 		functions = null;
-		functionsError = '';
+		functionsError = null;
 
 		const current = untrack(() => node);
 		if (!current) return;
@@ -97,7 +98,7 @@
 					if (alive) functions = parseFunctions(answer);
 				},
 				(caught) => {
-					if (alive) functionsError = sqlErrorMessage(caught);
+					if (alive) functionsError = sqlError(caught);
 				}
 			);
 
@@ -112,56 +113,80 @@
 
 	function coresDetail(host: HostView): string | undefined {
 		if (host.physicalCores === null) return undefined;
-		return `${host.physicalCores} physical cores`;
+		return $t('systemInfo.cpu.physicalCores', { count: host.physicalCores });
 	}
 
 	function usageDetail(value: Usage | null): string {
 		if (!value) return '—';
-		return `${formatBytesOrDash(value.used)} of ${formatBytesOrDash(value.total)}`;
+		return $t('systemInfo.memory.usage', {
+			used: formatBytesOrDash(value.used, $formatNumber),
+			total: formatBytesOrDash(value.total, $formatNumber)
+		});
+	}
+
+	function uptimeText(secs: number | null): string {
+		const uptime = formatUptime(secs);
+		if (!uptime) return '—';
+		return $t(uptime);
+	}
+
+	function percentText(value: number): string {
+		return $formatNumber(value / 100, PERCENT_FORMAT);
+	}
+
+	function loadText(value: number): string {
+		return $formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	}
 </script>
 
 <svelte:head>
-	<title>System Information - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('systemInfo.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'System Info', href: resolve('/system-info') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.systemInfo'), href: resolve('/system-info') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>System Information</h1>
+		<h1>{$t('systemInfo.title')}</h1>
 
-		<p>The version, health and host resources of a Beacon node.</p>
+		<p>{$t('systemInfo.intro')}</p>
 
 		<NodePicker />
 
 		{#if !node}
-			<p>Pick a Beacon node.</p>
+			<p>{$t('systemInfo.noNode')}</p>
 		{:else}
 			{#if error}
-				<p class="error">{error}</p>
+				<p class="error">{$t(error)}</p>
 			{/if}
 
 			<div class="tiles">
-				<StatTile label="Beacon version" value={info?.version ?? '—'} />
+				<StatTile label={$t('systemInfo.version')} value={info?.version ?? '—'} />
 				<div class="health">
-					<span class="label">Health</span>
+					<span class="label">{$t('systemInfo.health')}</span>
 					<BeaconNodeStatus health={node} variant="compact" />
 				</div>
 				{#if info?.host}
 					<StatTile
-						label="Host"
+						label={$t('systemInfo.host')}
 						value={info.host.hostName ?? '—'}
 						detail={systemDetail(info.host)}
 					/>
-					<StatTile label="Uptime" value={formatUptime(info.host.uptimeSecs)} />
-					<StatTile label="CPU" value={info.host.cpuBrand ?? '—'} detail={coresDetail(info.host)} />
+					<StatTile
+						label={$t('systemInfo.uptime.label')}
+						value={uptimeText(info.host.uptimeSecs)}
+					/>
+					<StatTile
+						label={$t('systemInfo.cpu.title')}
+						value={info.host.cpuBrand ?? '—'}
+						detail={coresDetail(info.host)}
+					/>
 				{/if}
 			</div>
 
 			{#if info && !info.host}
 				<p class="muted">
-					This node does not report host data. The server runs without BEACON_ENABLE_SYS_INFO.
+					{$t('systemInfo.noHost', { variable: 'BEACON_ENABLE_SYS_INFO' })}
 				</p>
 			{/if}
 
@@ -169,8 +194,8 @@
 				{@const host = info.host}
 				<div class="panels">
 					<section>
-						<h2>CPU</h2>
-						<Meter label="Overall usage" percent={host.cpuPercent} />
+						<h2>{$t('systemInfo.cpu.title')}</h2>
+						<Meter label={$t('systemInfo.cpu.overall')} percent={host.cpuPercent} />
 						<div class="cores">
 							{#each host.cores as core, index (index)}
 								<Meter label={core.name} percent={core.percent} />
@@ -179,31 +204,41 @@
 					</section>
 
 					<section>
-						<h2>Memory</h2>
+						<h2>{$t('systemInfo.memory.title')}</h2>
 						<Meter
-							label="Memory"
+							label={$t('systemInfo.memory.title')}
 							percent={host.memory?.percent ?? null}
 							detail={usageDetail(host.memory)}
 						/>
-						<p class="muted">Available: {formatBytesOrDash(host.availableMemory)}</p>
+						<p class="muted">
+							{$t('systemInfo.memory.available', { size: formatBytesOrDash(host.availableMemory, $formatNumber) })}
+						</p>
 						{#if host.swap}
-							<Meter label="Swap" percent={host.swap.percent} detail={usageDetail(host.swap)} />
+							<Meter
+								label={$t('systemInfo.memory.swap')}
+								percent={host.swap.percent}
+								detail={usageDetail(host.swap)}
+							/>
 						{:else}
-							<p class="muted">No swap.</p>
+							<p class="muted">{$t('systemInfo.memory.noSwap')}</p>
 						{/if}
 					</section>
 
 					{#if host.load}
 						<section>
-							<h2>Load average</h2>
+							<h2>{$t('systemInfo.load.title')}</h2>
 							<p>
-								1 min {host.load.one.toFixed(2)} · 5 min {host.load.five.toFixed(2)} · 15 min {host.load.fifteen.toFixed(
-									2
-								)}
+								{$t('systemInfo.load.values', {
+									one: loadText(host.load.one),
+									five: loadText(host.load.five),
+									fifteen: loadText(host.load.fifteen)
+								})}
 							</p>
 							{#if host.physicalCores}
 								<p class="muted">
-									Per core: {formatPercent((host.load.one / host.physicalCores) * 100)} over 1 min.
+									{$t('systemInfo.load.perCore', {
+										percent: percentText((host.load.one / host.physicalCores) * 100)
+									})}
 								</p>
 							{/if}
 						</section>
@@ -214,14 +249,23 @@
 			<AdminSummary {node} />
 
 			<section class="functions">
-				<h2>Functions</h2>
+				<h2>{$t('systemInfo.functions.title')}</h2>
 				{#if functionsError}
-					<p class="error">{functionsError}</p>
+					<p class="error">{$t(functionsError)}</p>
 				{:else if !functions}
-					<p class="muted">Loading the functions...</p>
+					<p class="muted">{$t('systemInfo.functions.loading')}</p>
 				{:else}
-					<Input type="search" placeholder="Filter functions" bind:value={needle} />
-					<p class="muted">{matches.length} of {functions.length} functions</p>
+					<Input
+						type="search"
+						placeholder={$t('systemInfo.functions.filter')}
+						bind:value={needle}
+					/>
+					<p class="muted">
+						{$t('systemInfo.functions.count', {
+							shown: $formatNumber(matches.length),
+							total: functions.length
+						})}
+					</p>
 					<ul>
 						{#each matches as fn (fn.name)}
 							<li>
@@ -235,7 +279,7 @@
 
 			{#if raw}
 				<details class="raw">
-					<summary>Raw answer</summary>
+					<summary>{$t('systemInfo.raw')}</summary>
 					<pre>{JSON.stringify(raw, null, 2)}</pre>
 				</details>
 			{/if}

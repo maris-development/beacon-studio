@@ -30,7 +30,8 @@
 		type DatasetEntry,
 		type FileSort
 	} from '@/data-browser/datasets';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { formatNumber, t, type Message } from '@/i18n';
 
 	const PAGE_SIZE = 100;
 
@@ -39,7 +40,7 @@
 	let entries: DatasetEntry[] = $state([]);
 	let total: number | null = $state(null);
 	let loading = $state(false);
-	let error = $state('');
+	let error: Message | null = $state(null);
 	let uploadOpen = $state(false);
 	let needle = $state(page.url.searchParams.get('q') ?? '');
 	let sortKey: FileSort = $state('name');
@@ -89,7 +90,7 @@
 
 		const client = makeBeaconClient(current);
 		loading = true;
-		error = '';
+		error = null;
 
 		// Another node: its file list must not show under the new node.
 		if (loadedUrl !== null && current.url !== loadedUrl) {
@@ -111,7 +112,7 @@
 		} catch (caught) {
 			if (current.url === nodeUrl) {
 				entries = [];
-				error = sqlErrorMessage(caught);
+				error = sqlError(caught);
 			}
 		} finally {
 			if (current.url === nodeUrl) loading = false;
@@ -184,21 +185,21 @@
 </script>
 
 <svelte:head>
-	<title>Datasets - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.datasets') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Datasets', href: resolve('/data-browser/datasets') }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.datasets'), href: resolve('/data-browser/datasets') }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Datasets</h1>
+		<h1>{$t('nav.item.datasets')}</h1>
 
-		<p>Explore the files of your Beacon node.</p>
+		<p>{$t('dataBrowser.datasets.intro')}</p>
 
 		<NodePicker>
 			{#snippet actions()}
@@ -209,7 +210,7 @@
 							disabled={disabled || !node}
 							onclick={() => (uploadOpen = true)}
 						>
-							Upload
+							{$t('dataBrowser.datasets.upload')}
 						</Button>
 					{/snippet}
 				</AdminAction>
@@ -217,28 +218,32 @@
 		</NodePicker>
 
 		{#if !node}
-			<p>Pick a Beacon node.</p>
+			<p>{$t('dataBrowser.datasets.pickNode')}</p>
 		{:else}
 			<StorageBar {node} />
 
 			<div class="toolbar">
 				<Input
 					type="search"
-					placeholder="Search all folders"
+					placeholder={$t('dataBrowser.datasets.search')}
 					bind:value={needle}
 					onchange={onSearch}
 				/>
-				{#if total !== null}<span class="muted">{total.toLocaleString()} files</span>{/if}
+				{#if total !== null}
+					<span class="muted">{$t('dataBrowser.datasets.fileCount', { count: total })}</span>
+				{/if}
 			</div>
 
 			{#if cut}
-				<p class="warning">This node has more than 100,000 files. The list is incomplete.</p>
+				<p class="warning">
+					{$t('dataBrowser.datasets.listCut', { limit: DATASET_LIST_LIMIT })}
+				</p>
 			{/if}
 
 			{#if !searching}
-				<nav class="path" aria-label="Folder">
+				<nav class="path" aria-label={$t('dataBrowser.datasets.folderNav')}>
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
-					<a href={listHref('')}>All</a>
+					<a href={listHref('')}>{$t('dataBrowser.datasets.all')}</a>
 					{#each folderParts(folder) as part (part.path)}
 						<span>/</span>
 						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
@@ -248,19 +253,29 @@
 			{/if}
 
 			{#if loading && entries.length === 0}
-				<p class="muted">Loading the files...</p>
+				<p class="muted">{$t('dataBrowser.datasets.loading')}</p>
 			{:else if error}
-				<p class="error">{error}</p>
+				<p class="error">{$t(error)}</p>
 			{:else if rowCount === 0}
-				<p class="muted">No files here.</p>
+				<p class="muted">{$t('dataBrowser.datasets.empty')}</p>
 			{:else}
 				<table class="files">
 					<thead>
 						<tr>
-							<th><button type="button" onclick={() => setSort('name')}>Name</button></th>
-							<th>Format</th>
-							<th><button type="button" onclick={() => setSort('size')}>Size</button></th>
-							<th><button type="button" onclick={() => setSort('date')}>Modified</button></th>
+							<th>
+								<button type="button" onclick={() => setSort('name')}>{$t('common.name')}</button>
+							</th>
+							<th>{$t('dataBrowser.datasets.column.format')}</th>
+							<th>
+								<button type="button" onclick={() => setSort('size')}>
+									{$t('dataBrowser.datasets.column.size')}
+								</button>
+							</th>
+							<th>
+								<button type="button" onclick={() => setSort('date')}>
+									{$t('dataBrowser.datasets.column.modified')}
+								</button>
+							</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -270,7 +285,7 @@
 									<button type="button" class="link" onclick={() => openFolder(row.path)}>
 										<FolderIcon class="size-4" />
 										{row.name}
-										<span class="muted">({row.count})</span>
+										<span class="muted">({$formatNumber(row.count)})</span>
 									</button>
 								</td>
 							</tr>
@@ -285,7 +300,7 @@
 									</a>
 								</td>
 								<td>{entry.format}</td>
-								<td>{formatSize(entry.size)}</td>
+								<td>{formatSize(entry.size, $formatNumber)}</td>
 								<td>{entry.lastModified?.slice(0, 10) ?? ''}</td>
 							</tr>
 						{/each}
@@ -298,14 +313,16 @@
 							variant="outline"
 							size="sm"
 							disabled={pageIndex <= 1}
-							onclick={() => goToPage(pageIndex - 1)}>Previous</Button
+							onclick={() => goToPage(pageIndex - 1)}>{$t('dataBrowser.datasets.previous')}</Button
 						>
-						<span class="muted">Page {pageIndex} of {pageCount}</span>
+						<span class="muted">
+							{$t('dataBrowser.datasets.pageOf', { page: pageIndex, count: pageCount })}
+						</span>
 						<Button
 							variant="outline"
 							size="sm"
 							disabled={pageIndex >= pageCount}
-							onclick={() => goToPage(pageIndex + 1)}>Next</Button
+							onclick={() => goToPage(pageIndex + 1)}>{$t('dataBrowser.datasets.next')}</Button
 						>
 					</div>
 				{/if}

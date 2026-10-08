@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError, ConnectionError } from '@maris-development/beacon-client';
-import { isSqlDisabled, isSuperUserRefusal, sqlErrorMessage, sqlToRun } from '../statement';
+import { translate } from '@/i18n';
+import { isSqlDisabled, isSuperUserRefusal, sqlError, sqlToRun } from '../statement';
 
 const refusal = new ApiError(
 	400,
@@ -54,27 +55,41 @@ describe('error matchers', () => {
 	});
 });
 
-describe('sqlErrorMessage', () => {
-	it('shows the server text', () => {
-		expect(sqlErrorMessage(new ApiError(400, 'column "x" not found', 'u'))).toBe(
-			'column "x" not found'
-		);
+describe('sqlError', () => {
+	it('keeps the server text raw', () => {
+		expect(sqlError(new ApiError(400, 'column "x" not found', 'u'))).toEqual({
+			key: 'sqlEditor.error.raw',
+			values: { text: 'column "x" not found' }
+		});
 	});
 
 	it('names the status when the body is empty', () => {
-		expect(sqlErrorMessage(new ApiError(502, '', 'u'))).toBe(
-			'The Beacon node answered with status 502.'
-		);
+		expect(sqlError(new ApiError(502, '', 'u'))).toEqual({
+			key: 'admin.error.status',
+			values: { status: 502 }
+		});
 	});
 
 	it('names a connection failure', () => {
-		expect(sqlErrorMessage(new ConnectionError('u', null))).toBe(
-			'The Beacon node cannot be reached.'
-		);
+		expect(sqlError(new ConnectionError('u', null)).key).toBe('admin.error.unreachable');
 	});
 
-	it('shows any other error message', () => {
-		expect(sqlErrorMessage(new Error('boom'))).toBe('boom');
-		expect(sqlErrorMessage('text')).toBe('text');
+	it('keeps any other error message raw', () => {
+		expect(sqlError(new Error('boom')).values).toEqual({ text: 'boom' });
+		expect(sqlError('text').values).toEqual({ text: 'text' });
+	});
+});
+
+describe('sqlError text', () => {
+	it('gives the English text', () => {
+		expect(translate(sqlError(new ApiError(400, 'column "x" not found', 'u')))).toBe(
+			'column "x" not found'
+		);
+		expect(translate(sqlError(new ApiError(502, '', 'u')))).toBe(
+			'The Beacon node answered with status 502.'
+		);
+		expect(translate(sqlError(new ConnectionError('u', null)))).toBe(
+			'The Beacon node cannot be reached.'
+		);
 	});
 });

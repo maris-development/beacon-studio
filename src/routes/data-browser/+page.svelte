@@ -5,21 +5,28 @@
 	import Card from '@/components/card/Card.svelte';
 	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
+	import { t } from '@/i18n';
 
-	let datasetsTitle: string = $state('Datasets');
-	let dataTablesTitle: string = $state('Data Tables');
+	// Zero or unknown shows the plain section name.
+	let datasetTotal = $state(0);
+	let tableTotal = $state(0);
 
 	let nodeUrl = $derived($currentNode?.url ?? null);
+
+	let datasetsTitle = $derived.by(() => {
+		if (datasetTotal > 0) return $t('dataBrowser.home.datasetCount', { count: datasetTotal });
+		return $t('nav.item.datasets');
+	});
+
+	let dataTablesTitle = $derived.by(() => {
+		if (tableTotal > 0) return $t('dataBrowser.home.tableCount', { count: tableTotal });
+		return $t('nav.item.dataTables');
+	});
 
 	$effect(() => {
 		if (!nodeUrl) return;
 		untrack(() => count());
 	});
-
-	function plural(count: number, word: string): string {
-		if (count === 1) return `1 ${word}`;
-		return `${count.toLocaleString()} ${word}s`;
-	}
 
 	function count() {
 		const node = $currentNode;
@@ -27,22 +34,20 @@
 
 		const client = makeBeaconClient(node);
 		const url = node.url;
-		datasetsTitle = 'Datasets';
-		dataTablesTitle = 'Data Tables';
+		datasetTotal = 0;
+		tableTotal = 0;
 
 		// A node switch during the request makes the answer stale.
 		client.totalDatasets().then(
 			(total) => {
-				if (url === nodeUrl && total > 0) datasetsTitle = plural(total, 'dataset');
+				if (url === nodeUrl) datasetTotal = total;
 			},
 			() => {}
 		);
 
 		client.tables().then(
 			(tables) => {
-				if (url === nodeUrl && tables.length > 0) {
-					dataTablesTitle = plural(tables.length, 'data table');
-				}
+				if (url === nodeUrl) tableTotal = tables.length;
 			},
 			() => {}
 		);
@@ -50,26 +55,26 @@
 </script>
 
 <svelte:head>
-	<title>Data Browser - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.dataBrowser') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Data Browser', href: resolve('/data-browser') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Data Browser</h1>
+		<h1>{$t('nav.item.dataBrowser')}</h1>
 
-		<p>Use the data browser functions listed below to explore and manage your Beacon contents.</p>
+		<p>{$t('dataBrowser.home.intro')}</p>
 
 		<div class="data-browser-functions">
 			<Card href={resolve('/data-browser/datasets')}>
 				<h3>{datasetsTitle}</h3>
-				<p>View and manage individual datasets.</p>
+				<p>{$t('dataBrowser.home.datasetsCard')}</p>
 			</Card>
 
 			<Card href={resolve('/data-browser/data-tables')}>
 				<h3>{dataTablesTitle}</h3>
-				<p>View and manage data tables.</p>
+				<p>{$t('dataBrowser.home.tablesCard')}</p>
 			</Card>
 		</div>
 	</div>

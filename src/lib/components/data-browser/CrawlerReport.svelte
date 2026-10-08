@@ -1,16 +1,17 @@
 <script lang="ts">
 	import type { CrawlReport } from '@/beacon-api/crawler-run';
+	import { t } from '@/i18n';
 
 	let { report, tableHref }: { report: CrawlReport; tableHref: (name: string) => string } =
 		$props();
 </script>
 
 <div class="report">
-	<p>Found {report.discovered} tables.</p>
+	<p>{$t('dataBrowser.crawlers.report.found', { count: report.discovered })}</p>
 
 	{#if report.created.length > 0}
 		<p>
-			<strong>Created:</strong>
+			<strong>{$t('dataBrowser.crawlers.report.created')}</strong>
 			{#each report.created as name, index (index)}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tableHref resolves the path -->
 				{#if index > 0},
@@ -21,7 +22,7 @@
 
 	{#if report.updated.length > 0}
 		<p>
-			<strong>Updated:</strong>
+			<strong>{$t('dataBrowser.crawlers.report.updated')}</strong>
 			{#each report.updated as name, index (index)}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- tableHref resolves the path -->
 				{#if index > 0},
@@ -32,14 +33,14 @@
 
 	{#if report.skipped.length > 0}
 		<p>
-			<strong>Skipped (owned by another crawler or made by hand):</strong>
+			<strong>{$t('dataBrowser.crawlers.report.skipped')}</strong>
 			{report.skipped.join(', ')}
 		</p>
 	{/if}
 
 	{#if report.failed.length > 0}
 		<div class="failed">
-			<strong>Failed:</strong>
+			<strong>{$t('dataBrowser.crawlers.report.failed')}</strong>
 			<ul>
 				<!-- The server can list one table more than once. -->
 				{#each report.failed as [name, reason], index (index)}
@@ -50,7 +51,9 @@
 	{/if}
 
 	{#if report.skippedFiles > 0}
-		<p class="muted">{report.skippedFiles} files matched no format.</p>
+		<p class="muted">
+			{$t('dataBrowser.crawlers.report.skippedFiles', { count: report.skippedFiles })}
+		</p>
 	{/if}
 </div>
 

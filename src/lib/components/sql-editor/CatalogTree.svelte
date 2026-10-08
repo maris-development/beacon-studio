@@ -13,12 +13,13 @@
 		type SchemaColumn
 	} from '@/sql/catalog';
 	import { quoteIdent, sqlName, type TableRef } from '@/sql/identifiers';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { t, type Message } from '@/i18n';
 
 	type Props = {
 		tree: CatalogTree | null;
 		loading: boolean;
-		error: string;
+		error: Message | null;
 		loadColumns: (ref: TableRef) => Promise<SchemaColumn[]>;
 		onInsert: (text: string) => void;
 		onRefresh: () => void;
@@ -26,7 +27,7 @@
 
 	let { tree, loading, error, loadColumns, onInsert, onRefresh }: Props = $props();
 
-	type ColumnState = { columns: SchemaColumn[]; shown: number } | { error: string } | 'loading';
+	type ColumnState = { columns: SchemaColumn[]; shown: number } | { error: Message } | 'loading';
 
 	let needle = $state('');
 	let open = $state<Record<string, boolean>>({});
@@ -77,7 +78,7 @@
 		try {
 			columns[key] = { columns: await loadColumns(ref), shown: COLUMN_PAGE_SIZE };
 		} catch (caught) {
-			columns[key] = { error: sqlErrorMessage(caught) };
+			columns[key] = { error: sqlError(caught) };
 		}
 	}
 
@@ -91,12 +92,12 @@
 
 <div class="catalog">
 	<div class="catalog-head">
-		<Input type="search" placeholder="Filter tables" bind:value={needle} />
+		<Input type="search" placeholder={$t('sqlEditor.catalog.filter')} bind:value={needle} />
 		<button
 			type="button"
 			class="icon-button"
-			title="Refresh"
-			aria-label="Refresh"
+			title={$t('common.refresh')}
+			aria-label={$t('common.refresh')}
 			onclick={onRefresh}
 		>
 			<RefreshCwIcon class="size-4" />
@@ -104,11 +105,11 @@
 	</div>
 
 	{#if loading}
-		<p class="muted">Loading tables...</p>
+		<p class="muted">{$t('sqlEditor.catalog.loading')}</p>
 	{:else if error}
-		<p class="error">{error}</p>
+		<p class="error">{$t(error)}</p>
 	{:else if shown && shown.catalogs.length === 0}
-		<p class="muted">No tables match.</p>
+		<p class="muted">{$t('sqlEditor.catalog.noMatch')}</p>
 	{:else if shown}
 		<ul class="level">
 			{#each shown.catalogs as catalog (catalog.name)}
@@ -144,7 +145,7 @@
 														<button
 															type="button"
 															class="toggle"
-															aria-label="Show columns"
+															aria-label={$t('sqlEditor.catalog.showColumns')}
 															onclick={() => toggleTable(ref)}
 														>
 															<ChevronRightIcon class="chevron {open[`t:${key}`] ? 'open' : ''}" />
@@ -161,9 +162,9 @@
 
 													{#if open[`t:${key}`]}
 														{#if colState === 'loading'}
-															<p class="muted nested">Loading columns...</p>
+															<p class="muted nested">{$t('sqlEditor.catalog.loadingColumns')}</p>
 														{:else if colState && 'error' in colState}
-															<p class="error nested">{colState.error}</p>
+															<p class="error nested">{$t(colState.error)}</p>
 														{:else if colState && 'columns' in colState}
 															<ul class="level columns">
 																{#each colState.columns.slice(0, colState.shown) as column (column.name)}
@@ -181,7 +182,9 @@
 															</ul>
 															{#if colState.columns.length > colState.shown}
 																<button type="button" class="more" onclick={() => showMore(key)}>
-																	Show more ({colState.columns.length - colState.shown} left)
+																	{$t('sqlEditor.catalog.showMore', {
+																		count: colState.columns.length - colState.shown
+																	})}
 																</button>
 															{/if}
 														{/if}

@@ -56,9 +56,9 @@ describe('externalTableSpec', () => {
 describe('externalTableErrors', () => {
 	it('asks for a name, a location and a file type', () => {
 		expect(externalTableErrors({ ...form, name: ' ', location: '', fileType: '' })).toEqual([
-			'Enter a table name.',
-			'Enter a location.',
-			'Pick a file type.'
+			{ key: 'dataBrowser.tables.external.nameMissing', values: undefined },
+			{ key: 'dataBrowser.tables.external.locationMissing', values: undefined },
+			{ key: 'dataBrowser.tables.external.typeMissing', values: undefined }
 		]);
 	});
 

@@ -125,7 +125,7 @@
 						<tr class={rowClass}>
 							{#each columns as column (column.key)}
 								{#if showNull && cell(row, column) == null}
-									<td onclick={() => onCellClick(row, column)}><span class="null-value">NULL</span></td>
+									<td onclick={() => onCellClick(row, column)}><span class="null-value">{$t('table.nullValue')}</span></td>
 								{:else if column.rawHtml === true}
 									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>

@@ -5,6 +5,7 @@
 	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
 	import PlanTree from './PlanTree.svelte';
 	import { viewOf } from '@/sql/plan';
+	import { t } from '@/i18n';
 
 	let { node, depth = 0 }: { node: Record<string, unknown>; depth?: number } = $props();
 
@@ -18,14 +19,14 @@
 			type="button"
 			class="toggle"
 			class:hidden={view.children.length === 0 && view.fields.length === 0 && !view.details}
-			aria-label={open ? 'Fold' : 'Unfold'}
+			aria-label={open ? $t('sqlEditor.plan.fold') : $t('sqlEditor.plan.unfold')}
 			onclick={() => (open = !open)}
 		>
 			<ChevronRightIcon class="chevron {open ? 'open' : ''}" />
 		</button>
-		<span class="type">{view.type}</span>
-		{#each view.badges as badge (badge)}
-			<span class="badge">{badge}</span>
+		<span class="type">{view.type ?? $t('sqlEditor.plan.node')}</span>
+		{#each view.badges as badge (badge.key)}
+			<span class="badge">{$t(badge)}</span>
 		{/each}
 	</div>
 

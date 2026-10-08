@@ -9,6 +9,7 @@
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
 import { ApiError, BeaconClient, ConnectionError } from '@maris-development/beacon-client';
 import type { BeaconNode } from '@/beacon-api/types';
+import { translate } from '@/i18n';
 import { normalizeUrl } from './beacon-node-url';
 
 export type AdminCredentials = { username: string; password: string };
@@ -20,7 +21,7 @@ const STORAGE_KEY = 'beacon-studio.admin-sessions';
 /** The credentials were wrong. The dialog shows this, and stays open. */
 export class AdminAuthError extends Error {
 	constructor() {
-		super('Wrong username or password.');
+		super(translate('admin.signIn.wrongCredentials'));
 		this.name = 'AdminAuthError';
 	}
 }
@@ -102,11 +103,11 @@ export function signOut(nodeId: string): void {
 /** A message for a toast after a failed admin action. */
 export function adminErrorMessage(error: unknown): string {
 	if (error instanceof ApiError) {
-		if (error.status === 403) return 'You have no permission for this action on this Beacon node.';
-		return error.body || `The Beacon node answered with status ${error.status}.`;
+		if (error.status === 403) return translate('admin.error.forbidden');
+		return error.body || translate('admin.error.status', { status: error.status });
 	}
 
-	if (error instanceof ConnectionError) return 'The Beacon node cannot be reached.';
+	if (error instanceof ConnectionError) return translate('admin.error.unreachable');
 	if (error instanceof Error) return error.message;
 
 	return String(error);

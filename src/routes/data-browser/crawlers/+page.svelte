@@ -17,6 +17,7 @@
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import { settings } from '@/stores/settings';
+	import { t, translate } from '@/i18n';
 	import { withBack } from '@/data-browser/back';
 	import {
 		describeFormats,
@@ -110,13 +111,19 @@
 			// The credentials are read inside, so a retry after a new sign-in uses the new ones.
 			const report = await withAdmin(current, () => {
 				const credentials = credentialsOf(current.id);
-				if (!credentials) throw new Error('No admin session.');
+				if (!credentials) throw new Error(translate('dataBrowser.crawlers.noSession'));
 				return runCrawlerReport(normalizeUrl(current.url), credentials, crawler.name);
 			});
 			// A node switch during the run makes this report belong to another node.
 			if (report !== null && current.url === nodeUrl) reports[crawler.name] = report;
 		} catch (caught) {
-			if (current.url === nodeUrl) addToast({ type: 'error', message: adminErrorMessage(caught) });
+			if (current.url === nodeUrl) {
+				addToast({
+					type: 'error',
+					key: 'dataBrowser.crawlers.runFailed',
+					message: adminErrorMessage(caught)
+				});
+			}
 		} finally {
 			delete runningByUrl[url];
 		}
@@ -127,10 +134,13 @@
 		if (!current) return;
 
 		const sure = await askConfirm({
-			title: `Delete crawler ${crawler.name}`,
-			message: `Delete the crawler "${crawler.name}" from ${current.name}?`,
-			note: 'Tables that this crawler made stay. Delete them on the Tables page.',
-			confirmLabel: 'Delete',
+			title: translate('dataBrowser.crawlers.delete.title', { name: crawler.name }),
+			message: translate('dataBrowser.crawlers.delete.message', {
+				name: crawler.name,
+				node: current.name
+			}),
+			note: translate('dataBrowser.crawlers.delete.note'),
+			confirmLabel: translate('common.delete'),
 			destructive: true
 		});
 		if (!sure) return;
@@ -141,11 +151,19 @@
 				return true;
 			});
 			if (done) {
-				addToast({ type: 'success', message: `Deleted the crawler ${crawler.name}.` });
+				addToast({
+					type: 'success',
+					key: 'dataBrowser.crawlers.delete.done',
+					values: { name: crawler.name }
+				});
 				await load();
 			}
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.crawlers.delete.failed',
+				message: adminErrorMessage(caught)
+			});
 		}
 	}
 
@@ -165,21 +183,21 @@
 </script>
 
 <svelte:head>
-	<title>Crawlers - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.crawlers') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Crawlers', href: resolve('/data-browser/crawlers') }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.crawlers'), href: resolve('/data-browser/crawlers') }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Crawlers</h1>
+		<h1>{$t('nav.item.crawlers')}</h1>
 
-		<p>A crawler scans a folder of the node and creates a table for each group of files.</p>
+		<p>{$t('dataBrowser.crawlers.intro')}</p>
 
 		{#if !admin}
 			<AdminOnlyNotice />
@@ -192,23 +210,23 @@
 						onclick={() => (dialog = { crawler: null })}
 					>
 						<PlusIcon />
-						New crawler
+						{$t('dataBrowser.crawlers.newCrawler')}
 					</Button>
 				{/snippet}
 			</NodePicker>
 
 			{#if !node}
-				<p>Pick a Beacon node.</p>
+				<p>{$t('dataBrowser.crawlers.pickNode')}</p>
 			{:else if phase === 'loading'}
-				<p class="muted">Loading the crawlers...</p>
+				<p class="muted">{$t('dataBrowser.crawlers.loading')}</p>
 			{:else if phase === 'needs-sign-in'}
-				<p>Sign in to see the crawlers of {node.name}.</p>
-				<Button onclick={load}>Sign in</Button>
+				<p>{$t('dataBrowser.crawlers.needsSignIn', { node: node.name })}</p>
+				<Button onclick={load}>{$t('dataBrowser.crawlers.signIn')}</Button>
 			{:else if phase === 'error'}
 				<p class="error">{error}</p>
-				<Button variant="outline" onclick={load}>Try again</Button>
+				<Button variant="outline" onclick={load}>{$t('dataBrowser.crawlers.tryAgain')}</Button>
 			{:else if phase === 'ready' && crawlers.length === 0}
-				<p class="muted">No crawlers on this node, or the node could not list them.</p>
+				<p class="muted">{$t('dataBrowser.crawlers.empty')}</p>
 			{:else if phase === 'ready'}
 				<ul class="cards">
 					{#each crawlers as crawler (crawler.name)}
@@ -218,35 +236,39 @@
 								<div class="card-actions">
 									<Button size="sm" disabled={running !== null} onclick={() => run(crawler)}>
 										<PlayIcon />
-										{#if running === crawler.name}Busy...{:else}Run{/if}
+										{#if running === crawler.name}
+											{$t('dataBrowser.crawlers.busy')}
+										{:else}
+											{$t('dataBrowser.crawlers.run')}
+										{/if}
 									</Button>
 									<Button
 										size="sm"
 										variant="outline"
 										disabled={running !== null}
-										onclick={() => (dialog = { crawler })}>Edit</Button
+										onclick={() => (dialog = { crawler })}>{$t('common.edit')}</Button
 									>
 									<Button
 										size="sm"
 										variant="destructive"
 										disabled={running !== null}
-										onclick={() => remove(crawler)}>Delete</Button
+										onclick={() => remove(crawler)}>{$t('common.delete')}</Button
 									>
 								</div>
 							</div>
 
 							<dl>
-								<dt>Folder</dt>
+								<dt>{$t('dataBrowser.crawlers.field.folder')}</dt>
 								<dd class="mono">{crawler.targetPrefix}</dd>
-								<dt>Formats</dt>
-								<dd>{describeFormats(crawler.formatFilter)}</dd>
-								<dt>Table names</dt>
-								<dd>{describeNaming(crawler.tableNaming)}</dd>
-								<dt>Partitions</dt>
-								<dd>{crawler.detectPartitions ? 'On' : 'Off'}</dd>
-								<dt>Schedule</dt>
-								<dd>{describeSchedule(crawler.scheduleSecs)}</dd>
-								<dt>Options</dt>
+								<dt>{$t('dataBrowser.crawlers.field.formats')}</dt>
+								<dd>{$t(describeFormats(crawler.formatFilter))}</dd>
+								<dt>{$t('dataBrowser.crawlers.field.naming')}</dt>
+								<dd>{$t(describeNaming(crawler.tableNaming))}</dd>
+								<dt>{$t('dataBrowser.crawlers.field.partitions')}</dt>
+								<dd>{$t(crawler.detectPartitions ? 'common.on' : 'common.off')}</dd>
+								<dt>{$t('dataBrowser.crawlers.field.schedule')}</dt>
+								<dd>{$t(describeSchedule(crawler.scheduleSecs))}</dd>
+								<dt>{$t('dataBrowser.crawlers.field.options')}</dt>
 								<dd>{Object.keys(crawler.options).length}</dd>
 							</dl>
 

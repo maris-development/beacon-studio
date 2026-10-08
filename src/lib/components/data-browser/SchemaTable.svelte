@@ -3,9 +3,11 @@
 	import { onMount } from 'svelte';
 	import { Input } from '@/components/ui/input';
 	import { COLUMN_PAGE_SIZE, stringifyType } from '@/sql/catalog';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { t, type Message } from '@/i18n';
 
-	type Row = { name: string; dataType: string; nullable: string };
+	// `nullable` is null when the field does not say.
+	type Row = { name: string; dataType: string; nullable: boolean | null };
 
 	let {
 		load,
@@ -17,7 +19,7 @@
 
 	let rows: Row[] = $state([]);
 	let loading = $state(true);
-	let error = $state('');
+	let error: Message | null = $state(null);
 	let needle = $state('');
 	let shown = $state(COLUMN_PAGE_SIZE);
 
@@ -29,9 +31,8 @@
 		return fields
 			.filter((field) => field && typeof field.name === 'string')
 			.map((field) => {
-				let nullable = '';
-				if (field.nullable === true) nullable = 'yes';
-				if (field.nullable === false) nullable = 'no';
+				let nullable: boolean | null = null;
+				if (typeof field.nullable === 'boolean') nullable = field.nullable;
 
 				return {
 					name: field.name,
@@ -45,7 +46,7 @@
 		try {
 			rows = toRows(await load());
 		} catch (caught) {
-			error = sqlErrorMessage(caught);
+			error = sqlError(caught);
 		} finally {
 			loading = false;
 		}
@@ -63,25 +64,42 @@
 </script>
 
 {#if loading}
-	<p class="muted">Loading the columns...</p>
+	<p class="muted">{$t('dataBrowser.common.schema.loading')}</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="error">{$t(error)}</p>
 {:else}
 	<div class="head">
-		<Input type="search" placeholder="Filter columns" bind:value={needle} onchange={onChange} />
-		<span class="muted">{matches.length} of {rows.length} columns</span>
+		<Input
+			type="search"
+			placeholder={$t('dataBrowser.common.schema.filter')}
+			bind:value={needle}
+			onchange={onChange}
+		/>
+		<span class="muted">
+			{$t('dataBrowser.common.schema.count', { shown: matches.length, total: rows.length })}
+		</span>
 	</div>
 
 	<table class="schema">
 		<thead>
-			<tr><th>Column</th><th>Type</th><th>Nullable</th></tr>
+			<tr>
+				<th>{$t('dataBrowser.common.schema.column')}</th>
+				<th>{$t('dataBrowser.common.schema.type')}</th>
+				<th>{$t('dataBrowser.common.schema.nullable')}</th>
+			</tr>
 		</thead>
 		<tbody>
 			{#each matches.slice(0, shown) as row (row.name)}
 				<tr>
 					<td>{row.name}</td>
 					<td class="type">{row.dataType}</td>
-					<td>{row.nullable}</td>
+					<td>
+						{#if row.nullable === true}
+							{$t('dataBrowser.common.schema.yes')}
+						{:else if row.nullable === false}
+							{$t('dataBrowser.common.schema.no')}
+						{/if}
+					</td>
 				</tr>
 			{/each}
 		</tbody>
@@ -89,7 +107,7 @@
 
 	{#if matches.length > shown}
 		<button type="button" class="more" onclick={() => (shown += COLUMN_PAGE_SIZE)}>
-			Show more ({matches.length - shown} left)
+			{$t('dataBrowser.common.schema.showMore', { count: matches.length - shown })}
 		</button>
 	{/if}
 {/if}

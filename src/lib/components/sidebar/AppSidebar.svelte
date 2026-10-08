@@ -12,7 +12,7 @@
 	import { page } from '$app/state';
 	import { addToast, dismissToast } from '@/stores/toasts';
 	import { openFeedback } from '$lib/feedback';
-	import { t, type MessageKey } from '@/i18n';
+	import { t } from '@/i18n';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';

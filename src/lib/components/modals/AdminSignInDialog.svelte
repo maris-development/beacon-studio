@@ -6,6 +6,7 @@
 	import Modal from '@/components/modals/Modal.svelte';
 	import { Input } from '@/components/ui/input';
 	import { Label } from '@/components/ui/label';
+	import { t } from '@/i18n';
 	import {
 		AdminAuthError,
 		adminErrorMessage,
@@ -73,7 +74,7 @@
 {#if $signInRequest}
 	<div class="sign-in-layer">
 		<Modal
-			title="Sign in to Beacon node {$signInRequest.node.name}"
+			title={$t('admin.signIn.title', { name: $signInRequest.node.name })}
 			onClose={() => answerSignIn(false)}
 			width="440px"
 		>
@@ -81,12 +82,12 @@
 				<p class="node-url">{$signInRequest.node.url}</p>
 
 				<div class="field">
-					<Label for="admin-username">Username</Label>
+					<Label for="admin-username">{$t('admin.signIn.username')}</Label>
 					<Input id="admin-username" autocomplete="username" bind:value={username} required />
 				</div>
 
 				<div class="field">
-					<Label for="admin-password">Password</Label>
+					<Label for="admin-password">{$t('admin.signIn.password')}</Label>
 					<Input
 						id="admin-password"
 						type="password"
@@ -102,12 +103,12 @@
 			</form>
 
 			<div slot="footer" class="actions">
-				<Button variant="outline" onclick={() => answerSignIn(false)}>Cancel</Button>
+				<Button variant="outline" onclick={() => answerSignIn(false)}>{$t('common.cancel')}</Button>
 				<Button type="submit" form="admin-sign-in" disabled={busy}>
 					{#if busy}
-						Signing in...
+						{$t('admin.signIn.busy')}
 					{:else}
-						Sign in
+						{$t('admin.signIn.submit')}
 					{/if}
 				</Button>
 			</div>

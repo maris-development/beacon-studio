@@ -1,17 +1,26 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
 	TABS_STORAGE_KEY,
-	addTab,
-	closeTab,
-	emptyTabs,
-	loadTabs,
-	openInNewTab,
-	readTabs,
+	addTab as addWith,
+	closeTab as closeWith,
+	emptyTabs as emptyWith,
+	loadTabs as loadWith,
+	openInNewTab as openWith,
+	readTabs as readWith,
 	renameTab,
 	saveTabs,
 	selectTab,
-	setTabSql
+	setTabSql,
+	type TabsState
 } from '../tabs';
+
+const titleOf = (number: number) => `Query ${number}`;
+const emptyTabs = () => emptyWith(titleOf);
+const loadTabs = () => loadWith(titleOf);
+const readTabs = (raw: string | null) => readWith(raw, titleOf);
+const addTab = (state: TabsState) => addWith(state, titleOf);
+const closeTab = (state: TabsState, id: string) => closeWith(state, id, titleOf);
+const openInNewTab = (state: TabsState, sql: string) => openWith(state, sql, titleOf);
 
 describe('readTabs', () => {
 	it('gives one empty tab for no value', () => {
@@ -48,6 +57,11 @@ describe('tab changes', () => {
 		const next = addTab(emptyTabs());
 		expect(next.tabs.map((tab) => tab.title)).toEqual(['Query 1', 'Query 2']);
 		expect(next.activeId).toBe(next.tabs[1].id);
+	});
+
+	it('names a new tab with the given title function', () => {
+		const state = addWith(emptyWith((n) => `Vraag ${n}`), (n) => `Vraag ${n}`);
+		expect(state.tabs.map((tab) => tab.title)).toEqual(['Vraag 1', 'Vraag 2']);
 	});
 
 	it('reuses a free title number', () => {

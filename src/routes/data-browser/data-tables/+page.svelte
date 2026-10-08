@@ -19,14 +19,15 @@
 	import { splitTree, tableDetailQuery, tableKind } from '@/data-browser/tables';
 	import { buildTree, filterTree, type CatalogTree } from '@/sql/catalog';
 	import type { TableRef } from '@/sql/identifiers';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { t, type Message } from '@/i18n';
 
 	type Dialog = 'view' | 'materialized' | 'external' | null;
 
 	let tree: CatalogTree | null = $state(null);
 	let defaultTable: string | null = $state(null);
 	let loading = $state(false);
-	let error = $state('');
+	let error: Message | null = $state(null);
 	let needle = $state(page.url.searchParams.get('q') ?? '');
 	let othersOpen = $state(false);
 	let dialog: Dialog = $state(null);
@@ -55,7 +56,7 @@
 		tree = null;
 		defaultTable = null;
 		loading = true;
-		error = '';
+		error = null;
 
 		try {
 			const [view, fallback] = await Promise.all([
@@ -75,7 +76,7 @@
 		} catch (caught) {
 			if (current.url === nodeUrl) {
 				tree = null;
-				error = sqlErrorMessage(caught);
+				error = sqlError(caught);
 			}
 		} finally {
 			if (current.url === nodeUrl) loading = false;
@@ -127,21 +128,21 @@
 </script>
 
 <svelte:head>
-	<title>Data Tables - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.dataTables') })}</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Data tables', href: resolve('/data-browser/data-tables') }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.dataTables'), href: resolve('/data-browser/data-tables') }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Data Tables</h1>
+		<h1>{$t('nav.item.dataTables')}</h1>
 
-		<p>Explore the tables of your Beacon node.</p>
+		<p>{$t('dataBrowser.tables.intro')}</p>
 
 		<NodePicker>
 			{#snippet actions()}
@@ -149,15 +150,19 @@
 					{#snippet children({ disabled })}
 						<DropdownMenu.Root>
 							<DropdownMenu.Trigger disabled={disabled || !node}>
-								<Button variant="outline" disabled={disabled || !node}>Create</Button>
+								<Button variant="outline" disabled={disabled || !node}>
+									{$t('dataBrowser.tables.create')}
+								</Button>
 							</DropdownMenu.Trigger>
 							<DropdownMenu.Content class="w-52">
-								<DropdownMenu.Item onclick={() => (dialog = 'view')}>View</DropdownMenu.Item>
+								<DropdownMenu.Item onclick={() => (dialog = 'view')}>
+									{$t('dataBrowser.tables.createView')}
+								</DropdownMenu.Item>
 								<DropdownMenu.Item onclick={() => (dialog = 'materialized')}>
-									Materialized view
+									{$t('dataBrowser.tables.createMaterialized')}
 								</DropdownMenu.Item>
 								<DropdownMenu.Item onclick={() => (dialog = 'external')}>
-									External table
+									{$t('dataBrowser.tables.createExternal')}
 								</DropdownMenu.Item>
 							</DropdownMenu.Content>
 						</DropdownMenu.Root>
@@ -167,17 +172,22 @@
 		</NodePicker>
 
 		{#if !node}
-			<p>Pick a Beacon node.</p>
+			<p>{$t('dataBrowser.common.pickNode')}</p>
 		{:else}
-			<Input type="search" placeholder="Search tables" bind:value={needle} onchange={onSearch} />
+			<Input
+				type="search"
+				placeholder={$t('dataBrowser.tables.search')}
+				bind:value={needle}
+				onchange={onSearch}
+			/>
 
 			{#if loading && !tree}
-				<p class="muted">Loading the tables...</p>
+				<p class="muted">{$t('dataBrowser.tables.loading')}</p>
 			{:else if error}
-				<p class="error">{error}</p>
+				<p class="error">{$t(error)}</p>
 			{:else if shown}
 				{#if shown.defaultTables.length === 0}
-					<p class="muted">No tables match.</p>
+					<p class="muted">{$t('dataBrowser.tables.noMatch')}</p>
 				{:else}
 					<ul class="tables">
 						{#each shown.defaultTables as table (table.name)}
@@ -190,12 +200,12 @@
 								<a href={detailHref(ref)}>
 									<span class="name">{table.name}</span>
 									{#if tableKind(table.table_type) === 'view'}
-										<span class="badge">View</span>
+										<span class="badge">{$t('dataBrowser.tables.kindView')}</span>
 									{:else}
-										<span class="badge">Table</span>
+										<span class="badge">{$t('dataBrowser.tables.kindTable')}</span>
 									{/if}
 									{#if table.name === defaultTable}
-										<span class="badge default">Default</span>
+										<span class="badge default">{$t('dataBrowser.tables.default')}</span>
 									{/if}
 								</a>
 							</li>
@@ -212,7 +222,7 @@
 							}}
 						>
 							<ChevronRightIcon class="chevron size-4" />
-							Other schemas
+							{$t('dataBrowser.tables.otherSchemas')}
 						</summary>
 
 						{#each shown.others.catalogs as catalog (catalog.name)}
@@ -225,9 +235,9 @@
 											<a href={detailHref(ref)}>
 												<span class="name">{table.name}</span>
 												{#if tableKind(table.table_type) === 'view'}
-													<span class="badge">View</span>
+													<span class="badge">{$t('dataBrowser.tables.kindView')}</span>
 												{:else}
-													<span class="badge">Table</span>
+													<span class="badge">{$t('dataBrowser.tables.kindTable')}</span>
 												{/if}
 											</a>
 										</li>

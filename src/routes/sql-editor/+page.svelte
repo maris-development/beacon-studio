@@ -29,7 +29,7 @@
 	import { planRoot } from '@/sql/plan';
 	import { withAdminFallback } from '@/sql/privilege';
 	import { PREVIEW_ROW_LIMIT, runPreview, type PreviewResult } from '@/sql/run';
-	import { isSqlDisabled, sqlErrorMessage, sqlToRun } from '@/sql/statement';
+	import { isSqlDisabled, sqlError, sqlToRun } from '@/sql/statement';
 	import {
 		addTab,
 		closeTab,
@@ -41,6 +41,7 @@
 		setTabSql,
 		type TabsState
 	} from '@/sql/tabs';
+	import { t, translate, type Message, type MessageKey } from '@/i18n';
 
 	type Action = 'run' | 'explain' | 'analyze';
 
@@ -48,19 +49,19 @@
 		| { kind: 'busy'; action: Action }
 		| { kind: 'rows'; result: PreviewResult }
 		| { kind: 'plan'; plan: unknown; analyzed: boolean }
-		| { kind: 'error'; message: string; hint?: string }
-		| { kind: 'notice'; message: string };
+		| { kind: 'error'; message: Message; adminHint?: boolean }
+		| { kind: 'notice'; message: MessageKey };
 
-	const ADMIN_HINT = 'Turn on "Show admin features" in Settings';
+	const titleOf = (number: number) => translate('sqlEditor.tabs.defaultTitle', { number });
 
-	let tabs: TabsState = $state(loadTabs());
+	let tabs: TabsState = $state(loadTabs(titleOf));
 
 	// Another page hands SQL over in `?sql=`. It opens in a new tab and leaves the URL.
 	onMount(async () => {
 		const handed = page.url.searchParams.get('sql');
 		if (handed === null || handed.trim() === '') return;
 
-		tabs = openInNewTab(tabs, handed);
+		tabs = openInNewTab(tabs, handed, titleOf);
 
 		// In dev, replaceState throws until the router has started.
 		await tick();
@@ -82,7 +83,7 @@
 	const cache = new CatalogCache();
 	let tree: Tree | null = $state(null);
 	let treeLoading = $state(false);
-	let treeError = $state('');
+	let treeError: Message | null = $state(null);
 	let functions: FnMeta[] = $state([]);
 	let columnsVersion = $state(0);
 
@@ -116,7 +117,7 @@
 
 		const client = makeBeaconClient(current);
 		treeLoading = true;
-		treeError = '';
+		treeError = null;
 
 		try {
 			const result = await cache.tree(current.url, client, refresh);
@@ -125,7 +126,7 @@
 		} catch (error) {
 			if (current.url === nodeUrl) {
 				tree = null;
-				treeError = sqlErrorMessage(error);
+				treeError = sqlError(error);
 			}
 		} finally {
 			if (current.url === nodeUrl) treeLoading = false;
@@ -208,21 +209,21 @@
 			if (result.kind === 'done') {
 				finish(own, tabId, result.value);
 			} else if (result.kind === 'cancelled') {
-				finish(own, tabId, { kind: 'notice', message: 'Cancelled.' });
+				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.cancelled' });
 			} else {
 				finish(own, tabId, {
 					kind: 'error',
-					message: sqlErrorMessage(result.error),
-					hint: ADMIN_HINT
+					message: sqlError(result.error),
+					adminHint: true
 				});
 			}
 		} catch (error) {
 			if (own.signal.aborted) {
-				finish(own, tabId, { kind: 'notice', message: 'Stopped.' });
+				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.stopped' });
 			} else if (isSqlDisabled(error)) {
-				finish(own, tabId, { kind: 'notice', message: 'SQL is turned off on this Beacon node.' });
+				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.sqlDisabled' });
 			} else {
-				finish(own, tabId, { kind: 'error', message: sqlErrorMessage(error) });
+				finish(own, tabId, { kind: 'error', message: sqlError(error) });
 			}
 		}
 	}
@@ -277,15 +278,15 @@
 			} else if (result.kind === 'needs-admin-features') {
 				outcomes[tabId] = {
 					kind: 'error',
-					message: sqlErrorMessage(result.error),
-					hint: ADMIN_HINT
+					message: sqlError(result.error),
+					adminHint: true
 				};
 			}
 		} catch (error) {
 			if (isSqlDisabled(error)) {
-				outcomes[tabId] = { kind: 'notice', message: 'SQL is turned off on this Beacon node.' };
+				outcomes[tabId] = { kind: 'notice', message: 'sqlEditor.result.sqlDisabled' };
 			} else {
-				outcomes[tabId] = { kind: 'error', message: sqlErrorMessage(error) };
+				outcomes[tabId] = { kind: 'error', message: sqlError(error) };
 			}
 		} finally {
 			downloading = false;
@@ -296,25 +297,25 @@
 		owners.get(id)?.abort();
 		owners.delete(id);
 		delete outcomes[id];
-		tabs = closeTab(tabs, id);
+		tabs = closeTab(tabs, id, titleOf);
 	}
 </script>
 
 <svelte:head>
-	<title>SQL Editor - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.sqlEditor') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'SQL Editor', href: resolve('/sql-editor') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.sqlEditor'), href: resolve('/sql-editor') }]} />
 
 <div class="page-wrapper sql-wrapper">
 	<div class="page-container sql-page">
 		<header class="page-head">
-			<h1>SQL Editor</h1>
+			<h1>{$t('nav.item.sqlEditor')}</h1>
 			<NodePicker />
 		</header>
 
 		{#if !node}
-			<p>Pick a Beacon node.</p>
+			<p>{$t('sqlEditor.pickNode')}</p>
 		{/if}
 
 		<div class="workspace">
@@ -322,7 +323,7 @@
 				<SqlTabs
 					state={tabs}
 					onSelect={(id) => (tabs = selectTab(tabs, id))}
-					onAdd={() => (tabs = addTab(tabs))}
+					onAdd={() => (tabs = addTab(tabs, titleOf))}
 					{onClose}
 					onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
 				/>
@@ -332,7 +333,7 @@
 						class="catalog-toggle"
 						variant="outline"
 						onclick={() => (catalogOpen = !catalogOpen)}
-						aria-label="Tables"
+						aria-label={$t('sqlEditor.toolbar.tables')}
 					>
 						<PanelRightIcon />
 					</Button>
@@ -340,23 +341,23 @@
 					{#if busy}
 						<Button variant="destructive" onclick={stop}>
 							<SquareIcon />
-							Stop
+							{$t('sqlEditor.toolbar.stop')}
 						</Button>
 					{:else}
-						<Button disabled={!node} onclick={run} title="Ctrl+Enter">
+						<Button disabled={!node} onclick={run} title={$t('sqlEditor.toolbar.runShortcut')}>
 							<PlayIcon />
-							Run
+							{$t('sqlEditor.toolbar.run')}
 						</Button>
 					{/if}
 					<Button variant="outline" disabled={!node || busy} onclick={() => explain(false)}>
 						<ListTreeIcon />
-						Explain
+						{$t('sqlEditor.toolbar.explain')}
 					</Button>
 					<Button variant="outline" disabled={!node || busy} onclick={() => explain(true)}>
-						Analyze
+						{$t('sqlEditor.toolbar.analyze')}
 					</Button>
 					<DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
-					<span class="hint">Ctrl+Enter runs the selection, or the whole tab.</span>
+					<span class="hint">{$t('sqlEditor.toolbar.hint')}</span>
 				</div>
 
 				<div class="editor-area">
@@ -379,27 +380,29 @@
 						{#if root}
 							<PlanTree node={root} />
 						{:else}
-							<p class="muted">No plan to show.</p>
+							<p class="muted">{$t('sqlEditor.result.noPlan')}</p>
 						{/if}
 					{:else}
 						{#if outcome?.kind === 'rows'}
 							{@const result = outcome.result}
 							{#if result.cancelled && result.rows.length > 0}
-								<p class="notice">Stopped. The grid shows the rows received before the stop.</p>
+								<p class="notice">{$t('sqlEditor.result.stoppedPartial')}</p>
 							{:else if result.cancelled}
-								<p class="notice">Stopped.</p>
+								<p class="notice">{$t('sqlEditor.result.stopped')}</p>
 							{:else if result.truncated}
-								<p class="notice">First {PREVIEW_ROW_LIMIT} rows. Download for the full result.</p>
+								<p class="notice">
+									{$t('sqlEditor.result.truncated', { count: PREVIEW_ROW_LIMIT })}
+								</p>
 							{/if}
 						{:else if outcome?.kind === 'error'}
 							<div class="error-block" role="alert">
-								<pre>{outcome.message}</pre>
-								{#if outcome.hint}
-									<p>{outcome.hint}</p>
+								<pre>{$t(outcome.message)}</pre>
+								{#if outcome.adminHint}
+									<p>{$t('admin.offHint')}</p>
 								{/if}
 							</div>
 						{:else if outcome?.kind === 'notice'}
-							<p class="notice">{outcome.message}</p>
+							<p class="notice">{$t(outcome.message)}</p>
 						{/if}
 
 						<ResultGrid

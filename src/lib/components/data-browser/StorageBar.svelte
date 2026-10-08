@@ -6,6 +6,7 @@
 	import { credentialsOf, makeAdminClient, signedInNodeIds } from '@/services/admin-session';
 	import { settings } from '@/stores/settings';
 	import { formatSize } from '@/data-browser/datasets';
+	import { formatNumber, t } from '@/i18n';
 
 	let { node }: { node: BeaconNode } = $props();
 
@@ -47,13 +48,19 @@
 		{#if storage.used_percent !== null}
 			<div class="bar"><span style="width: {storage.used_percent}%"></span></div>
 			<span>
-				{formatSize(storage.used_space)} used of {formatSize(storage.total_space)}, {formatSize(
-					storage.free_space
-				)} free
+				{$t('dataBrowser.datasets.storage.usedOf', {
+					used: formatSize(storage.used_space, $formatNumber),
+					total: formatSize(storage.total_space, $formatNumber),
+					free: formatSize(storage.free_space, $formatNumber)
+				})}
 			</span>
 		{:else}
 			<span>
-				{formatSize(storage.used_space)} in {storage.object_count ?? 0} objects ({storage.location})
+				{$t('dataBrowser.datasets.storage.objects', {
+					used: formatSize(storage.used_space, $formatNumber),
+					count: storage.object_count ?? 0,
+					location: storage.location
+				})}
 			</span>
 		{/if}
 	</div>

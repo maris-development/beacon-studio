@@ -32,16 +32,19 @@
 		tableKind
 	} from '@/data-browser/tables';
 	import type { CatalogDefaults, TableRef } from '@/sql/identifiers';
-	import { sqlErrorMessage } from '@/sql/statement';
+	import { sqlError } from '@/sql/statement';
+	import { message, t, translate, type Message } from '@/i18n';
 
 	const LIST = resolve('/data-browser/data-tables');
 
 	const tableName = page.url.searchParams.get('table_name') ?? '';
-	if (!tableName) throw kitError(400, 'Missing `table_name` query parameter');
+	if (!tableName) {
+		throw kitError(400, translate('dataBrowser.common.missingParam', { name: 'table_name' }));
+	}
 
 	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
 	const nodeUrl = page.url.searchParams.get('node') ?? '';
-	if (!nodeUrl) throw kitError(400, 'Missing `node` query parameter');
+	if (!nodeUrl) throw kitError(400, translate('dataBrowser.common.missingParam', { name: 'node' }));
 
 	// Admin actions need a saved node: the sign-in session belongs to its id.
 	let savedNode: BeaconNode | null = $state(null);
@@ -50,10 +53,11 @@
 	let defaults: CatalogDefaults | null = $state(null);
 	let tableType = $state('');
 	let found = $state(false);
-	let loadError = $state('');
+	let loadError: Message | null = $state(null);
 	let tab = $state('schema');
 	let definition: string | null | undefined = $state(undefined);
-	let definitionError = $state('');
+	// A Message, or the raw text of a server error.
+	let definitionError: Message | string = $state('');
 	let busy = $state(false);
 
 	let ref: TableRef | null = $derived.by(() => {
@@ -106,13 +110,16 @@
 				tableType = table.table_type;
 				found = true;
 			} else {
-				loadError = `The node has no table "${tableName}" in ${catalog}.${schema}.`;
+				loadError = message('dataBrowser.tables.detail.notFound', {
+					name: tableName,
+					schema: `${catalog}.${schema}`
+				});
 			}
 
 			client = current;
 			defaults = { catalog: view.default_catalog, schema: view.default_schema };
 		} catch (caught) {
-			loadError = sqlErrorMessage(caught);
+			loadError = sqlError(caught);
 		}
 	});
 
@@ -152,7 +159,7 @@
 				})
 			);
 			if (result === null) {
-				definitionError = 'Sign in to see the definition. Open this tab again to sign in.';
+				definitionError = message('dataBrowser.tables.detail.definitionSignIn');
 			} else {
 				definition = result.definition;
 			}
@@ -174,9 +181,20 @@
 
 		try {
 			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
-			if (done !== null) addToast({ type: 'success', message: `Refreshed ${tableName}.` });
+			if (done !== null) {
+				addToast({
+					type: 'success',
+					key: 'dataBrowser.tables.detail.refreshed',
+					values: { name: tableName }
+				});
+			}
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.tables.detail.refreshFailed',
+				values: { name: tableName },
+				message: adminErrorMessage(caught)
+			});
 		} finally {
 			busy = false;
 		}
@@ -186,10 +204,13 @@
 		if (!savedNode || !ref || !defaults) return;
 
 		const sure = await askConfirm({
-			title: `Drop ${tableName}`,
-			message: `Drop the table "${tableName}" from ${savedNode.name}?`,
-			note: 'The files stay in place.',
-			confirmLabel: 'Drop',
+			title: translate('dataBrowser.tables.detail.dropTitle', { name: tableName }),
+			message: translate('dataBrowser.tables.detail.dropMessage', {
+				name: tableName,
+				node: savedNode.name
+			}),
+			note: translate('dataBrowser.tables.detail.dropNote'),
+			confirmLabel: translate('dataBrowser.tables.detail.drop'),
 			destructive: true
 		});
 		if (!sure) return;
@@ -200,11 +221,20 @@
 		try {
 			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
 			if (done !== null) {
-				addToast({ type: 'success', message: `Dropped ${tableName}.` });
+				addToast({
+					type: 'success',
+					key: 'dataBrowser.tables.detail.dropped',
+					values: { name: tableName }
+				});
 				goto(LIST);
 			}
 		} catch (caught) {
-			addToast({ type: 'error', message: adminErrorMessage(caught) });
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.tables.detail.dropFailed',
+				values: { name: tableName },
+				message: adminErrorMessage(caught)
+			});
 		} finally {
 			busy = false;
 		}
@@ -218,32 +248,40 @@
 	async function copyDefinition() {
 		if (!definition) return;
 		await navigator.clipboard.writeText(definition);
-		addToast({ type: 'success', message: 'Copied the definition.' });
+		addToast({ type: 'success', key: 'dataBrowser.tables.detail.copied' });
 	}
 </script>
 
 <svelte:head>
-	<title>Table {tableName} - Beacon Studio</title>
+	<title>
+		{$t('app.pageTitle', {
+			page: $t('dataBrowser.tables.detail.pageTitle', { name: tableName })
+		})}
+	</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
-		{ label: 'Data Browser', href: resolve('/data-browser') },
-		{ label: 'Data tables', href: LIST },
-		{ label: `Table ${tableName}`, href: '' }
+		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
+		{ label: $t('nav.item.dataTables'), href: LIST },
+		{ label: $t('dataBrowser.tables.detail.pageTitle', { name: tableName }), href: '' }
 	]}
 />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<BackLink label="Tables" fallback={LIST} />
+		<BackLink label={$t('dataBrowser.tables.detail.back')} fallback={LIST} />
 
 		<header class="head">
 			<div>
 				<h1>{tableName}</h1>
 				<p class="meta">
 					{#if ref}{ref.catalog}.{ref.schema}{/if}
-					{#if tableType}<span class="badge">{isView ? 'View' : 'Table'}</span>{/if}
+					{#if tableType}
+						<span class="badge">
+							{isView ? $t('dataBrowser.tables.kindView') : $t('dataBrowser.tables.kindTable')}
+						</span>
+					{/if}
 					<span class="node">· {savedNode?.name ?? nodeUrl}</span>
 				</p>
 			</div>
@@ -251,7 +289,7 @@
 			<div class="actions">
 				<Button variant="outline" onclick={openInEditor} disabled={!ref}>
 					<SquareTerminalIcon />
-					Open in SQL Editor
+					{$t('dataBrowser.tables.detail.openInEditor')}
 				</Button>
 
 				{#if manageable}
@@ -259,14 +297,16 @@
 						<AdminAction>
 							{#snippet children({ disabled })}
 								<Button variant="outline" disabled={disabled || busy} onclick={refresh}>
-									Refresh
+									{$t('common.refresh')}
 								</Button>
 							{/snippet}
 						</AdminAction>
 					{/if}
 					<AdminAction>
 						{#snippet children({ disabled })}
-							<Button variant="destructive" disabled={disabled || busy} onclick={drop}>Drop</Button>
+							<Button variant="destructive" disabled={disabled || busy} onclick={drop}>
+								{$t('dataBrowser.tables.detail.drop')}
+							</Button>
 						{/snippet}
 					</AdminAction>
 				{/if}
@@ -274,15 +314,15 @@
 		</header>
 
 		{#if loadError}
-			<p class="error">{loadError}</p>
+			<p class="error">{$t(loadError)}</p>
 		{:else if !ref || !defaults || !client}
-			<p class="muted">Loading the table...</p>
+			<p class="muted">{$t('dataBrowser.tables.detail.loading')}</p>
 		{:else}
 			<DetailTabs
 				tabs={[
-					{ id: 'schema', label: 'Schema' },
-					{ id: 'preview', label: 'Preview' },
-					{ id: 'definition', label: 'Definition' }
+					{ id: 'schema', label: $t('dataBrowser.common.tab.schema') },
+					{ id: 'preview', label: $t('dataBrowser.common.tab.preview') },
+					{ id: 'definition', label: $t('dataBrowser.common.tab.definition') }
 				]}
 				active={tab}
 				onSelect={selectTab}
@@ -293,24 +333,22 @@
 			{:else if tab === 'preview'}
 				<PreviewGrid source={client} query={previewSql(ref, defaults)} />
 			{:else if !$settings.adminFeatures}
-				<p class="muted">
-					The definition needs admin features. Turn on "Show admin features" in Settings.
-				</p>
+				<p class="muted">{$t('dataBrowser.tables.detail.definitionNeedsAdmin')}</p>
 			{:else if !savedNode}
-				<p class="muted">Add this node on the Beacon Nodes page to see the definition.</p>
+				<p class="muted">{$t('dataBrowser.tables.detail.definitionNeedsNode')}</p>
+			{:else if typeof definitionError !== 'string'}
+				<p class="error">{$t(definitionError)}</p>
 			{:else if definitionError}
 				<p class="error">{definitionError}</p>
 			{:else if definition === undefined}
-				<p class="muted">Loading the definition...</p>
+				<p class="muted">{$t('dataBrowser.tables.detail.definitionLoading')}</p>
 			{:else if definition === null}
-				<p class="muted">
-					Beacon stores no definition for this table. A crawler made it, or it is an older table.
-				</p>
+				<p class="muted">{$t('dataBrowser.tables.detail.definitionNone')}</p>
 			{:else}
 				<div class="definition">
 					<Button variant="outline" size="sm" onclick={copyDefinition}>
 						<CopyIcon />
-						Copy
+						{$t('dataBrowser.tables.detail.copy')}
 					</Button>
 					<pre>{definition}</pre>
 				</div>

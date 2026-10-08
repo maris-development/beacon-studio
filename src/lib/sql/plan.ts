@@ -1,7 +1,10 @@
+import { message, type Message } from '@/i18n';
+
 /** One node of a DataFusion EXPLAIN plan, ready for display. */
 export interface PlanNodeView {
-	type: string;
-	badges: string[];
+	/** Null when the plan names no node type. */
+	type: string | null;
+	badges: Message[];
 	fields: [string, string][];
 	details: string | null;
 	children: Record<string, unknown>[];
@@ -31,12 +34,17 @@ function show(value: unknown): string {
 }
 
 export function viewOf(node: Record<string, unknown>): PlanNodeView {
-	const badges: string[] = [];
-	if (node['Actual Rows'] !== undefined) badges.push(`${show(node['Actual Rows'])} rows`);
+	const badges: Message[] = [];
+	const rows = node['Actual Rows'];
+	if (typeof rows === 'number') {
+		badges.push(message('common.rows', { count: rows }));
+	} else if (rows !== undefined) {
+		badges.push(message('sqlEditor.plan.rows', { rows: show(rows) }));
+	}
 	if (node['Actual Total Time'] !== undefined)
-		badges.push(`compute ${show(node['Actual Total Time'])} ms`);
+		badges.push(message('sqlEditor.plan.compute', { time: show(node['Actual Total Time']) }));
 
-	let type = 'Node';
+	let type: string | null = null;
 	if (typeof node['Node Type'] === 'string') type = node['Node Type'];
 
 	let details: string | null = null;
