@@ -20,6 +20,7 @@ import {
 } from 'svelte-i18n';
 import { derived, get, type Readable } from 'svelte/store';
 import en from './locales/en.json';
+import es from './locales/es.json';
 import it from './locales/it.json';
 import nl from './locales/nl.json';
 
@@ -32,6 +33,7 @@ export const FALLBACK_LOCALE = 'en';
 /** The languages that the app ships. The name is the native name and is never translated. */
 export const SUPPORTED_LOCALES: ReadonlyArray<{ code: string; name: string }> = [
 	{ code: 'en', name: 'English' },
+	{ code: 'es', name: 'Español' },
 	{ code: 'it', name: 'Italiano' },
 	{ code: 'nl', name: 'Nederlands' }
 ];
@@ -55,6 +57,7 @@ export type Translate = (message: MessageKey | Message, values?: MessageValues) 
 
 addMessages(FALLBACK_LOCALE, en);
 // A key that is missing in a catalog fails the type check.
+addMessages('es', es satisfies typeof en);
 addMessages('it', it satisfies typeof en);
 addMessages('nl', nl satisfies typeof en);
 // The English catalog is bundled, so the formatter works from the first import.
