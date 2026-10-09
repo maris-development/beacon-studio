@@ -32,6 +32,22 @@
 
 		return () => document.removeEventListener('keydown', onKeydown, true);
 	});
+
+	let cancelButton = $state<HTMLElement | null>(null);
+	let confirmButton = $state<HTMLElement | null>(null);
+
+	// Without this, Enter activates the opener again and repeats the question.
+	$effect(() => {
+		if (!$confirmRequest) return;
+
+		const opener = document.activeElement as HTMLElement | null;
+		const target = $confirmRequest.destructive ? (cancelButton ?? confirmButton) : confirmButton;
+		target?.focus();
+
+		return () => {
+			if (opener?.isConnected) opener.focus();
+		};
+	});
 </script>
 
 {#if $confirmRequest}
@@ -45,12 +61,13 @@
 
 			<div slot="footer" class="confirm-actions">
 				{#if $confirmRequest.cancelLabel !== null}
-					<Button variant="outline" onclick={() => answerConfirm(false)}>
+					<Button bind:ref={cancelButton} variant="outline" onclick={() => answerConfirm(false)}>
 						{$confirmRequest.cancelLabel ?? $t('common.cancel')}
 					</Button>
 				{/if}
 
 				<Button
+					bind:ref={confirmButton}
 					variant={$confirmRequest.destructive ? 'destructive' : 'default'}
 					onclick={() => answerConfirm(true)}
 				>

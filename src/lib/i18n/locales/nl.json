@@ -375,7 +375,7 @@
 		"closeBlock": {
 			"title": "Deze query sluiten",
 			"message": "Deze query bevat kolommen die je hebt gekozen.",
-			"note": "Het blok verdwijnt.",
+			"note": "Je kunt dit niet ongedaan maken.",
 			"confirm": "Query sluiten"
 		},
 		"header": {
