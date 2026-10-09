@@ -2,6 +2,7 @@
 	import { openExternalLink } from '$lib/external-link';
 	import type { Snippet } from 'svelte';
 	import type { HTMLAnchorAttributes } from 'svelte/elements';
+	import { t } from '@/i18n';
 
 	interface Props extends HTMLAnchorAttributes {
 		href: string;
@@ -14,7 +15,7 @@
 		href,
 		target = '_blank',
 		rel = 'noopener noreferrer',
-        title = 'Open link in external browser',
+        title,
 		openInSystemBrowser = true,
 		class: className,
 		children,
@@ -25,7 +26,7 @@
 <a
 	{href}
 	class={className ? `external-link ${className}` : 'external-link'}
-    {title}
+    title={title ?? $t('misc.externalLink')}
 	{target}
 	{rel}
 	onclick={(event) => (openInSystemBrowser ? openExternalLink(event, href) : undefined)}

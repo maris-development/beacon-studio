@@ -7,6 +7,7 @@
 	import Card from '../card/Card.svelte';
 	import type { QuerySelectionStatus } from '@/query/selection-status';
     import { askConfirm } from '@/stores/confirm';
+    import { t, translate } from '@/i18n';
 
     let {
         table_names = [],
@@ -38,9 +39,9 @@
 
         if (status && status.columns > 0) {
             const goAhead = await askConfirm({
-                title: 'Change the data table',
-                message: 'Another table needs other columns, so this empties your column selection.',
-                confirmLabel: 'Change table'
+                title: translate('query.table.change.title'),
+                message: translate('query.table.change.message'),
+                confirmLabel: translate('query.table.change.confirm')
             });
 
             if (!goAhead) return;
@@ -51,15 +52,21 @@
 </script>
 
 <div class="table-selector-header">
-    <h3>Select Data Table</h3>
+    <h3>{$t('query.table.title')}</h3>
 
     <div class="view-controls">
-        <p class="table-count">{!loaded ? 'Loading' : table_names.length} tables</p>
+        <p class="table-count">
+            {#if loaded}
+                {$t('query.table.count', { count: table_names.length })}
+            {:else}
+                {$t('query.table.countLoading')}
+            {/if}
+        </p>
         <Button
             variant={viewMode === 'cards' ? 'default' : 'outline'}
             onclick={() => (viewMode = 'cards')}
         >
-            Cards
+            {$t('query.view.cards')}
             <GridIcon />
         </Button>
 
@@ -67,7 +74,7 @@
             variant={viewMode === 'list' ? 'default' : 'outline'}
             onclick={() => (viewMode = 'list')}
         >
-            List
+            {$t('query.view.list')}
             <ListIcon />
         </Button>
     </div>
@@ -86,7 +93,7 @@
                         {/if}
                     </div>
                     <p class="table-description">
-                         Description not available
+                         {$t('query.table.noDescription')}
                     </p>
                     
 
@@ -106,11 +113,11 @@
             bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
         >
             <Select.Trigger class="table-select-trigger">
-                {selected_table_name ?? 'Select a table'}
+                {selected_table_name ?? $t('query.table.placeholder')}
             </Select.Trigger>
             <Select.Content>
                 <Select.Group>
-                    <Select.Label>Tables</Select.Label>
+                    <Select.Label>{$t('query.table.listLabel')}</Select.Label>
                     {#each table_names as table_name (table_name)}
                         <Select.Item value={table_name} label={table_name}>
                             {table_name}

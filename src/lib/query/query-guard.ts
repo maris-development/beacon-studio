@@ -13,10 +13,10 @@
  */
 import type { AndFilter, CompiledQuery, Filter, OrFilter } from '@/beacon-api/types';
 import { getSettings } from '@/stores/settings';
+import { message, type Message } from '@/i18n';
 
 /** The text that the workbench shows when the safeguard blocks a query. */
-export const NO_FILTER_MESSAGE =
-	'This query has no filters. Add at least one filter, or turn off "Require a filter" in the settings.';
+export const NO_FILTER_MESSAGE: Message = message('query.guard.noFilters');
 
 /**
  * The number of leaf filters of a query. A group (`and` / `or`) contributes its
@@ -60,7 +60,7 @@ export function isFilterRequired(): boolean {
  * A missing query gives null. Such a block has no table or no column yet, and
  * the caller reports that itself. This function judges a compiled query only.
  */
-export function runBlockReason(query: CompiledQuery | null | undefined): string | null {
+export function runBlockReason(query: CompiledQuery | null | undefined): Message | null {
 	if (!query) return null;
 	if (!isFilterRequired()) return null;
 	if (hasFilters(query)) return null;

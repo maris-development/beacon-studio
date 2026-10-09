@@ -1,5 +1,6 @@
 import { writable } from "svelte/store";
 import { track } from "@/telemetry";
+import type { MessageKey, MessageValues } from "@/i18n";
 
 export const toasts = writable([]);
 
@@ -25,9 +26,13 @@ export function addToast(toast: Partial<IToast>): number {
   // Push the toast to the top of the list of toasts
   toasts.update((all) => [toastData, ...all]);
 
+  // The key keeps the telemetry the same in every language. The raw text goes along as detail.
+  let props: Record<string, unknown> | undefined;
+  if (toastData.key) props = { detail: toastData.message || undefined, values: toastData.values };
   track(`toast.${toastData.type}`, {
     level: toastData.type,
-    message: toastData.message,
+    message: toastData.key ?? toastData.message,
+    props,
   });
 
   // If toast is dismissible, dismiss it after "timeout" amount of time.
@@ -58,6 +63,10 @@ export interface IToast {
   type: ToastType;
   dismissible: boolean;
   timeout: number;
+  /** The translation key of the text. The toast translates it at render time. */
+  key?: MessageKey;
+  values?: MessageValues;
+  /** Raw text with no key, for example a server error. It follows the key text when both are set. */
   message: string;
 }
 

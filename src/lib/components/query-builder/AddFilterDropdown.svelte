@@ -8,6 +8,8 @@
 	import { Utils } from '@/utils';
 	import type { SelectedFilterType } from '@/query/filter-types';
 	import { track } from '@/telemetry';
+	import { t } from '@/i18n';
+	import { filterLabel } from '@/query/seed-hydration';
 
 	let {
 		data_type,
@@ -19,11 +21,11 @@
 
 	const untyped_filters: SelectedFilterType[] = [
 		{
-			label: 'Is Null',
+			label: 'filter.op.isNull',
 			filter_value: { type: 'is_null' }
 		},
 		{
-			label: 'Is Not Null',
+			label: 'filter.op.isNotNull',
 			filter_value: { type: 'is_not_null' }
 		}
 	];
@@ -34,62 +36,62 @@
 		if (Utils.isNumericDataType(data_type)) {
 			return [
 				{
-					label: 'Between',
+					label: 'filter.op.between',
 					filter_value: { type: 'range_numeric', min: null, max: null }
 				},
 				{
-					label: 'Greater Than',
+					label: 'filter.op.greaterThan',
 					filter_value: { type: 'greater_than_numeric', value: null }
 				},
 				{
-					label: 'Greater Than or Equals',
+					label: 'filter.op.greaterThanOrEquals',
 					filter_value: { type: 'greater_than_or_equals_numeric', value: null }
 				},
 				{
-					label: 'Less Than',
+					label: 'filter.op.lessThan',
 					filter_value: { type: 'less_than_numeric', value: null }
 				},
 				{
-					label: 'Less Than or Equals',
+					label: 'filter.op.lessThanOrEquals',
 					filter_value: { type: 'less_than_or_equals_numeric', value: null }
 				},
 				{
-					label: 'Equals',
+					label: 'filter.op.equals',
 					filter_value: { type: 'equals_numeric', value: null }
 				},
 				{
-					label: 'Not Equals',
+					label: 'filter.op.notEquals',
 					filter_value: { type: 'not_equals_numeric', value: null }
 				}
 			];
 		} else if (Utils.isStringDataType(data_type)) {
 			return [
 				{
-					label: 'Between',
+					label: 'filter.op.between',
 					filter_value: { type: 'range_string', min: null, max: null }
 				},
 				{
-					label: 'Greater Than',
+					label: 'filter.op.greaterThan',
 					filter_value: { type: 'greater_than_string', value: null }
 				},
 				{
-					label: 'Greater Than or Equals',
+					label: 'filter.op.greaterThanOrEquals',
 					filter_value: { type: 'greater_than_or_equals_string', value: null }
 				},
 				{
-					label: 'Less Than',
+					label: 'filter.op.lessThan',
 					filter_value: { type: 'less_than_string', value: null }
 				},
 				{
-					label: 'Less Than or Equals',
+					label: 'filter.op.lessThanOrEquals',
 					filter_value: { type: 'less_than_or_equals_string', value: null }
 				},
 				{
-					label: 'Equals',
+					label: 'filter.op.equals',
 					filter_value: { type: 'equals_string', value: null }
 				},
 				{
-					label: 'Not Equals',
+					label: 'filter.op.notEquals',
 					filter_value: { type: 'not_equals_string', value: null }
 				}
 			];
@@ -97,11 +99,11 @@
 		} else if (Utils.isDictionaryOfStrings(data_type)) {
 			return [
 				{
-					label: 'Equals',
+					label: 'filter.op.equals',
 					filter_value: { type: 'equals_string', value: null }
 				},
 				{
-					label: 'Not Equals',
+					label: 'filter.op.notEquals',
 					filter_value: { type: 'not_equals_string', value: null }
 				}
 			];
@@ -119,31 +121,31 @@
 			const maxDefaultDateValue = new Date().toISOString().slice(0, 10) + maxTimeSuffix;
 			return [
 				{
-					label: 'Between',
+					label: 'filter.op.between',
 					filter_value: { type: 'range_timestamp', min: minDefaultDateValue, max: maxDefaultDateValue }
 				},
 				{
-					label: 'Greater Than',
+					label: 'filter.op.greaterThan',
 					filter_value: { type: 'greater_than_timestamp', value: minDefaultDateValue }
 				},
 				{
-					label: 'Greater Than or Equals',
+					label: 'filter.op.greaterThanOrEquals',
 					filter_value: { type: 'greater_than_or_equals_timestamp', value: minDefaultDateValue }
 				},
 				{
-					label: 'Less Than',
+					label: 'filter.op.lessThan',
 					filter_value: { type: 'less_than_timestamp', value: maxDefaultDateValue }
 				},
 				{
-					label: 'Less Than or Equals',
+					label: 'filter.op.lessThanOrEquals',
 					filter_value: { type: 'less_than_or_equals_timestamp', value: maxDefaultDateValue }
 				},
 				{
-					label: 'Equals',
+					label: 'filter.op.equals',
 					filter_value: { type: 'equals_timestamp', value: maxDefaultDateValue }
 				},
 				{
-					label: 'Not Equals',
+					label: 'filter.op.notEquals',
 					filter_value: { type: 'not_equals_timestamp', value: maxDefaultDateValue }
 				}
 			];
@@ -166,8 +168,8 @@
 				{...props}
 				role="combobox"
 				aria-expanded={open}
-				title="Add filter"
-				aria-label="Add filter"
+				title={$t('filter.add')}
+				aria-label={$t('filter.add')}
 			>
 				<FunnelPlusIcon class="add-filter-trigger-icon" />
 			</Button>
@@ -175,13 +177,13 @@
 	</Popover.Trigger>
 	<Popover.Content class="add-filter-content">
 		<SearchSelect.Root>
-			<SearchSelect.Input placeholder="Search filter..." />
+			<SearchSelect.Input placeholder={$t('filter.searchPlaceholder')} />
 			<SearchSelect.List>
-				<SearchSelect.Empty>No filters found.</SearchSelect.Empty>
+				<SearchSelect.Empty>{$t('filter.empty')}</SearchSelect.Empty>
 				<SearchSelect.Group>
 					{#each available_filters as filter, index (index)}
 						<SearchSelect.Item
-							value={filter.label}
+							value={$t(filterLabel(filter.filter_value))}
 							onSelect={() => {
 								selected_filters.push(filter);
 								track('builder.filter.add', {
@@ -190,7 +192,7 @@
 								open = false;
 							}}
 						>
-							{filter.label}
+							{$t(filterLabel(filter.filter_value))}
 						</SearchSelect.Item>
 						{#if index < available_filters.length - 1}
 							<Separator />

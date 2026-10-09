@@ -7,6 +7,7 @@
     import MapIcon from '@lucide/svelte/icons/map';
     import VisualiseIcon from '@lucide/svelte/icons/eye';
 	import LoadingIcon from '@lucide/svelte/icons/loader-2';
+	import { t } from '@/i18n';
 
 	let {
         visualiseTable,
@@ -42,26 +43,26 @@
         <Button disabled={isLoading || disabled} {title}>
         {#if isLoading}
             <LoadingIcon class="animate-spin" />
-            Executing...
+            {$t('visualise.executing')}
 
         {:else}
             <VisualiseIcon />
-            Visualise Query
+            {$t('visualise.button')}
         {/if}
         </Button>
     </DropdownMenu.Trigger>
     <DropdownMenu.Content class="w-48">
         <DropdownMenu.Item onclick={() => handleVisualise(visualiseMap)}>
             <MapIcon class="text-muted-foreground" />
-            <span>Map</span>
+            <span>{$t('query.entry.map')}</span>
         </DropdownMenu.Item>
         <DropdownMenu.Item onclick={() => handleVisualise(visualiseTable)}>
             <TableIcon class="text-muted-foreground" />
-            <span>Table</span>
+            <span>{$t('query.entry.table')}</span>
         </DropdownMenu.Item>
         <DropdownMenu.Item onclick={() => handleVisualise(visualiseChart)}>
             <ChartPieIcon class="text-muted-foreground" />
-            <span>Chart</span>
+            <span>{$t('query.entry.chart')}</span>
         </DropdownMenu.Item>        
     </DropdownMenu.Content>
 </DropdownMenu.Root>

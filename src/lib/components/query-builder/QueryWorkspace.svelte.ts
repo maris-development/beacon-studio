@@ -70,6 +70,7 @@ import type { BeaconNode } from '@/beacon-api/types';
 import { askConfirm } from '@/stores/confirm';
 import { addToast } from '@/stores/toasts';
 import { track } from '@/telemetry';
+import { translate, type MessageKey } from '@/i18n';
 import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
 import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
 import { isPlotRenderable, type ChartViewState } from '@/plots/plot-config';
@@ -219,7 +220,8 @@ export class QueryWorkspace {
 
 			addToast({
 				type: 'warning',
-				message: `This query needs the Beacon node ${url}. Add it to run the query.`
+				key: 'workbench.toast.missingNode',
+				values: { url }
 			});
 		});
 	}
@@ -314,9 +316,9 @@ export class QueryWorkspace {
 
 		if (columns > 0) {
 			const goAhead = await askConfirm({
-				title: 'Change the Beacon node',
-				message: 'Another node holds other tables, so this empties your table and column selection.',
-				confirmLabel: 'Change node'
+				title: translate('workbench.changeNode.title'),
+				message: translate('workbench.changeNode.message'),
+				confirmLabel: translate('workbench.changeNode.confirm')
 			});
 
 			if (!goAhead) return false;
@@ -376,32 +378,27 @@ export class QueryWorkspace {
 	 */
 	reportSeedMismatch(blockId: string, table: string, part: 'table' | 'columns'): void {
 		const node = this.nodeFor(this.blocks.find((b) => b.id === blockId) ?? null);
-		const nodeName = node?.name || node?.url || 'this node';
-
-		let missing = `has no table "${table}"`;
-		if (part === 'columns') {
-			missing = `has no columns of the query in "${table}"`;
-		}
+		const nodeName = node?.name || node?.url || translate('workbench.thisNode');
 
 		if (this.hasGuessedNode(blockId)) {
-			addToast({
-				type: 'error',
-				message:
-					`The link named no Beacon node, and "${nodeName}" ${missing}. ` +
-					`The query is kept. Pick the node of this query.`
-			});
+			let key: MessageKey = 'workbench.toast.guessedNodeNoTable';
+			if (part === 'columns') {
+				key = 'workbench.toast.guessedNodeNoColumns';
+			}
+
+			addToast({ type: 'error', key, values: { node: nodeName, table } });
 
 			// Report this one time. The user now picks a node, or edits the query.
 			this.clearGuessedNode(blockId);
 			return;
 		}
 
-		addToast({
-			type: 'warning',
-			message:
-				`"${nodeName}" ${missing}. The query is kept. ` +
-				`Pick another node, or edit the query.`
-		});
+		let key: MessageKey = 'workbench.toast.nodeNoTable';
+		if (part === 'columns') {
+			key = 'workbench.toast.nodeNoColumns';
+		}
+
+		addToast({ type: 'warning', key, values: { node: nodeName, table } });
 	}
 
 	/** Forget the guess for a block. The user now owns the choice of node. */
@@ -416,7 +413,7 @@ export class QueryWorkspace {
 	/** Add an empty block and select it. It inherits the node of the active block. */
 	addBlock(name?: string): StoredQuery {
 		const block = queryBlocks.append({
-			name: name ?? `Untitled (${nextBlockNumber()})`,
+			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
 			draft: makeEmptyDraft(),
 			node: this.defaultNodeRef()
 		});
@@ -433,7 +430,7 @@ export class QueryWorkspace {
 	addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
 		const block = cloneStoredQuery(source, {
 			role: 'block',
-			name: name ?? source.name ?? `Untitled (${nextBlockNumber()})`
+			name: name ?? source.name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() })
 		});
 		queryBlocks.insertAt(this.blocks.length, block);
 		this.select(block.id);
@@ -461,7 +458,7 @@ export class QueryWorkspace {
 		}
 
 		const block = queryBlocks.append({
-			name: name ?? `Untitled (${nextBlockNumber()})`,
+			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
 			draft: null,
 			compiled: Utils.cloneObject(query),
 			coordinateColumns: coordinateColumns ?? null,
@@ -479,7 +476,7 @@ export class QueryWorkspace {
 
 		const copy = cloneStoredQuery(this.blocks[index], {
 			role: 'block',
-			name: `${this.blocks[index].name} (copy)`
+			name: translate('workbench.copyName', { name: this.blocks[index].name })
 		});
 		queryBlocks.insertAt(index + 1, copy);
 		this.select(copy.id);
@@ -505,10 +502,10 @@ export class QueryWorkspace {
 
 		if ((block.draft?.selectedFields.length ?? 0) > 0) {
 			const goAhead = await askConfirm({
-				title: 'Close this query',
-				message: 'This query holds columns that you picked.',
-				note: 'You cannot undo this.',
-				confirmLabel: 'Close query',
+				title: translate('workbench.closeBlock.title'),
+				message: translate('workbench.closeBlock.message'),
+				note: translate('workbench.closeBlock.note'),
+				confirmLabel: translate('workbench.closeBlock.confirm'),
 				destructive: true
 			});
 

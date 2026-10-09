@@ -35,6 +35,7 @@
 	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
 	import GeospatialFilterModal from './GeospatialFilterModal.svelte';
 	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
+	import { t, translate } from '@/i18n';
 
 	let {
 		table_name,
@@ -142,7 +143,7 @@
 	/** The reason that the query takes no area, or null. */
 	const areaBlockReason = $derived.by(() => {
 		if (numericColumnCount < 2) {
-			return 'Select a latitude and a longitude column first.';
+			return $t('query.area.needsColumns');
 		}
 
 		return null;
@@ -384,7 +385,7 @@
 		);
 
 		if (!compiled) {
-			throw new Error('Pick a table and at least one column.');
+			throw new Error(translate('query.error.noColumns'));
 		}
 
 		return compiled;
@@ -399,7 +400,8 @@
 		} catch (error) {
 			console.error('Error compiling query:', error);
 			addToast({
-				message: `Error compiling query: ${error.message}`,
+				key: 'query.toast.compileFailed',
+				message: error.message,
 				type: 'error'
 			});
 			return;
@@ -455,7 +457,8 @@
 		if (seed.droppedParts > 0) {
 			addToast({
 				type: 'warning',
-				message: `Loaded query with best effort. ${seed.droppedParts} part(s) could not be represented in Advanced Builder.`
+				key: 'query.toast.bestEffort',
+				values: { count: seed.droppedParts }
 			});
 		}
 	}
@@ -463,20 +466,20 @@
 
 <div id="new-query-builder">
 	<div class="flex flex-row items-center justify-between">
-		<h3>Query Parameters</h3>
+		<h3>{$t('query.parameters.title')}</h3>
 		<div class="header-actions">
 			<Button variant="outline" onclick={() => (open = true)}>
-				Add Parameter
+				{$t('query.parameters.add')}
 				<PlusIcon />
 			</Button>
 			{#if !spatialFilter}
 				<Button
 					variant="outline"
-					title={areaBlockReason ?? 'Draw an area on a map, and filter the query on it'}
+					title={areaBlockReason ?? $t('query.area.addTitle')}
 					disabled={!!areaBlockReason}
 					onclick={() => (isGeoFilterOpen = true)}
 				>
-					Add Geospatial Filter
+					{$t('query.area.add')}
 					<PlusIcon />
 				</Button>
 			{/if}
@@ -494,22 +497,23 @@
 	<Dialog.Root bind:open>
 		<Dialog.Content class="search-columns-dialog" showCloseButton={false}>
 			<Dialog.Header class="sr-only">
-				<Dialog.Title>Add Query Parameter</Dialog.Title>
-				<Dialog.Description>Search and select a column to add it to the query.</Dialog.Description>
+				<Dialog.Title>{$t('query.parameters.dialogTitle')}</Dialog.Title>
+				<Dialog.Description>{$t('query.parameters.dialogDescription')}</Dialog.Description>
 			</Dialog.Header>
 
 			<SearchSelect.Root bind:query={searchQuery}>
 				<SearchSelect.Input
-					placeholder="Type a column or search..."
+					placeholder={$t('query.parameters.searchPlaceholder')}
 					bind:this={searchInput}
 					onKeydown={handleKeydown}
 				/>
 				<SearchSelect.List>
 					<SearchSelect.Empty>
-						No columns found for table <span class="search-columns-empty-table">{table_name}</span>.
+						{$t('query.parameters.emptyBeforeTable')}
+						<span class="search-columns-empty-table">{table_name}</span>{$t('query.parameters.emptyAfterTable')}
 					</SearchSelect.Empty>
 
-					<SearchSelect.Group heading={`Available Columns (${fields.length})`}>
+					<SearchSelect.Group heading={$t('query.parameters.available', { count: fields.length })}>
 						{#each fields as field (field.name)}
 							<SearchSelect.Item
 								value={field.name}
@@ -536,19 +540,21 @@
 	{#if filterWarning}
 		<p class="filter-warning">
 			<TriangleAlertIcon size={16} />
-			{filterWarning}
+			{$t(filterWarning)}
 		</p>
 	{/if}
 
 	{#if spatialFilter}
 		<div class="area-filter">
 			<MapPinnedIcon size={16} />
-			<span class="area-filter-label">Area: {describeSelection(spatialFilter)}</span>
+			<span class="area-filter-label">
+				{$t('query.area.label', { area: $t(describeSelection(spatialFilter)) })}
+			</span>
 
 			{#if missingAreaColumn}
 				<span class="area-filter-hint missing">
 					<TriangleAlertIcon size={14} />
-					The query does not select "{missingAreaColumn}", so this area filters nothing.
+					{$t('query.area.missingColumn', { column: missingAreaColumn })}
 				</span>
 			{:else if areaColumns}
 				<span class="area-filter-hint">
@@ -557,18 +563,18 @@
 			{:else}
 				<span class="area-filter-hint missing">
 					<TriangleAlertIcon size={14} />
-					The query selects no latitude and longitude column, so this area filters nothing.
+					{$t('query.area.noColumns')}
 				</span>
 			{/if}
 
 			<Button
 				variant="ghost"
-				title="Edit the geospatial filter"
+				title={$t('query.area.editTitle')}
 				onclick={() => (isGeoFilterOpen = true)}
 			>
 				<PencilLineIcon size={16} />
 			</Button>
-			<Button variant="ghost" title="Remove the area filter" onclick={() => (spatialFilter = null)}>
+			<Button variant="ghost" title={$t('query.area.removeTitle')} onclick={() => (spatialFilter = null)}>
 				<XIcon size={16} />
 			</Button>
 		</div>
@@ -580,7 +586,7 @@
 				<Parameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
 			{/each}
 		{:else}
-			<h4 class="no-selection">No parameters selected, use the 'Add Parameter' button above.</h4>
+			<h4 class="no-selection">{$t('query.parameters.empty')}</h4>
 		{/if}
 	</div>
 </div>

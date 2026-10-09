@@ -124,6 +124,12 @@ below hold the same meaning for every event. `props` holds the rest, as JSON.
 | `toast.warning` | A warning toast. |
 | `toast.error` | An error toast. |
 
+A toast event puts the translation key of its text in `message`, for example
+`nav.needsNode`. The key is the same in every language, so the dashboard groups
+one toast as one row. `props.detail` holds the raw text that the toast adds
+after the key text, for example a server error. `props.values` holds the
+values of the key. A toast with no key puts its raw text in `message`.
+
 ### The query shape
 
 `describeQuery` adds these keys to the props of `query.execute`, `query.error`,

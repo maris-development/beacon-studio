@@ -2,43 +2,35 @@
 	import Card from '@/components/card/Card.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import { resolve } from '$app/paths';
+	import { t } from '@/i18n';
 </script>
 
 <svelte:head>
-	<title>Visualisations - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('visualisation.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Visualisations', href: '/visualisations' }]} />
+<Cookiecrumb crumbs={[{ label: $t('visualisation.title'), href: '/visualisations' }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>Visualisations</h1>
+		<h1>{$t('visualisation.title')}</h1>
 
-		<p>Use the following ways to visualise your Beacon contents.</p>
+		<p>{$t('visualisation.intro')}</p>
 
 		<div class="visualisation-functions">
 			<Card href={resolve('/visualisations/map-viewer')}>
-				<h3>Map viewer</h3>
-				<p>
-					Visualise your data on an interactive map. Use the map viewer to explore geographical
-					patterns and insights.
-				</p>
+				<h3>{$t('map.title')}</h3>
+				<p>{$t('visualisation.card.map')}</p>
 			</Card>
 
 			<Card href={resolve('/visualisations/table-explorer')}>
-				<h3>Table explorer</h3>
-				<p>
-					Explore your data in a tabular format. The table explorer allows for detailed examination
-					and filtering of your dataset.
-				</p>
+				<h3>{$t('table.title')}</h3>
+				<p>{$t('visualisation.card.table')}</p>
 			</Card>
 
 			<Card href={resolve('/visualisations/chart-explorer')}>
-				<h3>Chart explorer</h3>
-				<p>
-					Explore your data using charts. The chart explorer allows for detailed examination and
-					filtering of your dataset.
-				</p>
+				<h3>{$t('chart.title')}</h3>
+				<p>{$t('visualisation.card.chart')}</p>
 			</Card>
 		</div>
 	</div>

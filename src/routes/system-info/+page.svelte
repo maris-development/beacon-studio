@@ -10,6 +10,7 @@
 	import type { BeaconSystemInfo } from '@/beacon-api/types';
 	import { Utils } from '@/utils';
 	import { askAlert } from '@/stores/confirm';
+	import { t, translate, formatNumber } from '@/i18n';
 
 	let currentNodeValue: BeaconNode | null = null;
 	let client: BeaconClient;
@@ -21,8 +22,8 @@
 
 		if (!currentNodeValue) {
 			void askAlert({
-				title: 'No Beacon node',
-				message: 'This page reads one node. Select a node first.'
+				title: translate('system.noNode.title'),
+				message: translate('system.noNode.message')
 			});
 
 			return;
@@ -60,127 +61,128 @@
 			console.error('Error fetching Beacon system info:', error);
 		}
 	}
+
+	function percent(fraction: number): string {
+		return $formatNumber(fraction, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+	}
 </script>
 
 <svelte:head>
-	<title>System Information - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('system.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'System Info', href: '/system-info' }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.systemInfo'), href: '/system-info' }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>System Information</h1>
+		<h1>{$t('system.title')}</h1>
 
 		<p>
-			View detailed information about the Beacon Studio system, including version, CPU usage, memory,
-			and more.
+			{$t('system.intro')}
 		</p>
 
 		{#if systemInfo && systemInfo.system_info == null}
 			<p class="bold">
-				No system information available, enable system information by setting the
-				BEACON_ENABLE_SYS_INFO environment variable.
+				{$t('system.disabled', { variable: 'BEACON_ENABLE_SYS_INFO' })}
 			</p>
 		{/if}
 
 		<div class="system-info-flex">
 			<div class="system-info-grid">
 				<Card>
-					<span class="description muted">Beacon Version</span>
+					<span class="description muted">{$t('system.version')}</span>
 					<div class="title">{systemInfo?.beacon_version}</div>
 					{#if systemInfo?.system_info != null}
 						<div>
-							System uptime: {Utils.formatSecondsToReadableTime(systemInfo.system_info.uptime)}
+							{$t('system.uptime', { time: Utils.formatSecondsToReadableTime(systemInfo.system_info.uptime) })}
 						</div>
 					{/if}
 				</Card>
 
 				{#if systemInfo?.system_info != null}
 					<Card>
-						<span class="description muted">System CPU Usage</span>
-						<div class="title">{(systemInfo.system_info.global_cpu_usage * 100).toFixed(1)}%</div>
+						<span class="description muted">{$t('system.cpu.title')}</span>
+						<div class="title">{percent(systemInfo.system_info.global_cpu_usage)}</div>
 
 						<div class="muted">
-							{systemInfo.system_info.physical_core_count} Physical Cores
+							{$t('system.cpu.cores', { count: systemInfo.system_info.physical_core_count })}
 						</div>
 					</Card>
 
 					<Card>
-						<span class="description muted">System Memory Usage</span>
+						<span class="description muted">{$t('system.memory.title')}</span>
 						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_memory)}</div>
 
-						<div>{Utils.formatBytes(systemInfo.system_info.total_memory)} Total</div>
+						<div>{$t('system.total', { size: Utils.formatBytes(systemInfo.system_info.total_memory) })}</div>
 						<div class="muted">
-							{(
-								(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory) *
-								100
-							).toFixed(1)}% Used
+							{$t('system.used', {
+								percent: percent(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory)
+							})}
 						</div>
 						<div class="muted">
-							{Utils.formatBytes(systemInfo.system_info.free_memory)} Free
+							{$t('system.free', { size: Utils.formatBytes(systemInfo.system_info.free_memory) })}
 						</div>
 					</Card>
 
 					<Card>
-						<span class="description muted">System Swap Usage</span>
+						<span class="description muted">{$t('system.swap.title')}</span>
 						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_swap)}</div>
 
-						<div>{Utils.formatBytes(systemInfo.system_info.total_swap)} Total</div>
+						<div>{$t('system.total', { size: Utils.formatBytes(systemInfo.system_info.total_swap) })}</div>
 						<div class="muted">
-							{((systemInfo.system_info.used_swap / systemInfo.system_info.total_swap) * 100).toFixed(
-								1
-							)}% Used
+							{$t('system.used', {
+								percent: percent(systemInfo.system_info.used_swap / systemInfo.system_info.total_swap)
+							})}
 						</div>
 						<div class="muted">
-							{Utils.formatBytes(systemInfo.system_info.free_swap)} Free
+							{$t('system.free', { size: Utils.formatBytes(systemInfo.system_info.free_swap) })}
 						</div>
 					</Card>
 
 					<Card>
-						<span class="muted">Load Average</span>
+						<span class="muted">{$t('system.load.title')}</span>
 
 						<div class="title">
-							1 min:
-							{(
-								(systemInfo.system_info.load_average.one /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
+							{$t('system.load.one', {
+								percent: percent(
+									systemInfo.system_info.load_average.one / systemInfo.system_info.physical_core_count
+								)
+							})}
 						</div>
 						<div class="title">
-							5 min:
-							{(
-								(systemInfo.system_info.load_average.five /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
+							{$t('system.load.five', {
+								percent: percent(
+									systemInfo.system_info.load_average.five / systemInfo.system_info.physical_core_count
+								)
+							})}
 						</div>
 						<div class="title">
-							15 min:
-							{(
-								(systemInfo.system_info.load_average.fifteen /
-									systemInfo.system_info.physical_core_count) *
-								100
-							).toFixed(1)}%
+							{$t('system.load.fifteen', {
+								percent: percent(
+									systemInfo.system_info.load_average.fifteen / systemInfo.system_info.physical_core_count
+								)
+							})}
 						</div>
 					</Card>
 
 					<Card>
-						<span class="muted">System Information</span>
+						<span class="muted">{$t('system.os.title')}</span>
 						<div class="title">{systemInfo.system_info.name}</div>
-						<div>OS: {systemInfo.system_info.long_os_version}</div>
-						<div class="muted">Hostname: {systemInfo.system_info.host_name}</div>
-						<div class="muted">Kernel: {systemInfo.system_info.kernel_version}</div>
-						<div class="muted">Distribution: {systemInfo.system_info.distribution_id}</div>
-						<div class="muted">Version: {systemInfo.system_info.os_version}</div>
+						<div>{$t('system.os.os', { value: systemInfo.system_info.long_os_version })}</div>
+						<div class="muted">{$t('system.os.hostname', { value: systemInfo.system_info.host_name })}</div>
+						<div class="muted">{$t('system.os.kernel', { value: systemInfo.system_info.kernel_version })}</div>
+						<div class="muted">{$t('system.os.distribution', { value: systemInfo.system_info.distribution_id })}</div>
+						<div class="muted">{$t('system.os.version', { value: systemInfo.system_info.os_version })}</div>
 					</Card>
 
 					<Card>
-						<span class="muted">CPUs</span>
+						<span class="muted">{$t('system.cpus.title')}</span>
 
 						<div class="title">
-							{systemInfo.system_info.cpus.length}× {systemInfo.system_info.cpus[0].brand}
+							{$t('system.cpus.count', {
+								count: systemInfo.system_info.cpus.length,
+								brand: systemInfo.system_info.cpus[0].brand
+							})}
 						</div>
 					</Card>
 				{/if}

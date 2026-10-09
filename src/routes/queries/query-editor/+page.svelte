@@ -13,6 +13,7 @@
 	import { addToast } from '@/stores/toasts';
 	import { resolveUrlQuery } from '@/stores/query-library';
 	import { resolve } from '$app/paths';
+	import { t, translate } from '@/i18n';
 
 	type RawQueryParameter = {
 		column?: string;
@@ -87,7 +88,8 @@
 		} catch (error) {
 			console.error('Error executing query:', error);
 			addToast({
-				message: `Error executing query: ${error.message}`,
+				key: 'editor.toast.executeFailed',
+				message: error.message,
 				type: 'error'
 			});
 		}
@@ -136,7 +138,7 @@
 				const column = parameter.column ?? parameter.column_name;
 
 				if (!column) {
-					throw new Error('Every query parameter must include column or column_name.');
+					throw new Error(translate('editor.error.noColumn'));
 				}
 
 				return {
@@ -151,7 +153,8 @@
 			} as CompiledQuery;
 		} catch (error) {
 			addToast({
-				message: `Failed to parse query JSON: ${error.message}`,
+				key: 'editor.toast.parseFailed',
+				message: error.message,
 				type: 'error'
 			});
 		}
@@ -160,12 +163,12 @@
 	onMount(() => {});
 </script>
 
-<h1 class="sr-only">Query editor</h1>
+<h1 class="sr-only">{$t('editor.title')}</h1>
 <div class="page-wrapper">
 	<Cookiecrumb
 		crumbs={[
-			{ label: 'Queries', href: resolve('/queries') },
-			{ label: 'Query Editor', href: resolve('/queries/query-editor') }
+			{ label: $t('nav.item.queries'), href: resolve('/queries') },
+			{ label: $t('editor.crumb'), href: resolve('/queries/query-editor') }
 		]}
 	/>
 	<!-- Right: Shadcn Buttons -->

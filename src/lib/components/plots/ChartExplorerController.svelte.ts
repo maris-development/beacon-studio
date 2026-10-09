@@ -54,6 +54,7 @@ import { buildInterpolationSurface, type InterpolationResult } from '@/plots/int
 import { samplePlotSeries } from '@/plots/sampling';
 import { getSettings } from '@/stores/settings';
 import { describeQuery, track } from '@/telemetry';
+import { message, type Message } from '@/i18n';
 
 export class ChartExplorerController {
 	/** The raw query result of the active block. */
@@ -165,14 +166,14 @@ export class ChartExplorerController {
 	displaySeries = $state.raw<PlotSeries | null>(null);
 
 	/**
-	 * The counts in the caption of the plot. Empty while the plot has no numbers.
+	 * The counts in the caption of the plot. Null while the plot has no numbers.
 	 *
 	 * The canvas draws this, so the PNG export carries it as well.
 	 */
-	readonly caption = $derived.by(() => {
+	readonly caption = $derived.by((): Message | null => {
 		const series = this.series;
 		const display = this.displaySeries;
-		if (!series || !display) return '';
+		if (!series || !display) return null;
 
 		return formatSeriesCaption(this.rowCount, series, display);
 	});
@@ -236,8 +237,8 @@ export class ChartExplorerController {
 	interpolation = $state.raw<InterpolationResult | null>(null);
 
 	/** Why the plot cannot draw, or null. */
-	readonly message = $derived.by(() => {
-		if (!this.table) return 'Loading rows…';
+	readonly message = $derived.by((): Message | null => {
+		if (!this.table) return message('visualisation.loadingRows');
 		if (this.isPreparing) return null;
 
 		const result = this.data;
@@ -456,7 +457,7 @@ export class ChartExplorerController {
 
 			if (this.entry.rowCount === 0) {
 				this.reportVisualise(query, node, readyAt);
-				addToast({ type: 'info', message: 'Query executed successfully but returned no data.' });
+				addToast({ type: 'info', key: 'visualisation.toast.noData' });
 				return;
 			}
 
@@ -473,7 +474,8 @@ export class ChartExplorerController {
 			console.error('Failed to execute query:', error);
 			addToast({
 				type: 'error',
-				message: `Failed to execute query: ${(error as Error).message}`
+				key: 'visualisation.toast.queryFailed',
+				message: (error as Error).message
 			});
 		}
 	}

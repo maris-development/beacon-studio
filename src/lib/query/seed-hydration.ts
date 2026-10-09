@@ -14,6 +14,7 @@ import type { CompiledQuery, DataType, Filter } from '@/beacon-api/types';
 import { Utils } from '@/utils';
 import type { SelectedFilterType } from '@/query/filter-types';
 import type { SelectedField } from '@/query/draft';
+import type { MessageKey } from '@/i18n';
 import {
 	coordinateColumnsOf,
 	findGeoJsonFilter,
@@ -44,41 +45,41 @@ export type HydratedSeed = {
 	droppedParts: number;
 };
 
-/** The label the filter dropdown shows for a filter value. */
-export function filterLabel(filter: SelectedFilterType['filter_value']): string {
+/** The catalog key of the label that the filter dropdown shows for a filter value. */
+export function filterLabel(filter: SelectedFilterType['filter_value']): MessageKey {
 	switch (filter.type) {
 		case 'range_numeric':
 		case 'range_string':
 		case 'range_timestamp':
-			return 'Between';
+			return 'filter.op.between';
 		case 'greater_than_numeric':
 		case 'greater_than_string':
 		case 'greater_than_timestamp':
-			return 'Greater Than';
+			return 'filter.op.greaterThan';
 		case 'greater_than_or_equals_numeric':
 		case 'greater_than_or_equals_string':
 		case 'greater_than_or_equals_timestamp':
-			return 'Greater Than or Equals';
+			return 'filter.op.greaterThanOrEquals';
 		case 'less_than_numeric':
 		case 'less_than_string':
 		case 'less_than_timestamp':
-			return 'Less Than';
+			return 'filter.op.lessThan';
 		case 'less_than_or_equals_numeric':
 		case 'less_than_or_equals_string':
 		case 'less_than_or_equals_timestamp':
-			return 'Less Than or Equals';
+			return 'filter.op.lessThanOrEquals';
 		case 'equals_numeric':
 		case 'equals_string':
 		case 'equals_timestamp':
-			return 'Equals';
+			return 'filter.op.equals';
 		case 'not_equals_numeric':
 		case 'not_equals_string':
 		case 'not_equals_timestamp':
-			return 'Not Equals';
+			return 'filter.op.notEquals';
 		case 'is_null':
-			return 'Is Null';
+			return 'filter.op.isNull';
 		case 'is_not_null':
-			return 'Is Not Null';
+			return 'filter.op.isNotNull';
 	}
 }
 

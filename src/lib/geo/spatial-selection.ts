@@ -16,6 +16,7 @@ import type { Filter, GeoJsonFilter, GeoJsonPolygon, MinMaxFilter } from '@/beac
 import { detectCoordinateColumns } from '@/geo/coordinate-columns';
 import { alignLongitude, TURN } from '@/geo/longitude';
 import { getSettings } from '@/stores/settings';
+import { message, type Message } from '@/i18n';
 
 export type SpatialSelectionMode = 'polygon' | 'box' | 'cross-section';
 
@@ -184,22 +185,11 @@ export function ringAreaKm2(ring: LngLat[]): number {
 }
 
 /** A short label for an area in square kilometres. */
-export function formatAreaKm2(areaKm2: number): string {
-    if (areaKm2 === 0) return '0 km²';
-
-    let digits = 0;
-    if (areaKm2 < 10) {
-        digits = 2;
-    } else if (areaKm2 < 100) {
-        digits = 1;
-    }
-
-    const value = areaKm2.toLocaleString(undefined, {
-        minimumFractionDigits: digits,
-        maximumFractionDigits: digits
-    });
-
-    return `${value} km²`;
+export function formatAreaKm2(areaKm2: number): Message {
+    if (areaKm2 === 0) return message('geo.area.km2Whole', { area: 0 });
+    if (areaKm2 < 10) return message('geo.area.km2TwoDecimals', { area: areaKm2 });
+    if (areaKm2 < 100) return message('geo.area.km2OneDecimal', { area: areaKm2 });
+    return message('geo.area.km2Whole', { area: areaKm2 });
 }
 
 /** The bounding box of a ring. */
@@ -472,15 +462,16 @@ export function coordinateColumnsOf(filters: Filter[] | null | undefined): Coord
 }
 
 /** A short label for the area, for the builder chip and the map toolbar. */
-export function describeSelection(selection: SpatialSelection): string {
+export function describeSelection(selection: SpatialSelection): Message {
     if (selection.mode === 'box') {
-        return 'Box';
+        return message('geo.selection.box');
     }
 
     if (selection.mode === 'cross-section') {
-        return `Cross section (${selection.widthKm ?? defaultCrossSectionWidthKm()} km)`;
+        const width = selection.widthKm ?? defaultCrossSectionWidthKm();
+        return message('geo.selection.crossSection', { width });
     }
 
     // The closing point repeats the first one, so it does not count.
-    return `Polygon (${Math.max(0, selection.ring.length - 1)} points)`;
+    return message('geo.selection.polygon', { count: Math.max(0, selection.ring.length - 1) });
 }

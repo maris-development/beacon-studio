@@ -10,6 +10,7 @@
 	import type { QueryActions } from './QueryActions';
 	import type { StoredQuery } from '@/stores/stored-query';
 	import { resolve } from '$app/paths';
+	import { t } from '@/i18n';
 
     type QuerySelectorMode = 'view' | 'edit';
 
@@ -59,7 +60,7 @@
                 {/if}
             </Button>
             <div class="page-title">
-                <h1 class="h2-like">{mode === 'edit' ? 'Editing' : 'Viewing'} {workspace.activeBlock.name}</h1>
+                <h1 class="h2-like">{mode === 'edit' ? $t('workbench.header.editing', { name: workspace.activeBlock.name }) : $t('workbench.header.viewing', { name: workspace.activeBlock.name })}</h1>
             </div>
         </div>
         <QueryActionBar queryActions={queryActionsForBar} />

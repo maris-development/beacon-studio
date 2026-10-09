@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDistanceToNow } from 'date-fns';
+	import { t, formatDate, formatRelative } from '@/i18n';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
@@ -22,7 +22,7 @@
 
 	function columnSummary(entry: StoredQuery): string {
 		const columns = (entry.compiled?.query_parameters ?? []).map((p) => p.alias ?? p.column);
-		if (!columns.length) return '(no columns)';
+		if (!columns.length) return $t('query.entry.noColumns');
 		return columns.join(', ');
 	}
 
@@ -31,7 +31,7 @@
 	}
 
 	function savedAgo(entry: StoredQuery): string {
-		return formatDistanceToNow(entry.createdAt, { addSuffix: true });
+		return $formatRelative(entry.createdAt);
 	}
 
 	/**
@@ -61,14 +61,14 @@
 		const link = buildShareLink(entry);
 
 		if (!link) {
-			addToast({ type: 'warning', message: 'This entry has no shareable query.' });
+			addToast({ type: 'warning', key: 'query.share.none' });
 			return;
 		}
 
 		if (await Utils.copyToClipboard(link)) {
-			addToast({ type: 'success', message: 'Share link copied to clipboard.' });
+			addToast({ type: 'success', key: 'query.share.copied' });
 		} else {
-			addToast({ type: 'error', message: 'Could not copy the share link.' });
+			addToast({ type: 'error', key: 'query.share.copyFailed' });
 		}
 	}
 
@@ -92,22 +92,22 @@
 </script>
 
 <svelte:head>
-	<title>Saved Queries - Beacon Studio</title>
+	<title>{$t('app.pageTitle', { page: $t('saved.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: 'Queries', href: resolve('/queries') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.queries'), href: resolve('/queries') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
 		<div class="header">
 			<div>
-				<h1>Saved Queries</h1>
-				<p>Queries you've saved from the query builder. Re-run, visualise, or open any saved query.</p>
+				<h1>{$t('saved.title')}</h1>
+				<p>{$t('saved.intro')}</p>
 			</div>
 			{#if entries.length > 0}
 				<div class="buttons">
 					<Button variant="outline" onclick={() => clearSavedQueries()}>
-						Clear saved
+						{$t('saved.clear')}
 						<Trash2Icon />
 					</Button>
 				</div>
@@ -116,10 +116,13 @@
 
 		{#if entries.length === 0}
 			<Card>
-				<h2>No saved queries yet</h2>
+				<h2>{$t('saved.empty.title')}</h2>
 				<p>
-					Build a query in the <a href={resolve('/queries/workbench')}>Query Builder</a> and click
-					<strong>Save Query</strong> to add it here.
+					{$t('saved.empty.beforeLink')}
+					<a href={resolve('/queries/workbench')}>{$t('nav.item.queryBuilder')}</a>
+					{$t('saved.empty.beforeButton')}
+					<strong>{$t('query.actions.save')}</strong>
+					{$t('saved.empty.afterButton')}
 				</p>
 			</Card>
 		{:else}
@@ -140,9 +143,9 @@
 												}}
 											/>
 											<Button size="sm" variant="outline" onclick={() => commitRename(entry.id)}>
-												Save
+												{$t('common.save')}
 											</Button>
-											<Button size="sm" variant="ghost" onclick={cancelRename}>Cancel</Button>
+											<Button size="sm" variant="ghost" onclick={cancelRename}>{$t('common.cancel')}</Button>
 										</div>
 									{:else}
 										<div class="entry-name" title={entry.name}>{entry.name}</div>
@@ -152,8 +155,10 @@
 											<span class="badge">{entry.node.name || entry.node.url}</span>
 										{/if}
 										<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
-										<span>{filterCount(entry)} filter{filterCount(entry) === 1 ? '' : 's'}</span>
-										<span title={new Date(entry.createdAt).toLocaleString()}>saved {savedAgo(entry)}</span>
+										<span>{$t('query.filterCount', { count: filterCount(entry) })}</span>
+										<span title={$formatDate(new Date(entry.createdAt), { dateStyle: 'short', timeStyle: 'medium' })}>
+											{$t('saved.entry.savedAgo', { time: savedAgo(entry) })}
+										</span>
 									</div>
 								</div>
 
@@ -162,10 +167,10 @@
 										size="sm"
 										variant="outline"
 										onclick={() => openInWorkbench(entry)}
-										title="Open in Query Builder"
+										title={$t('query.entry.openInBuilder')}
 									>
 										<WorkbenchIcon />
-										Query Builder
+										{$t('nav.item.queryBuilder')}
 									</Button>
 									<Button
 										size="sm"
@@ -173,7 +178,7 @@
 										onclick={() => openWith(resolve('/visualisations/table-explorer'), entry)}
 									>
 										<TableIcon />
-										Table
+										{$t('query.entry.table')}
 									</Button>
 									<Button
 										size="sm"
@@ -181,7 +186,7 @@
 										onclick={() => openWith(resolve('/visualisations/map-viewer'), entry)}
 									>
 										<MapIcon />
-										Map
+										{$t('query.entry.map')}
 									</Button>
 									<Button
 										size="sm"
@@ -189,13 +194,13 @@
 										onclick={() => openWith(resolve('/visualisations/chart-explorer'), entry)}
 									>
 										<ChartPieIcon />
-										Chart
+										{$t('query.entry.chart')}
 									</Button>
 									<Button
 										size="sm"
 										variant="ghost"
 										onclick={() => startRename(entry)}
-										title="Rename"
+										title={$t('common.rename')}
 									>
 										<PencilLineIcon />
 									</Button>
@@ -203,7 +208,7 @@
 										size="sm"
 										variant="ghost"
 										onclick={() => copyShareLink(entry)}
-										title="Copy a link that works in any browser"
+										title={$t('query.share.copyTitle')}
 									>
 										<Share2Icon />
 									</Button>
@@ -211,7 +216,7 @@
 										size="sm"
 										variant="ghost"
 										onclick={() => removeSavedQuery(entry.id)}
-										title="Remove saved query"
+										title={$t('saved.entry.remove')}
 									>
 										<Trash2Icon />
 									</Button>

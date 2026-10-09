@@ -7,6 +7,7 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { runBlockReason } from '@/query/query-guard';
 import type { ShareableQuery } from '@/stores/stored-query';
+import type { Message } from '@/i18n';
 
 export type ActionCallback = (() => void | Promise<void>) | undefined;
 
@@ -36,7 +37,7 @@ export type QueryActions = {
      * The value is a snapshot. A component that must react to a change of the
      * safeguard switch reads `$settings` beside this call.
      */
-    runBlockReason?: () => string | null;
+    runBlockReason?: () => Message | null;
 };
 
 /**
@@ -70,7 +71,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
     }
   
     /** The reason that the active query must not run. See {@link runBlockReason}. */
-    function activeRunBlockReason(): string | null {
+    function activeRunBlockReason(): Message | null {
         return runBlockReason(QueryWorkspace.getQuery(workspace.activeBlock));
     }
 
@@ -82,7 +83,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         const reason = runBlockReason(query);
         if (!reason) return false;
 
-        addToast({ message: reason, type: 'warning' });
+        addToast({ key: reason.key, values: reason.values, type: 'warning' });
         return true;
     }
 
@@ -99,14 +100,15 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         if (missing) {
             addToast({
-                message: `Add the Beacon node ${missing} to run this query.`,
+                key: 'workbench.toast.addMissingNode',
+                values: { url: missing },
                 type: 'warning'
             });
         } else if (!workspace.nodesReady) {
             // The public list is still on its way, so the node can still arrive.
-            addToast({ message: 'Wait for the Beacon nodes to load.', type: 'warning' });
+            addToast({ key: 'workbench.toast.waitForNodes', type: 'warning' });
         } else {
-            addToast({ message: 'Pick a Beacon node for this query first.', type: 'warning' });
+            addToast({ key: 'workbench.toast.pickNode', type: 'warning' });
         }
 
         return null;
@@ -118,7 +120,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         const query = QueryWorkspace.getQuery(block);
 
         if (!block || !query) {
-            addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
+            addToast({ key: 'workbench.toast.noQuery', type: 'warning' });
             return null;
         }
 
@@ -145,7 +147,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
             // is the intent of the user, so it needs no error.
             if (BeaconClient.isQueryAbort(e)) return null;
 
-            addToast({ message: `Query failed: ${e?.message ?? e}`, type: 'error' });
+            addToast({ key: 'workbench.toast.runFailed', message: String(e?.message ?? e), type: 'error' });
             return null;
         }
 
@@ -165,7 +167,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         const query = QueryWorkspace.getQuery(workspace.activeBlock);
 
         if (!block || !query) {
-            addToast({ message: 'Can not create query, please select a table and at least one column.', type: 'warning' });
+            addToast({ key: 'workbench.toast.noQuery', type: 'warning' });
             return;
         }
 
@@ -182,17 +184,18 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         const token = workspace.beginBlockRun(block.id);
 
-        addToast({ message: 'Downloading dataset...', type: 'info' });
+        addToast({ key: 'download.toast.started', type: 'info' });
 
         try {
             const outputExtension = BeaconClient.outputFormatToExtension(query);
             await client.queryToDownload(query, outputExtension);
             addToast({
-                message: `Dataset downloaded directly as ${outputExtension}. This does not populate the visualisation cache; use Visualise Query to run and cache this query.`,
+                key: 'download.toast.directDone',
+                values: { extension: outputExtension },
                 type: 'success'
             });
         } catch (e) {
-            addToast({ message: `Download failed: ${e?.message ?? e}`, type: 'error' });
+            addToast({ key: 'download.toast.failed', message: String(e?.message ?? e), type: 'error' });
         } finally {
             workspace.endBlockRun(block.id, token);
         }
@@ -224,15 +227,15 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         const block = workspace.activeBlock;
 
         if (!block || !QueryWorkspace.getQuery(block)) {
-            addToast({ message: 'Can not save: please select a table and at least one column.', type: 'warning' });
+            addToast({ key: 'saved.toast.noQuery', type: 'warning' });
             return;
         }
 
         try {
             saveQueryFrom(block);
-            addToast({ message: `Query "${block.name}" saved.`, type: 'success' });
+            addToast({ key: 'saved.toast.saved', values: { name: block.name }, type: 'success' });
         } catch (e) {
-            addToast({ message: `Failed to save query: ${e?.message ?? e}`, type: 'error' });
+            addToast({ key: 'saved.toast.saveFailed', message: String(e?.message ?? e), type: 'error' });
         }
     }
 
