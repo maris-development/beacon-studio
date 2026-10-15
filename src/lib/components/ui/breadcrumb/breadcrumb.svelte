@@ -30,8 +30,8 @@
 	justify-content: space-between;
 	align-items: center;
 	border-bottom-width: 1px;
-	border-color: #e5e7eb;
-	background-color: #f9fafb;
+	border-color: var(--crumb-border);
+	background-color: var(--crumb-background);
 	padding: 0.5rem 1rem; /* py-2 px-4 */
 }
 

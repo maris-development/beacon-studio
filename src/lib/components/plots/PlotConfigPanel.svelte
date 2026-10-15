@@ -1343,7 +1343,7 @@
 			&.dirty .apply {
 				border-color: var(--primary);// #2563eb;
 				background-color: var(--primary);// #2563eb;
-				color: #ffffff;
+				color: var(--primary-foreground);
 			}
 
 			&.dirty .revert:hover {

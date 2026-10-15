@@ -152,10 +152,8 @@
 </div>
 
 <style lang="scss">
-	@use 'sass:color';
-	
 	.data-table-wrapper {
-		border: 1px solid #ddd;
+		border: 1px solid var(--table-border);
 		border-radius: 8px;
 		overflow: hidden;
 		position: relative;
@@ -181,7 +179,7 @@
 				tbody td {
 					padding: 0.5rem 0.75rem;
 					font-size: 0.875rem;
-					border-bottom: 1px solid #ddd;
+					border-bottom: 1px solid var(--table-border);
 					white-space: nowrap;
 				}
 
@@ -203,23 +201,23 @@
 				
 				
 				thead {
-					background-color: #f9f9f9;
+					background-color: var(--table-header-background);
 
 					th {
 						position: sticky;
 						top: 0;
 						z-index: 1;
-						background-color: #f9f9f9;
+						background-color: var(--table-header-background);
 						text-align: left;
 						font-weight: 600;
 						text-transform: uppercase;
-						color: #666;
+						color: var(--table-header-foreground);
 
 						&.sortable {
 							cursor: pointer;
 
 							&:hover {
-								background-color: color.mix(black, #f9f9f9, 5%); 
+								background-color: color-mix(in srgb, black 5%, var(--table-header-background));
 							}
 						}
 
@@ -239,11 +237,11 @@
 				tbody {
 					tr {
 						&:nth-child(even) {
-							background-color: #fcfcfc;
+							background-color: var(--table-row-alternate);
 						}
 
 						td {
-							color: #555;
+							color: var(--table-foreground);
 
 							&.no-data {
 								display: table-cell;
@@ -257,7 +255,7 @@
 						}
 
 						&:hover {
-							background-color: #f1f1f1;
+							background-color: var(--table-row-hover);
 						}
 					}
 				}

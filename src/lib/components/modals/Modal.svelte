@@ -65,7 +65,7 @@
 	.backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
+		background: var(--overlay);
 		cursor: default;
 		z-index: 49;
 
@@ -74,7 +74,7 @@
 			top: 50%;
 			left: 50%;
 			transform: translate(-50%, -50%);
-			background: #fff;
+			background: var(--card);
 			padding: 1rem;
 			border-radius: 0.5rem;
 			// A modal never takes more than 90% of the window, in both directions.
@@ -100,7 +100,7 @@
 					border: none;
 					font-size: 1.5rem;
 					cursor: pointer;
-					color: #333;
+					color: var(--foreground);
 					position: absolute;
 					top: 0.5rem;
 					right: 0.5rem;

@@ -88,10 +88,12 @@
 		justify-content: center;
 		gap: 0.5rem;
 		white-space: nowrap;
-		border-radius: var(--radius-md);
+		border-radius: var(--button-radius);
 		font-size: 0.875rem;
 		line-height: 1.25rem;
-		font-weight: 500;
+		font-weight: var(--button-font-weight);
+		text-transform: var(--button-text-transform);
+		letter-spacing: var(--button-letter-spacing);
 		outline: none;
 		transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 		cursor: pointer;
@@ -175,7 +177,7 @@
 	.variant-default {
 		background-color: var(--primary);
 		color: var(--primary-foreground);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 
 		&:hover {
 			background-color: color-mix(in srgb, var(--primary) 90%, transparent);
@@ -185,7 +187,7 @@
 	.variant-destructive {
 		background-color: var(--destructive);
 		color: white;
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 
 		&:hover {
 			background-color: color-mix(in srgb, var(--destructive) 90%, transparent);
@@ -207,7 +209,7 @@
 	.variant-outline {
 		background-color: var(--background);
 		border-color: var(--border);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 
 		&:hover {
 			background-color: var(--accent);
@@ -227,7 +229,7 @@
 	.variant-secondary {
 		background-color: var(--secondary);
 		color: var(--secondary-foreground);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 
 		&:hover {
 			background-color: color-mix(in srgb, var(--secondary) 80%, transparent);
@@ -259,7 +261,7 @@
 	.variant-confirm {
 		background-color: var(--confirm-background);
 		color: var(--confirm-foreground);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 		border-color: var(--confirm-border);
 
 		&:hover {
@@ -270,7 +272,7 @@
 	.variant-deny {
 		background-color: var(--deny-background);
 		color: var(--deny-foreground);
-		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+		box-shadow: var(--button-shadow);
 		border-color: var(--deny-border);
 
 		&:hover {
