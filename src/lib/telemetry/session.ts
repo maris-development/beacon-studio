@@ -7,9 +7,12 @@
  * the real work.
  *
  * The endpoints live on the website. Every build posts to the absolute URL.
+ * A brand can set its own receiver in `brand.ts`.
  */
 
-const API_BASE = 'https://beacon-datalake.org/api/telemetry';
+import { BRAND } from '@/brand';
+
+const API_BASE = BRAND.endpoints.telemetry;
 // const API_BASE = 'http://beacon-datalake/api/telemetry';
 
 export function collectUrl(): string {

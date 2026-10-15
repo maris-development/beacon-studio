@@ -12,8 +12,11 @@
 	import { getSettings, settings } from '@/stores/settings';
 	import { afterNavigate } from '$app/navigation';
 	import { onMount, type Snippet } from 'svelte';
+	import { BRAND } from '@/brand';
 	import '../app.scss';
 	import '../tailwind.css';
+	// Import the brand theme here only and last, so its tokens win in the CSS order.
+	import '$brand/theme.scss';
 
 	// The width at which the sidebar becomes an overlay.
 	const MOBILE_QUERY = '(max-width: 767px)';
@@ -62,6 +65,10 @@
 		track('page.view', { props: { from: navigation.from?.route.id ?? null } });
 	});
 </script>
+
+<svelte:head>
+	<meta name="apple-mobile-web-app-title" content={BRAND.name} />
+</svelte:head>
 
 <Toasts />
 

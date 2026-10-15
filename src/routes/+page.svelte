@@ -13,6 +13,7 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import { addToast } from '@/stores/toasts';
 	import { t } from '@/i18n';
+	import { BRAND } from '@/brand';
 
 	import { asset, resolve } from '$app/paths';
 
@@ -54,7 +55,7 @@
 </script>
 
 <svelte:head>
-	<title>{$t('app.name')}</title>
+	<title>{BRAND.name}</title>
 </svelte:head>
 
 <Cookiecrumb />

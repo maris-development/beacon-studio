@@ -1,8 +1,7 @@
 {
 	"app": {
-		"name": "Beacon Studio",
-		"logoAlt": "Logo Beacon",
-		"pageTitle": "{page} - Beacon Studio"
+		"logoAlt": "Logo {app}",
+		"pageTitle": "{page} - {app}"
 	},
 	"common": {
 		"cancel": "Annulla",
@@ -39,7 +38,7 @@
 			"dataAccess": "Accesso ai dati",
 			"explore": "Esplora e analizza",
 			"nodeManagement": "Gestione nodi",
-			"studio": "Beacon Studio"
+			"studio": "{app}"
 		},
 		"item": {
 			"queries": "Query",
@@ -56,13 +55,13 @@
 			"systemInfo": "Info di sistema",
 			"beaconNodes": "Nodi Beacon",
 			"settings": "Impostazioni",
-			"aboutStudio": "Altro su Studio",
+			"aboutStudio": "Altro su {app}",
 			"documentation": "Documentazione",
 			"github": "GitHub",
 			"feedback": "Feedback"
 		},
 		"needsNode": "Questa pagina richiede un nodo Beacon. Aggiungine uno nella pagina Nodi Beacon.",
-		"waitForNodes": "Beacon Studio legge i nodi Beacon pubblici. Questo avviene solo alla prima visita. La tua query parte quando arrivano."
+		"waitForNodes": "{app} legge i nodi Beacon pubblici. Questo avviene solo alla prima visita. La tua query parte quando arrivano."
 	},
 	"build": {
 		"unknown": "sconosciuto",
@@ -74,14 +73,14 @@
 	},
 	"settings": {
 		"title": "Impostazioni",
-		"intro": "Gestisci qui le impostazioni di Beacon Studio. L'app conserva ogni valore in questo browser. Una modifica vale per la prossima query, mappa o aggiornamento.",
+		"intro": "Gestisci qui le impostazioni di {app}. L'app conserva ogni valore in questo browser. Una modifica vale per la prossima query, mappa o aggiornamento.",
 		"resetAll": "Ripristina tutte le impostazioni",
 		"resetAllMessage": "Questo riporta ogni impostazione di questo browser al valore predefinito. L'app perde i tuoi limiti di query, la dimensione della cache e le impostazioni predefinite della mappa.",
 		"resetAllMessageTelemetry": "Questo riporta ogni impostazione di questo browser al valore predefinito. L'app perde i tuoi limiti di query, la dimensione della cache, le impostazioni predefinite della mappa e la tua scelta sulla telemetria.",
 		"resetAllNote": "Non puoi annullare questa azione.",
 		"resetAllDone": "Tutte le impostazioni sono tornate ai valori predefiniti.",
 		"resetOne": "Riporta questa impostazione al valore predefinito",
-		"noTelemetryBuild": "Questa versione di Beacon Studio è compilata con la telemetria disattivata. Non invia dati di utilizzo.",
+		"noTelemetryBuild": "Questa versione di {app} è compilata con la telemetria disattivata. Non invia dati di utilizzo.",
 		"group": {
 			"general": "Generale",
 			"queries": "Query",
@@ -106,7 +105,7 @@
 		"field": {
 			"language": {
 				"label": "Lingua",
-				"description": "La lingua di Beacon Studio. Automatica segue la lingua del browser."
+				"description": "La lingua di {app}. Automatica segue la lingua del browser."
 			},
 			"defaultOutputFormat": {
 				"label": "Formato di output predefinito",
@@ -812,7 +811,7 @@
 			"title": "Nessun nodo Beacon",
 			"message": "Questa pagina legge un nodo. Seleziona prima un nodo."
 		},
-		"intro": "Visualizza informazioni dettagliate sul sistema di Beacon Studio, tra cui versione, uso della CPU, memoria e altro.",
+		"intro": "Visualizza informazioni dettagliate sul sistema di {app}, tra cui versione, uso della CPU, memoria e altro.",
 		"disabled": "Nessuna informazione di sistema disponibile. Attiva le informazioni di sistema con la variabile di ambiente {variable}.",
 		"version": "Versione di Beacon",
 		"uptime": "Tempo di attività del sistema: {time}",
@@ -910,7 +909,7 @@
 		}
 	},
 	"home": {
-		"betaToast": "Beacon Studio è ancora in beta. Invia il tuo feedback con \"Feedback\" in basso a sinistra.",
+		"betaToast": "{app} è ancora in beta. Invia il tuo feedback con \"Feedback\" in basso a sinistra.",
 		"title": {
 			"beforeHighlight": "Benvenuto in Beacon",
 			"highlight": "Studio"

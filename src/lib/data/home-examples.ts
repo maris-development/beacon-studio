@@ -11,9 +11,10 @@
 import { get, readonly, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
 import bundledExamples from './home-examples.default.json';
+import { BRAND } from '@/brand';
 
-/** The address of the examples list. */
-export const HOME_EXAMPLES_URL = 'https://beacon-datalake.org/api/studio/examples';
+/** The address of the examples list. A brand can set its own in `brand.ts`. */
+export const HOME_EXAMPLES_URL = BRAND.endpoints.homeExamples;
 
 /** The localStorage key of the cached list. */
 const STORAGE_KEY = 'beacon-studio.home-examples';

@@ -1,8 +1,7 @@
 {
 	"app": {
-		"name": "Beacon Studio",
-		"logoAlt": "Logotipo de Beacon",
-		"pageTitle": "{page} - Beacon Studio"
+		"logoAlt": "Logotipo de {app}",
+		"pageTitle": "{page} - {app}"
 	},
 	"common": {
 		"cancel": "Cancelar",
@@ -39,7 +38,7 @@
 			"dataAccess": "Acceso a datos",
 			"explore": "Explorar y analizar",
 			"nodeManagement": "Gestión de nodos",
-			"studio": "Beacon Studio"
+			"studio": "{app}"
 		},
 		"item": {
 			"queries": "Consultas",
@@ -56,13 +55,13 @@
 			"systemInfo": "Información del sistema",
 			"beaconNodes": "Nodos Beacon",
 			"settings": "Ajustes",
-			"aboutStudio": "Más sobre Studio",
+			"aboutStudio": "Más sobre {app}",
 			"documentation": "Documentación",
 			"github": "GitHub",
 			"feedback": "Comentarios"
 		},
 		"needsNode": "Esta página necesita un nodo Beacon. Añade uno en la página Nodos Beacon.",
-		"waitForNodes": "Beacon Studio lee los nodos Beacon públicos. Esto ocurre solo en la primera visita. Tu consulta empieza cuando llegan."
+		"waitForNodes": "{app} lee los nodos Beacon públicos. Esto ocurre solo en la primera visita. Tu consulta empieza cuando llegan."
 	},
 	"build": {
 		"unknown": "desconocido",
@@ -74,14 +73,14 @@
 	},
 	"settings": {
 		"title": "Ajustes",
-		"intro": "Gestiona aquí los ajustes de Beacon Studio. La aplicación guarda cada valor en este navegador. Un cambio se aplica a la próxima consulta, mapa o actualización.",
+		"intro": "Gestiona aquí los ajustes de {app}. La aplicación guarda cada valor en este navegador. Un cambio se aplica a la próxima consulta, mapa o actualización.",
 		"resetAll": "Restablecer todos los ajustes",
 		"resetAllMessage": "Esto devuelve cada ajuste de este navegador a su valor predeterminado. La aplicación pierde tus límites de consulta, el tamaño de la caché y los valores predeterminados del mapa.",
 		"resetAllMessageTelemetry": "Esto devuelve cada ajuste de este navegador a su valor predeterminado. La aplicación pierde tus límites de consulta, el tamaño de la caché, los valores predeterminados del mapa y tu elección de telemetría.",
 		"resetAllNote": "No puedes deshacer esta acción.",
 		"resetAllDone": "Todos los ajustes han vuelto a sus valores predeterminados.",
 		"resetOne": "Devolver este ajuste a su valor predeterminado",
-		"noTelemetryBuild": "Esta versión de Beacon Studio está compilada con la telemetría desactivada. No envía datos de uso.",
+		"noTelemetryBuild": "Esta versión de {app} está compilada con la telemetría desactivada. No envía datos de uso.",
 		"group": {
 			"general": "General",
 			"queries": "Consultas",
@@ -106,7 +105,7 @@
 		"field": {
 			"language": {
 				"label": "Idioma",
-				"description": "El idioma de Beacon Studio. Automático sigue el idioma del navegador."
+				"description": "El idioma de {app}. Automático sigue el idioma del navegador."
 			},
 			"defaultOutputFormat": {
 				"label": "Formato de salida predeterminado",
@@ -812,7 +811,7 @@
 			"title": "Sin nodo Beacon",
 			"message": "Esta página lee un nodo. Selecciona primero un nodo."
 		},
-		"intro": "Consulta información detallada sobre el sistema de Beacon Studio, como la versión, el uso de CPU, la memoria y más.",
+		"intro": "Consulta información detallada sobre el sistema de {app}, como la versión, el uso de CPU, la memoria y más.",
 		"disabled": "No hay información del sistema disponible. Actívala con la variable de entorno {variable}.",
 		"version": "Versión de Beacon",
 		"uptime": "Tiempo de actividad del sistema: {time}",
@@ -910,7 +909,7 @@
 		}
 	},
 	"home": {
-		"betaToast": "Beacon Studio todavía está en fase beta. Envía tus comentarios con el botón \"Comentarios\" de la esquina inferior izquierda.",
+		"betaToast": "{app} todavía está en fase beta. Envía tus comentarios con el botón \"Comentarios\" de la esquina inferior izquierda.",
 		"title": {
 			"beforeHighlight": "Bienvenido a Beacon",
 			"highlight": "Studio"
