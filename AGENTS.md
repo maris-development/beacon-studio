@@ -47,6 +47,20 @@ This file is a quick operational guide for coding agents working in this reposit
 - For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`.
 - Keep path handling consistent by using SvelteKit helpers (`resolve`, `asset`) already used in the codebase.
 
+## Brands (Important)
+A project fork changes the look through one folder, `src/brands/<name>/`. Guide: `src/brands/default/README.md`.
+
+- Upstream code is the default look. Upstream ships only `default` (empty template) and `example`. Never add a real project brand here.
+- `resolveBrand()` (`scripts/brand.js`) picks the brand: `STUDIO_BRAND`, else the one folder that is not `default` or `example`, else `default`.
+- Vite, svelte-check, ESLint and the SvelteKit child processes all load `svelte.config.js`. Keep `resolveBrand()` free of writes and logs.
+- `kit.alias.$brand` points to the active folder. Import `$brand/theme.scss` only in `+layout.svelte`, after `tailwind.css`. A second import moves it into a shared chunk, and the CSS order breaks.
+- A brand needs `brand.ts`, `theme.scss` and `locales.ts`. Add a new brand option only as a field of `BrandConfig` with a default. A new required file breaks fork builds after a clean merge.
+- Read the name, logo, links and endpoints from `BRAND` (`@/brand`). Never put the app name, the logo import or a beacon-datalake.org URL in a component.
+- `theme.scss` holds only `:root` tokens and `@font-face`. A brand changes a component through a token. When a project needs a hardcoded value changed, move it to a token in `src/tailwind.css` `:root`, with the current value as default.
+- `brandPlugin` serves `src/brands/<name>/static/` in dev and copies it over `static/` in the client build. Do not use `kit.files.assets`. SvelteKit 2 marks it deprecated.
+- `--map-draw` must stay a hex color. Terra Draw takes only hex.
+- `--ring` and `--deny` have no definition. Several components read them, some with a fallback. A definition changes their look, so define them in a separate change.
+
 ## High-Level Architecture
 - App shell and navigation:
   - `src/routes/+layout.svelte`
@@ -144,7 +158,9 @@ Sort each persisted value into one class. The class decides whether a change nee
 ## Layer Rule (Important)
 Imports point one way only:
 
-`beacon-api` → `query` / `geo` → `stores` → `components` → `routes`
+`brand` → `i18n` → `beacon-api` → `query` / `geo` → `stores` → `components` → `routes`
+
+- `src/lib/brand/*` is pure config at the bottom. It imports only `$brand` and `$lib/assets`. ESLint enforces this.
 
 - `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
   import a type out of a `.svelte` file. A type that both a component and the domain need belongs in
@@ -202,6 +218,8 @@ message the change never reaches production.
 - The settings page derives its text from the setting key: `settings.field.<key>.label` and `.description`, and `settings.group.<id>`. A new setting needs those keys.
 - `+layout.svelte` calls `setLanguage` at the top of its script, not in `onMount`. A child `onMount` runs first.
 - `<html lang>` follows the active locale. `app.html` holds only the start value.
+- Never write the app name in a catalog string. Write `{app}`. `t` and `translate` pass the brand name as `app` on every call.
+- svelte-i18n parses a string as ICU only when it gets values. The `app` value makes every string go through the parser. A literal `{` or `''` in a catalog string is therefore ICU syntax.
 
 ## Frontend Conventions
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
