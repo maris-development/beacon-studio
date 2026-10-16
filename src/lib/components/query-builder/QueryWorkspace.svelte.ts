@@ -324,7 +324,11 @@ export class QueryWorkspace {
 			if (!goAhead) return false;
 		}
 
-		if (needsDraftSeed(block)) {
+		// A write during the dialog replaces the block object.
+		const current = this.blocks.find((candidate) => candidate.id === id);
+		if (!current) return false;
+
+		if (needsDraftSeed(current)) {
 			queryBlocks.update(id, {
 				node: snapshotNode(node),
 				datasetKey: null,
@@ -332,7 +336,7 @@ export class QueryWorkspace {
 			});
 		} else {
 			const draft = makeEmptyDraft();
-			draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
+			draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
 
 			queryBlocks.update(id, {
 				node: snapshotNode(node),
@@ -493,10 +497,10 @@ export class QueryWorkspace {
 	async closeBlock(id: string): Promise<void> {
 		if (this.blocks.length === 1) return;
 
-		const index = this.blocks.findIndex((b) => b.id === id);
-		if (index === -1) return;
+		const block = this.blocks.find((b) => b.id === id);
+		if (!block) return;
 
-		if ((this.blocks[index].draft?.selectedFields.length ?? 0) > 0) {
+		if ((block.draft?.selectedFields.length ?? 0) > 0) {
 			const goAhead = await askConfirm({
 				title: translate('workbench.closeBlock.title'),
 				message: translate('workbench.closeBlock.message'),
@@ -507,6 +511,10 @@ export class QueryWorkspace {
 
 			if (!goAhead) return;
 		}
+
+		// The blocks can change during the dialog, so find the position now.
+		const index = this.blocks.findIndex((b) => b.id === id);
+		if (index === -1 || this.blocks.length === 1) return;
 
 		queryBlocks.remove(id);
 

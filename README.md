@@ -88,3 +88,9 @@ npm run lint
 The Beacon SDK comes from npm as [`@maris-development/beacon-client`](https://www.npmjs.com/package/@maris-development/beacon-client). `npm install` installs it with the other dependencies.
 
 Its source is in the `beacon` repository, in [`beacon-clients/beacon-ts`](https://github.com/maris-development/beacon/tree/main/beacon-clients/beacon-ts).
+
+## License
+
+Beacon Studio is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+
+The Beacon server has its own license (AGPLv3). Studio connects to a Beacon node over HTTP, so that license does not apply to Studio.
