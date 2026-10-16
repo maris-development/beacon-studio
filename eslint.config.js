@@ -139,7 +139,7 @@ export default ts.config(
 			]
 		}
 	},
-	// A brand folder holds overrides only. A fork must not need an edit outside it.
+	// A brand folder holds overrides only. A brand feature goes in shared code behind a BrandConfig field.
 	{
 		files: ['src/brands/**'],
 		rules: {

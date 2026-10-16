@@ -1,4 +1,4 @@
-// The brand overlay. A fork adds `src/brands/<name>/`, and the build takes its overrides.
+// The brand overlay. `STUDIO_BRAND` picks a folder in `src/brands/`, and the build takes its overrides.
 // See AGENTS.md "Brands".
 
 import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
@@ -9,8 +9,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BRANDS_DIR = 'src/brands';
 const UPSTREAM_STATIC_DIR = join(ROOT, 'static');
 
-/** The brand folders that upstream ships. A fork brand is any other folder. */
-const UPSTREAM_BRANDS = ['default', 'example'];
+const DEFAULT_BRAND = 'default';
 const REQUIRED_FILES = ['brand.ts', 'theme.scss', 'locales.ts'];
 const NAME_PATTERN = /^[a-z0-9-]+$/;
 
@@ -43,7 +42,7 @@ const CONTENT_TYPES = {
  */
 export function resolveBrand() {
 	const brandsDir = join(ROOT, BRANDS_DIR);
-	const name = (process.env.STUDIO_BRAND ?? '').trim() || detectForkBrand(brandsDir);
+	const name = (process.env.STUDIO_BRAND ?? '').trim() || DEFAULT_BRAND;
 
 	if (!NAME_PATTERN.test(name)) {
 		throw new Error(
@@ -65,21 +64,6 @@ export function resolveBrand() {
 	}
 
 	return { name, dir, staticDir: join(dir, 'static') };
-}
-
-// A fork holds one brand of its own, so the fork needs no env var.
-function detectForkBrand(brandsDir) {
-	const own = readdirSync(brandsDir, { withFileTypes: true })
-		.filter((entry) => entry.isDirectory() && !UPSTREAM_BRANDS.includes(entry.name))
-		.map((entry) => entry.name);
-
-	if (own.length > 1) {
-		throw new Error(
-			`${BRANDS_DIR} holds more than one brand (${own.join(', ')}). Set STUDIO_BRAND.`
-		);
-	}
-
-	return own[0] ?? 'default';
 }
 
 /** Every file below a folder, as paths relative to it. */

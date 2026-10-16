@@ -64,7 +64,7 @@ STUDIO_BRAND=example npm run build
 $env:STUDIO_BRAND="example"; npm run build
 ```
 
-Without `STUDIO_BRAND`, the build uses the one fork brand in `src/brands/`, or else `default`. See [src/brands/default/README.md](src/brands/default/README.md) to make a brand in a fork.
+Without `STUDIO_BRAND`, the build uses `default`. See [src/brands/default/README.md](src/brands/default/README.md) to make a brand.
 
 Build downloadable desktop executables (Tauri):
 
