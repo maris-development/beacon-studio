@@ -189,11 +189,12 @@ Tests go in `src/lib/data-browser/tests/`.
 - Name: read-only on Edit.
 - Folder (`target_prefix`): `FolderPicker` plus free text. A folder with no files shows a warning: "This folder holds no files. The crawler creates no tables."
 - Formats (`format_filter`): checkboxes from the beacon-web list. None checked sends `null` (all formats).
-- Table names (`table_naming`): "Folder name" (`leaf_prefix`) or "Crawler name + folder name" (`crawler_prefixed`), each with an example from the chosen folder.
-- "Find partitions in folder names" (`detect_partitions`): on by default.
-- Schedule (`schedule_secs`): "Only on Run" (`null`) or "Every N seconds/minutes/hours". A stored value keeps its exact seconds on Edit.
-- Options: key/value rows.
-- `event_driven` is not in the form (not implemented on the server). Edit keeps the stored value.
+- Table names (`table_naming`): a select, "Last folder" (`leaf_prefix`) or "Crawler name + last folder" (`crawler_prefixed`). Each option shows an example from the chosen folder.
+- "Detect Hive partitions" (`detect_partitions`): on by default.
+- Timer (`schedule_secs`): seconds. Empty sends `null` (only on Run). Minimum 60.
+- Table options: a textarea, one `key=value` for each line. A line with no `=` or no key shows an error.
+- "Crawl on new files" (`event_driven`): a checkbox. The server does not act on it yet.
+- "Request payload": a closed section with the request body as JSON.
 - Save: `admin.createCrawler(definition)` through `withAdmin`. Edit sends `replace: true`. A 409 on create shows "A crawler with this name exists."
 
 ### Delete

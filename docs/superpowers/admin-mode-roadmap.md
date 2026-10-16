@@ -3,6 +3,8 @@
 Read this file first. It holds the state of the admin mode work, every decision so far, and the next step.
 Agents: update this file when you finish a stage (spec, plan, build). Keep it short. Link to specs and plans for detail.
 
+**Change of course (2026-10-16):** admin mode now follows the sub-issues of GitHub issue #165 (https://github.com/maris-development/beacon-studio/issues/165). Where a decision below differs from an issue, the issue wins. Crawlers rework: #159, [plan](plans/2026-10-16-crawlers-page-rework.md).
+
 ## Goal
 
 Move the admin features of `beacon-web` (`beacon/beacon-clients/beacon-web`) into Beacon Studio.
