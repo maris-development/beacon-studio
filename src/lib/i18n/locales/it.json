@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "Nessuna colonna trovata per la tabella",
 			"emptyAfterTable": ".",
 			"available": "Colonne disponibili ({count, number})",
+			"selectAll": "Seleziona tutto",
+			"deselectAll": "Deseleziona tutto",
 			"empty": "Nessun parametro selezionato. Usa il pulsante \"Aggiungi parametro\" qui sopra."
 		},
 		"view": {

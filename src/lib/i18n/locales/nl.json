@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "Geen kolommen gevonden voor tabel",
 			"emptyAfterTable": ".",
 			"available": "Beschikbare kolommen ({count, number})",
+			"selectAll": "Alles selecteren",
+			"deselectAll": "Alles deselecteren",
 			"empty": "Geen parameters gekozen. Gebruik de knop \"Parameter toevoegen\" hierboven."
 		},
 		"view": {

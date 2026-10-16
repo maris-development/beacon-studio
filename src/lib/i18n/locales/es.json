@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "No se encontraron columnas para la tabla",
 			"emptyAfterTable": ".",
 			"available": "Columnas disponibles ({count, number})",
+			"selectAll": "Seleccionar todo",
+			"deselectAll": "Deseleccionar todo",
 			"empty": "No hay parámetros seleccionados. Usa el botón 'Añadir parámetro' de arriba."
 		},
 		"view": {

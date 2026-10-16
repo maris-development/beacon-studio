@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "No columns found for table",
 			"emptyAfterTable": ".",
 			"available": "Available Columns ({count, number})",
+			"selectAll": "Select all",
+			"deselectAll": "Deselect all",
 			"empty": "No parameters selected, use the 'Add Parameter' button above."
 		},
 		"view": {

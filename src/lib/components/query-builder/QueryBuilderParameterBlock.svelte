@@ -85,6 +85,9 @@
 		actions?: QueryActions; // todo
 	} = $props();
 
+	/** The maximum number of table columns that shows the "Select all" item. */
+	const SELECT_ALL_MAX_COLUMNS = 20;
+
 	let searchInput;
 	let searchQuery = $state('');
 	let fields: {
@@ -183,6 +186,16 @@
 
 		return fields.find((item) => item.name.toLowerCase().includes(normalized));
 	});
+
+	const allColumnsSelected = $derived(
+		fields.length > 0 &&
+			fields.every((field) => selectedFields.some((selected) => selected.name === field.name))
+	);
+
+	// A search hides columns, so "Select all" shows only with an empty search field.
+	const showSelectAll = $derived(
+		fields.length > 0 && fields.length <= SELECT_ALL_MAX_COLUMNS && searchQuery.trim() === ''
+	);
 
 	// $effect(() => {
 	// 	status.outputFormat = selected_output_format;
@@ -357,6 +370,25 @@
 		}
 	}
 
+	function toggleAllColumns() {
+		if (allColumnsSelected) {
+			selectedFields = [];
+			return;
+		}
+
+		// Keep the selected columns with their filters, and append the rest in schema order.
+		const selectedNames = new Set(selectedFields.map((field) => field.name));
+		const added = fields
+			.filter((field) => !selectedNames.has(field.name))
+			.map((field) => ({ name: field.name, type: field.type, selected_filters: [] }));
+
+		selectedFields = [...selectedFields, ...added];
+
+		track('builder.column.add', {
+			props: { selectAll: true, added: added.length, columns: selectedFields.length }
+		});
+	}
+
 	function removeColumnSelection(field_name: string) {
 		selectedFields = selectedFields.filter((f) => f.name !== field_name);
 	}
@@ -514,6 +546,16 @@
 					</SearchSelect.Empty>
 
 					<SearchSelect.Group heading={$t('query.parameters.available', { count: fields.length })}>
+						{#if showSelectAll}
+							<SearchSelect.Item class="search-columns-item" onSelect={toggleAllColumns}>
+								<span class="search-columns-item-name">
+									{allColumnsSelected
+										? $t('query.parameters.deselectAll')
+										: $t('query.parameters.selectAll')}
+								</span>
+							</SearchSelect.Item>
+							<hr class="search-columns-divider" />
+						{/if}
 						{#each fields as field (field.name)}
 							<SearchSelect.Item
 								value={field.name}
@@ -686,6 +728,12 @@
 
 	:global(.search-columns-item) {
 		display: flex;
+	}
+
+	.search-columns-divider {
+		margin: 0.25rem 0.5rem;
+		border: 0;
+		border-top: 1px solid var(--border);
 	}
 
 	.search-columns-item-name {
