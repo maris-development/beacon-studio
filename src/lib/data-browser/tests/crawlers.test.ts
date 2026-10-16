@@ -8,7 +8,9 @@ import {
 	emptyCrawlerForm,
 	folderHasFiles,
 	formFromCrawler,
+	optionsToText,
 	parseCrawlers,
+	parseTableOptions,
 	tableNameExample,
 	type Crawler
 } from '../crawlers';
@@ -62,29 +64,66 @@ describe('form round trip', () => {
 		expect(request).toEqual({ ...server, replace: true });
 	});
 
-	it('keeps event_driven, which the form does not show', () => {
-		expect(crawlerRequest(formFromCrawler(crawler), true).event_driven).toBe(true);
+	it('shows the stored options as key=value lines', () => {
+		expect(formFromCrawler(crawler).optionsText).toBe('read_dimensions=lat,lon');
+	});
+});
+
+describe('parseTableOptions', () => {
+	it('reads key=value lines, skips empty lines, trims, splits on the first =', () => {
+		expect(parseTableOptions('read_dimensions=lat,lon\r\n\n  b = x=y  \n').options).toEqual({
+			read_dimensions: 'lat,lon',
+			b: 'x=y'
+		});
+	});
+
+	it('gives one error for each bad line, with its line number', () => {
+		const { options, errors } = parseTableOptions('a=1\nnoequals\n=x');
+		expect(options).toEqual({ a: '1' });
+		expect(errors.map((error) => translate(error))).toEqual([
+			'Line 2 has no =. Write key=value.',
+			'Line 3 has no key. Write key=value.'
+		]);
+	});
+
+	it('round-trips with optionsToText', () => {
+		const options = { read_dimensions: 'lat,lon', b: 'x=y' };
+		expect(optionsToText(options)).toBe('read_dimensions=lat,lon\nb=x=y');
+		expect(parseTableOptions(optionsToText(options)).options).toEqual(options);
+	});
+});
+
+describe('timer', () => {
+	it('sends no schedule for an empty timer', () => {
+		expect(crawlerRequest({ ...emptyCrawlerForm(), timer: null }, false).schedule_secs).toBeNull();
+	});
+
+	it('shows a stored schedule in seconds, and sends it back exact', () => {
+		const form = formFromCrawler({ ...crawler, scheduleSecs: 900 });
+		expect(form.timer).toBe(900);
+		expect(crawlerRequest(form, true).schedule_secs).toBe(900);
+		expect(formFromCrawler({ ...crawler, scheduleSecs: null }).timer).toBeNull();
+	});
+
+	it.each([0, -5, 59, 90.5])('rejects a timer of %s', (timer) => {
+		const form = { ...emptyCrawlerForm(), name: 'a', folder: 'a/', timer };
+		expect(crawlerErrors(form).map((error) => translate(error))).toEqual([
+			'Enter a schedule of at least 60 seconds.'
+		]);
+	});
+
+	it('flags a stored schedule below the minimum on Edit', () => {
+		expect(crawlerErrors(formFromCrawler({ ...crawler, scheduleSecs: 30 }))).toHaveLength(1);
+	});
+});
+
+describe('event_driven', () => {
+	it('follows the checkbox', () => {
+		expect(crawlerRequest({ ...emptyCrawlerForm(), eventDriven: true }, false).event_driven).toBe(
+			true
+		);
 		expect(crawlerRequest(emptyCrawlerForm(), false).event_driven).toBe(false);
-	});
-
-	it('shows a schedule in hours when it divides by an hour, else in minutes', () => {
-		expect(formFromCrawler({ ...crawler, scheduleSecs: 7200 })).toMatchObject({
-			scheduled: true,
-			every: 2,
-			unit: 'hours'
-		});
-		expect(formFromCrawler({ ...crawler, scheduleSecs: 900 })).toMatchObject({
-			scheduled: true,
-			every: 15,
-			unit: 'minutes'
-		});
-		expect(formFromCrawler({ ...crawler, scheduleSecs: null })).toMatchObject({ scheduled: false });
-	});
-
-	it('keeps a schedule of odd seconds exact, in seconds', () => {
-		const form = formFromCrawler({ ...crawler, scheduleSecs: 90 });
-		expect(form).toMatchObject({ scheduled: true, every: 90, unit: 'seconds' });
-		expect(crawlerRequest(form, true).schedule_secs).toBe(90);
+		expect(crawlerRequest(formFromCrawler(crawler), true).event_driven).toBe(true);
 	});
 });
 
@@ -94,7 +133,7 @@ describe('crawlerRequest', () => {
 			...emptyCrawlerForm(),
 			name: ' wod ',
 			folder: '/wod',
-			options: [{ key: ' ', value: 'x' }]
+			optionsText: '\n  \n'
 		};
 		expect(crawlerRequest(form, false)).toEqual({
 			name: 'wod',
@@ -111,21 +150,15 @@ describe('crawlerRequest', () => {
 });
 
 describe('crawlerErrors', () => {
-	it('asks for a name, a folder and a schedule above zero', () => {
-		const form = { ...emptyCrawlerForm(), scheduled: true, every: 0 };
+	it('asks for a name, a folder, a timer of at least a minute and valid options', () => {
+		const form = { ...emptyCrawlerForm(), timer: 0, optionsText: 'x' };
 		expect(crawlerErrors(form).map((error) => translate(error))).toEqual([
 			'Enter a crawler name.',
 			'Pick a folder.',
-			'Enter a schedule of at least 1.'
+			'Enter a schedule of at least 60 seconds.',
+			'Line 1 has no =. Write key=value.'
 		]);
-	});
-
-	it('refuses a schedule in seconds below one minute, and accepts 90 seconds', () => {
-		const form = { ...formFromCrawler(crawler), unit: 'seconds' as const, every: 1 };
-		expect(crawlerErrors(form).map((error) => translate(error))).toEqual([
-			'Enter a schedule of at least 60 seconds.'
-		]);
-		expect(crawlerErrors({ ...form, every: 90 })).toEqual([]);
+		expect(crawlerErrors({ ...formFromCrawler(crawler), timer: 90 })).toEqual([]);
 	});
 
 	it('accepts a complete form', () => {

@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { ApiError } from '@maris-development/beacon-client';
 	import PlusIcon from '@lucide/svelte/icons/plus';
-	import XIcon from '@lucide/svelte/icons/x';
 	import Modal from '@/components/modals/Modal.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import { Input } from '@/components/ui/input';
@@ -10,17 +9,20 @@
 	import FolderPicker from '@/components/data-browser/FolderPicker.svelte';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { splitNodeUrl } from '@/services/beacon-node-url';
 	import { DATASET_LIST_LIMIT } from '@/data-browser/datasets';
 	import {
 		CRAWLER_FORMATS,
 		crawlerErrors,
 		crawlerRequest,
+		describeNaming,
 		emptyCrawlerForm,
 		folderHasFiles,
 		formFromCrawler,
 		tableNameExample,
 		type Crawler,
-		type CrawlerForm
+		type CrawlerForm,
+		type TableNaming
 	} from '@/data-browser/crawlers';
 	import { message, t, type Message } from '@/i18n';
 
@@ -33,6 +35,8 @@
 	};
 
 	let { node, crawler, loadPaths, onClose, onSaved }: Props = $props();
+
+	const NAMINGS: TableNaming[] = ['leaf_prefix', 'crawler_prefixed'];
 
 	function initialForm(): CrawlerForm {
 		if (crawler) return formFromCrawler(crawler);
@@ -53,6 +57,8 @@
 			form.folder.trim() !== '' &&
 			!folderHasFiles(form.folder, paths, paths.length >= DATASET_LIST_LIMIT)
 	);
+	let endpoint = $derived(`POST ${splitNodeUrl(node.url).pathPrefix}/api/admin/crawlers`);
+	let payload = $derived(JSON.stringify(crawlerRequest(form, editing), null, 2));
 
 	onMount(() => {
 		loadPaths().then(
@@ -99,36 +105,49 @@
 	title={editing
 		? $t('dataBrowser.crawlers.dialog.editTitle', { name: form.name })
 		: $t('dataBrowser.crawlers.newCrawler')}
+	subtitle={endpoint}
 	{onClose}
 	canCloseModal={!busy}
 	width="640px"
 >
 	<div class="form">
 		<div class="field">
-			<Label for="crawler-name">{$t('common.name')}</Label>
-			<Input id="crawler-name" bind:value={form.name} disabled={editing} />
+			<Label for="crawler-name">
+				{$t('common.name')}<span class="required" aria-hidden="true">*</span>
+			</Label>
+			<Input
+				id="crawler-name"
+				bind:value={form.name}
+				required
+				disabled={editing}
+				placeholder={$t('dataBrowser.crawlers.dialog.namePlaceholder')}
+			/>
 		</div>
 
 		<div class="field">
-			<Label for="crawler-folder">{$t('dataBrowser.crawlers.field.folder')}</Label>
+			<Label for="crawler-folder">
+				{$t('dataBrowser.crawlers.dialog.folder')}<span class="required" aria-hidden="true">*</span>
+			</Label>
 			<div class="row">
 				<Input
 					id="crawler-folder"
 					bind:value={form.folder}
+					required
 					placeholder={$t('dataBrowser.crawlers.dialog.folderPlaceholder')}
 				/>
 				<FolderPicker {loadPaths} onPick={(folder) => (form.folder = folder)} />
 			</div>
+			<span class="hint">{$t('dataBrowser.crawlers.dialog.folderHint')}</span>
 			{#if empty}
 				<span class="warning">{$t('dataBrowser.crawlers.dialog.emptyFolder')}</span>
 			{/if}
 		</div>
 
 		<fieldset class="field">
-			<legend>{$t('dataBrowser.crawlers.field.formats')}</legend>
+			<legend>{$t('dataBrowser.crawlers.dialog.formats')}</legend>
 			<div class="checks">
 				{#each CRAWLER_FORMATS as format (format.value)}
-					<label>
+					<label class="check">
 						<input
 							type="checkbox"
 							checked={form.formats.includes(format.value)}
@@ -141,84 +160,66 @@
 			<span class="hint">{$t('dataBrowser.crawlers.dialog.formatsHint')}</span>
 		</fieldset>
 
-		<fieldset class="field">
-			<legend>{$t('dataBrowser.crawlers.field.naming')}</legend>
-			<label>
-				<input type="radio" bind:group={form.naming} value="leaf_prefix" />
-				{$t('dataBrowser.crawlers.naming.leaf')}
-			</label>
-			<label>
-				<input type="radio" bind:group={form.naming} value="crawler_prefixed" />
-				{$t('dataBrowser.crawlers.naming.prefixed')}
-			</label>
-			<span class="hint">
-				{$t('dataBrowser.crawlers.dialog.example', { name: tableNameExample(form) })}
-			</span>
-		</fieldset>
-
-		<label class="check">
-			<input type="checkbox" bind:checked={form.detectPartitions} />
-			{$t('dataBrowser.crawlers.dialog.partitions')}
-		</label>
-
-		<fieldset class="field">
-			<legend>{$t('dataBrowser.crawlers.field.schedule')}</legend>
-			<label>
-				<input type="radio" bind:group={form.scheduled} value={false} />
-				{$t('dataBrowser.crawlers.schedule.never')}
-			</label>
-			<div class="row">
-				<label>
-					<input type="radio" bind:group={form.scheduled} value={true} />
-					{$t('dataBrowser.crawlers.dialog.every')}
-				</label>
-				<input
-					class="every"
-					type="number"
-					min="1"
-					step="1"
-					bind:value={form.every}
-					disabled={!form.scheduled}
-				/>
-				<select bind:value={form.unit} disabled={!form.scheduled}>
-					<option value="seconds">{$t('dataBrowser.crawlers.dialog.unit.seconds')}</option>
-					<option value="minutes">{$t('dataBrowser.crawlers.dialog.unit.minutes')}</option>
-					<option value="hours">{$t('dataBrowser.crawlers.dialog.unit.hours')}</option>
+		<div class="pair">
+			<div class="field">
+				<Label for="crawler-naming">{$t('dataBrowser.crawlers.field.naming')}</Label>
+				<select id="crawler-naming" bind:value={form.naming}>
+					{#each NAMINGS as naming (naming)}
+						<option value={naming}>
+							{$t('dataBrowser.crawlers.dialog.namingOption', {
+								naming: $t(describeNaming(naming)),
+								example: tableNameExample({ ...form, naming })
+							})}
+						</option>
+					{/each}
 				</select>
 			</div>
-		</fieldset>
 
-		<div class="field">
-			<Label>{$t('dataBrowser.crawlers.field.options')}</Label>
-			{#each form.options as option, index (index)}
-				<div class="row">
-					<Input placeholder={$t('dataBrowser.crawlers.dialog.optionKey')} bind:value={option.key} />
-					<Input
-						placeholder={$t('dataBrowser.crawlers.dialog.optionValue')}
-						bind:value={option.value}
-					/>
-					<button
-						type="button"
-						class="icon"
-						aria-label={$t('dataBrowser.crawlers.dialog.removeOption')}
-						onclick={() => form.options.splice(index, 1)}
-					>
-						<XIcon class="size-4" />
-					</button>
-				</div>
-			{/each}
-			<Button
-				type="button"
-				variant="outline"
-				size="sm"
-				onclick={() => form.options.push({ key: '', value: '' })}
-			>
-				<PlusIcon />
-				{$t('dataBrowser.crawlers.dialog.addOption')}
-			</Button>
+			<div class="field">
+				<Label for="crawler-timer">{$t('dataBrowser.crawlers.dialog.timer')}</Label>
+				<Input
+					id="crawler-timer"
+					type="number"
+					min="60"
+					step="1"
+					bind:value={form.timer}
+					placeholder={$t('dataBrowser.crawlers.dialog.timerPlaceholder')}
+				/>
+				<span class="hint">{$t('dataBrowser.crawlers.dialog.timerHint')}</span>
+			</div>
 		</div>
 
-		{#each errors as error (error.key)}
+		<div class="toggles">
+			<label class="check">
+				<input type="checkbox" bind:checked={form.detectPartitions} />
+				{$t('dataBrowser.crawlers.dialog.partitions')}
+			</label>
+			<label class="check">
+				<input type="checkbox" bind:checked={form.eventDriven} />
+				{$t('dataBrowser.crawlers.dialog.eventDriven')}
+			</label>
+		</div>
+
+		<div class="field">
+			<Label for="crawler-options">{$t('dataBrowser.crawlers.dialog.options')}</Label>
+			<textarea
+				id="crawler-options"
+				class="mono"
+				rows="4"
+				spellcheck="false"
+				bind:value={form.optionsText}
+				placeholder={$t('dataBrowser.crawlers.dialog.optionsPlaceholder')}
+			></textarea>
+			<span class="hint">{$t('dataBrowser.crawlers.dialog.optionsHint')}</span>
+		</div>
+
+		<details class="payload">
+			<summary>{$t('dataBrowser.crawlers.dialog.payload')}</summary>
+			<pre class="mono">{payload}</pre>
+		</details>
+
+		<!-- Two bad option lines give the same key, so the list keys by index. -->
+		{#each errors as error, index (index)}
 			<p class="error" role="alert">{$t(error)}</p>
 		{/each}
 		{#if failure}
@@ -228,7 +229,14 @@
 
 	<div slot="footer" class="actions">
 		<Button variant="outline" onclick={onClose} disabled={busy}>{$t('common.cancel')}</Button>
-		<Button onclick={save} disabled={busy}>{$t('common.save')}</Button>
+		<Button onclick={save} disabled={busy}>
+			{#if editing}
+				{$t('common.save')}
+			{:else}
+				<PlusIcon />
+				{$t('dataBrowser.crawlers.dialog.create')}
+			{/if}
+		</Button>
 	</div>
 </Modal>
 
@@ -236,11 +244,12 @@
 	.form {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 
 	.field {
 		display: grid;
+		align-content: start;
 		gap: 0.375rem;
 		margin: 0;
 		padding: 0;
@@ -248,8 +257,13 @@
 	}
 
 	legend {
-		margin-bottom: 0.25rem;
+		margin-bottom: 0.375rem;
 		font-weight: 500;
+	}
+
+	.required {
+		margin-left: 0.125rem;
+		color: var(--destructive);
 	}
 
 	.row {
@@ -258,10 +272,25 @@
 		gap: 0.5rem;
 	}
 
+	.pair {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1rem;
+
+		@media (max-width: 480px) {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	.checks {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.5rem 1rem;
+	}
+
+	.toggles {
+		display: grid;
+		gap: 0.375rem;
 	}
 
 	.check {
@@ -270,18 +299,49 @@
 		gap: 0.5rem;
 	}
 
-	.every {
-		width: 5rem;
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
+	select,
+	textarea {
+		width: 100%;
+		border: 1px solid var(--input);
+		border-radius: calc(var(--radius) - 2px);
+		background: var(--card);
 	}
 
+	// The same size as `Input`.
 	select {
-		padding: 0.25rem 0.5rem;
-		border: 1px solid var(--border);
-		border-radius: 0.375rem;
-		background: var(--background);
+		height: 2.25rem;
+		padding: 0.25rem 0.75rem;
+		font-size: var(--font-size-md);
+
+		@media (min-width: 768px) {
+			font-size: var(--font-size-sm);
+		}
+	}
+
+	textarea {
+		padding: 0.5rem 0.75rem;
+		font-size: var(--font-size-sm);
+		resize: vertical;
+	}
+
+	.payload {
+		summary {
+			color: var(--muted-foreground);
+			font-size: var(--font-size-sm);
+			font-weight: 500;
+			cursor: pointer;
+		}
+
+		pre {
+			max-height: 16rem;
+			margin: 0.5rem 0 0;
+			padding: 0.5rem 0.75rem;
+			overflow: auto;
+			border: 1px solid var(--border);
+			border-radius: calc(var(--radius) - 2px);
+			background: var(--muted);
+			font-size: var(--font-size-xs);
+		}
 	}
 
 	.hint {
@@ -294,13 +354,6 @@
 		margin: 0;
 		color: var(--destructive);
 		font-size: var(--font-size-sm);
-	}
-
-	.icon {
-		display: flex;
-		border: 0;
-		background: none;
-		cursor: pointer;
 	}
 
 	.actions {

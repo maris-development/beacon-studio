@@ -4,8 +4,12 @@
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import PlayIcon from '@lucide/svelte/icons/play';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import RadarIcon from '@lucide/svelte/icons/radar';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import Button from '@/components/buttons/Button.svelte';
+	import ExternalLink from '@/components/ExternalLink.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import NodePicker from '@/components/NodePicker.svelte';
 	import AdminOnlyNotice from '@/components/data-browser/AdminOnlyNotice.svelte';
@@ -29,6 +33,7 @@
 	import { t, translate } from '@/i18n';
 	import { withBack } from '@/data-browser/back';
 	import {
+		CRAWLER_DOCS_URL,
 		describeFormats,
 		describeNaming,
 		describeSchedule,
@@ -219,18 +224,40 @@
 		{#if !admin}
 			<AdminOnlyNotice />
 		{:else}
-			<NodePicker>
-				{#snippet actions()}
-					<Button
-						variant="outline"
-						disabled={!node || phase !== 'ready'}
-						onclick={() => (dialog = { crawler: null })}
-					>
-						<PlusIcon />
-						{$t('dataBrowser.crawlers.newCrawler')}
-					</Button>
-				{/snippet}
-			</NodePicker>
+			<div class="toolbar">
+				<NodePicker />
+
+				{#if node && gate === 'ready'}
+					<div class="toolbar-actions">
+						<Button
+							variant="outline"
+							size="icon"
+							aria-label={$t('dataBrowser.crawlers.refresh')}
+							title={$t('dataBrowser.crawlers.refresh')}
+							disabled={phase === 'loading'}
+							onclick={load}
+						>
+							<RefreshCwIcon />
+						</Button>
+						<Button disabled={phase !== 'ready'} onclick={() => (dialog = { crawler: null })}>
+							<PlusIcon />
+							{$t('dataBrowser.crawlers.newCrawler')}
+						</Button>
+					</div>
+				{/if}
+			</div>
+
+			{#if node && gate === 'ready'}
+				<p class="banner">
+					<InfoIcon size={16} />
+					<span>
+						{$t('dataBrowser.crawlers.banner.text')}
+						<ExternalLink href={CRAWLER_DOCS_URL}
+							>{$t('dataBrowser.crawlers.banner.link')}</ExternalLink
+						>
+					</span>
+				</p>
+			{/if}
 
 			{#if !node || gate === 'pick-node'}
 				<p>{$t('dataBrowser.crawlers.pickNode')}</p>
@@ -242,7 +269,11 @@
 				<p class="error">{error}</p>
 				<Button variant="outline" onclick={load}>{$t('dataBrowser.crawlers.tryAgain')}</Button>
 			{:else if phase === 'ready' && crawlers.length === 0}
-				<p class="muted">{$t('dataBrowser.crawlers.empty')}</p>
+				<section class="empty-state">
+					<RadarIcon size={24} />
+					<h2>{$t('dataBrowser.crawlers.emptyState.title')}</h2>
+					<p class="muted">{$t('dataBrowser.crawlers.emptyState.text')}</p>
+				</section>
 			{:else if phase === 'ready'}
 				<ul class="cards">
 					{#each crawlers as crawler (crawler.name)}
@@ -310,6 +341,63 @@
 {/if}
 
 <style lang="scss">
+	.toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-end;
+		gap: 0.75rem;
+		margin-bottom: 0.75rem;
+	}
+
+	.toolbar-actions {
+		display: flex;
+		gap: 0.5rem;
+		margin-left: auto;
+	}
+
+	.banner {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0 0.75rem;
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.5rem;
+		background: var(--muted);
+		font-size: var(--font-size-sm);
+
+		:global(svg) {
+			flex-shrink: 0;
+			color: var(--primary);
+		}
+
+		:global(.external-link) {
+			color: var(--primary);
+			text-decoration: underline;
+		}
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 2rem 1.5rem;
+		border: 1px solid var(--border);
+		border-radius: 0.75rem;
+		background: var(--card);
+		color: var(--muted-foreground);
+		text-align: center;
+
+		h2 {
+			margin: 0;
+			color: var(--foreground);
+		}
+
+		p {
+			margin: 0;
+		}
+	}
+
 	.cards {
 		display: grid;
 		gap: 0.75rem;

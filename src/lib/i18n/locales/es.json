@@ -1271,12 +1271,20 @@
 			"start": "Subir"
 		},
 		"crawlers": {
-			"intro": "Un rastreador examina una carpeta del nodo y crea una tabla para cada grupo de archivos.",
+			"intro": "Un rastreador examina una carpeta del almacén de datasets y registra los archivos como tablas. Ejecútalo a petición, con un temporizador o con archivos nuevos.",
 			"newCrawler": "Nuevo rastreador",
+			"refresh": "Actualizar",
 			"pickNode": "Elige un nodo Beacon.",
 			"loading": "Cargando los rastreadores…",
 			"tryAgain": "Reintentar",
-			"empty": "No hay rastreadores en este nodo, o el nodo no pudo listarlos.",
+			"banner": {
+				"text": "Los rastreadores funcionan como un rastreador de AWS Glue.",
+				"link": "Lee la documentación de los rastreadores."
+			},
+			"emptyState": {
+				"title": "No hay rastreadores",
+				"text": "Haz clic en Nuevo rastreador para crear uno."
+			},
 			"busy": "Ocupado…",
 			"run": "Ejecutar",
 			"runFailed": "La ejecución del rastreador falló.",
@@ -1308,33 +1316,37 @@
 				"list": "{formats}"
 			},
 			"naming": {
-				"leaf": "Nombre de la carpeta",
-				"prefixed": "Nombre del rastreador + nombre de la carpeta"
+				"leaf": "Última carpeta",
+				"prefixed": "Nombre del rastreador + última carpeta"
 			},
 			"error": {
 				"name": "Introduce un nombre de rastreador.",
 				"folder": "Elige una carpeta.",
-				"scheduleMin": "Introduce una programación de al menos 1.",
 				"scheduleSeconds": "Introduce una programación de al menos {min} segundos.",
+				"optionEquals": "La línea {line} no tiene =. Escribe key=value.",
+				"optionKey": "La línea {line} no tiene clave. Escribe key=value.",
 				"exists": "Ya existe un rastreador con este nombre."
 			},
 			"dialog": {
 				"editTitle": "Editar el rastreador {name}",
+				"namePlaceholder": "argo",
+				"folder": "Carpeta de destino",
 				"folderPlaceholder": "argo/",
+				"folderHint": "La carpeta del almacén de datasets que se examina.",
 				"emptyFolder": "Esta carpeta no tiene archivos. El rastreador no crea tablas.",
-				"formatsHint": "Sin ninguno marcado, se usan todos los formatos.",
-				"example": "Ejemplo: {name}",
-				"partitions": "Buscar particiones en los nombres de carpeta (key=value/)",
-				"every": "Cada",
-				"unit": {
-					"seconds": "segundos",
-					"minutes": "minutos",
-					"hours": "horas"
-				},
-				"optionKey": "clave",
-				"optionValue": "valor",
-				"removeOption": "Quitar opción",
-				"addOption": "Añadir opción"
+				"formats": "Filtro de formatos",
+				"formatsHint": "Sin selección: el rastreador lee todos los formatos.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Temporizador (segundos)",
+				"timerPlaceholder": "900",
+				"timerHint": "Vacío: sin temporizador.",
+				"partitions": "Detectar particiones Hive (key=value/)",
+				"eventDriven": "Rastrear archivos nuevos (event driven)",
+				"options": "Opciones de tabla",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "Un key=value por línea. Beacon los añade a las OPTIONS de cada tabla.",
+				"payload": "Carga de la solicitud",
+				"create": "Crear rastreador"
 			},
 			"report": {
 				"found": "{count, plural, one {Se encontró # tabla.} other {Se encontraron # tablas.}}",

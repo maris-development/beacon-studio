@@ -76,7 +76,8 @@ export function parseCrawlers(raw: unknown): Crawler[] {
 	return result;
 }
 
-export type ScheduleUnit = 'seconds' | 'minutes' | 'hours';
+export const CRAWLER_DOCS_URL =
+	'https://maris-development.github.io/beacon/docs/latest/server/crawlers.html';
 
 export interface CrawlerForm {
 	name: string;
@@ -84,10 +85,10 @@ export interface CrawlerForm {
 	formats: string[];
 	naming: TableNaming;
 	detectPartitions: boolean;
-	scheduled: boolean;
-	every: number;
-	unit: ScheduleUnit;
-	options: { key: string; value: string }[];
+	/** Seconds between runs. `null` means only on Run. */
+	timer: number | null;
+	/** One `key=value` for each line. */
+	optionsText: string;
 	eventDriven: boolean;
 }
 
@@ -98,32 +99,15 @@ export function emptyCrawlerForm(): CrawlerForm {
 		formats: [],
 		naming: 'leaf_prefix',
 		detectPartitions: true,
-		scheduled: false,
-		every: 1,
-		unit: 'hours',
-		options: [],
+		timer: null,
+		optionsText: '',
 		eventDriven: false
 	};
 }
 
-// The form shows hours or minutes when the value divides, else seconds, so a save keeps the value.
 export function formFromCrawler(crawler: Crawler): CrawlerForm {
-	let scheduled = false;
-	let every = 1;
-	let unit: ScheduleUnit = 'hours';
-
-	if (crawler.scheduleSecs !== null && crawler.scheduleSecs > 0) {
-		scheduled = true;
-		if (crawler.scheduleSecs % 3600 === 0) {
-			every = crawler.scheduleSecs / 3600;
-		} else if (crawler.scheduleSecs % 60 === 0) {
-			unit = 'minutes';
-			every = crawler.scheduleSecs / 60;
-		} else {
-			unit = 'seconds';
-			every = crawler.scheduleSecs;
-		}
-	}
+	let timer: number | null = null;
+	if (crawler.scheduleSecs !== null && crawler.scheduleSecs > 0) timer = crawler.scheduleSecs;
 
 	return {
 		name: crawler.name,
@@ -131,12 +115,46 @@ export function formFromCrawler(crawler: Crawler): CrawlerForm {
 		formats: crawler.formatFilter ?? [],
 		naming: crawler.tableNaming,
 		detectPartitions: crawler.detectPartitions,
-		scheduled,
-		every,
-		unit,
-		options: Object.entries(crawler.options).map(([key, value]) => ({ key, value })),
+		timer,
+		optionsText: optionsToText(crawler.options),
 		eventDriven: crawler.eventDriven
 	};
+}
+
+/** Reads the options text. A later line with the same key wins. */
+export function parseTableOptions(text: string): {
+	options: Record<string, string>;
+	errors: Message[];
+} {
+	const options: Record<string, string> = {};
+	const errors: Message[] = [];
+
+	text.split('\n').forEach((raw, index) => {
+		const line = raw.trim();
+		if (line === '') return;
+
+		const split = line.indexOf('=');
+		if (split < 0) {
+			errors.push(message('dataBrowser.crawlers.error.optionEquals', { line: index + 1 }));
+			return;
+		}
+
+		const key = line.slice(0, split).trim();
+		if (key === '') {
+			errors.push(message('dataBrowser.crawlers.error.optionKey', { line: index + 1 }));
+			return;
+		}
+
+		options[key] = line.slice(split + 1).trim();
+	});
+
+	return { options, errors };
+}
+
+export function optionsToText(options: Record<string, string>): string {
+	return Object.entries(options)
+		.map(([key, value]) => `${key}=${value}`)
+		.join('\n');
 }
 
 /** The body of `POST /api/admin/crawlers`. */
@@ -144,28 +162,15 @@ export function crawlerRequest(form: CrawlerForm, replace: boolean): Record<stri
 	let formatFilter: string[] | null = null;
 	if (form.formats.length > 0) formatFilter = form.formats;
 
-	let scheduleSecs: number | null = null;
-	if (form.scheduled) {
-		let factor = 3600;
-		if (form.unit === 'minutes') factor = 60;
-		if (form.unit === 'seconds') factor = 1;
-		scheduleSecs = form.every * factor;
-	}
-
-	const options: Record<string, string> = {};
-	for (const option of form.options) {
-		if (option.key.trim() !== '') options[option.key.trim()] = option.value;
-	}
-
 	return {
 		name: form.name.trim(),
 		target_prefix: normalizeFolder(form.folder),
 		format_filter: formatFilter,
 		table_naming: form.naming,
 		detect_partitions: form.detectPartitions,
-		schedule_secs: scheduleSecs,
+		schedule_secs: form.timer,
 		event_driven: form.eventDriven,
-		options,
+		options: parseTableOptions(form.optionsText).options,
 		replace
 	};
 }
@@ -177,12 +182,11 @@ export function crawlerErrors(form: CrawlerForm): Message[] {
 
 	if (form.name.trim() === '') errors.push(message('dataBrowser.crawlers.error.name'));
 	if (normalizeFolder(form.folder) === '') errors.push(message('dataBrowser.crawlers.error.folder'));
-	if (form.scheduled && (!Number.isInteger(form.every) || form.every < 1)) {
-		errors.push(message('dataBrowser.crawlers.error.scheduleMin'));
-	} else if (form.scheduled && form.unit === 'seconds' && form.every < MIN_SCHEDULE_SECS) {
+	if (form.timer !== null && (!Number.isInteger(form.timer) || form.timer < MIN_SCHEDULE_SECS)) {
 		// Each run scans the whole folder, so a shorter period loads the node for nothing.
 		errors.push(message('dataBrowser.crawlers.error.scheduleSeconds', { min: MIN_SCHEDULE_SECS }));
 	}
+	errors.push(...parseTableOptions(form.optionsText).errors);
 
 	return errors;
 }

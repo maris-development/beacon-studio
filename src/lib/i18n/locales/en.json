@@ -1271,12 +1271,20 @@
 			"start": "Upload"
 		},
 		"crawlers": {
-			"intro": "A crawler scans a folder of the node and creates a table for each group of files.",
+			"intro": "A crawler scans a folder of the datasets store and registers the files as tables. Run it on demand, on a timer, or on new files.",
 			"newCrawler": "New crawler",
+			"refresh": "Refresh",
 			"pickNode": "Pick a Beacon node.",
 			"loading": "Loading the crawlers…",
 			"tryAgain": "Try again",
-			"empty": "No crawlers on this node, or the node could not list them.",
+			"banner": {
+				"text": "Crawlers work like an AWS Glue crawler.",
+				"link": "Read the crawler documentation."
+			},
+			"emptyState": {
+				"title": "No crawlers",
+				"text": "Click New crawler to make one."
+			},
 			"busy": "Busy…",
 			"run": "Run",
 			"runFailed": "The crawler run failed.",
@@ -1308,33 +1316,37 @@
 				"list": "{formats}"
 			},
 			"naming": {
-				"leaf": "Folder name",
-				"prefixed": "Crawler name + folder name"
+				"leaf": "Last folder",
+				"prefixed": "Crawler name + last folder"
 			},
 			"error": {
 				"name": "Enter a crawler name.",
 				"folder": "Pick a folder.",
-				"scheduleMin": "Enter a schedule of at least 1.",
 				"scheduleSeconds": "Enter a schedule of at least {min} seconds.",
+				"optionEquals": "Line {line} has no =. Write key=value.",
+				"optionKey": "Line {line} has no key. Write key=value.",
 				"exists": "A crawler with this name exists."
 			},
 			"dialog": {
 				"editTitle": "Edit crawler {name}",
+				"namePlaceholder": "argo",
+				"folder": "Target folder",
 				"folderPlaceholder": "argo/",
+				"folderHint": "The folder of the datasets store to scan.",
 				"emptyFolder": "This folder holds no files. The crawler creates no tables.",
-				"formatsHint": "None checked means all formats.",
-				"example": "Example: {name}",
-				"partitions": "Find partitions in folder names (key=value/)",
-				"every": "Every",
-				"unit": {
-					"seconds": "seconds",
-					"minutes": "minutes",
-					"hours": "hours"
-				},
-				"optionKey": "key",
-				"optionValue": "value",
-				"removeOption": "Remove option",
-				"addOption": "Add option"
+				"formats": "Format filter",
+				"formatsHint": "No selection: the crawler reads all formats.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Timer (seconds)",
+				"timerPlaceholder": "900",
+				"timerHint": "Empty: no timer.",
+				"partitions": "Detect Hive partitions (key=value/)",
+				"eventDriven": "Crawl on new files (event driven)",
+				"options": "Table options",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "One key=value for each line. Beacon adds them to the OPTIONS of each table.",
+				"payload": "Request payload",
+				"create": "Create crawler"
 			},
 			"report": {
 				"found": "{count, plural, one {Found # table.} other {Found # tables.}}",

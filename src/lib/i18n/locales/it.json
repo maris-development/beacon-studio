@@ -1271,12 +1271,20 @@
 			"start": "Carica"
 		},
 		"crawlers": {
-			"intro": "Un crawler analizza una cartella del nodo e crea una tabella per ogni gruppo di file.",
+			"intro": "Un crawler analizza una cartella dell'archivio dei dataset e registra i file come tabelle. Avvialo su richiesta, con un timer o con nuovi file.",
 			"newCrawler": "Nuovo crawler",
+			"refresh": "Aggiorna",
 			"pickNode": "Scegli un nodo Beacon.",
 			"loading": "Caricamento dei crawler…",
 			"tryAgain": "Riprova",
-			"empty": "Nessun crawler su questo nodo, oppure il nodo non ha potuto elencarli.",
+			"banner": {
+				"text": "I crawler funzionano come un crawler di AWS Glue.",
+				"link": "Leggi la documentazione dei crawler."
+			},
+			"emptyState": {
+				"title": "Nessun crawler",
+				"text": "Fai clic su Nuovo crawler per crearne uno."
+			},
 			"busy": "In corso…",
 			"run": "Avvia",
 			"runFailed": "L'esecuzione del crawler non è riuscita.",
@@ -1308,33 +1316,37 @@
 				"list": "{formats}"
 			},
 			"naming": {
-				"leaf": "Nome della cartella",
-				"prefixed": "Nome del crawler + nome della cartella"
+				"leaf": "Ultima cartella",
+				"prefixed": "Nome del crawler + ultima cartella"
 			},
 			"error": {
 				"name": "Inserisci un nome per il crawler.",
 				"folder": "Scegli una cartella.",
-				"scheduleMin": "Inserisci una pianificazione di almeno 1.",
 				"scheduleSeconds": "Inserisci una pianificazione di almeno {min} secondi.",
+				"optionEquals": "La riga {line} non ha =. Scrivi key=value.",
+				"optionKey": "La riga {line} non ha una chiave. Scrivi key=value.",
 				"exists": "Esiste già un crawler con questo nome."
 			},
 			"dialog": {
 				"editTitle": "Modifica il crawler {name}",
+				"namePlaceholder": "argo",
+				"folder": "Cartella di destinazione",
 				"folderPlaceholder": "argo/",
+				"folderHint": "La cartella dell'archivio dei dataset da analizzare.",
 				"emptyFolder": "Questa cartella non contiene file. Il crawler non crea tabelle.",
-				"formatsHint": "Nessuna selezione significa tutti i formati.",
-				"example": "Esempio: {name}",
-				"partitions": "Trova partizioni nei nomi delle cartelle (key=value/)",
-				"every": "Ogni",
-				"unit": {
-					"seconds": "secondi",
-					"minutes": "minuti",
-					"hours": "ore"
-				},
-				"optionKey": "chiave",
-				"optionValue": "valore",
-				"removeOption": "Rimuovi opzione",
-				"addOption": "Aggiungi opzione"
+				"formats": "Filtro dei formati",
+				"formatsHint": "Nessuna selezione: il crawler legge tutti i formati.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Timer (secondi)",
+				"timerPlaceholder": "900",
+				"timerHint": "Vuoto: nessun timer.",
+				"partitions": "Rileva le partizioni Hive (key=value/)",
+				"eventDriven": "Analizza i nuovi file (event driven)",
+				"options": "Opzioni della tabella",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "Una key=value per riga. Beacon le aggiunge alle OPTIONS di ogni tabella.",
+				"payload": "Payload della richiesta",
+				"create": "Crea crawler"
 			},
 			"report": {
 				"found": "{count, plural, one {Trovata # tabella.} other {Trovate # tabelle.}}",

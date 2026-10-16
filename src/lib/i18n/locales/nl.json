@@ -1271,12 +1271,20 @@
 			"start": "Uploaden"
 		},
 		"crawlers": {
-			"intro": "Een crawler doorzoekt een map van de node en maakt een tabel voor elke groep bestanden.",
+			"intro": "Een crawler doorzoekt een map van de datasetopslag en registreert de bestanden als tabellen. Start hem op verzoek, met een timer of bij nieuwe bestanden.",
 			"newCrawler": "Nieuwe crawler",
+			"refresh": "Vernieuwen",
 			"pickNode": "Kies een Beacon-node.",
 			"loading": "Crawlers laden…",
 			"tryAgain": "Opnieuw proberen",
-			"empty": "Geen crawlers op deze node, of de node kon ze niet tonen.",
+			"banner": {
+				"text": "Crawlers werken zoals een AWS Glue-crawler.",
+				"link": "Lees de documentatie over crawlers."
+			},
+			"emptyState": {
+				"title": "Geen crawlers",
+				"text": "Klik op Nieuwe crawler om er een te maken."
+			},
 			"busy": "Bezig…",
 			"run": "Starten",
 			"runFailed": "De crawler is mislukt.",
@@ -1308,33 +1316,37 @@
 				"list": "{formats}"
 			},
 			"naming": {
-				"leaf": "Mapnaam",
-				"prefixed": "Crawlernaam + mapnaam"
+				"leaf": "Laatste map",
+				"prefixed": "Crawlernaam + laatste map"
 			},
 			"error": {
 				"name": "Vul een naam voor de crawler in.",
 				"folder": "Kies een map.",
-				"scheduleMin": "Vul een planning van minstens 1 in.",
 				"scheduleSeconds": "Vul een planning van minstens {min} seconden in.",
+				"optionEquals": "Regel {line} heeft geen =. Schrijf key=value.",
+				"optionKey": "Regel {line} heeft geen sleutel. Schrijf key=value.",
 				"exists": "Er bestaat al een crawler met deze naam."
 			},
 			"dialog": {
 				"editTitle": "Crawler {name} bewerken",
+				"namePlaceholder": "argo",
+				"folder": "Doelmap",
 				"folderPlaceholder": "argo/",
+				"folderHint": "De map van de datasetopslag die de crawler doorzoekt.",
 				"emptyFolder": "Deze map bevat geen bestanden. De crawler maakt geen tabellen.",
-				"formatsHint": "Niets aangevinkt betekent alle formaten.",
-				"example": "Voorbeeld: {name}",
-				"partitions": "Partities zoeken in mapnamen (key=value/)",
-				"every": "Elke",
-				"unit": {
-					"seconds": "seconden",
-					"minutes": "minuten",
-					"hours": "uur"
-				},
-				"optionKey": "sleutel",
-				"optionValue": "waarde",
-				"removeOption": "Optie verwijderen",
-				"addOption": "Optie toevoegen"
+				"formats": "Formaatfilter",
+				"formatsHint": "Niets gekozen: de crawler leest alle formaten.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Timer (seconden)",
+				"timerPlaceholder": "900",
+				"timerHint": "Leeg: geen timer.",
+				"partitions": "Hive-partities herkennen (key=value/)",
+				"eventDriven": "Crawlen bij nieuwe bestanden (event driven)",
+				"options": "Tabelopties",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "Eén key=value per regel. Beacon voegt ze toe aan de OPTIONS van elke tabel.",
+				"payload": "Request-payload",
+				"create": "Crawler maken"
 			},
 			"report": {
 				"found": "{count, plural, one {# tabel gevonden.} other {# tabellen gevonden.}}",
