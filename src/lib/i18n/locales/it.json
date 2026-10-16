@@ -42,7 +42,7 @@
 		},
 		"item": {
 			"queries": "Query",
-			"queryBuilder": "Generatore di query",
+			"queryBuilder": "Banco di lavoro query",
 			"savedQueries": "Query salvate",
 			"queryHistory": "Cronologia query",
 			"workspace": "Spazio di lavoro",
@@ -182,7 +182,7 @@
 		"filterCount": "{count, plural, one {# filtro} other {# filtri}}",
 		"entry": {
 			"noColumns": "(nessuna colonna)",
-			"openInBuilder": "Apri nel Generatore di query",
+			"openInBuilder": "Apri nel Banco di lavoro query",
 			"table": "Tabella",
 			"map": "Mappa",
 			"chart": "Grafico"
@@ -382,7 +382,7 @@
 			"viewing": "Visualizzazione di {name}"
 		},
 		"panes": {
-			"builder": "Generatore di query",
+			"builder": "Banco di lavoro query",
 			"collapseBuilder": "Comprimi generatore",
 			"expandBuilder": "Espandi generatore",
 			"json": "JSON della query",
@@ -443,7 +443,7 @@
 	},
 	"saved": {
 		"title": "Query salvate",
-		"intro": "Query che hai salvato dal generatore di query. Eseguile di nuovo, visualizzale o apri qualsiasi query salvata.",
+		"intro": "Query che hai salvato dal banco di lavoro query. Eseguile di nuovo, visualizzale o apri qualsiasi query salvata.",
 		"clear": "Cancella salvate",
 		"empty": {
 			"title": "Ancora nessuna query salvata",
@@ -948,7 +948,7 @@
 		},
 		"examples": {
 			"title": "Esempi per iniziare",
-			"lead": "Tre query reali. Aprine una per esaminare la query nel generatore di query e tracciarla sulla mappa.",
+			"lead": "Tre query reali. Aprine una per esaminare la query nel banco di lavoro query e tracciarla sulla mappa.",
 			"imageAlt": "Il risultato della query {title} nel Visualizzatore mappa",
 			"metricHint": "Misurato su un'esecuzione di riferimento. La tua esecuzione può variare.",
 			"check": "Esamina query",

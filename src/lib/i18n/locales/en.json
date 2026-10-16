@@ -42,7 +42,7 @@
 		},
 		"item": {
 			"queries": "Queries",
-			"queryBuilder": "Query Builder",
+			"queryBuilder": "Query Workbench",
 			"savedQueries": "Saved Queries",
 			"queryHistory": "Query History",
 			"workspace": "Workspace",
@@ -182,7 +182,7 @@
 		"filterCount": "{count, plural, one {# filter} other {# filters}}",
 		"entry": {
 			"noColumns": "(no columns)",
-			"openInBuilder": "Open in Query Builder",
+			"openInBuilder": "Open in Query Workbench",
 			"table": "Table",
 			"map": "Map",
 			"chart": "Chart"
@@ -382,7 +382,7 @@
 			"viewing": "Viewing {name}"
 		},
 		"panes": {
-			"builder": "Query builder",
+			"builder": "Query workbench",
 			"collapseBuilder": "Collapse builder",
 			"expandBuilder": "Expand builder",
 			"json": "Query JSON",
@@ -443,7 +443,7 @@
 	},
 	"saved": {
 		"title": "Saved Queries",
-		"intro": "Queries you've saved from the query builder. Re-run, visualise, or open any saved query.",
+		"intro": "Queries you've saved from the query workbench. Re-run, visualise, or open any saved query.",
 		"clear": "Clear saved",
 		"empty": {
 			"title": "No saved queries yet",
@@ -948,7 +948,7 @@
 		},
 		"examples": {
 			"title": "Quick start examples",
-			"lead": "Three real queries. Open one to review the query in the query builder and plot it on the map.",
+			"lead": "Three real queries. Open one to review the query in the query workbench and plot it on the map.",
 			"imageAlt": "The result of the {title} query in the Map Viewer",
 			"metricHint": "Measured on a reference run. Your run can differ.",
 			"check": "Check query",
