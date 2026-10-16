@@ -2,8 +2,9 @@
 // See AGENTS.md "Brands".
 
 import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
-import { extname, join, relative, resolve, sep } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { lookup } from 'mrmime';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BRANDS_DIR = 'src/brands';
@@ -12,21 +13,6 @@ const UPSTREAM_STATIC_DIR = join(ROOT, 'static');
 const DEFAULT_BRAND = 'default';
 const REQUIRED_FILES = ['brand.ts', 'theme.scss', 'locales.ts'];
 const NAME_PATTERN = /^[a-z0-9-]+$/;
-
-const CONTENT_TYPES = {
-	'.avif': 'image/avif',
-	'.gif': 'image/gif',
-	'.ico': 'image/x-icon',
-	'.jpeg': 'image/jpeg',
-	'.jpg': 'image/jpeg',
-	'.json': 'application/json',
-	'.png': 'image/png',
-	'.svg': 'image/svg+xml',
-	'.txt': 'text/plain; charset=utf-8',
-	'.webmanifest': 'application/manifest+json',
-	'.webp': 'image/webp',
-	'.woff2': 'font/woff2'
-};
 
 /**
  * @typedef {object} Brand
@@ -110,7 +96,7 @@ export function brandPlugin(brand) {
 				const file = brandFileFor(req.url, server.config.base, brand.staticDir);
 				if (!file) return next();
 
-				res.setHeader('Content-Type', CONTENT_TYPES[extname(file)] ?? 'application/octet-stream');
+				res.setHeader('Content-Type', lookup(file) ?? 'application/octet-stream');
 				createReadStream(file).pipe(res);
 			});
 		},
