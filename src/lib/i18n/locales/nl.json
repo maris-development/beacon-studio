@@ -42,7 +42,7 @@
 		},
 		"item": {
 			"queries": "Queries",
-			"queryBuilder": "Querybouwer",
+			"queryBuilder": "Query-werkbank",
 			"savedQueries": "Opgeslagen queries",
 			"queryHistory": "Querygeschiedenis",
 			"workspace": "Werkruimte",
@@ -182,7 +182,7 @@
 		"filterCount": "{count, plural, one {# filter} other {# filters}}",
 		"entry": {
 			"noColumns": "(geen kolommen)",
-			"openInBuilder": "Openen in Querybouwer",
+			"openInBuilder": "Openen in Query-werkbank",
 			"table": "Tabel",
 			"map": "Kaart",
 			"chart": "Grafiek"
@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "Geen kolommen gevonden voor tabel",
 			"emptyAfterTable": ".",
 			"available": "Beschikbare kolommen ({count, number})",
+			"selectAll": "Alles selecteren",
+			"deselectAll": "Alles deselecteren",
 			"empty": "Geen parameters gekozen. Gebruik de knop \"Parameter toevoegen\" hierboven."
 		},
 		"view": {
@@ -382,7 +384,7 @@
 			"viewing": "{name} bekijken"
 		},
 		"panes": {
-			"builder": "Querybouwer",
+			"builder": "Query-werkbank",
 			"collapseBuilder": "Bouwer inklappen",
 			"expandBuilder": "Bouwer uitklappen",
 			"json": "Query-JSON",
@@ -443,7 +445,7 @@
 	},
 	"saved": {
 		"title": "Opgeslagen queries",
-		"intro": "Queries die je hebt opgeslagen vanuit de querybouwer. Voer ze opnieuw uit, visualiseer ze of open ze.",
+		"intro": "Queries die je hebt opgeslagen vanuit de query-werkbank. Voer ze opnieuw uit, visualiseer ze of open ze.",
 		"clear": "Opgeslagen wissen",
 		"empty": {
 			"title": "Nog geen opgeslagen queries",
@@ -948,7 +950,7 @@
 		},
 		"examples": {
 			"title": "Voorbeelden om snel te starten",
-			"lead": "Drie echte queries. Open er een om de query in de querybouwer te bekijken en op de kaart te plotten.",
+			"lead": "Drie echte queries. Open er een om de query in de query-werkbank te bekijken en op de kaart te plotten.",
 			"imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
 			"metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
 			"check": "Query bekijken",

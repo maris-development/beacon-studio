@@ -42,7 +42,7 @@
 		},
 		"item": {
 			"queries": "Consultas",
-			"queryBuilder": "Constructor de consultas",
+			"queryBuilder": "Banco de trabajo de consultas",
 			"savedQueries": "Consultas guardadas",
 			"queryHistory": "Historial de consultas",
 			"workspace": "Espacio de trabajo",
@@ -182,7 +182,7 @@
 		"filterCount": "{count, plural, one {# filtro} other {# filtros}}",
 		"entry": {
 			"noColumns": "(sin columnas)",
-			"openInBuilder": "Abrir en el constructor de consultas",
+			"openInBuilder": "Abrir en el banco de trabajo de consultas",
 			"table": "Tabla",
 			"map": "Mapa",
 			"chart": "Gráfico"
@@ -258,6 +258,8 @@
 			"emptyBeforeTable": "No se encontraron columnas para la tabla",
 			"emptyAfterTable": ".",
 			"available": "Columnas disponibles ({count, number})",
+			"selectAll": "Seleccionar todo",
+			"deselectAll": "Deseleccionar todo",
 			"empty": "No hay parámetros seleccionados. Usa el botón 'Añadir parámetro' de arriba."
 		},
 		"view": {
@@ -382,7 +384,7 @@
 			"viewing": "Viendo {name}"
 		},
 		"panes": {
-			"builder": "Constructor de consultas",
+			"builder": "Banco de trabajo de consultas",
 			"collapseBuilder": "Contraer el constructor",
 			"expandBuilder": "Expandir el constructor",
 			"json": "JSON de la consulta",
@@ -443,7 +445,7 @@
 	},
 	"saved": {
 		"title": "Consultas guardadas",
-		"intro": "Consultas que has guardado desde el constructor de consultas. Vuelve a ejecutar, visualizar o abrir cualquier consulta guardada.",
+		"intro": "Consultas que has guardado desde el banco de trabajo de consultas. Vuelve a ejecutar, visualizar o abrir cualquier consulta guardada.",
 		"clear": "Borrar guardadas",
 		"empty": {
 			"title": "Todavía no hay consultas guardadas",
@@ -948,7 +950,7 @@
 		},
 		"examples": {
 			"title": "Ejemplos de inicio rápido",
-			"lead": "Tres consultas reales. Abre una para revisarla en el constructor de consultas y representarla en el mapa.",
+			"lead": "Tres consultas reales. Abre una para revisarla en el banco de trabajo de consultas y representarla en el mapa.",
 			"imageAlt": "El resultado de la consulta {title} en el visor de mapas",
 			"metricHint": "Medido en una ejecución de referencia. Tu ejecución puede variar.",
 			"check": "Ver consulta",
