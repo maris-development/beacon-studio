@@ -3,7 +3,7 @@
 	import { currentNode, nodes, selectFirstIfNone } from '@/services/beacon-node';
 	import { ensureFresh } from '@/services/beacon-node-connect';
 	import { openNodesSettled } from '@/services/open-nodes-import';
-	import logo from '$lib/assets/logo-gradient.svg';
+	import { BRAND } from '@/brand';
 
 	// Svelte lifecycle and navigation
 	import { onMount } from 'svelte';
@@ -104,26 +104,29 @@
 		}
 	];
 
-	const footer: MenuItem[] = [
+	const footerLinks: MenuItem[] = [
 		{
 			title: 'nav.item.aboutStudio',
-			url: 'https://beacon-datalake.org/ecosystem/studio',
+			url: BRAND.links.about,
 			icon: InfoIcon,
 			target: '_blank'
 		},
 		{
 			title: 'nav.item.documentation',
-			url: 'https://maris-development.github.io/beacon/',
+			url: BRAND.links.docs,
 			icon: BookOpenIcon,
 			target: '_blank'
 		},
 		{
 			title: 'nav.item.github',
-			url: 'https://github.com/maris-development/beacon',
+			url: BRAND.links.source,
 			icon: LifeBuoyIcon,
 			target: '_blank'
 		}
 	];
+
+	// A brand hides a link with a null URL.
+	const footer = footerLinks.filter((item) => item.url !== null);
 
 	// The layout owns both flags, because the page header holds the menu button.
 	let {
@@ -224,8 +227,8 @@
 	<div class="sidebar-header">
 		<div class="logo-wrapper">
 			<a class="header-link" href={resolve('/')}>
-				<img src={logo} alt={$t('app.logoAlt')} class="beacon-logo" />
-				<span class="app-name">{$t('app.name')}</span>
+				<img src={BRAND.logo} alt={$t('app.logoAlt')} class="beacon-logo" />
+				<span class="app-name">{BRAND.name}</span>
 			</a>
 			<button
 				class="collapse-toggle"

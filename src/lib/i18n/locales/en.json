@@ -1,8 +1,7 @@
 {
 	"app": {
-		"name": "Beacon Studio",
-		"logoAlt": "Beacon Logo",
-		"pageTitle": "{page} - Beacon Studio"
+		"logoAlt": "{app} logo",
+		"pageTitle": "{page} - {app}"
 	},
 	"common": {
 		"cancel": "Cancel",
@@ -39,7 +38,7 @@
 			"dataAccess": "Data Access",
 			"explore": "Explore and Analyze",
 			"nodeManagement": "Node Management",
-			"studio": "Beacon Studio"
+			"studio": "{app}"
 		},
 		"item": {
 			"queries": "Queries",
@@ -56,13 +55,13 @@
 			"systemInfo": "System Info",
 			"beaconNodes": "Beacon Nodes",
 			"settings": "Settings",
-			"aboutStudio": "More about Studio",
+			"aboutStudio": "More about {app}",
 			"documentation": "Documentation",
 			"github": "GitHub",
 			"feedback": "Feedback"
 		},
 		"needsNode": "This page needs a Beacon node. Add one on the Beacon Nodes page.",
-		"waitForNodes": "Beacon Studio reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive."
+		"waitForNodes": "{app} reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive."
 	},
 	"build": {
 		"unknown": "unknown",
@@ -74,14 +73,14 @@
 	},
 	"settings": {
 		"title": "Settings",
-		"intro": "Manage your Beacon Studio settings here. The app keeps every value in this browser. A change applies to the next query, map or refresh.",
+		"intro": "Manage your {app} settings here. The app keeps every value in this browser. A change applies to the next query, map or refresh.",
 		"resetAll": "Reset all settings",
 		"resetAllMessage": "This puts every setting of this browser back to its default. The app loses your query limits, your cache size and your map defaults.",
 		"resetAllMessageTelemetry": "This puts every setting of this browser back to its default. The app loses your query limits, your cache size, your map defaults and your telemetry choice.",
 		"resetAllNote": "You cannot undo this.",
 		"resetAllDone": "All settings are back to their defaults.",
 		"resetOne": "Put this setting back to its default",
-		"noTelemetryBuild": "This version of Beacon Studio is built with telemetry disabled. It sends no usage data.",
+		"noTelemetryBuild": "This version of {app} is built with telemetry disabled. It sends no usage data.",
 		"group": {
 			"general": "General",
 			"queries": "Queries",
@@ -106,7 +105,7 @@
 		"field": {
 			"language": {
 				"label": "Language",
-				"description": "The language of Beacon Studio. Automatic follows the language of the browser."
+				"description": "The language of {app}. Automatic follows the language of the browser."
 			},
 			"defaultOutputFormat": {
 				"label": "Default output format",
@@ -812,7 +811,7 @@
 			"title": "No Beacon node",
 			"message": "This page reads one node. Select a node first."
 		},
-		"intro": "View detailed information about the Beacon Studio system, including version, CPU usage, memory, and more.",
+		"intro": "View detailed information about the {app} system, including version, CPU usage, memory, and more.",
 		"disabled": "No system information available, enable system information by setting the {variable} environment variable.",
 		"version": "Beacon Version",
 		"uptime": "System uptime: {time}",
@@ -910,7 +909,7 @@
 		}
 	},
 	"home": {
-		"betaToast": "Beacon Studio is still in Beta stage, please provide any feedback by clicking \"Feedback\" in the bottom left corner.",
+		"betaToast": "{app} is still in Beta stage, please provide any feedback by clicking \"Feedback\" in the bottom left corner.",
 		"title": {
 			"beforeHighlight": "Welcome to Beacon",
 			"highlight": "Studio"
@@ -952,7 +951,8 @@
 			"lead": "Three real queries. Open one to review the query in the query builder and plot it on the map.",
 			"imageAlt": "The result of the {title} query in the Map Viewer",
 			"metricHint": "Measured on a reference run. Your run can differ.",
-			"check": "Check query"
+			"check": "Check query",
+			"loadFailed": "Could not load the Quick start examples."
 		}
 	},
 	"errorPage": {

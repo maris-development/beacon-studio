@@ -45,21 +45,9 @@
 	// Decorative layers. A negative z-index keeps them under the page content.
 	.hero-glow,
 	.hero-network {
-		--network-line: rgba(51, 65, 85, 0.1);
-		--network-dot: rgba(45, 212, 191, 0.55);
-		--network-glow-a: rgba(45, 212, 191, 0.16);
-		--network-glow-b: rgba(139, 92, 246, 0.14);
-
 		position: fixed;
 		pointer-events: none;
 		z-index: -1;
-
-		:global(.dark) & {
-			--network-line: rgba(226, 232, 240, 0.1);
-			--network-dot: rgba(45, 212, 191, 0.45);
-			--network-glow-a: rgba(45, 212, 191, 0.12);
-			--network-glow-b: rgba(139, 92, 246, 0.12);
-		}
 	}
 
 	.hero-glow {

@@ -1,8 +1,9 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { getCurrentNode } from '@/services/beacon-node';
 import { diagnostics } from '@/telemetry';
+import { BRAND } from '@/brand';
 
-const FEEDBACK_URL = 'https://beacon-datalake.org/studio-feedback';
+const FEEDBACK_URL = BRAND.endpoints.feedback;
 
 /**
  * The form URL, with the state of this client in the query string.

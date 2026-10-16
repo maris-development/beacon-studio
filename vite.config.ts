@@ -3,6 +3,7 @@ import devtoolsJson from 'vite-plugin-devtools-json';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { execSync } from 'node:child_process';
+import { brandPlugin, resolveBrand } from './scripts/brand.js';
 
 const DEFAULT_REPO_URL = 'https://github.com/maris-development/beacon-studio';
 
@@ -55,9 +56,12 @@ function telemetryFlag() {
 	return { __TELEMETRY__: JSON.stringify(enabled) };
 }
 
+const brand = resolveBrand();
+console.log(`[beacon-studio] brand: ${brand.name}`);
+
 export default defineConfig({
-	plugins: [tailwindcss(), sveltekit(), devtoolsJson()],
-	define: { ...buildInfo(), ...telemetryFlag() },
+	plugins: [brandPlugin(brand), tailwindcss(), sveltekit(), devtoolsJson()],
+	define: { ...buildInfo(), ...telemetryFlag(), __BRAND__: JSON.stringify(brand.name) },
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
 		dedupe: ['apache-arrow']

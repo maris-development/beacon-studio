@@ -1,8 +1,7 @@
 {
 	"app": {
-		"name": "Beacon Studio",
-		"logoAlt": "Beacon-logo",
-		"pageTitle": "{page} - Beacon Studio"
+		"logoAlt": "{app}-logo",
+		"pageTitle": "{page} - {app}"
 	},
 	"common": {
 		"cancel": "Annuleren",
@@ -39,7 +38,7 @@
 			"dataAccess": "Datatoegang",
 			"explore": "Verkennen en analyseren",
 			"nodeManagement": "Nodebeheer",
-			"studio": "Beacon Studio"
+			"studio": "{app}"
 		},
 		"item": {
 			"queries": "Queries",
@@ -56,13 +55,13 @@
 			"systemInfo": "Systeeminfo",
 			"beaconNodes": "Beacon-nodes",
 			"settings": "Instellingen",
-			"aboutStudio": "Meer over Studio",
+			"aboutStudio": "Meer over {app}",
 			"documentation": "Documentatie",
 			"github": "GitHub",
 			"feedback": "Feedback"
 		},
 		"needsNode": "Deze pagina heeft een Beacon-node nodig. Voeg er een toe op de pagina Beacon-nodes.",
-		"waitForNodes": "Beacon Studio leest de openbare Beacon-nodes. Dit gebeurt alleen bij het eerste bezoek. Je query start zodra ze binnen zijn."
+		"waitForNodes": "{app} leest de openbare Beacon-nodes. Dit gebeurt alleen bij het eerste bezoek. Je query start zodra ze binnen zijn."
 	},
 	"build": {
 		"unknown": "onbekend",
@@ -74,14 +73,14 @@
 	},
 	"settings": {
 		"title": "Instellingen",
-		"intro": "Beheer hier je instellingen van Beacon Studio. De app bewaart elke waarde in deze browser. Een wijziging geldt voor de volgende query, kaart of vernieuwing.",
+		"intro": "Beheer hier je instellingen van {app}. De app bewaart elke waarde in deze browser. Een wijziging geldt voor de volgende query, kaart of vernieuwing.",
 		"resetAll": "Alle instellingen terugzetten",
 		"resetAllMessage": "Dit zet elke instelling van deze browser terug naar de standaardwaarde. De app verliest je querylimieten, je cachegrootte en je kaartstandaarden.",
 		"resetAllMessageTelemetry": "Dit zet elke instelling van deze browser terug naar de standaardwaarde. De app verliest je querylimieten, je cachegrootte, je kaartstandaarden en je telemetriekeuze.",
 		"resetAllNote": "Je kunt dit niet ongedaan maken.",
 		"resetAllDone": "Alle instellingen staan weer op hun standaardwaarde.",
 		"resetOne": "Zet deze instelling terug naar de standaardwaarde",
-		"noTelemetryBuild": "Deze versie van Beacon Studio is gebouwd zonder telemetrie. Ze verstuurt geen gebruiksgegevens.",
+		"noTelemetryBuild": "Deze versie van {app} is gebouwd zonder telemetrie. Ze verstuurt geen gebruiksgegevens.",
 		"group": {
 			"general": "Algemeen",
 			"queries": "Queries",
@@ -106,7 +105,7 @@
 		"field": {
 			"language": {
 				"label": "Taal",
-				"description": "De taal van Beacon Studio. Automatisch volgt de taal van de browser."
+				"description": "De taal van {app}. Automatisch volgt de taal van de browser."
 			},
 			"defaultOutputFormat": {
 				"label": "Standaard uitvoerformaat",
@@ -812,7 +811,7 @@
 			"title": "Geen Beacon-node",
 			"message": "Deze pagina leest één node. Kies eerst een node."
 		},
-		"intro": "Bekijk gedetailleerde informatie over het systeem van Beacon Studio, zoals versie, CPU-gebruik, geheugen en meer.",
+		"intro": "Bekijk gedetailleerde informatie over het systeem van {app}, zoals versie, CPU-gebruik, geheugen en meer.",
 		"disabled": "Geen systeeminformatie beschikbaar. Zet systeeminformatie aan met de omgevingsvariabele {variable}.",
 		"version": "Beacon-versie",
 		"uptime": "Systeem actief: {time}",
@@ -910,7 +909,7 @@
 		}
 	},
 	"home": {
-		"betaToast": "Beacon Studio is nog in bèta. Geef je feedback via \"Feedback\" linksonder.",
+		"betaToast": "{app} is nog in bèta. Geef je feedback via \"Feedback\" linksonder.",
 		"title": {
 			"beforeHighlight": "Welkom bij Beacon",
 			"highlight": "Studio"
@@ -952,7 +951,8 @@
 			"lead": "Drie echte queries. Open er een om de query in de querybouwer te bekijken en op de kaart te plotten.",
 			"imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
 			"metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
-			"check": "Query bekijken"
+			"check": "Query bekijken",
+			"loadFailed": "De snelstartvoorbeelden konden niet worden geladen."
 		}
 	},
 	"errorPage": {

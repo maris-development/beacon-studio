@@ -16,6 +16,7 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { t } from '@/i18n';
+	import { BRAND } from '@/brand';
 
 	let editingNode: BeaconNode | null = $state(null);
 	let showFormModal = $state(false);
@@ -61,7 +62,7 @@
 
 		<p>
 			{$t('node.page.introBeforeLink')}
-			<a href="https://beacon-datalake.org/public-nodes" rel="noopener noreferrer" target="_blank"
+			<a href={BRAND.links.publicNodes} rel="noopener noreferrer" target="_blank"
 				>{$t('node.page.introLink')}</a
 			>{$t('node.page.introAfterLink')}
 		</p>

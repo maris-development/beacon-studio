@@ -5,8 +5,8 @@
  * with `$t('key')` in a component, or with {@link translate} in plain code. Domain
  * code returns a {@link Message} and leaves the translation to the component.
  *
- * This module sits in the bottom layer. It imports only svelte-i18n and its
- * catalogs, so every other layer can import it.
+ * This module sits in the bottom layer. It imports only svelte-i18n, its
+ * catalogs and the brand, so every other layer can import it.
  */
 
 import {
@@ -19,6 +19,9 @@ import {
 	time as timeFormat
 } from 'svelte-i18n';
 import { derived, get, type Readable } from 'svelte/store';
+import brandLocales from '$brand/locales';
+import { BRAND } from '@/brand';
+import type { DeepPartial } from '@/brand/define';
 import en from './locales/en.json';
 import es from './locales/es.json';
 import it from './locales/it.json';
@@ -31,12 +34,14 @@ export const AUTO_LANGUAGE = 'auto';
 export const FALLBACK_LOCALE = 'en';
 
 /** The languages that the app ships. The name is the native name and is never translated. */
-export const SUPPORTED_LOCALES: ReadonlyArray<{ code: string; name: string }> = [
+export const SUPPORTED_LOCALES = [
 	{ code: 'en', name: 'English' },
 	{ code: 'es', name: 'Español' },
 	{ code: 'it', name: 'Italiano' },
 	{ code: 'nl', name: 'Nederlands' }
-];
+] as const satisfies ReadonlyArray<{ code: string; name: string }>;
+
+export type LocaleCode = (typeof SUPPORTED_LOCALES)[number]['code'];
 
 type Leaves<T, Prefix extends string = ''> = {
 	[K in keyof T & string]: T[K] extends string ? `${Prefix}${K}` : Leaves<T[K], `${Prefix}${K}.`>;
@@ -55,13 +60,25 @@ export interface Message {
 
 export type Translate = (message: MessageKey | Message, values?: MessageValues) => string;
 
+/** The text overrides of a brand, per locale. A wrong key or locale code fails the type check. */
+export type BrandLocales = { [Code in LocaleCode]?: DeepPartial<typeof en> };
+
 addMessages(FALLBACK_LOCALE, en);
 // A key that is missing in a catalog fails the type check.
 addMessages('es', es satisfies typeof en);
 addMessages('it', it satisfies typeof en);
 addMessages('nl', nl satisfies typeof en);
+// The brand comes last, so its text wins. svelte-i18n deep-merges each overlay.
+for (const [code, overlay] of Object.entries(brandLocales as BrandLocales)) {
+	addMessages(code, overlay);
+}
 // The English catalog is bundled, so the formatter works from the first import.
 init({ fallbackLocale: FALLBACK_LOCALE, initialLocale: FALLBACK_LOCALE });
+
+// svelte-i18n formats a message only when it gets values, so `{app}` needs values on every call.
+function withApp(...values: Array<MessageValues | undefined>): MessageValues {
+	return Object.assign({ app: BRAND.name }, ...values);
+}
 
 /** The code of a supported locale for a setting value. `auto` reads the browser. */
 export function resolveLocale(setting: string): string {
@@ -94,8 +111,8 @@ export function setLanguage(setting: string): void {
 /** The formatter for components: `$t('nav.item.settings')` or `$t(message)`. */
 export const t: Readable<Translate> = derived(_, (format) => {
 	return (message, values) => {
-		if (typeof message === 'string') return format(message, { values });
-		return format(message.key, { values: { ...message.values, ...values } });
+		if (typeof message === 'string') return format(message, { values: withApp(values) });
+		return format(message.key, { values: withApp(message.values, values) });
 	};
 });
 
