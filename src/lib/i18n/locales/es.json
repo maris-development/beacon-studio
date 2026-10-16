@@ -58,7 +58,9 @@
 			"aboutStudio": "Más sobre {app}",
 			"documentation": "Documentación",
 			"github": "GitHub",
-			"feedback": "Comentarios"
+			"feedback": "Comentarios",
+			"sqlEditor": "Editor SQL",
+			"crawlers": "Rastreadores"
 		},
 		"needsNode": "Esta página necesita un nodo Beacon. Añade uno en la página Nodos Beacon.",
 		"waitForNodes": "{app} lee los nodos Beacon públicos. Esto ocurre solo en la primera visita. Tu consulta empieza cuando llegan."
@@ -174,6 +176,10 @@
 			"telemetryConsoleLog": {
 				"label": "Incluir la salida de console.log",
 				"description": "Añade console.log a la salida de consola que se informa. Las advertencias y los errores siempre se envían. Actívalo solo para una sesión de depuración: una línea de log genera ruido y puede contener una ruta de archivo o un valor de resultado. Este interruptor no hace nada mientras \"Enviar estadísticas de uso\" está desactivado."
+			},
+			"adminFeatures": {
+				"label": "Mostrar funciones de administración",
+				"description": "Muestra las páginas y las acciones de administración, por ejemplo la carga de conjuntos de datos. Una acción de administración pide el usuario y la contraseña de administrador del nodo Beacon."
 			}
 		}
 	},
@@ -560,7 +566,8 @@
 		"toast": {
 			"noData": "No hay datos de tabla para mostrar.",
 			"sortFailed": "No se pudo ordenar la tabla:"
-		}
+		},
+		"nullValue": "NULL"
 	},
 	"chart": {
 		"title": "Explorador de gráficos",
@@ -805,48 +812,6 @@
 		"enable": "Activar la caché",
 		"clearAll": "Borrar todas las cachés"
 	},
-	"system": {
-		"title": "Información del sistema",
-		"noNode": {
-			"title": "Sin nodo Beacon",
-			"message": "Esta página lee un nodo. Selecciona primero un nodo."
-		},
-		"intro": "Consulta información detallada sobre el sistema de {app}, como la versión, el uso de CPU, la memoria y más.",
-		"disabled": "No hay información del sistema disponible. Actívala con la variable de entorno {variable}.",
-		"version": "Versión de Beacon",
-		"uptime": "Tiempo de actividad del sistema: {time}",
-		"cpu": {
-			"title": "Uso de CPU del sistema",
-			"cores": "{count, plural, one {# núcleo físico} other {# núcleos físicos}}"
-		},
-		"memory": {
-			"title": "Uso de memoria del sistema"
-		},
-		"swap": {
-			"title": "Uso de swap del sistema"
-		},
-		"total": "{size} en total",
-		"used": "{percent} usado",
-		"free": "{size} libre",
-		"load": {
-			"title": "Carga media",
-			"one": "1 min: {percent}",
-			"five": "5 min: {percent}",
-			"fifteen": "15 min: {percent}"
-		},
-		"os": {
-			"title": "Información del sistema",
-			"os": "SO: {value}",
-			"hostname": "Nombre de host: {value}",
-			"kernel": "Kernel: {value}",
-			"distribution": "Distribución: {value}",
-			"version": "Versión: {value}"
-		},
-		"cpus": {
-			"title": "CPU",
-			"count": "{count}× {brand}"
-		}
-	},
 	"node": {
 		"form": {
 			"addTitle": "Añadir nodo Beacon",
@@ -962,79 +927,388 @@
 	"modal": {
 		"close": "Cerrar ventana"
 	},
-	"upload": {
-		"username": "Usuario administrador",
-		"password": "Contraseña de administrador",
-		"failed": "La subida falló",
-		"example": "p. ej. {example}",
-		"table": {
-			"title": "Crear tabla",
-			"name": "Nombre de la tabla",
-			"paths": "Rutas glob",
-			"pathsHint": "Puedes indicar varias rutas separadas por comas.",
-			"format": "Formato de archivo",
-			"formatPlaceholder": "Selecciona un formato de archivo",
-			"nameMissing": "Introduce un nombre de tabla.",
-			"formatMissing": "Selecciona un formato de archivo.",
-			"pathMissing": "Introduce al menos una ruta glob.",
-			"created": "✅ Tabla {name} creada"
-		},
-		"files": {
-			"title": "Subir conjuntos de datos",
-			"dataset": "Conjunto de datos",
-			"missing": "Selecciona archivos.",
-			"done": "✅ {count, plural, one {# archivo subido} other {# archivos subidos}}",
-			"size": "{name} ({size} KB)",
-			"uploading": "Subiendo... {progress}%",
-			"upload": "Subir"
-		}
-	},
-	"browser": {
-		"intro": "Usa las funciones del navegador de datos que aparecen abajo para explorar y gestionar el contenido de Beacon.",
-		"datasetCount": "{count, plural, one {# conjunto de datos} other {# conjuntos de datos}}",
-		"tableCount": "{count, plural, one {# tabla de datos} other {# tablas de datos}}",
-		"datasetsCard": "Ver y gestionar conjuntos de datos individuales.",
-		"tablesCard": "Ver y gestionar tablas de datos.",
-		"searchPlaceholder": "Buscar...",
-		"nodeLine": "Nodo: {url}",
-		"picker": {
-			"label": "Nodo Beacon",
-			"placeholder": "Selecciona un nodo",
-			"group": "Nodos"
-		},
-		"error": {
-			"missingParam": "Falta el parámetro de consulta `{name}`"
-		},
-		"datasets": {
-			"column": "Conjunto de datos",
-			"intro": "Explora y gestiona los conjuntos de datos disponibles en tu nodo Beacon.",
-			"noNodes": "Todavía no hay nodos Beacon guardados. Añade un nodo Beacon en la página Nodos Beacon para explorar conjuntos de datos."
-		},
-		"tables": {
-			"column": "Tabla",
-			"default": "Predeterminada",
-			"intro": "Explora y gestiona las tablas disponibles en tu nodo Beacon.",
-			"noNodes": "Todavía no hay nodos Beacon guardados. Añade un nodo Beacon en la página Nodos Beacon para explorar tablas de datos."
-		},
-		"schema": {
-			"field": "Campo",
-			"dataType": "Tipo de datos",
-			"nullable": "Admite nulos",
-			"dictId": "Id. de diccionario",
-			"isOrdered": "Ordenado",
-			"metadata": "Metadatos"
-		},
-		"table": {
-			"title": "Tabla {name}",
-			"heading": "Tabla ''{name}'' ({count, plural, one {# campo} other {# campos}})"
-		},
-		"dataset": {
-			"title": "Conjunto de datos {name}",
-			"heading": "Conjunto de datos {name} ({count, plural, one {# campo} other {# campos}})"
-		}
-	},
 	"misc": {
 		"externalLink": "Abrir el enlace en un navegador externo",
 		"bytes": "Bytes"
+	},
+	"systemInfo": {
+		"title": "Información del sistema",
+		"intro": "La versión, el estado y los recursos del servidor de un nodo Beacon.",
+		"noNode": "Elige un nodo Beacon.",
+		"version": "Versión de Beacon",
+		"health": "Estado",
+		"host": "Servidor",
+		"noHost": "Este nodo no informa datos del servidor. El servidor funciona sin {variable}.",
+		"uptime": {
+			"label": "Tiempo activo",
+			"days": "{days} d {hours} h {minutes} min",
+			"hours": "{hours} h {minutes} min",
+			"minutes": "{minutes} min"
+		},
+		"cpu": {
+			"title": "CPU",
+			"overall": "Uso total",
+			"physicalCores": "{count, plural, one {# núcleo físico} other {# núcleos físicos}}"
+		},
+		"memory": {
+			"title": "Memoria",
+			"available": "Disponible: {size}",
+			"swap": "Swap",
+			"noSwap": "Sin swap.",
+			"usage": "{used} de {total}"
+		},
+		"load": {
+			"title": "Carga media",
+			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
+			"perCore": "Por núcleo: {percent} en 1 min."
+		},
+		"admin": {
+			"title": "Administración",
+			"users": "Usuarios",
+			"roles": "Roles"
+		},
+		"functions": {
+			"title": "Funciones",
+			"loading": "Cargando las funciones…",
+			"filter": "Filtrar funciones",
+			"count": "{shown} de {total, plural, one {# función} other {# funciones}}"
+		},
+		"raw": "Respuesta sin procesar"
+	},
+	"admin": {
+		"signIn": {
+			"title": "Iniciar sesión en el nodo Beacon {name}",
+			"username": "Usuario",
+			"password": "Contraseña",
+			"submit": "Iniciar sesión",
+			"busy": "Iniciando sesión…",
+			"wrongCredentials": "Usuario o contraseña incorrectos."
+		},
+		"error": {
+			"forbidden": "No tienes permiso para esta acción en este nodo Beacon.",
+			"status": "El nodo Beacon respondió con el estado {status}.",
+			"unreachable": "No se puede conectar con el nodo Beacon."
+		},
+		"offHint": "Activa \"Mostrar funciones de administración\" en Ajustes",
+		"onlyNotice": {
+			"beforeLink": "Esta página necesita las funciones de administración. Activa \"Mostrar funciones de administración\" en",
+			"afterLink": "."
+		},
+		"nodePicker": {
+			"label": "Nodo Beacon",
+			"placeholder": "Selecciona un nodo",
+			"group": "Nodos",
+			"signedIn": "Sesión iniciada",
+			"signOut": "Cerrar sesión"
+		}
+	},
+	"sqlEditor": {
+		"pickNode": "Elige un nodo Beacon.",
+		"toolbar": {
+			"tables": "Tablas",
+			"stop": "Detener",
+			"run": "Ejecutar",
+			"runShortcut": "Ctrl+Enter",
+			"explain": "Explicar",
+			"analyze": "Analizar",
+			"download": "Descargar",
+			"hint": "Ctrl+Enter ejecuta la selección, o la pestaña completa."
+		},
+		"result": {
+			"noPlan": "No hay plan que mostrar.",
+			"stoppedPartial": "Detenido. La tabla muestra las filas recibidas antes de detener.",
+			"stopped": "Detenido.",
+			"truncated": "{count, plural, one {Primera fila.} other {Primeras # filas.}} Descarga el resultado completo.",
+			"cancelled": "Cancelado.",
+			"sqlDisabled": "SQL está desactivado en este nodo Beacon."
+		},
+		"error": {
+			"raw": "{text}"
+		},
+		"catalog": {
+			"filter": "Filtrar tablas",
+			"loading": "Cargando tablas…",
+			"noMatch": "Ninguna tabla coincide.",
+			"showColumns": "Mostrar columnas",
+			"loadingColumns": "Cargando columnas…",
+			"showMore": "{count, plural, one {Mostrar # columna más} other {Mostrar # columnas más}}"
+		},
+		"plan": {
+			"fold": "Plegar",
+			"unfold": "Desplegar",
+			"node": "Nodo",
+			"rows": "{rows} filas",
+			"compute": "cálculo {time} ms"
+		},
+		"tabs": {
+			"defaultTitle": "Consulta {number}",
+			"close": "Cerrar {title}",
+			"add": "Nueva pestaña"
+		}
+	},
+	"dataBrowser": {
+		"home": {
+			"intro": "Usa las funciones del navegador de datos para explorar y gestionar el contenido de tu nodo Beacon.",
+			"datasetCount": "{count, plural, one {# conjunto de datos} other {# conjuntos de datos}}",
+			"tableCount": "{count, plural, one {# tabla de datos} other {# tablas de datos}}",
+			"datasetsCard": "Ver y gestionar conjuntos de datos individuales.",
+			"tablesCard": "Ver y gestionar tablas de datos."
+		},
+		"common": {
+			"missingParam": "La URL no tiene el parámetro `{name}`.",
+			"pickNode": "Elige un nodo Beacon.",
+			"tab": {
+				"schema": "Esquema",
+				"preview": "Vista previa",
+				"definition": "Definición"
+			},
+			"schema": {
+				"loading": "Cargando las columnas…",
+				"filter": "Filtrar columnas",
+				"count": "{shown, number} de {total, plural, one {# columna} other {# columnas}}",
+				"column": "Columna",
+				"type": "Tipo",
+				"nullable": "Admite nulos",
+				"yes": "sí",
+				"no": "no",
+				"showMore": "Mostrar más (quedan {count, number})"
+			},
+			"preview": {
+				"loading": "Cargando {count, plural, one {la primera fila} other {las primeras # filas}}…",
+				"none": "No hay filas.",
+				"first": "{count, plural, one {Primera fila.} other {Primeras # filas.}}"
+			},
+			"folder": {
+				"pick": "Elegir carpeta",
+				"loading": "Cargando las carpetas…",
+				"none": "Este nodo no tiene carpetas.",
+				"filter": "Filtrar carpetas"
+			}
+		},
+		"tables": {
+			"intro": "Explora las tablas de tu nodo Beacon.",
+			"create": "Crear",
+			"createView": "Vista",
+			"createMaterialized": "Vista materializada",
+			"createExternal": "Tabla externa",
+			"search": "Buscar tablas",
+			"loading": "Cargando las tablas…",
+			"noMatch": "Ninguna tabla coincide.",
+			"kindView": "Vista",
+			"kindTable": "Tabla",
+			"default": "Predeterminado",
+			"otherSchemas": "Otros esquemas",
+			"detail": {
+				"pageTitle": "Tabla {name}",
+				"back": "Tablas",
+				"notFound": "El nodo no tiene la tabla \"{name}\" en {schema}.",
+				"openInEditor": "Abrir en el editor SQL",
+				"drop": "Eliminar",
+				"loading": "Cargando la tabla…",
+				"refreshed": "{name} actualizada.",
+				"refreshFailed": "No se pudo actualizar {name}.",
+				"dropped": "{name} eliminada.",
+				"dropFailed": "No se pudo eliminar {name}.",
+				"dropTitle": "Eliminar {name}",
+				"dropMessage": "¿Eliminar la tabla \"{name}\" de {node}?",
+				"dropNote": "Los archivos no se borran.",
+				"copy": "Copiar",
+				"copied": "Definición copiada.",
+				"definitionSignIn": "Inicia sesión para ver la definición. Abre esta pestaña de nuevo para iniciar sesión.",
+				"definitionNeedsAdmin": "La definición necesita las funciones de administración. Activa \"Mostrar funciones de administración\" en Ajustes.",
+				"definitionNeedsNode": "Añade este nodo en la página Nodos Beacon para ver la definición.",
+				"definitionLoading": "Cargando la definición…",
+				"definitionNone": "Beacon no guarda ninguna definición para esta tabla. La creó un rastreador, o es una tabla antigua."
+			},
+			"view": {
+				"title": "Crear vista",
+				"titleMaterialized": "Crear vista materializada",
+				"query": "Consulta",
+				"missing": "Introduce un nombre y una consulta."
+			},
+			"external": {
+				"title": "Crear tabla externa",
+				"fileType": "Tipo de archivo",
+				"location": "Ubicación",
+				"locationHint": "Una ruta o un patrón glob en el almacén de conjuntos de datos. Una carpeta elegida termina en **/*.",
+				"partitions": "Columnas de partición",
+				"partitionsPlaceholder": "year, month",
+				"options": "Opciones",
+				"optionKey": "clave",
+				"optionValue": "valor",
+				"removeOption": "Quitar opción",
+				"addOption": "Añadir opción",
+				"ifNotExists": "Solo si no existe",
+				"request": "Solicitud",
+				"nameMissing": "Introduce un nombre de tabla.",
+				"locationMissing": "Introduce una ubicación.",
+				"typeMissing": "Elige un tipo de archivo.",
+				"hint": {
+					"parquet": "Una ruta o un patrón glob, por ejemplo data/**/*.parquet.",
+					"geoparquet": "Parquet con una columna de geometría. Beacon lee la geometría como GeoArrow.",
+					"csv": "Las opciones pueden fijar el delimitador y la cabecera.",
+					"arrow": "Archivos Arrow IPC (.arrow).",
+					"nc": "Archivos NetCDF, por ejemplo argo/**/*.nc.",
+					"hdf5": "Archivos HDF5, por ejemplo data/**/*.h5. NetCDF-4 es HDF5.",
+					"zarr": "La ruta de un almacén Zarr v3, con su archivo zarr.json.",
+					"atlas": "La ruta de una colección Atlas, con su archivo data.atlas.",
+					"tiff": "Archivos GeoTIFF o COG.",
+					"bbf": "Archivos Beacon Binary Format (.bbf).",
+					"odv": "Archivos de hoja de cálculo de Ocean Data View.",
+					"delta": "La carpeta de una tabla Delta, o una URL con esquema.",
+					"iceberg": "La carpeta de una tabla Iceberg, o una URL con esquema.",
+					"remote": "Una ubicación con esquema, por ejemplo s3://bucket/path."
+				}
+			}
+		},
+		"datasets": {
+			"intro": "Explora los archivos de tu nodo Beacon.",
+			"upload": "Subir",
+			"pickNode": "Elige un nodo Beacon.",
+			"search": "Buscar en todas las carpetas",
+			"fileCount": "{count, plural, one {# archivo} other {# archivos}}",
+			"listCut": "Este nodo tiene más de {limit, number} archivos. La lista está incompleta.",
+			"folderNav": "Carpeta",
+			"all": "Todo",
+			"loading": "Cargando los archivos…",
+			"empty": "No hay archivos aquí.",
+			"column": {
+				"format": "Formato",
+				"size": "Tamaño",
+				"modified": "Modificado"
+			},
+			"previous": "Anterior",
+			"next": "Siguiente",
+			"pageOf": "Página {page} de {count}",
+			"storage": {
+				"usedOf": "{used} usados de {total}, {free} libres",
+				"objects": "{used} en {count, plural, one {# objeto} other {# objetos}} ({location})"
+			},
+			"detail": {
+				"title": "Conjunto de datos {name}",
+				"missingParam": "Falta el parámetro de consulta `{name}`.",
+				"openInEditor": "Abrir en el editor SQL",
+				"download": "Descargar",
+				"downloadFailed": "Beacon no pudo enviar el archivo.",
+				"schema": "Esquema",
+				"preview": "Vista previa",
+				"loadingFile": "Cargando el archivo…",
+				"cannotRead": "Beacon no puede leer este formato de archivo.",
+				"loadingColumns": "Cargando las columnas…",
+				"noColumns": "Este archivo no tiene columnas para la vista previa.",
+				"deleteTitle": "Borrar {name}",
+				"deleteMessage": "¿Borrar \"{path}\" de {node}?",
+				"deleteNote": "Una tabla que lee este archivo deja de funcionar.",
+				"deleted": "{name} borrado.",
+				"deleteFailed": "Beacon no pudo borrar el archivo."
+			}
+		},
+		"upload": {
+			"title": "Subir conjuntos de datos",
+			"destination": "Carpeta de destino",
+			"destinationPlaceholder": "argo/2024/",
+			"dropRegion": "Suelta archivos o carpetas aquí",
+			"dropText": "Suelta archivos o carpetas aquí, o",
+			"pickFiles": "Elegir archivos",
+			"pickFolder": "Elegir una carpeta",
+			"skippedHidden": "{count, plural, one {Se omitió # archivo oculto.} other {Se omitieron # archivos ocultos.}}",
+			"replace": "Reemplazar archivos existentes",
+			"progress": "Progreso",
+			"summary": "{done} de {total} listos",
+			"summaryFailed": "{done} de {total} listos, {failed} fallidos",
+			"status": {
+				"waiting": "En cola",
+				"uploading": "En curso",
+				"done": "Listo",
+				"failed": "Fallido",
+				"stopped": "Detenido"
+			},
+			"next": {
+				"intro": "Para consultar estos archivos, crea una tabla:",
+				"crawler": "Ejecuta un rastreador.",
+				"tableBefore": "Usa Crear tabla externa en la página",
+				"tableAfter": "."
+			},
+			"stop": "Detener",
+			"retry": "Reintentar fallidos",
+			"start": "Subir"
+		},
+		"crawlers": {
+			"intro": "Un rastreador examina una carpeta del nodo y crea una tabla para cada grupo de archivos.",
+			"newCrawler": "Nuevo rastreador",
+			"pickNode": "Elige un nodo Beacon.",
+			"loading": "Cargando los rastreadores…",
+			"needsSignIn": "Inicia sesión para ver los rastreadores de {node}.",
+			"signIn": "Iniciar sesión",
+			"tryAgain": "Reintentar",
+			"empty": "No hay rastreadores en este nodo, o el nodo no pudo listarlos.",
+			"busy": "Ocupado…",
+			"run": "Ejecutar",
+			"runFailed": "La ejecución del rastreador falló.",
+			"noSession": "No hay sesión de administrador.",
+			"noReport": "El nodo Beacon no envió ningún informe de ejecución.",
+			"field": {
+				"folder": "Carpeta",
+				"formats": "Formatos",
+				"naming": "Nombres de tabla",
+				"partitions": "Particiones",
+				"schedule": "Programación",
+				"options": "Opciones"
+			},
+			"delete": {
+				"title": "Borrar el rastreador {name}",
+				"message": "¿Borrar el rastreador \"{name}\" de {node}?",
+				"note": "Las tablas que creó este rastreador se mantienen. Bórralas en la página Tablas.",
+				"done": "Rastreador {name} borrado.",
+				"failed": "Beacon no pudo borrar el rastreador."
+			},
+			"schedule": {
+				"never": "Solo al ejecutar",
+				"hours": "{count, plural, one {Cada hora} other {Cada # horas}}",
+				"minutes": "{count, plural, one {Cada minuto} other {Cada # minutos}}",
+				"seconds": "{count, plural, one {Cada segundo} other {Cada # segundos}}"
+			},
+			"formats": {
+				"all": "Todos los formatos",
+				"list": "{formats}"
+			},
+			"naming": {
+				"leaf": "Nombre de la carpeta",
+				"prefixed": "Nombre del rastreador + nombre de la carpeta"
+			},
+			"error": {
+				"name": "Introduce un nombre de rastreador.",
+				"folder": "Elige una carpeta.",
+				"scheduleMin": "Introduce una programación de al menos 1.",
+				"scheduleSeconds": "Introduce una programación de al menos {min} segundos.",
+				"exists": "Ya existe un rastreador con este nombre."
+			},
+			"dialog": {
+				"editTitle": "Editar el rastreador {name}",
+				"folderPlaceholder": "argo/",
+				"emptyFolder": "Esta carpeta no tiene archivos. El rastreador no crea tablas.",
+				"formatsHint": "Sin ninguno marcado, se usan todos los formatos.",
+				"example": "Ejemplo: {name}",
+				"partitions": "Buscar particiones en los nombres de carpeta (key=value/)",
+				"every": "Cada",
+				"unit": {
+					"seconds": "segundos",
+					"minutes": "minutos",
+					"hours": "horas"
+				},
+				"optionKey": "clave",
+				"optionValue": "valor",
+				"removeOption": "Quitar opción",
+				"addOption": "Añadir opción"
+			},
+			"report": {
+				"found": "{count, plural, one {Se encontró # tabla.} other {Se encontraron # tablas.}}",
+				"created": "Creadas:",
+				"updated": "Actualizadas:",
+				"skipped": "Omitidas (de otro rastreador o creadas a mano):",
+				"failed": "Fallidas:",
+				"skippedFiles": "{count, plural, one {# archivo no coincidió con ningún formato.} other {# archivos no coincidieron con ningún formato.}}"
+			}
+		}
 	}
 }
