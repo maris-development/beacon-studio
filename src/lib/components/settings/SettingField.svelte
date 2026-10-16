@@ -179,7 +179,7 @@
 
 			.description {
 				margin: 0;
-				font-size: 0.85rem;
+				font-size: var(--font-size-sm);
 				color: var(--muted-foreground);
 			}
 		}
@@ -196,7 +196,7 @@
 				flex: 1;
 
 				.boolean-label {
-					font-size: 0.85rem;
+					font-size: var(--font-size-sm);
 					color: var(--muted-foreground);
 				}
 			}
@@ -208,7 +208,7 @@
 				flex: 1;
 
 				.unit {
-					font-size: 0.85rem;
+					font-size: var(--font-size-sm);
 					color: var(--muted-foreground);
 					white-space: nowrap;
 				}

@@ -43,22 +43,24 @@
 		"item": {
 			"queries": "Query",
 			"queryBuilder": "Generatore di query",
-			"savedQueries": "Query salvate",
-			"queryHistory": "Cronologia query",
 			"workspace": "Spazio di lavoro",
-			"mapViewer": "Visualizzatore mappa",
-			"tableExplorer": "Esplora tabelle",
-			"chartExplorer": "Esplora grafici",
 			"dataBrowser": "Browser dati",
 			"datasets": "Dataset",
 			"dataTables": "Tabelle dati",
 			"systemInfo": "Info di sistema",
+			"usersRoles": "Utenti e ruoli",
 			"beaconNodes": "Nodi Beacon",
 			"settings": "Impostazioni",
 			"aboutStudio": "Altro su {app}",
 			"documentation": "Documentazione",
 			"github": "GitHub",
-			"feedback": "Feedback"
+			"feedback": "Feedback",
+			"sqlConsole": "Console SQL",
+			"crawlers": "Crawler"
+		},
+		"adminLock": {
+			"signIn": "Accedi come amministratore su {node} per usare questa pagina.",
+			"noNode": "Accedi come amministratore per usare questa pagina."
 		},
 		"needsNode": "Questa pagina richiede un nodo Beacon. Aggiungine uno nella pagina Nodi Beacon.",
 		"waitForNodes": "{app} legge i nodi Beacon pubblici. Questo avviene solo alla prima visita. La tua query parte quando arrivano."
@@ -79,6 +81,9 @@
 		"resetAllMessageTelemetry": "Questo riporta ogni impostazione di questo browser al valore predefinito. L'app perde i tuoi limiti di query, la dimensione della cache, le impostazioni predefinite della mappa e la tua scelta sulla telemetria.",
 		"resetAllNote": "Non puoi annullare questa azione.",
 		"resetAllDone": "Tutte le impostazioni sono tornate ai valori predefiniti.",
+		"forgetAdminSignIns": "Dimentica tutti gli accessi admin",
+		"forgetAdminSignInsMessage": "{app} rimuove ogni accesso admin salvato su questo dispositivo. Gli accessi nelle schede aperte restano fino alla chiusura della scheda.",
+		"forgetAdminSignInsDone": "{app} ha dimenticato gli accessi admin salvati.",
 		"resetOne": "Riporta questa impostazione al valore predefinito",
 		"noTelemetryBuild": "Questa versione di {app} è compilata con la telemetria disattivata. Non invia dati di utilizzo.",
 		"group": {
@@ -174,6 +179,10 @@
 			"telemetryConsoleLog": {
 				"label": "Includi l'output di console.log",
 				"description": "Aggiunge console.log all'output della console segnalato. Avvisi ed errori vengono sempre inviati. Attivalo solo per una sessione di debug: una riga di log è rumorosa e può contenere un percorso di file o un valore dei risultati. Questo interruttore non fa nulla finché \"Invia statistiche di utilizzo\" è disattivato."
+			},
+			"adminFeatures": {
+				"label": "Mostra funzioni di amministrazione",
+				"description": "Mostra le pagine e le azioni di amministrazione, per esempio il caricamento di dataset. Un'azione di amministrazione chiede il nome utente e la password dell'amministratore del nodo Beacon."
 			}
 		}
 	},
@@ -560,7 +569,8 @@
 		"toast": {
 			"noData": "Nessun dato della tabella da mostrare.",
 			"sortFailed": "Impossibile ordinare la tabella:"
-		}
+		},
+		"nullValue": "NULL"
 	},
 	"chart": {
 		"title": "Esplora grafici",
@@ -805,55 +815,27 @@
 		"enable": "Attiva cache",
 		"clearAll": "Svuota tutte le cache"
 	},
-	"system": {
-		"title": "Informazioni di sistema",
-		"noNode": {
-			"title": "Nessun nodo Beacon",
-			"message": "Questa pagina legge un nodo. Seleziona prima un nodo."
-		},
-		"intro": "Visualizza informazioni dettagliate sul sistema di {app}, tra cui versione, uso della CPU, memoria e altro.",
-		"disabled": "Nessuna informazione di sistema disponibile. Attiva le informazioni di sistema con la variabile di ambiente {variable}.",
-		"version": "Versione di Beacon",
-		"uptime": "Tempo di attività del sistema: {time}",
-		"cpu": {
-			"title": "Uso CPU del sistema",
-			"cores": "{count, plural, one {# core fisico} other {# core fisici}}"
-		},
-		"memory": {
-			"title": "Uso memoria del sistema"
-		},
-		"swap": {
-			"title": "Uso swap del sistema"
-		},
-		"total": "{size} totali",
-		"used": "{percent} usati",
-		"free": "{size} liberi",
-		"load": {
-			"title": "Carico medio",
-			"one": "1 min: {percent}",
-			"five": "5 min: {percent}",
-			"fifteen": "15 min: {percent}"
-		},
-		"os": {
-			"title": "Informazioni di sistema",
-			"os": "SO: {value}",
-			"hostname": "Nome host: {value}",
-			"kernel": "Kernel: {value}",
-			"distribution": "Distribuzione: {value}",
-			"version": "Versione: {value}"
-		},
-		"cpus": {
-			"title": "CPU",
-			"count": "{count}× {brand}"
-		}
-	},
 	"node": {
 		"form": {
 			"addTitle": "Aggiungi nodo Beacon",
 			"editTitle": "Modifica nodo Beacon",
 			"closeTitle": "Chiudi senza salvare",
 			"closeMessage": "Questo modulo contiene modifiche che l'app non ha ancora salvato.",
-			"closeNote": "Le modifiche andranno perse."
+			"closeNote": "Le modifiche andranno perse.",
+			"intro": "Collega {app} a un nodo Beacon.",
+			"namePlaceholder": "Il mio Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "L'URL radice del nodo. {app} aggiunge /api da solo.",
+			"tokenPlaceholder": "Facoltativo",
+			"tokenHint": "{app} lo invia come bearer token nelle richieste di visualizzazione.",
+			"adminTitle": "Accesso amministratore (facoltativo)",
+			"adminUsername": "Nome utente amministratore",
+			"adminPassword": "Password amministratore",
+			"adminSignedIn": "Accesso effettuato come amministratore.",
+			"adminSignOut": "Chiudi sessione amministratore",
+			"adminValid": "Le credenziali di amministratore sono valide.",
+			"adminFailed": "Il nodo \"{name}\" esiste, ma senza accesso amministratore.",
+			"submitAdd": "Aggiungi nodo"
 		},
 		"delete": {
 			"title": "Elimina nodo Beacon",
@@ -962,79 +944,566 @@
 	"modal": {
 		"close": "Chiudi finestra"
 	},
-	"upload": {
-		"username": "Nome utente amministratore",
-		"password": "Password amministratore",
-		"failed": "Caricamento non riuscito",
-		"example": "es. {example}",
-		"table": {
-			"title": "Crea tabella",
-			"name": "Nome tabella",
-			"paths": "Percorsi glob",
-			"pathsHint": "Puoi indicare più percorsi separati da virgole.",
-			"format": "Formato file",
-			"formatPlaceholder": "Seleziona un formato file",
-			"nameMissing": "Inserisci un nome per la tabella.",
-			"formatMissing": "Seleziona un formato file.",
-			"pathMissing": "Inserisci almeno un percorso glob.",
-			"created": "✅ Tabella {name} creata"
-		},
-		"files": {
-			"title": "Carica dataset",
-			"dataset": "Dataset",
-			"missing": "Seleziona i file.",
-			"done": "✅ {count, plural, one {# file caricato} other {# file caricati}}",
-			"size": "{name} ({size} KB)",
-			"uploading": "Caricamento... {progress}%",
-			"upload": "Carica"
-		}
-	},
-	"browser": {
-		"intro": "Usa le funzioni del browser dati elencate qui sotto per esplorare e gestire i contenuti di Beacon.",
-		"datasetCount": "{count, plural, one {# dataset} other {# dataset}}",
-		"tableCount": "{count, plural, one {# tabella dati} other {# tabelle dati}}",
-		"datasetsCard": "Visualizza e gestisci i singoli dataset.",
-		"tablesCard": "Visualizza e gestisci le tabelle dati.",
-		"searchPlaceholder": "Cerca...",
-		"nodeLine": "Nodo: {url}",
-		"picker": {
-			"label": "Nodo Beacon",
-			"placeholder": "Seleziona un nodo",
-			"group": "Nodi"
-		},
-		"error": {
-			"missingParam": "Parametro di query `{name}` mancante"
-		},
-		"datasets": {
-			"column": "Dataset",
-			"intro": "Esplora e gestisci i dataset disponibili nel tuo nodo Beacon.",
-			"noNodes": "Ancora nessun nodo Beacon salvato. Aggiungi un nodo Beacon nella pagina Nodi Beacon per sfogliare i dataset."
-		},
-		"tables": {
-			"column": "Tabella",
-			"default": "Predefinita",
-			"intro": "Esplora e gestisci le tabelle disponibili nel tuo nodo Beacon.",
-			"noNodes": "Ancora nessun nodo Beacon salvato. Aggiungi un nodo Beacon nella pagina Nodi Beacon per sfogliare le tabelle dati."
-		},
-		"schema": {
-			"field": "Campo",
-			"dataType": "Tipo di dato",
-			"nullable": "Nullable",
-			"dictId": "ID dizionario",
-			"isOrdered": "Ordinato",
-			"metadata": "Metadati"
-		},
-		"table": {
-			"title": "Tabella {name}",
-			"heading": "Tabella ''{name}'' ({count, plural, one {# campo} other {# campi}})"
-		},
-		"dataset": {
-			"title": "Dataset {name}",
-			"heading": "Dataset {name} ({count, plural, one {# campo} other {# campi}})"
-		}
-	},
 	"misc": {
 		"externalLink": "Apri link nel browser esterno",
 		"bytes": "Byte"
+	},
+	"systemInfo": {
+		"title": "Informazioni di sistema",
+		"intro": "La versione, lo stato e le risorse host di un nodo Beacon.",
+		"noNode": "Scegli un nodo Beacon.",
+		"version": "Versione di Beacon",
+		"health": "Stato",
+		"host": "Host",
+		"noHost": "Questo nodo non fornisce dati sull'host. Il server funziona senza {variable}.",
+		"uptime": {
+			"label": "Tempo di attività",
+			"days": "{days}g {hours}h {minutes}m",
+			"hours": "{hours}h {minutes}m",
+			"minutes": "{minutes}m"
+		},
+		"cpu": {
+			"title": "CPU",
+			"overall": "Utilizzo totale",
+			"physicalCores": "{count, plural, one {# core fisico} other {# core fisici}}"
+		},
+		"memory": {
+			"title": "Memoria",
+			"available": "Disponibile: {size}",
+			"swap": "Swap",
+			"noSwap": "Nessuno swap.",
+			"usage": "{used} di {total}"
+		},
+		"load": {
+			"title": "Carico medio",
+			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
+			"perCore": "Per core: {percent} su 1 min."
+		},
+		"admin": {
+			"title": "Amministrazione",
+			"users": "Utenti",
+			"roles": "Ruoli"
+		},
+		"functions": {
+			"title": "Funzioni",
+			"loading": "Caricamento delle funzioni…",
+			"filter": "Filtra funzioni",
+			"count": "{shown} di {total, plural, one {# funzione} other {# funzioni}}"
+		},
+		"raw": "Risposta grezza"
+	},
+	"admin": {
+		"badge": "Admin",
+		"signIn": {
+			"title": "Accedi come amministratore",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Usa BEACON_ADMIN_USERNAME e BEACON_ADMIN_PASSWORD del nodo. {app} conserva le credenziali solo per questa scheda del browser.",
+			"remember": "Ricorda su questo dispositivo",
+			"helpRemember": "Usa BEACON_ADMIN_USERNAME e BEACON_ADMIN_PASSWORD del nodo. Senza \"Ricorda\", {app} conserva le credenziali solo per questa scheda del browser.",
+			"rememberUnavailable": "Non disponibile qui. {app} richiede una connessione sicura (https:// o localhost) e lo spazio di archiviazione del browser (IndexedDB).",
+			"rememberNote": "{app} cifra la password salvata. Uno script eseguito in {app} può comunque leggerla. Usa questa opzione solo su un dispositivo di cui ti fidi.",
+			"rememberFailed": "{app} non ha potuto salvare questo accesso sul dispositivo. Dura fino alla chiusura di questa scheda.",
+			"username": "Nome utente",
+			"password": "Password",
+			"submit": "Accedi",
+			"busy": "Accesso in corso…",
+			"wrongCredentials": "Nome utente o password errati."
+		},
+		"error": {
+			"forbidden": "Non hai il permesso per questa azione su questo nodo Beacon.",
+			"status": "Il nodo Beacon ha risposto con lo stato {status}.",
+			"unreachable": "Il nodo Beacon non è raggiungibile."
+		},
+		"offHint": "Attiva \"Mostra funzioni di amministrazione\" in Impostazioni",
+		"sessionRequired": {
+			"title": "Sessione da amministratore richiesta",
+			"textBefore": "Accedi su",
+			"textAfter": "con le credenziali da amministratore del nodo.",
+			"button": "Accedi come amministratore"
+		},
+		"nodePicker": {
+			"label": "Nodo Beacon",
+			"placeholder": "Seleziona un nodo",
+			"group": "Nodi Beacon",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Accedi come amministratore",
+			"signInHint": "Sblocca le funzioni di amministrazione di {name}",
+			"closeSession": "Chiudi sessione amministratore",
+			"closeSessionHint": "Accesso effettuato come amministratore",
+			"addNode": "Aggiungi nodo",
+			"manageNodes": "Gestisci nodi"
+		}
+	},
+	"sqlEditor": {
+		"pickNode": "Scegli un nodo Beacon.",
+		"toolbar": {
+			"tables": "Tabelle",
+			"stop": "Ferma",
+			"run": "Esegui",
+			"runShortcut": "Ctrl+Invio",
+			"explain": "Spiega",
+			"analyze": "Analizza",
+			"download": "Scarica",
+			"hint": "Ctrl+Invio esegue la selezione, o l'intera scheda."
+		},
+		"result": {
+			"noPlan": "Nessun piano da mostrare.",
+			"stoppedPartial": "Interrotto. La griglia mostra le righe ricevute prima dell'interruzione.",
+			"stopped": "Interrotto.",
+			"truncated": "{count, plural, one {Prima # riga.} other {Prime # righe.}} Scarica per il risultato completo.",
+			"cancelled": "Annullato.",
+			"sqlDisabled": "SQL è disattivato su questo nodo Beacon."
+		},
+		"error": {
+			"raw": "{text}"
+		},
+		"catalog": {
+			"filter": "Filtra tabelle",
+			"loading": "Caricamento tabelle…",
+			"noMatch": "Nessuna tabella corrisponde.",
+			"showColumns": "Mostra colonne",
+			"loadingColumns": "Caricamento colonne…",
+			"showMore": "{count, plural, one {Mostra # altra colonna} other {Mostra altre # colonne}}"
+		},
+		"plan": {
+			"fold": "Comprimi",
+			"unfold": "Espandi",
+			"node": "Nodo",
+			"rows": "{rows} righe",
+			"compute": "calcolo {time} ms"
+		},
+		"tabs": {
+			"defaultTitle": "Query {number}",
+			"close": "Chiudi {title}",
+			"add": "Nuova scheda"
+		}
+	},
+	"dataBrowser": {
+		"home": {
+			"intro": "Usa le funzioni del data browser qui sotto per esplorare e gestire i contenuti del tuo nodo Beacon.",
+			"datasetCount": "{count, plural, one {# dataset} other {# dataset}}",
+			"tableCount": "{count, plural, one {# tabella dati} other {# tabelle dati}}",
+			"datasetsCard": "Visualizza e gestisci i singoli dataset.",
+			"tablesCard": "Visualizza e gestisci le tabelle dati."
+		},
+		"common": {
+			"missingParam": "L'URL non contiene il parametro `{name}`.",
+			"pickNode": "Scegli un nodo Beacon.",
+			"tab": {
+				"schema": "Schema",
+				"preview": "Anteprima",
+				"definition": "Definizione"
+			},
+			"schema": {
+				"loading": "Caricamento delle colonne…",
+				"filter": "Filtra colonne",
+				"count": "{shown, number} di {total, plural, one {# colonna} other {# colonne}}",
+				"column": "Colonna",
+				"type": "Tipo",
+				"nullable": "Nullable",
+				"yes": "sì",
+				"no": "no",
+				"showMore": "Mostra altro (ne restano {count, number})"
+			},
+			"preview": {
+				"loading": "Caricamento {count, plural, one {della prima riga} other {delle prime # righe}}…",
+				"none": "Nessuna riga.",
+				"first": "{count, plural, one {Prima riga} other {Prime # righe}}."
+			},
+			"folder": {
+				"pick": "Scegli cartella",
+				"loading": "Caricamento delle cartelle…",
+				"none": "Questo nodo non ha cartelle.",
+				"filter": "Filtra cartelle"
+			}
+		},
+		"tables": {
+			"intro": "Esplora le tabelle del tuo nodo Beacon.",
+			"create": "Crea",
+			"createView": "Vista",
+			"createMaterialized": "Vista materializzata",
+			"createExternal": "Tabella esterna",
+			"search": "Cerca tabelle",
+			"loading": "Caricamento delle tabelle…",
+			"noMatch": "Nessuna tabella corrisponde.",
+			"kindView": "Vista",
+			"kindTable": "Tabella",
+			"default": "Predefinita",
+			"otherSchemas": "Altri schemi",
+			"detail": {
+				"pageTitle": "Tabella {name}",
+				"back": "Tabelle",
+				"notFound": "Il nodo non ha la tabella \"{name}\" in {schema}.",
+				"openInEditor": "Apri nella console SQL",
+				"drop": "Elimina",
+				"loading": "Caricamento della tabella…",
+				"refreshed": "{name} aggiornata.",
+				"refreshFailed": "Impossibile aggiornare {name}.",
+				"dropped": "{name} eliminata.",
+				"dropFailed": "Impossibile eliminare {name}.",
+				"dropTitle": "Elimina {name}",
+				"dropMessage": "Eliminare la tabella \"{name}\" da {node}?",
+				"dropNote": "I file restano al loro posto.",
+				"copy": "Copia",
+				"copied": "Definizione copiata.",
+				"definitionSignIn": "Accedi per vedere la definizione. Apri di nuovo questa scheda per accedere.",
+				"definitionNeedsAdmin": "La definizione richiede le funzioni di amministrazione. Attiva \"Mostra funzioni di amministrazione\" in Impostazioni.",
+				"definitionNeedsNode": "Aggiungi questo nodo nella pagina Nodi Beacon per vedere la definizione.",
+				"definitionLoading": "Caricamento della definizione…",
+				"definitionNone": "Beacon non salva una definizione per questa tabella. L'ha creata un crawler, oppure è una tabella più vecchia."
+			},
+			"view": {
+				"title": "Crea vista",
+				"titleMaterialized": "Crea vista materializzata",
+				"query": "Query",
+				"missing": "Inserisci un nome e una query."
+			},
+			"external": {
+				"title": "Crea tabella esterna",
+				"fileType": "Tipo di file",
+				"location": "Posizione",
+				"locationHint": "Un percorso o un glob nell'archivio dei dataset. Una cartella scelta termina con **/*.",
+				"partitions": "Colonne di partizione",
+				"partitionsPlaceholder": "anno, mese",
+				"options": "Opzioni",
+				"optionKey": "chiave",
+				"optionValue": "valore",
+				"removeOption": "Rimuovi opzione",
+				"addOption": "Aggiungi opzione",
+				"ifNotExists": "Solo se non esiste",
+				"request": "Richiesta",
+				"nameMissing": "Inserisci un nome per la tabella.",
+				"locationMissing": "Inserisci una posizione.",
+				"typeMissing": "Scegli un tipo di file.",
+				"hint": {
+					"parquet": "Un percorso o un glob, per esempio data/**/*.parquet.",
+					"geoparquet": "Parquet con una colonna di geometria. Beacon legge la geometria come GeoArrow.",
+					"csv": "Le opzioni possono impostare il separatore e l'intestazione.",
+					"arrow": "File Arrow IPC (.arrow).",
+					"nc": "File NetCDF, per esempio argo/**/*.nc.",
+					"hdf5": "File HDF5, per esempio data/**/*.h5. NetCDF-4 è HDF5.",
+					"zarr": "Il percorso di uno store Zarr v3, con il suo file zarr.json.",
+					"atlas": "Il percorso di una collezione Atlas, con il suo file data.atlas.",
+					"tiff": "File GeoTIFF o COG.",
+					"bbf": "File Beacon Binary Format (.bbf).",
+					"odv": "File di foglio di calcolo Ocean Data View.",
+					"delta": "La cartella di una tabella Delta, oppure un URL con uno schema.",
+					"iceberg": "La cartella di una tabella Iceberg, oppure un URL con uno schema.",
+					"remote": "Una posizione con uno schema, per esempio s3://bucket/path."
+				}
+			}
+		},
+		"datasets": {
+			"intro": "Esplora i file del tuo nodo Beacon.",
+			"upload": "Carica",
+			"pickNode": "Scegli un nodo Beacon.",
+			"search": "Cerca in tutte le cartelle",
+			"fileCount": "{count, plural, one {# file} other {# file}}",
+			"listCut": "Questo nodo ha più di {limit, number} file. L'elenco è incompleto.",
+			"folderNav": "Cartella",
+			"all": "Tutto",
+			"loading": "Caricamento dei file…",
+			"empty": "Nessun file qui.",
+			"column": {
+				"format": "Formato",
+				"size": "Dimensione",
+				"modified": "Modificato"
+			},
+			"previous": "Precedente",
+			"next": "Successiva",
+			"pageOf": "Pagina {page} di {count}",
+			"storage": {
+				"usedOf": "{used} usati di {total}, {free} liberi",
+				"objects": "{used} in {count, plural, one {# oggetto} other {# oggetti}} ({location})"
+			},
+			"detail": {
+				"title": "Dataset {name}",
+				"missingParam": "Manca il parametro di query `{name}`.",
+				"openInEditor": "Apri nella console SQL",
+				"download": "Scarica",
+				"downloadFailed": "Beacon non ha potuto inviare il file.",
+				"schema": "Schema",
+				"preview": "Anteprima",
+				"loadingFile": "Caricamento del file…",
+				"cannotRead": "Beacon non può leggere questo formato di file.",
+				"loadingColumns": "Caricamento delle colonne…",
+				"noColumns": "Questo file non ha colonne da mostrare.",
+				"deleteTitle": "Elimina {name}",
+				"deleteMessage": "Eliminare \"{path}\" da {node}?",
+				"deleteNote": "Una tabella che legge questo file smette di funzionare.",
+				"deleted": "{name} eliminato.",
+				"deleteFailed": "Beacon non ha potuto eliminare il file."
+			}
+		},
+		"upload": {
+			"title": "Carica dataset",
+			"destination": "Cartella di destinazione",
+			"destinationPlaceholder": "argo/2024/",
+			"dropRegion": "Trascina qui file o cartelle",
+			"dropText": "Trascina qui file o cartelle, oppure",
+			"pickFiles": "Scegli file",
+			"pickFolder": "Scegli una cartella",
+			"skippedHidden": "{count, plural, one {Saltato # file nascosto.} other {Saltati # file nascosti.}}",
+			"replace": "Sostituisci i file esistenti",
+			"progress": "Avanzamento",
+			"summary": "{done} di {total} completati",
+			"summaryFailed": "{done} di {total} completati, {failed} non riusciti",
+			"status": {
+				"waiting": "In coda",
+				"uploading": "In corso",
+				"done": "Completato",
+				"failed": "Non riuscito",
+				"stopped": "Interrotto"
+			},
+			"next": {
+				"intro": "Per interrogare questi file, crea una tabella:",
+				"crawler": "Avvia un crawler.",
+				"tableBefore": "Usa Crea tabella esterna nella pagina",
+				"tableAfter": "."
+			},
+			"stop": "Interrompi",
+			"retry": "Riprova i non riusciti",
+			"start": "Carica"
+		},
+		"crawlers": {
+			"intro": "Un crawler analizza una cartella dell'archivio dei dataset e registra i file come tabelle. Avvialo su richiesta, con un timer o con nuovi file.",
+			"newCrawler": "Nuovo crawler",
+			"refresh": "Aggiorna",
+			"pickNode": "Scegli un nodo Beacon.",
+			"loading": "Caricamento dei crawler…",
+			"tryAgain": "Riprova",
+			"banner": {
+				"text": "I crawler funzionano come un crawler di AWS Glue.",
+				"link": "Leggi la documentazione dei crawler."
+			},
+			"emptyState": {
+				"title": "Nessun crawler",
+				"text": "Fai clic su Nuovo crawler per crearne uno."
+			},
+			"busy": "In corso…",
+			"run": "Avvia",
+			"runFailed": "L'esecuzione del crawler non è riuscita.",
+			"noSession": "Nessuna sessione di amministratore.",
+			"noReport": "Il nodo Beacon non ha inviato alcun rapporto.",
+			"field": {
+				"folder": "Cartella",
+				"formats": "Formati",
+				"naming": "Nomi delle tabelle",
+				"partitions": "Partizioni",
+				"schedule": "Pianificazione",
+				"options": "Opzioni"
+			},
+			"delete": {
+				"title": "Elimina il crawler {name}",
+				"message": "Eliminare il crawler \"{name}\" da {node}?",
+				"note": "Le tabelle create da questo crawler restano. Eliminale nella pagina Tabelle.",
+				"done": "Crawler {name} eliminato.",
+				"failed": "Beacon non ha potuto eliminare il crawler."
+			},
+			"schedule": {
+				"never": "Solo con Avvia",
+				"hours": "{count, plural, one {Ogni ora} other {Ogni # ore}}",
+				"minutes": "{count, plural, one {Ogni minuto} other {Ogni # minuti}}",
+				"seconds": "{count, plural, one {Ogni secondo} other {Ogni # secondi}}"
+			},
+			"formats": {
+				"all": "Tutti i formati",
+				"list": "{formats}"
+			},
+			"naming": {
+				"leaf": "Ultima cartella",
+				"prefixed": "Nome del crawler + ultima cartella"
+			},
+			"error": {
+				"name": "Inserisci un nome per il crawler.",
+				"folder": "Scegli una cartella.",
+				"scheduleSeconds": "Inserisci una pianificazione di almeno {min} secondi.",
+				"optionEquals": "La riga {line} non ha =. Scrivi key=value.",
+				"optionKey": "La riga {line} non ha una chiave. Scrivi key=value.",
+				"exists": "Esiste già un crawler con questo nome."
+			},
+			"dialog": {
+				"editTitle": "Modifica il crawler {name}",
+				"namePlaceholder": "argo",
+				"folder": "Cartella di destinazione",
+				"folderPlaceholder": "argo/",
+				"folderHint": "La cartella dell'archivio dei dataset da analizzare.",
+				"emptyFolder": "Questa cartella non contiene file. Il crawler non crea tabelle.",
+				"formats": "Filtro dei formati",
+				"formatsHint": "Nessuna selezione: il crawler legge tutti i formati.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Timer (secondi)",
+				"timerPlaceholder": "900",
+				"timerHint": "Vuoto: nessun timer.",
+				"partitions": "Rileva le partizioni Hive (key=value/)",
+				"eventDriven": "Analizza i nuovi file (event driven)",
+				"options": "Opzioni della tabella",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "Una key=value per riga. Beacon le aggiunge alle OPTIONS di ogni tabella.",
+				"payload": "Payload della richiesta",
+				"create": "Crea crawler"
+			},
+			"report": {
+				"found": "{count, plural, one {Trovata # tabella.} other {Trovate # tabelle.}}",
+				"created": "Create:",
+				"updated": "Aggiornate:",
+				"skipped": "Saltate (di un altro crawler o create a mano):",
+				"failed": "Non riuscite:",
+				"skippedFiles": "{count, plural, one {# file non corrisponde a nessun formato.} other {# file non corrispondono a nessun formato.}}"
+			}
+		}
+	},
+	"usersRoles": {
+		"ruleCount": "{count, plural, =0 {Nessuna regola} one {# regola} other {# regole}}",
+		"users": {
+			"col": { "user": "Utente", "roles": "Ruoli", "access": "Accesso" },
+			"badge": { "superUser": "Super-utente", "anonymous": "Anonimo" },
+			"line": {
+				"superUser": "Impostato nella configurazione del nodo",
+				"anonymous": "Ogni richiesta senza credenziali",
+				"noRole": "Ancora nessun ruolo"
+			},
+			"noRoleNeeded": "Nessun ruolo necessario",
+			"addRole": "Aggiungi ruolo",
+			"addRoleTo": "Aggiungi un ruolo a {user}",
+			"newRoleItem": "Nuovo ruolo…",
+			"removeRole": "Rimuovi {role}",
+			"delete": "Elimina {user}",
+			"deleteTitle": "Eliminare {user}?",
+			"deleteMessage": "{user} non può più accedere a {node}.",
+			"deleted": "{user} è stato eliminato.",
+			"deleteFailed": "Impossibile eliminare l'utente.",
+			"addRoleFailed": "Impossibile assegnare il ruolo.",
+			"removeRoleFailed": "Impossibile rimuovere il ruolo.",
+			"footer": "Un utente legge i dati tramite le regole dei suoi ruoli. Le regole di negazione prevalgono su quelle di concessione.",
+			"noMatch": "Nessun utente corrisponde al filtro."
+		},
+		"roles": {
+			"counts": "{rules, plural, one {# regola} other {# regole}} · {members, plural, one {# membro} other {# membri}}",
+			"addRule": "Aggiungi regola",
+			"addFirstRule": "Aggiungi la prima regola",
+			"rules": "Regole di accesso",
+			"rulesHint": "Le regole di negazione prevalgono su quelle di concessione. Senza una concessione corrispondente, Beacon rifiuta la lettura.",
+			"grant": "Concessione",
+			"deny": "Negazione",
+			"noRules": "Questo ruolo non ha regole. I suoi membri non leggono nulla.",
+			"removeRule": "Rimuovi regola",
+			"members": "Membri",
+			"addMember": "Aggiungi membro",
+			"giveTo": "Assegna {role} a",
+			"noRole": "Nessun ruolo",
+			"nobodyToAdd": "Ogni utente ha questo ruolo.",
+			"noMembers": "Nessun utente ha questo ruolo.",
+			"removeMember": "Rimuovi {user}",
+			"delete": "Elimina {role}",
+			"deleteTitle": "Eliminare {role}?",
+			"deleteMessage": "{count, plural, =0 {Nessun utente ha {role}.} one {# utente perde {role}: {members}.} other {# utenti perdono {role}: {members}.}}",
+			"deleted": "{role} è stato eliminato.",
+			"deleteFailed": "Impossibile eliminare il ruolo.",
+			"removeRuleFailed": "Impossibile rimuovere la regola."
+		},
+		"access": {
+			"full": {
+				"label": "Accesso completo",
+				"line": "Il super-utente ignora le regole",
+				"short": "Completo"
+			},
+			"none": {
+				"label": "Nessun accesso",
+				"noRoles": "L'utente non ha ruoli",
+				"noGrants": "I ruoli non hanno regole di concessione",
+				"short": "Nessuno"
+			},
+			"all": {
+				"label": "Tutti i dati",
+				"line": "Tramite {roles}",
+				"short": "Tutti i dati"
+			},
+			"limited": {
+				"label": "Accesso limitato",
+				"line": "{grants, plural, one {# concessione} other {# concessioni}} · {denies, plural, one {# negazione} other {# negazioni}}",
+				"short": "Limitato"
+			}
+		},
+		"cards": {
+			"users": "Utenti",
+			"usersLine": "{count, plural, one {# utente locale} other {# utenti locali}}",
+			"roles": "Ruoli",
+			"rolesEmpty": "Crea un ruolo per dare accesso",
+			"rolesLine": "Assegnato a {count, plural, one {# utente} other {# utenti}}",
+			"rules": "Regole",
+			"rulesLine": "{grants, plural, one {# concessione} other {# concessioni}} · {denies, plural, one {# negazione} other {# negazioni}}",
+			"public": "Accesso pubblico",
+			"publicLine": "Richieste senza credenziali",
+			"publicOff": "Disattivato"
+		},
+		"target": {
+			"all": "tutti i dati",
+			"table": "TABELLA {name}",
+			"path": "PERCORSO {glob}"
+		},
+		"intro": "Controlla chi legge i dati del nodo. Un ruolo contiene regole di concessione e negazione su tutti i dati, su una tabella o su un percorso. Un utente riceve le regole dei suoi ruoli.",
+		"pickNode": "Scegli un nodo Beacon.",
+		"loading": "Caricamento di utenti e ruoli…",
+		"tryAgain": "Riprova",
+		"refresh": "Aggiorna",
+		"newUser": "Nuovo utente",
+		"newRole": "Nuovo ruolo",
+		"loadFailed": "Impossibile caricare utenti e ruoli.",
+		"tab": {
+			"users": "Utenti",
+			"roles": "Ruoli"
+		},
+		"filter": {
+			"users": "Filtra utenti o ruoli",
+			"roles": "Filtra ruoli"
+		},
+		"nameHint": "Lettere, cifre e trattini bassi. Non iniziare con una cifra.",
+		"newUserDialog": {
+			"title": "Nuovo utente",
+			"subtitle": "L'utente accede a {node} con questo nome e questa password.",
+			"username": "Nome utente",
+			"usernamePlaceholder": "jane_doe",
+			"password": "Password",
+			"showPassword": "Mostra password",
+			"hidePassword": "Nascondi password",
+			"generate": "Genera",
+			"passwordHint": "{app} non conserva la password. Dalla subito all'utente.",
+			"roles": "Ruoli",
+			"noRoles": "Il nodo non ha ancora ruoli. Senza ruolo, l'utente non legge nulla.",
+			"create": "Crea utente",
+			"created": "{user} è stato creato."
+		},
+		"newRoleDialog": {
+			"title": "Nuovo ruolo",
+			"subtitle": "Un ruolo contiene le regole. Aggiungi le regole, poi dai il ruolo agli utenti.",
+			"name": "Nome del ruolo",
+			"namePlaceholder": "analysts",
+			"startFrom": "Parti da",
+			"empty": "Un ruolo vuoto",
+			"copyOf": "Le regole di {role} ({count, plural, =0 {Nessuna regola} one {# regola} other {# regole}})",
+			"create": "Crea ruolo",
+			"created": "{role} è stato creato."
+		},
+		"addRuleDialog": {
+			"title": "Aggiungi una regola a {role}",
+			"effect": "Effetto",
+			"target": "Destinazione",
+			"all": "Tutti i dati",
+			"table": "Tabella",
+			"path": "Percorso",
+			"pathPlaceholder": "argo/**/*.nc",
+			"tableLoading": "Caricamento delle tabelle…",
+			"preview": "{effect} SELECT su {target}",
+			"add": "Aggiungi regola"
+		},
+		"error": {
+			"nameRequired": "Inserisci un nome.",
+			"nameInvalid": "Usa lettere, cifre e trattini bassi. Non iniziare con una cifra.",
+			"passwordRequired": "Inserisci una password.",
+			"exists": "Questo nome esiste già sul nodo."
+		},
+		"partialFailed": "{count, plural, one {Un passaggio non è riuscito: {steps}.} other {# passaggi non sono riusciti: {steps}.}} Controlla il risultato e riprova."
 	}
 }

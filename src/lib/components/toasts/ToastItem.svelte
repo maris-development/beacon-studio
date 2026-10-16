@@ -68,7 +68,7 @@
 		flex: 1;
 	}
 	.icon {
-		font-size: 1.1rem;
+		font-size: var(--font-size-lg);
 	}
 	button {
 		color: var(--toast-foreground);
@@ -76,7 +76,7 @@
 		border: 0 none;
 		padding: 0;
 		line-height: 1;
-		font-size: 1.1rem;
+		font-size: var(--font-size-lg);
 		cursor: pointer;
 	}
 </style>

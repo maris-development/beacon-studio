@@ -1,47 +1,56 @@
 <script lang="ts">
-	import { BeaconClient } from '@/beacon-api/client';
+	import { makeBeaconClient } from '@/beacon-api/client';
 	import { currentNode } from '@/services/beacon-node';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { onMount } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import { resolve } from '$app/paths';
+	import { untrack } from 'svelte';
 	import { t } from '@/i18n';
 
-	let currentNodeValue: BeaconNode | null = $state(null);
-	let client: BeaconClient;
+	// Zero or unknown shows the plain section name.
+	let datasetTotal = $state(0);
+	let tableTotal = $state(0);
 
-	let datasetCount: number = $state(0);
-	let dataTableCount: number = $state(0);
+	let nodeUrl = $derived($currentNode?.url ?? null);
 
-	onMount(() => {
-		currentNodeValue = $currentNode;
-		client = BeaconClient.new(currentNodeValue);
-
-		countDatasets();
-		countDataTables();
+	let datasetsTitle = $derived.by(() => {
+		if (datasetTotal > 0) return $t('dataBrowser.home.datasetCount', { count: datasetTotal });
+		return $t('nav.item.datasets');
 	});
 
-	function countDatasets() {
-		client
-			.getTotalDatasets()
-			.then((count) => {
-				datasetCount = count;
-			})
-			.catch((error) => {
-				console.error('Error fetching dataset count:', error);
-			});
-	}
+	let dataTablesTitle = $derived.by(() => {
+		if (tableTotal > 0) return $t('dataBrowser.home.tableCount', { count: tableTotal });
+		return $t('nav.item.dataTables');
+	});
 
-	async function countDataTables() {
-		client
-			.getTables()
-			.then((tables) => {
-				dataTableCount = tables.length;
-			})
-			.catch((error) => {
-				console.error('Error fetching data tables:', error);
-			});
+	$effect(() => {
+		if (!nodeUrl) return;
+		untrack(() => count());
+	});
+
+	function count() {
+		const node = $currentNode;
+		if (!node) return;
+
+		const client = makeBeaconClient(node);
+		const url = node.url;
+		datasetTotal = 0;
+		tableTotal = 0;
+
+		// A node switch during the request makes the answer stale.
+		client.totalDatasets().then(
+			(total) => {
+				if (url === nodeUrl) datasetTotal = total;
+			},
+			() => {}
+		);
+
+		client.tables().then(
+			(tables) => {
+				if (url === nodeUrl) tableTotal = tables.length;
+			},
+			() => {}
+		);
 	}
 </script>
 
@@ -49,23 +58,23 @@
 	<title>{$t('app.pageTitle', { page: $t('nav.item.dataBrowser') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: $t('nav.item.dataBrowser'), href: '/data-browser' }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
 		<h1>{$t('nav.item.dataBrowser')}</h1>
 
-		<p>{$t('browser.intro')}</p>
+		<p>{$t('dataBrowser.home.intro')}</p>
 
 		<div class="data-browser-functions">
 			<Card href={resolve('/data-browser/datasets')}>
-				<h3>{datasetCount > 0 ? $t('browser.datasetCount', { count: datasetCount }) : $t('nav.item.datasets')}</h3>
-				<p>{$t('browser.datasetsCard')}</p>
+				<h3>{datasetsTitle}</h3>
+				<p>{$t('dataBrowser.home.datasetsCard')}</p>
 			</Card>
 
 			<Card href={resolve('/data-browser/data-tables')}>
-				<h3>{dataTableCount > 0 ? $t('browser.tableCount', { count: dataTableCount }) : $t('nav.item.dataTables')}</h3>
-				<p>{$t('browser.tablesCard')}</p>
+				<h3>{dataTablesTitle}</h3>
+				<p>{$t('dataBrowser.home.tablesCard')}</p>
 			</Card>
 		</div>
 	</div>

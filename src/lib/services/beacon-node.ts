@@ -26,6 +26,7 @@ import { Utils } from '@/utils';
 import { track } from '@/telemetry';
 import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-node-health';
 import { normalizeUrl } from './beacon-node-url';
+import { signOut } from './admin-session';
 
 export type { BeaconNode, NodeRef, StoredBeaconNode };
 export { normalizeUrl };
@@ -232,6 +233,9 @@ export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconN
 		}
 	});
 
+	// A session belongs to the server at the old URL.
+	if (updated.url !== previous.url) signOut(id);
+
 	if (updated.token !== previous.token) {
 		dropHealth(updated.url);
 		return { ...updated, ...UNKNOWN_HEALTH };
@@ -252,6 +256,7 @@ export function removeNode(id: string): BeaconNode | null {
 	const wasSelected = get(selectedIdStore) === id;
 
 	listStore.update((list) => list.filter((node) => node.id !== id));
+	signOut(id);
 
 	// Another record can point at the same node. Keep the health for it.
 	if (findByUrl(removed.url) === null) {

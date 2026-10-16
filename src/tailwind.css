@@ -24,6 +24,9 @@
   
   --highlight: #087cdf;
 
+  /* The beacon-datalake.org header gradient. */
+  --admin-badge-background: linear-gradient(120deg,#08306b 0 3.3333333333%,#0c3976 3.3333333333% 6.6666666667%,#114381 6.6666666667% 10%,#154c8d 10% 13.3333333333%,#195598 13.3333333333% 16.6666666667%,#1e5fa3 16.6666666667% 20%,#2569ae 20% 23.3333333333%,#387ab6 23.3333333333% 26.6666666667%,#4c8abf 26.6666666667% 30%,#5f9ac8 30% 33.3333333333%,#73abd0 33.3333333333% 36.6666666667%,#86bbd9 36.6666666667% 40%,#99c3d8 40% 43.3333333333%,#aabdc8 43.3333333333% 46.6666666667%,#bbb8b8 46.6666666667% 50%,#cbb2a8 50% 53.3333333333%,#dcad98 53.3333333333% 56.6666666667%,#eda788 56.6666666667% 60%,#f19e7d 60% 63.3333333333%,#ec9273 63.3333333333% 66.6666666667%,#e7866a 66.6666666667% 70%,#e17a61 70% 73.3333333333%,#dc6e58 73.3333333333% 76.6666666667%,#d7624f 76.6666666667% 80%,#c75347 80% 83.3333333333%,#b4423f 83.3333333333% 86.6666666667%,#a03237 86.6666666667% 90%,#8d212f 90% 93.3333333333%,#7a1127 93.3333333333% 96.6666666667%,#67001f 96.6666666667% 100%);
+
   --primary: #3451b2; /*  oklch(35.9% 0.144 278.697); */
   --primary-foreground: oklch(0.985 0 0);
   
@@ -35,6 +38,8 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
+  --access-all: #16a34a;
+  --access-limited: #d97706;
   --border: color-mix(in srgb, var(--primary) 25%, transparent);
   --input: oklch(0.92 0.004 286.32);
   --focus-ring: oklch(0.705 0.015 286.067);
@@ -149,6 +154,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Type tokens live in app.scss. */
+  --font-sans: var(--font-family-base);
+  --font-mono: var(--font-family-mono);
+  --text-xs: var(--font-size-xs);
+  --text-sm: var(--font-size-sm);
+  --text-base: var(--font-size-md);
+  --text-lg: var(--font-size-lg);
+  --text-xl: var(--font-size-xl);
+  --text-2xl: var(--font-size-2xl);
   /* `bg-background` needs this map. The dialog panel is transparent without it. */
   --color-background: var(--background);
   --color-foreground: var(--foreground);

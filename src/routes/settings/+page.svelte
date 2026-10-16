@@ -7,8 +7,10 @@
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import { t, translate } from '@/i18n';
+	import { canRememberSignIn, forgetAllAdminSignIns } from '@/services/admin-session';
 	import {
 		resetSettings,
+		settings,
 		VISIBLE_SETTING_DEFINITIONS,
 		type SettingDefinition,
 		type SettingGroup
@@ -49,6 +51,24 @@
 		resetSettings();
 		addToast({ type: 'success', key: 'settings.resetAllDone' });
 	}
+
+	async function onForgetAdminSignIns(): Promise<void> {
+		const goAhead = await askConfirm({
+			title: translate('settings.forgetAdminSignIns'),
+			message: translate('settings.forgetAdminSignInsMessage'),
+			confirmLabel: translate('settings.forgetAdminSignIns'),
+			destructive: true
+		});
+
+		if (!goAhead) return;
+
+		try {
+			await forgetAllAdminSignIns();
+			addToast({ type: 'success', key: 'settings.forgetAdminSignInsDone' });
+		} catch (error) {
+			addToast({ type: 'error', key: 'settings.forgetAdminSignIns', message: String(error) });
+		}
+	}
 </script>
 
 <svelte:head>
@@ -77,6 +97,11 @@
 		</div>
 
 		<div class="actions">
+			{#if $settings.adminFeatures && canRememberSignIn()}
+				<Button variant="outline" onclick={onForgetAdminSignIns}>
+					{$t('settings.forgetAdminSignIns')}
+				</Button>
+			{/if}
 			<Button variant="outline" onclick={onResetAll}>{$t('settings.resetAll')}</Button>
 		</div>
 
@@ -112,12 +137,13 @@
 		.actions {
 			display: flex;
 			justify-content: flex-end;
+			gap: 0.5rem;
 			margin: 1rem 0 2rem;
 		}
 
 		.build-note {
 			margin: 0 0 2rem;
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			color: var(--muted-foreground);
 			text-align: center;
 		}

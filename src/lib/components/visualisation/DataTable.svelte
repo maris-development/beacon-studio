@@ -19,6 +19,9 @@
 		isLoading?: boolean;
 		rowClass?: string;
 		size?: 'small' | 'medium' | 'large';
+		pagination?: boolean;
+		/** Shows a null or undefined cell as a styled NULL, apart from an empty string. */
+		showNull?: boolean;
 	};
 
 	let {
@@ -32,7 +35,9 @@
 		totalRows = 0,
 		isLoading = false,
 		rowClass = '',
-		size = 'medium'
+		size = 'medium',
+		pagination = true,
+		showNull = true
 	}: Props = $props();
 
 	let pageCount: number = $derived.by(() => {
@@ -119,7 +124,9 @@
 					{#each rows as row, rowIndex (rowIndex)}
 						<tr class={rowClass}>
 							{#each columns as column (column.key)}
-								{#if column.rawHtml === true}
+								{#if showNull && cell(row, column) == null}
+									<td onclick={() => onCellClick(row, column)}><span class="null-value">{$t('table.nullValue')}</span></td>
+								{:else if column.rawHtml === true}
 									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>
 								{:else}
@@ -132,23 +139,22 @@
 			</tbody>
 		</table>
 	</div>
-	<div class="pagination">
-		<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
-			{$t('table.previous')}
-		</button>
-		<div class="page-info">
-			{$t('table.pageBeforeInput')}
-			<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
-			{$t('table.pageAfterInput', { count: pageCount })}
-
-			
-
+	{#if pagination}
+		<div class="pagination">
+			<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
+				{$t('table.previous')}
+			</button>
+			<div class="page-info">
+				{$t('table.pageBeforeInput')}
+				<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
+				{$t('table.pageAfterInput', { count: pageCount })}
+			</div>
+			<button
+				disabled={pageIndex >= pageCount}
+				onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>{$t('table.next')}</button
+			>
 		</div>
-		<button
-			disabled={pageIndex >= pageCount}
-			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>{$t('table.next')}</button
-		>
-	</div>
+	{/if}
 </div>
 
 <style lang="scss">
@@ -178,7 +184,7 @@
 				thead th,
 				tbody td {
 					padding: 0.5rem 0.75rem;
-					font-size: 0.875rem;
+					font-size: var(--font-size-sm);
 					border-bottom: 1px solid var(--table-border);
 					white-space: nowrap;
 				}
@@ -187,7 +193,7 @@
 					thead th, 
 					tbody td {
 						padding: 0.25rem 0.5rem;
-						font-size: 0.7rem;
+						font-size: var(--font-size-xs);
 					}
 				}
 
@@ -195,7 +201,7 @@
 					thead th, 
 					tbody td {
 						padding: 1rem 1.5rem;
-						font-size: 1rem;
+						font-size: var(--font-size-md);
 					}
 				}
 				
@@ -243,6 +249,12 @@
 						td {
 							color: var(--table-foreground);
 
+							.null-value {
+								color: var(--muted-foreground);
+								font-style: italic;
+								opacity: 0.7;
+							}
+
 							&.no-data {
 								display: table-cell;
 								text-align: center;
@@ -275,7 +287,7 @@
 				color: var(--primary-foreground);
 				border: none;
 				padding: 0.5rem 1rem;
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				border-radius: 4px;
 				cursor: pointer;
 				transition: filter 0.2s ease;
@@ -296,7 +308,7 @@
 			}
 
 			.page-info {
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				color: var(--foreground);
 			}
 		}

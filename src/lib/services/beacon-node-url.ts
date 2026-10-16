@@ -105,3 +105,12 @@ export function normalizeUrl(url: string): string {
 
     return origin + pathPrefix;
 }
+
+/** The host of a node URL, for a short label. Returns the input when it does not parse. */
+export function nodeHost(url: string): string {
+    try {
+        return new URL(url).host;
+    } catch {
+        return url;
+    }
+}

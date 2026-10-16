@@ -12,7 +12,7 @@
 	import { page } from '$app/state';
 	import { addToast, dismissToast } from '@/stores/toasts';
 	import { openFeedback } from '$lib/feedback';
-	import { t, type MessageKey } from '@/i18n';
+	import { t } from '@/i18n';
 
 	// Icons
 	import EyeIcon from '@lucide/svelte/icons/eye';
@@ -22,45 +22,33 @@
 	import Table2Icon from '@lucide/svelte/icons/table-2';
 	import LinkIcon from '@lucide/svelte/icons/link-2';
 	import CpuIcon from '@lucide/svelte/icons/cpu';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
+	import RadarIcon from '@lucide/svelte/icons/radar';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
 	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
 
 	// Components
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
 	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
 	import BuildVersion from './BuildVersion.svelte';
 	import LanguageMenu from './LanguageMenu.svelte';
-
-	type SubItem = { title: MessageKey; url: string };
-	type MenuItem = {
-		title: MessageKey;
-		url: string;
-		/** Section root the item highlights on. Defaults to `url`. */
-		match?: string;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		icon: any;
-		children?: SubItem[];
-		target?: string;
-	};
-	type Group = { title: MessageKey; items: MenuItem[] };
+	import { settings } from '@/stores/settings';
+	import { signedInNodeIds } from '@/services/admin-session';
+	import { isLocked, visibleGroups, type Group, type MenuItem } from './menu';
 
 	const groups: Group[] = [
 		{
 			title: 'nav.group.dataAccess',
 			items: [
 				{
-					title: 'nav.item.queries',
+					title: 'nav.item.queryBuilder',
 					url: resolve('/queries/workbench'),
 					match: resolve('/queries'),
-					icon: TextSearchIcon,
-					children: [
-						{ title: 'nav.item.queryBuilder', url: resolve('/queries/workbench') },
-						{ title: 'nav.item.savedQueries', url: resolve('/queries/saved') },
-						{ title: 'nav.item.queryHistory', url: resolve('/queries/history') }
-					]
+					icon: TextSearchIcon
 				}
 			]
 		},
@@ -71,12 +59,7 @@
 					title: 'nav.item.workspace',
 					url: resolve('/visualisations/map-viewer'),
 					match: resolve('/visualisations'),
-					icon: EyeIcon,
-					children: [
-						{ title: 'nav.item.mapViewer', url: resolve('/visualisations/map-viewer') },
-						{ title: 'nav.item.tableExplorer', url: resolve('/visualisations/table-explorer') },
-						{ title: 'nav.item.chartExplorer', url: resolve('/visualisations/chart-explorer') }
-					]
+					icon: EyeIcon
 				}
 			]
 		},
@@ -91,6 +74,24 @@
 						{ title: 'nav.item.datasets', url: resolve('/data-browser/datasets') },
 						{ title: 'nav.item.dataTables', url: resolve('/data-browser/data-tables') }
 					]
+				},
+				{
+					title: 'nav.item.sqlConsole',
+					url: resolve('/sql-editor'),
+					icon: SquareTerminalIcon,
+					adminOnly: true
+				},
+				{
+					title: 'nav.item.crawlers',
+					url: resolve('/data-browser/crawlers'),
+					icon: RadarIcon,
+					adminOnly: true
+				},
+				{
+					title: 'nav.item.usersRoles',
+					url: resolve('/node-management/users-roles'),
+					icon: ShieldIcon,
+					adminOnly: true
 				},
 				{ title: 'nav.item.systemInfo', url: resolve('/system-info'), icon: CpuIcon }
 			]
@@ -125,8 +126,19 @@
 		}
 	];
 
+	let shownGroups = $derived(visibleGroups(groups, $settings.adminFeatures));
+
+	let hasSession = $derived(!!$currentNode && $signedInNodeIds.has($currentNode.id));
+
+	function lockOf(item: MenuItem): string | undefined {
+		if (!isLocked(item, hasSession)) return undefined;
+		if (!$currentNode) return $t('nav.adminLock.noNode');
+
+		return $t('nav.adminLock.signIn', { node: $currentNode.name });
+	}
+
 	// A brand hides a link with a null URL.
-	const footer = footerLinks.filter((item) => item.url !== null);
+	const shownFooterLinks = footerLinks.filter((item) => item.url !== null);
 
 	// The layout owns both flags, because the page header holds the menu button.
 	let {
@@ -218,9 +230,11 @@
 </script>
 
 {#if isMobile && !collapsed}
-	<button class="sidebar-backdrop" 
-			aria-label={$t('nav.closeMenu')} 
-			onclick={() => (collapsed = true)}></button>
+	<button
+		class="sidebar-backdrop"
+		aria-label={$t('nav.closeMenu')}
+		onclick={() => (collapsed = true)}
+	></button>
 {/if}
 
 <div class="sidebar" class:collapsed>
@@ -244,11 +258,10 @@
 				{/if}
 			</button>
 		</div>
-
 	</div>
 
 	<div class="sidebar-content">
-		{#each groups as group (group.title)}
+		{#each shownGroups as group (group.title)}
 			<div class="menu-group">
 				<span class="menu-title">{$t(group.title)}</span>
 				{#each group.items as item (item.url)}
@@ -261,7 +274,13 @@
 							items={item.children.map((child) => ({ title: $t(child.title), url: child.url }))}
 						/>
 					{:else}
-						<SidebarMenuItem title={$t(item.title)} url={item.url} icon={item.icon} />
+						<SidebarMenuItem
+							title={$t(item.title)}
+							url={item.url}
+							match={item.match}
+							icon={item.icon}
+							lock={lockOf(item)}
+						/>
 					{/if}
 				{/each}
 			</div>
@@ -270,7 +289,7 @@
 
 	<div class="sidebar-footer">
 		<div class="menu-group">
-			{#each footer as item (item.url)}
+			{#each shownFooterLinks as item (item.url)}
 				<SidebarMenuItem
 					title={$t(item.title)}
 					url={item.url}
@@ -337,7 +356,7 @@
 
 					.app-name {
 						flex-grow: 1;
-						font-size: 1rem;
+						font-size: var(--font-size-md);
 						font-weight: 600;
 						line-height: 1.5rem;
 						margin: 0;
@@ -398,7 +417,7 @@
 			flex-direction: column;
 
 			.menu-title {
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 				font-weight: 600;
 				line-height: 1rem;
 				text-transform: uppercase;

@@ -56,7 +56,7 @@
 
 	.search-select-group-heading {
 		padding: 0.25rem 0.5rem;
-		font-size: 0.75rem;
+		font-size: var(--font-size-xs);
 		font-weight: 600;
 		color: var(--muted-foreground);
 	}

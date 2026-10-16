@@ -89,7 +89,7 @@
 		gap: 0.5rem;
 		white-space: nowrap;
 		border-radius: var(--button-radius);
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		line-height: 1.25rem;
 		font-weight: var(--button-font-weight);
 		text-transform: var(--button-text-transform);

@@ -72,7 +72,7 @@
 			display: flex;
 			justify-content: space-between;
 			gap: 0.5rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 
 		em {

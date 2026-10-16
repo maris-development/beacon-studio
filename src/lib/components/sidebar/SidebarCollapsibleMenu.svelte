@@ -4,13 +4,14 @@
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import Button from '@/components/buttons/Button.svelte';
 	import SidebarMenuItem from './SidebarMenuItem.svelte';
+	import { isItemActive } from './menu';
 
 	let {
 		title,
 		url,
 		match = undefined,
 		icon: Icon,
-		items,
+		items
 	}: {
 		title: string;
 		url: string;
@@ -21,11 +22,7 @@
 		items: { title: string; url: string }[];
 	} = $props();
 
-	function isActive(itemUrl: string): boolean {
-		return page.url.pathname === itemUrl || page.url.pathname.startsWith(itemUrl + '/');
-	}
-
-	const isHeaderActive = $derived(isActive(match ?? url));
+	const isHeaderActive = $derived(isItemActive(page.url.pathname, { url, match, children: items }));
 	const storageKey = $derived(`beacon-studio.sidebar-menu.${url}.open`);
 
 	let open = $state(true);

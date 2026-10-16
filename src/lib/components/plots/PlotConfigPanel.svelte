@@ -1329,7 +1329,7 @@
 				border-radius: 0.375rem;
 				border: 1px solid var(--border, #e5e7eb);
 				background-color: var(--card, #ffffff);
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 				font-weight: 500;
 				cursor: pointer;
 
@@ -1352,7 +1352,7 @@
 		}
 
 		h4 {
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 			font-weight: 600;
 			text-transform: uppercase;
 			letter-spacing: 0.04em;
@@ -1375,11 +1375,11 @@
 				display: flex;
 				justify-content: space-between;
 				gap: 0.5rem;
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 			}
 
 			.fixed-value {
-				font-size: 0.8125rem;
+				font-size: var(--font-size-sm);
 				color: var(--muted-foreground, #6b7280);
 				padding: 0.375rem 0;
 			}
@@ -1411,7 +1411,7 @@
 				justify-content: space-between;
 				padding: 0.625rem 0;
 				color: var(--foreground, #111827);
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 				font-weight: 600;
 				letter-spacing: 0.04em;
 				text-transform: uppercase;
@@ -1424,7 +1424,7 @@
 
 				&::after {
 					content: '\2304';
-					font-size: 1rem;
+					font-size: var(--font-size-md);
 					line-height: 0.75;
 					transform: rotate(180deg);
 					transition: transform 0.15s ease;
@@ -1465,7 +1465,7 @@
 				gap: 0.5rem;
 				padding: 0.625rem 0;
 				color: var(--foreground, #111827);
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 				font-weight: 600;
 				letter-spacing: 0.04em;
 				text-transform: uppercase;
@@ -1478,7 +1478,7 @@
 
 				&::after {
 					content: '\2304';
-					font-size: 1rem;
+					font-size: var(--font-size-md);
 					line-height: 0.75;
 					transform: rotate(0deg);
 					transition: transform 0.15s ease;
@@ -1502,7 +1502,7 @@
 			display: flex;
 			justify-content: space-between;
 			gap: 0.5rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 
 		.clip-range-header span:last-child {
@@ -1612,7 +1612,7 @@
 
 		.axis-title,
 		.axis-heading {
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			font-weight: 500;
 		}
 
@@ -1625,7 +1625,7 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 0.5rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 			cursor: pointer;
 		}
 
@@ -1676,14 +1676,14 @@
 			flex-direction: column;
 			gap: 0.3125rem;
 			min-width: 0;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 		}
 
 		.checkbox-field {
 			display: flex;
 			align-items: center;
 			gap: 0.5rem;
-			font-size: 0.8125rem;
+			font-size: var(--font-size-sm);
 			cursor: pointer;
 
 			:global([data-slot='checkbox'][data-state='checked']) {
@@ -1699,7 +1699,7 @@
 		}
 
 		.hint {
-			font-size: 0.75rem;
+			font-size: var(--font-size-xs);
 			color: var(--muted-foreground, #6b7280);
 		}
 	}

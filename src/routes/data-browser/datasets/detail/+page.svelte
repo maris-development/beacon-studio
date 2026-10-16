@@ -1,190 +1,322 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { BeaconClient } from '@/beacon-api/client';
-	import { findByUrl } from '@/services/beacon-node';
-	import { error } from '@sveltejs/kit';
 	import { onMount } from 'svelte';
-	import { track } from '@/telemetry';
-	import DataTable from '@/components/visualisation/DataTable.svelte';
-	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import type { SchemaField, Schema } from '@/beacon-api/types';
-	import type { Column, SortDirection } from '@/util-types';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Input } from '@/components/ui/input';
-	import { t, translate, type MessageKey } from '@/i18n';
+	import { error as kitError } from '@sveltejs/kit';
+	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
+	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
+	import Button from '@/components/buttons/Button.svelte';
+	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
+	import AdminAction from '@/components/AdminAction.svelte';
+	import BackLink from '@/components/data-browser/BackLink.svelte';
+	import SchemaTable from '@/components/data-browser/SchemaTable.svelte';
+	import PreviewGrid from '@/components/data-browser/PreviewGrid.svelte';
+	import DetailTabs from '@/components/data-browser/DetailTabs.svelte';
+	import { saveBlob } from '@/components/sql-editor/save-blob';
+	import { makeBeaconClient } from '@/beacon-api/client';
+	import type { BeaconNode } from '@/beacon-api/types';
+	import { findByUrl } from '@/services/beacon-node';
+	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
+	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { askConfirm } from '@/stores/confirm';
+	import { addToast } from '@/stores/toasts';
+	import { track } from '@/telemetry';
+	import { backTarget } from '@/data-browser/back';
+	import {
+		datasetEditorSql,
+		fileName,
+		folderOf,
+		formatFromPath,
+		formatSize,
+		parseEntries,
+		previewQuery,
+		type DatasetEntry
+	} from '@/data-browser/datasets';
+	import { parseSchema } from '@/sql/catalog';
+	import { formatNumber, t, translate } from '@/i18n';
 
-	const file = page.url.searchParams.get('file') || '';
+	const LIST = resolve('/data-browser/datasets');
 
+	const file = page.url.searchParams.get('file') ?? '';
 	if (!file) {
-		throw error(400, translate('browser.error.missingParam', { name: 'file' }));
+		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'file' }));
 	}
 
-	// The node URL, and not its id. An id exists in one browser only, so a
-	// shared link must name the node itself.
-	const nodeUrl = page.url.searchParams.get('node') || '';
-
+	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
+	const nodeUrl = page.url.searchParams.get('node') ?? '';
 	if (!nodeUrl) {
-		throw error(400, translate('browser.error.missingParam', { name: 'node' }));
+		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'node' }));
 	}
 
-	let client: BeaconClient;
+	const FOLDER_LIST = `${LIST}?folder=${encodeURIComponent(folderOf(file))}`;
+	// The base path without its trailing slash.
+	const PREFIX = resolve('/').replace(/\/$/, '');
 
-	let virtualSchemaData: VirtualPaginationData<SchemaField> =
-		new VirtualPaginationData<SchemaField>([]);
-	const SCHEMA_HEADERS: Record<string, MessageKey> = {
-		name: 'browser.schema.field',
-		data_type: 'browser.schema.dataType',
-		nullable: 'browser.schema.nullable',
-		dict_id: 'browser.schema.dictId',
-		dict_is_ordered: 'browser.schema.isOrdered',
-		metadata: 'browser.schema.metadata'
-	};
-	let columns: Column[] = $state([
-		{ key: 'name', header: '', sortable: true },
-		{ key: 'data_type', header: '', sortable: true },
-		{ key: 'nullable', header: '', sortable: true },
-		{ key: 'dict_id', header: '', sortable: true },
-		{ key: 'dict_is_ordered', header: '', sortable: true },
-		{ key: 'metadata', header: '', sortable: false }
-	]);
+	// Admin actions need a saved node: the sign-in session belongs to its id.
+	let savedNode: BeaconNode | null = $state(null);
+	let client: SdkClient | null = $state(null);
 
-	// The headers follow the language. The objects stay, so the sort state stays.
-	$effect.pre(() => {
-		for (const column of columns) column.header = $t(SCHEMA_HEADERS[column.key]);
+	// The list builds the detail link from a known entry. A share link has only the path.
+	let entry: DatasetEntry = $state({
+		path: file,
+		format: formatFromPath(file),
+		canInspect: true,
+		size: null,
+		lastModified: null
 	});
+	let tab = $state('schema');
+	let columns: string[] | null = $state(null);
+	let busy = $state(false);
 
-	let rows: SchemaField[] = $state([]);
-	let totalRows: number = $state(0);
-	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let offset = $state(0);
-	let isLoading = $state(true);
-	let pageSize: number = 20;
-	let firstLoad = true;
+	let folderList = $derived(backTarget(page.url.searchParams.get('back'), PREFIX, FOLDER_LIST));
 
-	onMount(() => {
-		// A receiver without this node still reads it, over a client with no token.
-		const saved = findByUrl(nodeUrl);
+	// A node outside the list gets a client with no token.
+	function readNode(): BeaconNode {
+		if (savedNode) return savedNode;
 
-		if (saved) {
-			client = BeaconClient.new(saved);
-		} else {
-			client = new BeaconClient(nodeUrl);
-		}
+		return {
+			id: '',
+			name: nodeUrl,
+			url: nodeUrl,
+			status: 'unknown',
+			latencyMs: null,
+			lastCheckedAt: null
+		};
+	}
 
+	onMount(async () => {
 		track('browser.dataset.open', { nodeHost: nodeUrl, props: { file } });
 
-		getDatasetSchema();
+		// On a first visit the public nodes arrive after this page mounts.
+		await whenOpenNodesSettled();
+		savedNode = findByUrl(nodeUrl);
+		const current = makeBeaconClient(readNode());
+
+		try {
+			const found = parseEntries(await current.datasets({ pattern: file, limit: 1 }));
+			if (found[0]?.path === file) entry = found[0];
+		} catch {
+			// The details stay unknown. Schema and preview still try.
+		}
+
+		client = current;
+		// The user can open Preview before the client is ready.
+		void loadColumns();
 	});
 
-	async function getDatasetSchema() {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+	let schemaLoad: Promise<unknown> | null = null;
 
-		firstLoad = false;
-		isLoading = true;
+	// One request per page: the schema tab and the preview columns share it.
+	function loadSchema(): Promise<unknown> {
+		if (!client) return Promise.resolve(null);
 
-		const schema: Schema | null = await client.getDatasetSchema(file);
+		if (!schemaLoad) {
+			const load = client.datasetSchema(file).then((schema) => {
+				columns = parseSchema(schema).map((column) => column.name);
+				return schema;
+			});
+			// A failure can be tried again on the next open.
+			load.catch(() => (schemaLoad = null));
+			schemaLoad = load;
+		}
 
-		if (schema) {
-			totalRows = schema.fields.length;
-			virtualSchemaData.setData(schema.fields);
-			getPage();
+		return schemaLoad;
+	}
+
+	async function loadColumns() {
+		if (tab !== 'preview' || columns !== null || !client || !entry.canInspect) return;
+
+		try {
+			await loadSchema();
+		} catch {
+			columns = [];
 		}
 	}
 
-	function getPage() {
-		offset = (pageIndex - 1) * pageSize;
-
-		const data = virtualSchemaData.getPageData(offset, pageSize);
-
-		setData(data);
-
-		Utils.setPageUrlParameter(pageIndex);
+	function selectTab(id: string) {
+		tab = id;
+		void loadColumns();
 	}
 
-	function setData(fields: SchemaField[]) {
-		rows = fields;
+	async function download() {
+		if (!savedNode) return;
+		busy = true;
 
-		isLoading = false;
-	}
-
-	function onPageChange(page: number) {
-		pageIndex = page;
-
-		getPage();
-	}
-
-	function onSearchBoxChange() {
-		const searchTerm = (document.getElementById('search') as HTMLInputElement).value;
-
-		if (!searchTerm) {
-			totalRows = virtualSchemaData.resetFilter();
-			getPage();
-			return;
+		try {
+			const blob = await withAdmin(savedNode, (admin) => admin.admin.downloadDataset(file));
+			if (blob !== null) saveBlob(blob, fileName(file));
+		} catch (caught) {
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.datasets.detail.downloadFailed',
+				message: adminErrorMessage(caught)
+			});
+		} finally {
+			busy = false;
 		}
+	}
 
-		totalRows = virtualSchemaData.filter(function (field: SchemaField) {
-			for (const value of Object.values(field)) {
-				if (typeof value === 'string') {
-					return value.toLowerCase().includes(searchTerm.toLowerCase());
-				}
-			}
+	async function remove() {
+		if (!savedNode) return;
 
-			return false;
+		const sure = await askConfirm({
+			title: translate('dataBrowser.datasets.detail.deleteTitle', { name: fileName(file) }),
+			message: translate('dataBrowser.datasets.detail.deleteMessage', {
+				path: file,
+				node: savedNode.name
+			}),
+			note: translate('dataBrowser.datasets.detail.deleteNote'),
+			confirmLabel: translate('common.delete'),
+			destructive: true
 		});
+		if (!sure) return;
 
-		track('browser.search', { props: { scope: 'dataset-fields', term: searchTerm.slice(0, 60), results: totalRows } });
+		busy = true;
 
-		getPage();
+		try {
+			const done = await withAdmin(savedNode, async (admin) => {
+				await admin.admin.deleteDataset(file);
+				return true;
+			});
+			if (done) {
+				addToast({
+					type: 'success',
+					key: 'dataBrowser.datasets.detail.deleted',
+					values: { name: fileName(file) }
+				});
+				goto(folderList);
+			}
+		} catch (caught) {
+			addToast({
+				type: 'error',
+				key: 'dataBrowser.datasets.detail.deleteFailed',
+				message: adminErrorMessage(caught)
+			});
+		} finally {
+			busy = false;
+		}
 	}
 
-	function onChangeSort(column: keyof SchemaField, direction: SortDirection) {
-		virtualSchemaData.orderBy(column, direction);
-
-		getPage();
+	function openInEditor() {
+		goto(`${resolve('/sql-editor')}?sql=${encodeURIComponent(datasetEditorSql(entry))}`);
 	}
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('browser.dataset.title', { name: file }) })}</title>
+	<title>
+		{$t('app.pageTitle', {
+			page: $t('dataBrowser.datasets.detail.title', { name: fileName(file) })
+		})}
+	</title>
 </svelte:head>
 
 <Cookiecrumb
 	crumbs={[
 		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
-		{ label: $t('nav.item.datasets'), href: resolve('/data-browser/datasets') },
-		{ label: $t('browser.dataset.title', { name: file }), href: '#' }
+		{ label: $t('nav.item.datasets'), href: LIST },
+		{ label: fileName(file), href: '' }
 	]}
 />
+
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>{$t('browser.dataset.heading', { name: file, count: totalRows })}</h1>
+		<BackLink label={$t('nav.item.datasets')} fallback={FOLDER_LIST} />
 
-		<p class="node-line">{$t('browser.nodeLine', { url: nodeUrl })}</p>
+		<header class="head">
+			<div>
+				<h1>{fileName(file)}</h1>
+				<p class="meta">
+					<span class="mono">{file}</span>
+					{#if entry.format}· {entry.format}{/if}
+					{#if entry.size !== null}· {formatSize(entry.size, $formatNumber)}{/if}
+					{#if entry.lastModified}· {entry.lastModified}{/if}
+					· {savedNode?.name ?? nodeUrl}
+				</p>
+			</div>
 
-		<Input type="search" id="search" placeholder={$t('browser.searchPlaceholder')} class="search-input" onchange={onSearchBoxChange} />
+			<div class="actions">
+				<!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
+				<AdminAction>
+					{#snippet children({ disabled })}
+						<Button variant="outline" onclick={openInEditor} {disabled}>
+							<SquareTerminalIcon />
+							{$t('dataBrowser.datasets.detail.openInEditor')}
+						</Button>
+					{/snippet}
+				</AdminAction>
 
+				{#if savedNode}
+					<AdminAction>
+						{#snippet children({ disabled })}
+							<Button variant="outline" disabled={disabled || busy} onclick={download}>
+								{$t('dataBrowser.datasets.detail.download')}
+							</Button>
+						{/snippet}
+					</AdminAction>
+					<AdminAction>
+						{#snippet children({ disabled })}
+							<Button variant="destructive" disabled={disabled || busy} onclick={remove}>
+								{$t('common.delete')}
+							</Button>
+						{/snippet}
+					</AdminAction>
+				{/if}
+			</div>
+		</header>
 
-		<DataTable
-			{onPageChange}
-			{onChangeSort}
-			{columns}
-			{rows}
-			{totalRows}
-			{pageSize}
-			{pageIndex}
-			{isLoading}
+		<DetailTabs
+			tabs={[
+				{ id: 'schema', label: $t('dataBrowser.datasets.detail.schema') },
+				{ id: 'preview', label: $t('dataBrowser.datasets.detail.preview') }
+			]}
+			active={tab}
+			onSelect={selectTab}
 		/>
+
+		{#if !client}
+			<p class="muted">{$t('dataBrowser.datasets.detail.loadingFile')}</p>
+		{:else if !entry.canInspect}
+			<p class="muted">{$t('dataBrowser.datasets.detail.cannotRead')}</p>
+		{:else if tab === 'schema'}
+			<SchemaTable load={loadSchema} />
+		{:else if columns === null}
+			<p class="muted">{$t('dataBrowser.datasets.detail.loadingColumns')}</p>
+		{:else if columns.length === 0}
+			<p class="muted">{$t('dataBrowser.datasets.detail.noColumns')}</p>
+		{:else}
+			<PreviewGrid source={client} query={previewQuery(entry, columns)} />
+		{/if}
 	</div>
 </div>
 
 <style lang="scss">
-	:global(.search-input){
-		margin-bottom: 0.5rem;
-	}
-	p.node-line {
-		margin-bottom: 1rem;
+	.head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1rem;
 
+		h1 {
+			margin: 0;
+			word-break: break-all;
+		}
+	}
+
+	.meta {
+		margin: 0.25rem 0 0;
+		color: var(--muted-foreground);
+		word-break: break-all;
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.muted {
 		color: var(--muted-foreground);
 	}
 </style>

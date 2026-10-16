@@ -39,7 +39,7 @@
 		user-select: none;
 
 		&[data-size='sm'] {
-			font-size: 0.6875rem;
+			font-size: var(--font-size-xs);
 			font-weight: 600;
 			text-transform: uppercase;
 			letter-spacing: 0.04em;

@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { execSync } from 'node:child_process';
 import { brandPlugin, resolveBrand } from './scripts/brand.js';
 
@@ -56,12 +56,18 @@ function telemetryFlag() {
 	return { __TELEMETRY__: JSON.stringify(enabled) };
 }
 
+function basePathFlag() {
+	const basePath = (process.env.BASE_PATH ?? '').trim();
+	console.log(`[beacon-studio] base path: ${basePath}`);
+	return { __BASE_PATH__: JSON.stringify(basePath) };
+}
+
 const brand = resolveBrand();
 console.log(`[beacon-studio] brand: ${brand.name}`);
 
 export default defineConfig({
 	plugins: [brandPlugin(brand), tailwindcss(), sveltekit(), devtoolsJson()],
-	define: { ...buildInfo(), ...telemetryFlag(), __BRAND__: JSON.stringify(brand.name) },
+	define: { ...buildInfo(), ...telemetryFlag(), ...basePathFlag(), __BRAND__: JSON.stringify(brand.name) },
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
 		dedupe: ['apache-arrow']
@@ -81,5 +87,9 @@ export default defineConfig({
 	},
 	css: {
 		devSourcemap: true
+	},
+	test: {
+		environment: 'jsdom',
+		include: ['src/**/*.test.ts']
 	}
 });

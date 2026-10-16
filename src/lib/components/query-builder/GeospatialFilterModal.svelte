@@ -260,7 +260,7 @@
 
 	.geo-filter-description {
 		margin: 0;
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
 	}
 
@@ -294,7 +294,7 @@
 		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--destructive);
 		border-radius: var(--radius, 0.5rem);
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 		color: var(--destructive);
 
 		:global(svg) {
@@ -325,7 +325,7 @@
 
 	.geo-filter-hint {
 		flex-grow: 1;
-		font-size: 0.8rem;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
 		text-align: left;
 	}

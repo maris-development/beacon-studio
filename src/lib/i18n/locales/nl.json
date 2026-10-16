@@ -43,22 +43,24 @@
 		"item": {
 			"queries": "Queries",
 			"queryBuilder": "Querybouwer",
-			"savedQueries": "Opgeslagen queries",
-			"queryHistory": "Querygeschiedenis",
 			"workspace": "Werkruimte",
-			"mapViewer": "Kaartviewer",
-			"tableExplorer": "Tabelverkenner",
-			"chartExplorer": "Grafiekverkenner",
 			"dataBrowser": "Databrowser",
 			"datasets": "Datasets",
 			"dataTables": "Datatabellen",
 			"systemInfo": "Systeeminfo",
+			"usersRoles": "Gebruikers en rollen",
 			"beaconNodes": "Beacon-nodes",
 			"settings": "Instellingen",
 			"aboutStudio": "Meer over {app}",
 			"documentation": "Documentatie",
 			"github": "GitHub",
-			"feedback": "Feedback"
+			"feedback": "Feedback",
+			"sqlConsole": "SQL-console",
+			"crawlers": "Crawlers"
+		},
+		"adminLock": {
+			"signIn": "Meld je aan als beheerder op {node} om deze pagina te gebruiken.",
+			"noNode": "Meld je aan als beheerder om deze pagina te gebruiken."
 		},
 		"needsNode": "Deze pagina heeft een Beacon-node nodig. Voeg er een toe op de pagina Beacon-nodes.",
 		"waitForNodes": "{app} leest de openbare Beacon-nodes. Dit gebeurt alleen bij het eerste bezoek. Je query start zodra ze binnen zijn."
@@ -79,6 +81,9 @@
 		"resetAllMessageTelemetry": "Dit zet elke instelling van deze browser terug naar de standaardwaarde. De app verliest je querylimieten, je cachegrootte, je kaartstandaarden en je telemetriekeuze.",
 		"resetAllNote": "Je kunt dit niet ongedaan maken.",
 		"resetAllDone": "Alle instellingen staan weer op hun standaardwaarde.",
+		"forgetAdminSignIns": "Alle beheerderslogins vergeten",
+		"forgetAdminSignInsMessage": "{app} verwijdert elke beheerderslogin die op dit apparaat staat opgeslagen. Logins in geopende tabbladen blijven tot het tabblad sluit.",
+		"forgetAdminSignInsDone": "{app} heeft de opgeslagen beheerderslogins vergeten.",
 		"resetOne": "Zet deze instelling terug naar de standaardwaarde",
 		"noTelemetryBuild": "Deze versie van {app} is gebouwd zonder telemetrie. Ze verstuurt geen gebruiksgegevens.",
 		"group": {
@@ -174,6 +179,10 @@
 			"telemetryConsoleLog": {
 				"label": "Uitvoer van console.log meesturen",
 				"description": "Voegt console.log toe aan de gemelde console-uitvoer. Waarschuwingen en fouten gaan altijd mee. Zet dit alleen aan voor een debugsessie: een logregel geeft ruis en kan een bestandspad of een resultaatwaarde bevatten. Deze schakelaar doet niets zolang \"Gebruiksstatistieken versturen\" uit staat."
+			},
+			"adminFeatures": {
+				"label": "Beheerfuncties tonen",
+				"description": "Toont de beheerpagina's en de beheeracties, bijvoorbeeld het uploaden van datasets. Een beheeractie vraagt om de gebruikersnaam en het wachtwoord van de beheerder van de Beacon-node."
 			}
 		}
 	},
@@ -560,7 +569,8 @@
 		"toast": {
 			"noData": "Geen tabeldata om te tonen.",
 			"sortFailed": "Kan tabel niet sorteren:"
-		}
+		},
+		"nullValue": "NULL"
 	},
 	"chart": {
 		"title": "Grafiekverkenner",
@@ -805,55 +815,27 @@
 		"enable": "Caching aanzetten",
 		"clearAll": "Alle caches wissen"
 	},
-	"system": {
-		"title": "Systeeminformatie",
-		"noNode": {
-			"title": "Geen Beacon-node",
-			"message": "Deze pagina leest één node. Kies eerst een node."
-		},
-		"intro": "Bekijk gedetailleerde informatie over het systeem van {app}, zoals versie, CPU-gebruik, geheugen en meer.",
-		"disabled": "Geen systeeminformatie beschikbaar. Zet systeeminformatie aan met de omgevingsvariabele {variable}.",
-		"version": "Beacon-versie",
-		"uptime": "Systeem actief: {time}",
-		"cpu": {
-			"title": "CPU-gebruik systeem",
-			"cores": "{count, plural, one {# fysieke kern} other {# fysieke kernen}}"
-		},
-		"memory": {
-			"title": "Geheugengebruik systeem"
-		},
-		"swap": {
-			"title": "Swapgebruik systeem"
-		},
-		"total": "{size} totaal",
-		"used": "{percent} gebruikt",
-		"free": "{size} vrij",
-		"load": {
-			"title": "Gemiddelde belasting",
-			"one": "1 min: {percent}",
-			"five": "5 min: {percent}",
-			"fifteen": "15 min: {percent}"
-		},
-		"os": {
-			"title": "Systeeminformatie",
-			"os": "OS: {value}",
-			"hostname": "Hostnaam: {value}",
-			"kernel": "Kernel: {value}",
-			"distribution": "Distributie: {value}",
-			"version": "Versie: {value}"
-		},
-		"cpus": {
-			"title": "Processors",
-			"count": "{count}× {brand}"
-		}
-	},
 	"node": {
 		"form": {
 			"addTitle": "Beacon-node toevoegen",
 			"editTitle": "Beacon-node bewerken",
 			"closeTitle": "Sluiten zonder opslaan",
 			"closeMessage": "Dit formulier bevat wijzigingen die de app nog niet heeft opgeslagen.",
-			"closeNote": "De wijzigingen gaan verloren."
+			"closeNote": "De wijzigingen gaan verloren.",
+			"intro": "Verbind {app} met een Beacon-node.",
+			"namePlaceholder": "Mijn Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "De basis-URL van de node. {app} voegt zelf /api toe.",
+			"tokenPlaceholder": "Optioneel",
+			"tokenHint": "{app} stuurt het als bearer-token mee bij kijkverzoeken.",
+			"adminTitle": "Beheerderstoegang (optioneel)",
+			"adminUsername": "Gebruikersnaam beheerder",
+			"adminPassword": "Wachtwoord beheerder",
+			"adminSignedIn": "Aangemeld als beheerder.",
+			"adminSignOut": "Beheerderssessie sluiten",
+			"adminValid": "De beheerdersgegevens zijn geldig.",
+			"adminFailed": "De node \"{name}\" bestaat, maar zonder beheerderstoegang.",
+			"submitAdd": "Node toevoegen"
 		},
 		"delete": {
 			"title": "Beacon-node verwijderen",
@@ -962,79 +944,566 @@
 	"modal": {
 		"close": "Venster sluiten"
 	},
-	"upload": {
-		"username": "Gebruikersnaam beheerder",
-		"password": "Wachtwoord beheerder",
-		"failed": "Uploaden mislukt",
-		"example": "bijv. {example}",
-		"table": {
-			"title": "Tabel maken",
-			"name": "Tabelnaam",
-			"paths": "Glob-paden",
-			"pathsHint": "Je kunt meerdere paden opgeven, gescheiden door een komma.",
-			"format": "Bestandsformaat",
-			"formatPlaceholder": "Kies een bestandsformaat",
-			"nameMissing": "Voer een tabelnaam in.",
-			"formatMissing": "Kies een bestandsformaat.",
-			"pathMissing": "Voer minstens één glob-pad in.",
-			"created": "✅ Tabel {name} gemaakt"
-		},
-		"files": {
-			"title": "Datasets uploaden",
-			"dataset": "Dataset",
-			"missing": "Kies bestanden.",
-			"done": "✅ {count, plural, one {# bestand} other {# bestanden}} geüpload",
-			"size": "{name} ({size} KB)",
-			"uploading": "Uploaden... {progress}%",
-			"upload": "Uploaden"
-		}
-	},
-	"browser": {
-		"intro": "Gebruik de databrowserfuncties hieronder om je Beacon-inhoud te verkennen en te beheren.",
-		"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
-		"tableCount": "{count, plural, one {# datatabel} other {# datatabellen}}",
-		"datasetsCard": "Bekijk en beheer afzonderlijke datasets.",
-		"tablesCard": "Bekijk en beheer datatabellen.",
-		"searchPlaceholder": "Zoeken...",
-		"nodeLine": "Node: {url}",
-		"picker": {
-			"label": "Beacon-node",
-			"placeholder": "Kies een node",
-			"group": "Nodes"
-		},
-		"error": {
-			"missingParam": "Queryparameter `{name}` ontbreekt"
-		},
-		"datasets": {
-			"column": "Dataset",
-			"intro": "Verken en beheer de datasets die beschikbaar zijn op je Beacon-node.",
-			"noNodes": "Nog geen opgeslagen Beacon-nodes. Voeg een Beacon-node toe op de pagina Beacon-nodes om datasets te bekijken."
-		},
-		"tables": {
-			"column": "Tabel",
-			"default": "Standaard",
-			"intro": "Verken en beheer de tabellen die beschikbaar zijn op je Beacon-node.",
-			"noNodes": "Nog geen opgeslagen Beacon-nodes. Voeg een Beacon-node toe op de pagina Beacon-nodes om datatabellen te bekijken."
-		},
-		"schema": {
-			"field": "Veld",
-			"dataType": "Datatype",
-			"nullable": "Nullable",
-			"dictId": "Dictionary-ID",
-			"isOrdered": "Is geordend",
-			"metadata": "Metadata"
-		},
-		"table": {
-			"title": "Tabel {name}",
-			"heading": "Tabel ''{name}'' ({count, plural, one {# veld} other {# velden}})"
-		},
-		"dataset": {
-			"title": "Dataset {name}",
-			"heading": "Dataset {name} ({count, plural, one {# veld} other {# velden}})"
-		}
-	},
 	"misc": {
 		"externalLink": "Link openen in externe browser",
 		"bytes": "Bytes"
+	},
+	"systemInfo": {
+		"title": "Systeeminformatie",
+		"intro": "De versie, de status en de hostbronnen van een Beacon-node.",
+		"noNode": "Kies een Beacon-node.",
+		"version": "Beacon-versie",
+		"health": "Status",
+		"host": "Host",
+		"noHost": "Deze node geeft geen hostgegevens. De server draait zonder {variable}.",
+		"uptime": {
+			"label": "Uptime",
+			"days": "{days}d {hours}u {minutes}m",
+			"hours": "{hours}u {minutes}m",
+			"minutes": "{minutes}m"
+		},
+		"cpu": {
+			"title": "CPU",
+			"overall": "Totaal gebruik",
+			"physicalCores": "{count, plural, one {# fysieke kern} other {# fysieke kernen}}"
+		},
+		"memory": {
+			"title": "Geheugen",
+			"available": "Beschikbaar: {size}",
+			"swap": "Swap",
+			"noSwap": "Geen swap.",
+			"usage": "{used} van {total}"
+		},
+		"load": {
+			"title": "Gemiddelde belasting",
+			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
+			"perCore": "Per kern: {percent} over 1 min."
+		},
+		"admin": {
+			"title": "Beheer",
+			"users": "Gebruikers",
+			"roles": "Rollen"
+		},
+		"functions": {
+			"title": "Functies",
+			"loading": "Functies laden…",
+			"filter": "Functies filteren",
+			"count": "{shown} van {total, plural, one {# functie} other {# functies}}"
+		},
+		"raw": "Ruw antwoord"
+	},
+	"admin": {
+		"badge": "Admin",
+		"signIn": {
+			"title": "Aanmelden als beheerder",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Gebruik BEACON_ADMIN_USERNAME en BEACON_ADMIN_PASSWORD van de node. {app} bewaart de gegevens alleen voor dit browsertabblad.",
+			"remember": "Onthouden op dit apparaat",
+			"helpRemember": "Gebruik BEACON_ADMIN_USERNAME en BEACON_ADMIN_PASSWORD van de node. Zonder \"Onthouden\" bewaart {app} de gegevens alleen voor dit browsertabblad.",
+			"rememberUnavailable": "Hier niet beschikbaar. {app} heeft een beveiligde verbinding (https:// of localhost) en browseropslag (IndexedDB) nodig.",
+			"rememberNote": "{app} versleutelt het opgeslagen wachtwoord. Een script dat in {app} draait, kan het nog steeds lezen. Gebruik dit alleen op een apparaat dat u vertrouwt.",
+			"rememberFailed": "{app} kon de login niet op dit apparaat opslaan. Hij blijft actief tot u dit tabblad sluit.",
+			"username": "Gebruikersnaam",
+			"password": "Wachtwoord",
+			"submit": "Aanmelden",
+			"busy": "Aanmelden…",
+			"wrongCredentials": "Onjuiste gebruikersnaam of wachtwoord."
+		},
+		"error": {
+			"forbidden": "U hebt geen toestemming voor deze actie op deze Beacon-node.",
+			"status": "De Beacon-node antwoordde met status {status}.",
+			"unreachable": "De Beacon-node is niet bereikbaar."
+		},
+		"offHint": "Zet \"Beheerfuncties tonen\" aan in Instellingen",
+		"sessionRequired": {
+			"title": "Beheerderssessie vereist",
+			"textBefore": "Meld u aan op",
+			"textAfter": "met de beheerdersgegevens van de node.",
+			"button": "Aanmelden als beheerder"
+		},
+		"nodePicker": {
+			"label": "Beacon-node",
+			"placeholder": "Kies een node",
+			"group": "Beacon-nodes",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Aanmelden als beheerder",
+			"signInHint": "Ontgrendel de beheerfuncties van {name}",
+			"closeSession": "Beheerderssessie sluiten",
+			"closeSessionHint": "Aangemeld als beheerder",
+			"addNode": "Node toevoegen",
+			"manageNodes": "Nodes beheren"
+		}
+	},
+	"sqlEditor": {
+		"pickNode": "Kies een Beacon-node.",
+		"toolbar": {
+			"tables": "Tabellen",
+			"stop": "Stoppen",
+			"run": "Uitvoeren",
+			"runShortcut": "Ctrl+Enter",
+			"explain": "Uitleggen",
+			"analyze": "Analyseren",
+			"download": "Downloaden",
+			"hint": "Ctrl+Enter voert de selectie uit, of het hele tabblad."
+		},
+		"result": {
+			"noPlan": "Geen plan om te tonen.",
+			"stoppedPartial": "Gestopt. Het raster toont de rijen die voor de stop binnenkwamen.",
+			"stopped": "Gestopt.",
+			"truncated": "{count, plural, one {Eerste # rij.} other {Eerste # rijen.}} Download voor het volledige resultaat.",
+			"cancelled": "Geannuleerd.",
+			"sqlDisabled": "SQL staat uit op deze Beacon-node."
+		},
+		"error": {
+			"raw": "{text}"
+		},
+		"catalog": {
+			"filter": "Tabellen filteren",
+			"loading": "Tabellen laden…",
+			"noMatch": "Geen tabellen gevonden.",
+			"showColumns": "Kolommen tonen",
+			"loadingColumns": "Kolommen laden…",
+			"showMore": "{count, plural, one {Nog # kolom tonen} other {Nog # kolommen tonen}}"
+		},
+		"plan": {
+			"fold": "Inklappen",
+			"unfold": "Uitklappen",
+			"node": "Knooppunt",
+			"rows": "{rows} rijen",
+			"compute": "rekentijd {time} ms"
+		},
+		"tabs": {
+			"defaultTitle": "Query {number}",
+			"close": "{title} sluiten",
+			"add": "Nieuw tabblad"
+		}
+	},
+	"dataBrowser": {
+		"home": {
+			"intro": "Gebruik de functies van de databrowser hieronder om de inhoud van je Beacon-node te verkennen en te beheren.",
+			"datasetCount": "{count, plural, one {# dataset} other {# datasets}}",
+			"tableCount": "{count, plural, one {# datatabel} other {# datatabellen}}",
+			"datasetsCard": "Bekijk en beheer afzonderlijke datasets.",
+			"tablesCard": "Bekijk en beheer datatabellen."
+		},
+		"common": {
+			"missingParam": "De URL heeft geen parameter `{name}`.",
+			"pickNode": "Kies een Beacon-node.",
+			"tab": {
+				"schema": "Schema",
+				"preview": "Voorbeeld",
+				"definition": "Definitie"
+			},
+			"schema": {
+				"loading": "Kolommen laden…",
+				"filter": "Kolommen filteren",
+				"count": "{shown, number} van {total, plural, one {# kolom} other {# kolommen}}",
+				"column": "Kolom",
+				"type": "Type",
+				"nullable": "Nullable",
+				"yes": "ja",
+				"no": "nee",
+				"showMore": "Meer tonen (nog {count, number})"
+			},
+			"preview": {
+				"loading": "De eerste {count, plural, one {# rij} other {# rijen}} laden…",
+				"none": "Geen rijen.",
+				"first": "Eerste {count, plural, one {# rij} other {# rijen}}."
+			},
+			"folder": {
+				"pick": "Map kiezen",
+				"loading": "Mappen laden…",
+				"none": "Deze node heeft geen mappen.",
+				"filter": "Mappen filteren"
+			}
+		},
+		"tables": {
+			"intro": "Verken de tabellen van je Beacon-node.",
+			"create": "Aanmaken",
+			"createView": "View",
+			"createMaterialized": "Gematerialiseerde view",
+			"createExternal": "Externe tabel",
+			"search": "Tabellen zoeken",
+			"loading": "Tabellen laden…",
+			"noMatch": "Geen tabellen gevonden.",
+			"kindView": "View",
+			"kindTable": "Tabel",
+			"default": "Standaard",
+			"otherSchemas": "Andere schema's",
+			"detail": {
+				"pageTitle": "Tabel {name}",
+				"back": "Tabellen",
+				"notFound": "De node heeft geen tabel \"{name}\" in {schema}.",
+				"openInEditor": "Openen in SQL-console",
+				"drop": "Verwijderen",
+				"loading": "Tabel laden…",
+				"refreshed": "{name} is ververst.",
+				"refreshFailed": "Kan {name} niet verversen.",
+				"dropped": "{name} is verwijderd.",
+				"dropFailed": "Kan {name} niet verwijderen.",
+				"dropTitle": "{name} verwijderen",
+				"dropMessage": "De tabel \"{name}\" verwijderen van {node}?",
+				"dropNote": "De bestanden blijven staan.",
+				"copy": "Kopiëren",
+				"copied": "Definitie gekopieerd.",
+				"definitionSignIn": "Meld je aan om de definitie te zien. Open dit tabblad opnieuw om je aan te melden.",
+				"definitionNeedsAdmin": "De definitie vraagt om beheerfuncties. Zet \"Beheerfuncties tonen\" aan in Instellingen.",
+				"definitionNeedsNode": "Voeg deze node toe op de pagina Beacon Nodes om de definitie te zien.",
+				"definitionLoading": "Definitie laden…",
+				"definitionNone": "Beacon bewaart geen definitie voor deze tabel. Een crawler heeft hem gemaakt, of het is een oudere tabel."
+			},
+			"view": {
+				"title": "View aanmaken",
+				"titleMaterialized": "Gematerialiseerde view aanmaken",
+				"query": "Query",
+				"missing": "Vul een naam en een query in."
+			},
+			"external": {
+				"title": "Externe tabel aanmaken",
+				"fileType": "Bestandstype",
+				"location": "Locatie",
+				"locationHint": "Een pad of glob in de datasetopslag. Een gekozen map eindigt op **/*.",
+				"partitions": "Partitiekolommen",
+				"partitionsPlaceholder": "jaar, maand",
+				"options": "Opties",
+				"optionKey": "sleutel",
+				"optionValue": "waarde",
+				"removeOption": "Optie verwijderen",
+				"addOption": "Optie toevoegen",
+				"ifNotExists": "Alleen als hij nog niet bestaat",
+				"request": "Verzoek",
+				"nameMissing": "Vul een tabelnaam in.",
+				"locationMissing": "Vul een locatie in.",
+				"typeMissing": "Kies een bestandstype.",
+				"hint": {
+					"parquet": "Een pad of glob, bijvoorbeeld data/**/*.parquet.",
+					"geoparquet": "Parquet met een geometriekolom. Beacon leest de geometrie als GeoArrow.",
+					"csv": "Opties kunnen het scheidingsteken en de kopregel instellen.",
+					"arrow": "Arrow IPC-bestanden (.arrow).",
+					"nc": "NetCDF-bestanden, bijvoorbeeld argo/**/*.nc.",
+					"hdf5": "HDF5-bestanden, bijvoorbeeld data/**/*.h5. NetCDF-4 is HDF5.",
+					"zarr": "Het pad van een Zarr v3-store, met zijn zarr.json-bestand.",
+					"atlas": "Het pad van een Atlas-collectie, met zijn data.atlas-bestand.",
+					"tiff": "GeoTIFF- of COG-bestanden.",
+					"bbf": "Beacon Binary Format-bestanden (.bbf).",
+					"odv": "Ocean Data View-spreadsheetbestanden.",
+					"delta": "De map van een Delta-tabel, of een URL met een schema.",
+					"iceberg": "De map van een Iceberg-tabel, of een URL met een schema.",
+					"remote": "Een locatie met een schema, bijvoorbeeld s3://bucket/path."
+				}
+			}
+		},
+		"datasets": {
+			"intro": "Verken de bestanden van je Beacon-node.",
+			"upload": "Uploaden",
+			"pickNode": "Kies een Beacon-node.",
+			"search": "Zoek in alle mappen",
+			"fileCount": "{count, plural, one {# bestand} other {# bestanden}}",
+			"listCut": "Deze node heeft meer dan {limit, number} bestanden. De lijst is onvolledig.",
+			"folderNav": "Map",
+			"all": "Alles",
+			"loading": "Bestanden laden…",
+			"empty": "Geen bestanden hier.",
+			"column": {
+				"format": "Formaat",
+				"size": "Grootte",
+				"modified": "Gewijzigd"
+			},
+			"previous": "Vorige",
+			"next": "Volgende",
+			"pageOf": "Pagina {page} van {count}",
+			"storage": {
+				"usedOf": "{used} gebruikt van {total}, {free} vrij",
+				"objects": "{used} in {count, plural, one {# object} other {# objecten}} ({location})"
+			},
+			"detail": {
+				"title": "Dataset {name}",
+				"missingParam": "De queryparameter `{name}` ontbreekt.",
+				"openInEditor": "Openen in SQL-console",
+				"download": "Downloaden",
+				"downloadFailed": "Beacon kon het bestand niet versturen.",
+				"schema": "Schema",
+				"preview": "Voorbeeld",
+				"loadingFile": "Bestand laden…",
+				"cannotRead": "Beacon kan dit bestandsformaat niet lezen.",
+				"loadingColumns": "Kolommen laden…",
+				"noColumns": "Dit bestand heeft geen kolommen om te tonen.",
+				"deleteTitle": "{name} verwijderen",
+				"deleteMessage": "\"{path}\" verwijderen van {node}?",
+				"deleteNote": "Een tabel die dit bestand leest, werkt dan niet meer.",
+				"deleted": "{name} verwijderd.",
+				"deleteFailed": "Beacon kon het bestand niet verwijderen."
+			}
+		},
+		"upload": {
+			"title": "Datasets uploaden",
+			"destination": "Doelmap",
+			"destinationPlaceholder": "argo/2024/",
+			"dropRegion": "Sleep bestanden of mappen hierheen",
+			"dropText": "Sleep bestanden of mappen hierheen, of",
+			"pickFiles": "Kies bestanden",
+			"pickFolder": "Kies een map",
+			"skippedHidden": "{count, plural, one {# verborgen bestand overgeslagen.} other {# verborgen bestanden overgeslagen.}}",
+			"replace": "Bestaande bestanden vervangen",
+			"progress": "Voortgang",
+			"summary": "{done} van {total} klaar",
+			"summaryFailed": "{done} van {total} klaar, {failed} mislukt",
+			"status": {
+				"waiting": "In wachtrij",
+				"uploading": "Bezig",
+				"done": "Klaar",
+				"failed": "Mislukt",
+				"stopped": "Gestopt"
+			},
+			"next": {
+				"intro": "Maak een tabel om deze bestanden te bevragen:",
+				"crawler": "Start een crawler.",
+				"tableBefore": "Gebruik Externe tabel maken op de pagina",
+				"tableAfter": "."
+			},
+			"stop": "Stoppen",
+			"retry": "Mislukte opnieuw proberen",
+			"start": "Uploaden"
+		},
+		"crawlers": {
+			"intro": "Een crawler doorzoekt een map van de datasetopslag en registreert de bestanden als tabellen. Start hem op verzoek, met een timer of bij nieuwe bestanden.",
+			"newCrawler": "Nieuwe crawler",
+			"refresh": "Vernieuwen",
+			"pickNode": "Kies een Beacon-node.",
+			"loading": "Crawlers laden…",
+			"tryAgain": "Opnieuw proberen",
+			"banner": {
+				"text": "Crawlers werken zoals een AWS Glue-crawler.",
+				"link": "Lees de documentatie over crawlers."
+			},
+			"emptyState": {
+				"title": "Geen crawlers",
+				"text": "Klik op Nieuwe crawler om er een te maken."
+			},
+			"busy": "Bezig…",
+			"run": "Starten",
+			"runFailed": "De crawler is mislukt.",
+			"noSession": "Geen beheerderssessie.",
+			"noReport": "De Beacon-node stuurde geen rapport.",
+			"field": {
+				"folder": "Map",
+				"formats": "Formaten",
+				"naming": "Tabelnamen",
+				"partitions": "Partities",
+				"schedule": "Planning",
+				"options": "Opties"
+			},
+			"delete": {
+				"title": "Crawler {name} verwijderen",
+				"message": "De crawler \"{name}\" verwijderen van {node}?",
+				"note": "Tabellen die deze crawler maakte, blijven bestaan. Verwijder ze op de pagina Tabellen.",
+				"done": "Crawler {name} verwijderd.",
+				"failed": "Beacon kon de crawler niet verwijderen."
+			},
+			"schedule": {
+				"never": "Alleen bij Starten",
+				"hours": "{count, plural, one {Elk uur} other {Elke # uur}}",
+				"minutes": "{count, plural, one {Elke minuut} other {Elke # minuten}}",
+				"seconds": "{count, plural, one {Elke seconde} other {Elke # seconden}}"
+			},
+			"formats": {
+				"all": "Alle formaten",
+				"list": "{formats}"
+			},
+			"naming": {
+				"leaf": "Laatste map",
+				"prefixed": "Crawlernaam + laatste map"
+			},
+			"error": {
+				"name": "Vul een naam voor de crawler in.",
+				"folder": "Kies een map.",
+				"scheduleSeconds": "Vul een planning van minstens {min} seconden in.",
+				"optionEquals": "Regel {line} heeft geen =. Schrijf key=value.",
+				"optionKey": "Regel {line} heeft geen sleutel. Schrijf key=value.",
+				"exists": "Er bestaat al een crawler met deze naam."
+			},
+			"dialog": {
+				"editTitle": "Crawler {name} bewerken",
+				"namePlaceholder": "argo",
+				"folder": "Doelmap",
+				"folderPlaceholder": "argo/",
+				"folderHint": "De map van de datasetopslag die de crawler doorzoekt.",
+				"emptyFolder": "Deze map bevat geen bestanden. De crawler maakt geen tabellen.",
+				"formats": "Formaatfilter",
+				"formatsHint": "Niets gekozen: de crawler leest alle formaten.",
+				"namingOption": "{naming} ({example})",
+				"timer": "Timer (seconden)",
+				"timerPlaceholder": "900",
+				"timerHint": "Leeg: geen timer.",
+				"partitions": "Hive-partities herkennen (key=value/)",
+				"eventDriven": "Crawlen bij nieuwe bestanden (event driven)",
+				"options": "Tabelopties",
+				"optionsPlaceholder": "read_dimensions=lat,lon",
+				"optionsHint": "Eén key=value per regel. Beacon voegt ze toe aan de OPTIONS van elke tabel.",
+				"payload": "Request-payload",
+				"create": "Crawler maken"
+			},
+			"report": {
+				"found": "{count, plural, one {# tabel gevonden.} other {# tabellen gevonden.}}",
+				"created": "Gemaakt:",
+				"updated": "Bijgewerkt:",
+				"skipped": "Overgeslagen (van een andere crawler of met de hand gemaakt):",
+				"failed": "Mislukt:",
+				"skippedFiles": "{count, plural, one {# bestand paste bij geen formaat.} other {# bestanden pasten bij geen formaat.}}"
+			}
+		}
+	},
+	"usersRoles": {
+		"ruleCount": "{count, plural, =0 {Geen regels} one {# regel} other {# regels}}",
+		"users": {
+			"col": { "user": "Gebruiker", "roles": "Rollen", "access": "Toegang" },
+			"badge": { "superUser": "Superuser", "anonymous": "Anoniem" },
+			"line": {
+				"superUser": "Ingesteld in de nodeconfiguratie",
+				"anonymous": "Elk verzoek zonder inloggegevens",
+				"noRole": "Nog geen rol"
+			},
+			"noRoleNeeded": "Geen rol nodig",
+			"addRole": "Rol toevoegen",
+			"addRoleTo": "Rol toevoegen aan {user}",
+			"newRoleItem": "Nieuwe rol…",
+			"removeRole": "{role} verwijderen",
+			"delete": "{user} verwijderen",
+			"deleteTitle": "{user} verwijderen?",
+			"deleteMessage": "{user} kan niet meer inloggen op {node}.",
+			"deleted": "{user} is verwijderd.",
+			"deleteFailed": "De gebruiker kon niet worden verwijderd.",
+			"addRoleFailed": "De rol kon niet worden toegekend.",
+			"removeRoleFailed": "De rol kon niet worden verwijderd.",
+			"footer": "Een gebruiker leest data via de regels van zijn rollen. Weigeringsregels gaan voor op toekenningsregels.",
+			"noMatch": "Geen gebruiker komt overeen met het filter."
+		},
+		"roles": {
+			"counts": "{rules, plural, one {# regel} other {# regels}} · {members, plural, one {# lid} other {# leden}}",
+			"addRule": "Regel toevoegen",
+			"addFirstRule": "Eerste regel toevoegen",
+			"rules": "Toegangsregels",
+			"rulesHint": "Weigeringsregels gaan voor op toekenningsregels. Zonder passende toekenning weigert Beacon de lezing.",
+			"grant": "Toekenning",
+			"deny": "Weigering",
+			"noRules": "Deze rol heeft geen regels. De leden lezen niets.",
+			"removeRule": "Regel verwijderen",
+			"members": "Leden",
+			"addMember": "Lid toevoegen",
+			"giveTo": "Geef {role} aan",
+			"noRole": "Geen rol",
+			"nobodyToAdd": "Elke gebruiker heeft deze rol.",
+			"noMembers": "Geen gebruiker heeft deze rol.",
+			"removeMember": "{user} verwijderen",
+			"delete": "{role} verwijderen",
+			"deleteTitle": "{role} verwijderen?",
+			"deleteMessage": "{count, plural, =0 {Geen gebruiker heeft {role}.} one {# gebruiker verliest {role}: {members}.} other {# gebruikers verliezen {role}: {members}.}}",
+			"deleted": "{role} is verwijderd.",
+			"deleteFailed": "De rol kon niet worden verwijderd.",
+			"removeRuleFailed": "De regel kon niet worden verwijderd."
+		},
+		"access": {
+			"full": {
+				"label": "Volledige toegang",
+				"line": "De superuser slaat de regels over",
+				"short": "Volledig"
+			},
+			"none": {
+				"label": "Geen toegang",
+				"noRoles": "De gebruiker heeft geen rol",
+				"noGrants": "De rollen hebben geen toekenningsregels",
+				"short": "Geen"
+			},
+			"all": {
+				"label": "Alle data",
+				"line": "Via {roles}",
+				"short": "Alle data"
+			},
+			"limited": {
+				"label": "Beperkte toegang",
+				"line": "{grants, plural, one {# toekenning} other {# toekenningen}} · {denies, plural, one {# weigering} other {# weigeringen}}",
+				"short": "Beperkt"
+			}
+		},
+		"cards": {
+			"users": "Gebruikers",
+			"usersLine": "{count, plural, one {# lokale gebruiker} other {# lokale gebruikers}}",
+			"roles": "Rollen",
+			"rolesEmpty": "Maak een rol aan om toegang te geven",
+			"rolesLine": "Toegekend aan {count, plural, one {# gebruiker} other {# gebruikers}}",
+			"rules": "Regels",
+			"rulesLine": "{grants, plural, one {# toekenning} other {# toekenningen}} · {denies, plural, one {# weigering} other {# weigeringen}}",
+			"public": "Openbare toegang",
+			"publicLine": "Verzoeken zonder inloggegevens",
+			"publicOff": "Uit"
+		},
+		"target": {
+			"all": "alle data",
+			"table": "TABEL {name}",
+			"path": "PAD {glob}"
+		},
+		"intro": "Bepaal wie de data van de node leest. Een rol bevat toekennings- en weigeringsregels voor alle data, een tabel of een pad. Een gebruiker krijgt de regels van zijn rollen.",
+		"pickNode": "Kies een Beacon-node.",
+		"loading": "Gebruikers en rollen laden…",
+		"tryAgain": "Opnieuw proberen",
+		"refresh": "Vernieuwen",
+		"newUser": "Nieuwe gebruiker",
+		"newRole": "Nieuwe rol",
+		"loadFailed": "De gebruikers en rollen konden niet worden geladen.",
+		"tab": {
+			"users": "Gebruikers",
+			"roles": "Rollen"
+		},
+		"filter": {
+			"users": "Filter gebruikers of rollen",
+			"roles": "Filter rollen"
+		},
+		"nameHint": "Letters, cijfers en underscores. Begin niet met een cijfer.",
+		"newUserDialog": {
+			"title": "Nieuwe gebruiker",
+			"subtitle": "De gebruiker meldt zich op {node} aan met deze naam en dit wachtwoord.",
+			"username": "Gebruikersnaam",
+			"usernamePlaceholder": "jane_doe",
+			"password": "Wachtwoord",
+			"showPassword": "Wachtwoord tonen",
+			"hidePassword": "Wachtwoord verbergen",
+			"generate": "Genereren",
+			"passwordHint": "{app} bewaart het wachtwoord niet. Geef het nu aan de gebruiker.",
+			"roles": "Rollen",
+			"noRoles": "De node heeft nog geen rollen. Zonder rol leest de gebruiker niets.",
+			"create": "Gebruiker maken",
+			"created": "{user} is gemaakt."
+		},
+		"newRoleDialog": {
+			"title": "Nieuwe rol",
+			"subtitle": "Een rol bevat de regels. Voeg de regels toe en geef de rol daarna aan gebruikers.",
+			"name": "Rolnaam",
+			"namePlaceholder": "analysts",
+			"startFrom": "Beginnen met",
+			"empty": "Een lege rol",
+			"copyOf": "De regels van {role} ({count, plural, =0 {Geen regels} one {# regel} other {# regels}})",
+			"create": "Rol maken",
+			"created": "{role} is gemaakt."
+		},
+		"addRuleDialog": {
+			"title": "Regel toevoegen aan {role}",
+			"effect": "Effect",
+			"target": "Doel",
+			"all": "Alle data",
+			"table": "Tabel",
+			"path": "Pad",
+			"pathPlaceholder": "argo/**/*.nc",
+			"tableLoading": "Tabellen laden…",
+			"preview": "{effect} SELECT op {target}",
+			"add": "Regel toevoegen"
+		},
+		"error": {
+			"nameRequired": "Voer een naam in.",
+			"nameInvalid": "Gebruik letters, cijfers en underscores. Begin niet met een cijfer.",
+			"passwordRequired": "Voer een wachtwoord in.",
+			"exists": "Deze naam bestaat al op de node."
+		},
+		"partialFailed": "{count, plural, one {Eén stap is mislukt: {steps}.} other {# stappen zijn mislukt: {steps}.}} Controleer het resultaat en probeer het opnieuw."
 	}
 }

@@ -103,7 +103,7 @@
 			padding: 0.25rem 0.5rem;
 			color: white;
 			background-color: var(--muted-foreground);
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			line-height: 1;
 
 			&.online {
@@ -131,7 +131,7 @@
 			.latency-label {
 				text-transform: uppercase;
 				color: var(--muted-foreground);
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 			}
 
 			.latency-value {
@@ -144,7 +144,7 @@
 
 			.badge {
 				padding: 0.125rem 0.5rem;
-				font-size: 0.75rem;
+				font-size: var(--font-size-xs);
 			}
 		}
 	}

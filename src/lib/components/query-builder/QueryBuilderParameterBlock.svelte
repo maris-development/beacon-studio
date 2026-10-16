@@ -600,7 +600,7 @@
 		padding: 0.5rem 0.75rem;
 		border: 1px solid var(--destructive);
 		border-radius: var(--radius, 0.5rem);
-		font-size: 0.85rem;
+		font-size: var(--font-size-sm);
 		color: var(--destructive);
 
 		:global(svg) {
@@ -634,7 +634,7 @@
 			align-items: center;
 			gap: 0.35rem;
 			flex-grow: 1;
-			font-size: 0.8rem;
+			font-size: var(--font-size-sm);
 			color: var(--muted-foreground);
 
 			&.missing {

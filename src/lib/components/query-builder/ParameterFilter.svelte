@@ -190,7 +190,7 @@
 	}
 
 	.input-label {
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		font-weight: 500;
 		color: var(--muted-foreground);
 	}

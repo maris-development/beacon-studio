@@ -402,7 +402,7 @@
 					gap: 0.625rem;
 
 					.summary {
-						font-size: 0.8125rem;
+						font-size: var(--font-size-sm);
 						color: var(--muted-foreground, #6b7280);
 						margin: 0;
 					}
@@ -428,7 +428,7 @@
 
 					.coordinates-missing {
 						margin: 0;
-						font-size: 0.8125rem;
+						font-size: var(--font-size-sm);
 						color: var(--destructive);
 					}
 

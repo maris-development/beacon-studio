@@ -178,13 +178,8 @@ export class ApacheArrowUtils {
         ];
     }
 
-    // A Dictionary vector decodes to its value type, so switch on that type.
     private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
-        if (ApacheArrow.DataType.isDictionary(type)) {
-            return type.dictionary.typeId;
-        }
-
-        return type.typeId;
+        return ApacheArrowUtils.valueType(type).typeId;
     }
 
     /**
@@ -195,43 +190,97 @@ export class ApacheArrowUtils {
      * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
      *
      * @remarks
-     * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
+     * - For `Utf8`, `LargeUtf8`, and `Int` types, the value is converted to a string using `String(value)`.
+     * - For a 32-bit `Float`, returns the shortest text that reads back to the same 32-bit value.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
      * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
-     * - For unsupported types, logs a warning and returns the stringified value.
-     * 
+     * - For other types, returns the stringified value. An object becomes JSON.
+     *
      */
-    static typedValueToString(value: unknown, type: ApacheArrow.Type): string {
+    static typedValueToString(value: unknown, type: ApacheArrow.DataType): string {
         if (value === null || value === undefined) {
             return '';
         }
 
-        switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
+        const valueType = ApacheArrowUtils.valueType(type);
+
+        switch (valueType.typeId) {
             case ApacheArrow.Type.Utf8:
             case ApacheArrow.Type.LargeUtf8:
+            case ApacheArrow.Type.Int:
                 return String(value);
 
-            case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
+                if ((valueType as ApacheArrow.Float).precision === ApacheArrow.Precision.SINGLE) {
+                    return ApacheArrowUtils.float32ToString(value);
+                }
                 return String(value);
 
             case ApacheArrow.Type.Bool:
                 return value ? 'true' : 'false';
 
+            // Arrow returns a timestamp and a date as epoch milliseconds.
             case ApacheArrow.Type.Timestamp:
-                return new Date(value as number).toISOString();
+                return ApacheArrowUtils.isoString(value) ?? String(value);
 
-            // Arrow returns a date as epoch milliseconds.
             case ApacheArrow.Type.Date:
-                return new Date(value as number).toISOString().slice(0, 10);
+                return ApacheArrowUtils.isoString(value)?.slice(0, 10) ?? String(value);
 
             case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
-                return JSON.stringify(value);
+                return ApacheArrowUtils.toJson(value) ?? String(value);
 
             default:
-                console.warn(`Unsupported type for toString: ${type}`, type);
-                return String(value);
+                return ApacheArrowUtils.anyToString(value);
+        }
+    }
+
+    // A Dictionary vector decodes to its value type, so switch on that type.
+    private static valueType(type: ApacheArrow.DataType): ApacheArrow.DataType {
+        if (ApacheArrow.DataType.isDictionary(type)) {
+            return type.dictionary;
+        }
+
+        return type;
+    }
+
+    private static isoString(value: unknown): string | null {
+        const date = new Date(value as number);
+        if (Number.isNaN(date.getTime())) return null;
+
+        return date.toISOString();
+    }
+
+    // Float32 values arrive as 64-bit numbers, so `String` would show noise like 0.6000000238418579.
+    private static float32ToString(value: unknown): string {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
+
+        for (let digits = 1; digits <= 9; digits++) {
+            const rounded = Number(value.toPrecision(digits));
+            if (Math.fround(rounded) === value) return String(rounded);
+        }
+
+        return String(value);
+    }
+
+    private static anyToString(value: unknown): string {
+        if (typeof value !== 'object' || value === null) return String(value);
+
+        const text = String(value);
+        if (text !== '[object Object]') return text;
+
+        return ApacheArrowUtils.toJson(value) ?? text;
+    }
+
+    // `JSON.stringify` throws on a bigint, and Int64 values arrive as bigints.
+    private static toJson(value: unknown): string | null {
+        try {
+            return JSON.stringify(value, (_key, item) => {
+                if (typeof item === 'bigint') return item.toString();
+                return item;
+            });
+        } catch {
+            return null;
         }
     }
 
@@ -240,7 +289,13 @@ export class ApacheArrowUtils {
 
         schema.fields.forEach((field, index) => {
             if (field.name === 'geometry') return; // Skip geometry field
-            record[field.name] = ApacheArrowUtils.typedValueToString(array[index], field.type);
+            const value = array[index];
+            // A null cell stays null, so a table can show it apart from an empty string.
+            if (value === null || value === undefined) {
+                record[field.name] = null;
+            } else {
+                record[field.name] = ApacheArrowUtils.typedValueToString(value, field.type);
+            }
         });
 
         return record;

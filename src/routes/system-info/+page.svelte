@@ -1,227 +1,382 @@
 <script lang="ts">
-	import { BeaconClient } from '@/beacon-api/client';
-
-	import { currentNode } from '@/services/beacon-node';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { settings } from '@/stores/settings';
+	import { resolve } from '$app/paths';
+	import { untrack } from 'svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import Card from '@/components/card/Card.svelte';
-	import { onMount } from 'svelte';
-	import type { BeaconSystemInfo } from '@/beacon-api/types';
-	import { Utils } from '@/utils';
-	import { askAlert } from '@/stores/confirm';
-	import { t, translate, formatNumber } from '@/i18n';
+	import NodePicker from '@/components/NodePicker.svelte';
+	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import Meter from '@/components/system-info/Meter.svelte';
+	import StatTile from '@/components/system-info/StatTile.svelte';
+	import AdminSummary from '@/components/system-info/AdminSummary.svelte';
+	import { Input } from '@/components/ui/input';
+	import { makeBeaconClient } from '@/beacon-api/client';
+	import { currentNode } from '@/services/beacon-node';
+	import { settings } from '@/stores/settings';
+	import { parseFunctions, type FnMeta } from '@/sql/completion';
+	import { sqlError } from '@/sql/statement';
+	import { formatNumber, t, type Message } from '@/i18n';
+	import {
+		formatBytesOrDash,
+		formatUptime,
+		PERCENT_FORMAT,
+		readInfo,
+		type HostView,
+		type InfoView,
+		type Usage
+	} from '@/system-info/host';
+	import { poll } from '@/system-info/poll';
 
-	let currentNodeValue: BeaconNode | null = null;
-	let client: BeaconClient;
-	let systemInfo: BeaconSystemInfo | undefined = $state(undefined);
-	let ready = $state(false);
+	let info: InfoView | null = $state(null);
+	let raw: unknown = $state(null);
+	let error: Message | null = $state(null);
+	let functions: FnMeta[] | null = $state(null);
+	let functionsError: Message | null = $state(null);
+	let needle = $state('');
 
-	onMount(() => {
-		currentNodeValue = $currentNode;
+	let node = $derived($currentNode);
+	let nodeUrl = $derived(node?.url ?? null);
+	let period = $derived($settings.systemInfoUpdateIntervalMs);
 
-		if (!currentNodeValue) {
-			void askAlert({
-				title: translate('system.noNode.title'),
-				message: translate('system.noNode.message')
-			});
-
-			return;
-		}
-
-		client = BeaconClient.new(currentNodeValue);
-		ready = true;
+	let matches = $derived.by(() => {
+		if (!functions) return [];
+		const query = needle.trim().toLowerCase();
+		if (!query) return functions;
+		return functions.filter((fn) => fn.name.toLowerCase().includes(query));
 	});
 
-	// The user sets the period on the settings page. A new value restarts the timer.
+	// The info repeats on the period from Settings. Only a node or period change restarts it.
 	$effect(() => {
-		if (!ready) return;
+		const url = nodeUrl;
+		const every = period;
+		if (!url) return;
 
-		const period = $settings.systemInfoUpdateIntervalMs;
-		const updateInterval = setInterval(async () => {
-			await updateSystemInfo();
-		}, period);
+		info = null;
+		raw = null;
+		error = null;
 
-		updateSystemInfo();
+		const current = untrack(() => node);
+		if (!current) return;
+
+		const client = makeBeaconClient(current);
+		let alive = true;
+
+		const read = async () => {
+			try {
+				const answer = await client.info<unknown>();
+				if (!alive) return;
+				raw = answer;
+				info = readInfo(answer);
+				error = null;
+			} catch (caught) {
+				if (alive) error = sqlError(caught);
+			}
+		};
+
+		const stop = poll(read, every);
 
 		return () => {
-			clearInterval(updateInterval);
+			alive = false;
+			stop();
 		};
 	});
 
-	async function updateSystemInfo() {
-		try {
-			systemInfo = await client.getSystemInfo();
+	// The function list loads once per node.
+	$effect(() => {
+		const url = nodeUrl;
+		if (!url) return;
 
-			// systemInfo = {
-			// 	beacon_version : '1.0.0',
-			// 	system_info: null
-			// }
-		} catch (error) {
-			console.error('Error fetching Beacon system info:', error);
-		}
+		functions = null;
+		functionsError = null;
+
+		const current = untrack(() => node);
+		if (!current) return;
+
+		let alive = true;
+		makeBeaconClient(current)
+			.functions<unknown>()
+			.then(
+				(answer) => {
+					if (alive) functions = parseFunctions(answer);
+				},
+				(caught) => {
+					if (alive) functionsError = sqlError(caught);
+				}
+			);
+
+		return () => (alive = false);
+	});
+
+	function systemDetail(host: HostView): string | undefined {
+		const parts = [host.osName, host.kernel].filter(Boolean);
+		if (parts.length === 0) return undefined;
+		return parts.join(' · ');
 	}
 
-	function percent(fraction: number): string {
-		return $formatNumber(fraction, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 });
+	function coresDetail(host: HostView): string | undefined {
+		if (host.physicalCores === null) return undefined;
+		return $t('systemInfo.cpu.physicalCores', { count: host.physicalCores });
+	}
+
+	function usageDetail(value: Usage | null): string {
+		if (!value) return '—';
+		return $t('systemInfo.memory.usage', {
+			used: formatBytesOrDash(value.used, $formatNumber),
+			total: formatBytesOrDash(value.total, $formatNumber)
+		});
+	}
+
+	function uptimeText(secs: number | null): string {
+		const uptime = formatUptime(secs);
+		if (!uptime) return '—';
+		return $t(uptime);
+	}
+
+	function percentText(value: number): string {
+		return $formatNumber(value / 100, PERCENT_FORMAT);
+	}
+
+	function loadText(value: number): string {
+		return $formatNumber(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 	}
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('system.title') })}</title>
+	<title>{$t('app.pageTitle', { page: $t('systemInfo.title') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: $t('nav.item.systemInfo'), href: '/system-info' }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.systemInfo'), href: resolve('/system-info') }]} />
 
 <div class="page-wrapper">
 	<div class="page-container">
-		<h1>{$t('system.title')}</h1>
+		<h1>{$t('systemInfo.title')}</h1>
 
-		<p>
-			{$t('system.intro')}
-		</p>
+		<p>{$t('systemInfo.intro')}</p>
 
-		{#if systemInfo && systemInfo.system_info == null}
-			<p class="bold">
-				{$t('system.disabled', { variable: 'BEACON_ENABLE_SYS_INFO' })}
-			</p>
-		{/if}
+		<NodePicker />
 
-		<div class="system-info-flex">
-			<div class="system-info-grid">
-				<Card>
-					<span class="description muted">{$t('system.version')}</span>
-					<div class="title">{systemInfo?.beacon_version}</div>
-					{#if systemInfo?.system_info != null}
-						<div>
-							{$t('system.uptime', { time: Utils.formatSecondsToReadableTime(systemInfo.system_info.uptime) })}
-						</div>
-					{/if}
-				</Card>
+		{#if !node}
+			<p>{$t('systemInfo.noNode')}</p>
+		{:else}
+			{#if error}
+				<p class="error">{$t(error)}</p>
+			{/if}
 
-				{#if systemInfo?.system_info != null}
-					<Card>
-						<span class="description muted">{$t('system.cpu.title')}</span>
-						<div class="title">{percent(systemInfo.system_info.global_cpu_usage)}</div>
-
-						<div class="muted">
-							{$t('system.cpu.cores', { count: systemInfo.system_info.physical_core_count })}
-						</div>
-					</Card>
-
-					<Card>
-						<span class="description muted">{$t('system.memory.title')}</span>
-						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_memory)}</div>
-
-						<div>{$t('system.total', { size: Utils.formatBytes(systemInfo.system_info.total_memory) })}</div>
-						<div class="muted">
-							{$t('system.used', {
-								percent: percent(systemInfo.system_info.used_memory / systemInfo.system_info.total_memory)
-							})}
-						</div>
-						<div class="muted">
-							{$t('system.free', { size: Utils.formatBytes(systemInfo.system_info.free_memory) })}
-						</div>
-					</Card>
-
-					<Card>
-						<span class="description muted">{$t('system.swap.title')}</span>
-						<div class="title">{Utils.formatBytes(systemInfo.system_info.used_swap)}</div>
-
-						<div>{$t('system.total', { size: Utils.formatBytes(systemInfo.system_info.total_swap) })}</div>
-						<div class="muted">
-							{$t('system.used', {
-								percent: percent(systemInfo.system_info.used_swap / systemInfo.system_info.total_swap)
-							})}
-						</div>
-						<div class="muted">
-							{$t('system.free', { size: Utils.formatBytes(systemInfo.system_info.free_swap) })}
-						</div>
-					</Card>
-
-					<Card>
-						<span class="muted">{$t('system.load.title')}</span>
-
-						<div class="title">
-							{$t('system.load.one', {
-								percent: percent(
-									systemInfo.system_info.load_average.one / systemInfo.system_info.physical_core_count
-								)
-							})}
-						</div>
-						<div class="title">
-							{$t('system.load.five', {
-								percent: percent(
-									systemInfo.system_info.load_average.five / systemInfo.system_info.physical_core_count
-								)
-							})}
-						</div>
-						<div class="title">
-							{$t('system.load.fifteen', {
-								percent: percent(
-									systemInfo.system_info.load_average.fifteen / systemInfo.system_info.physical_core_count
-								)
-							})}
-						</div>
-					</Card>
-
-					<Card>
-						<span class="muted">{$t('system.os.title')}</span>
-						<div class="title">{systemInfo.system_info.name}</div>
-						<div>{$t('system.os.os', { value: systemInfo.system_info.long_os_version })}</div>
-						<div class="muted">{$t('system.os.hostname', { value: systemInfo.system_info.host_name })}</div>
-						<div class="muted">{$t('system.os.kernel', { value: systemInfo.system_info.kernel_version })}</div>
-						<div class="muted">{$t('system.os.distribution', { value: systemInfo.system_info.distribution_id })}</div>
-						<div class="muted">{$t('system.os.version', { value: systemInfo.system_info.os_version })}</div>
-					</Card>
-
-					<Card>
-						<span class="muted">{$t('system.cpus.title')}</span>
-
-						<div class="title">
-							{$t('system.cpus.count', {
-								count: systemInfo.system_info.cpus.length,
-								brand: systemInfo.system_info.cpus[0].brand
-							})}
-						</div>
-					</Card>
+			<div class="tiles">
+				<StatTile label={$t('systemInfo.version')} value={info?.version ?? '—'} />
+				<div class="health">
+					<span class="label">{$t('systemInfo.health')}</span>
+					<BeaconNodeStatus health={node} variant="compact" />
+				</div>
+				{#if info?.host}
+					<StatTile
+						label={$t('systemInfo.host')}
+						value={info.host.hostName ?? '—'}
+						detail={systemDetail(info.host)}
+					/>
+					<StatTile
+						label={$t('systemInfo.uptime.label')}
+						value={uptimeText(info.host.uptimeSecs)}
+					/>
+					<StatTile
+						label={$t('systemInfo.cpu.title')}
+						value={info.host.cpuBrand ?? '—'}
+						detail={coresDetail(info.host)}
+					/>
 				{/if}
 			</div>
-		</div>
+
+			{#if info && !info.host}
+				<p class="muted">
+					{$t('systemInfo.noHost', { variable: 'BEACON_ENABLE_SYS_INFO' })}
+				</p>
+			{/if}
+
+			{#if info?.host}
+				{@const host = info.host}
+				<div class="panels">
+					<section>
+						<h2>{$t('systemInfo.cpu.title')}</h2>
+						<Meter label={$t('systemInfo.cpu.overall')} percent={host.cpuPercent} />
+						<div class="cores">
+							{#each host.cores as core, index (index)}
+								<Meter label={core.name} percent={core.percent} />
+							{/each}
+						</div>
+					</section>
+
+					<section>
+						<h2>{$t('systemInfo.memory.title')}</h2>
+						<Meter
+							label={$t('systemInfo.memory.title')}
+							percent={host.memory?.percent ?? null}
+							detail={usageDetail(host.memory)}
+						/>
+						<p class="muted">
+							{$t('systemInfo.memory.available', { size: formatBytesOrDash(host.availableMemory, $formatNumber) })}
+						</p>
+						{#if host.swap}
+							<Meter
+								label={$t('systemInfo.memory.swap')}
+								percent={host.swap.percent}
+								detail={usageDetail(host.swap)}
+							/>
+						{:else}
+							<p class="muted">{$t('systemInfo.memory.noSwap')}</p>
+						{/if}
+					</section>
+
+					{#if host.load}
+						<section>
+							<h2>{$t('systemInfo.load.title')}</h2>
+							<p>
+								{$t('systemInfo.load.values', {
+									one: loadText(host.load.one),
+									five: loadText(host.load.five),
+									fifteen: loadText(host.load.fifteen)
+								})}
+							</p>
+							{#if host.physicalCores}
+								<p class="muted">
+									{$t('systemInfo.load.perCore', {
+										percent: percentText((host.load.one / host.physicalCores) * 100)
+									})}
+								</p>
+							{/if}
+						</section>
+					{/if}
+				</div>
+			{/if}
+
+			<AdminSummary {node} />
+
+			<section class="functions">
+				<h2>{$t('systemInfo.functions.title')}</h2>
+				{#if functionsError}
+					<p class="error">{$t(functionsError)}</p>
+				{:else if !functions}
+					<p class="muted">{$t('systemInfo.functions.loading')}</p>
+				{:else}
+					<Input
+						type="search"
+						placeholder={$t('systemInfo.functions.filter')}
+						bind:value={needle}
+					/>
+					<p class="muted">
+						{$t('systemInfo.functions.count', {
+							shown: $formatNumber(matches.length),
+							total: functions.length
+						})}
+					</p>
+					<ul>
+						{#each matches as fn (fn.name)}
+							<li>
+								<span class="name">{fn.name}</span>
+								<span class="muted">{fn.description ?? ''}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</section>
+
+			{#if raw}
+				<details class="raw">
+					<summary>{$t('systemInfo.raw')}</summary>
+					<pre>{JSON.stringify(raw, null, 2)}</pre>
+				</details>
+			{/if}
+		{/if}
 	</div>
 </div>
 
 <style lang="scss">
-	.page-container {
-		--gap: 1rem;
-		.muted {
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.health {
+		display: grid;
+		gap: 0.25rem;
+		padding: 0.75rem;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
+
+		.label {
 			color: var(--muted-foreground);
-			font-weight: normal;
+			font-size: var(--font-size-sm);
+		}
+	}
+
+	.panels {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+		gap: 1rem;
+
+		section {
+			display: grid;
+			align-content: start;
+			gap: 0.5rem;
+			padding: 0.75rem;
+			border: 1px solid var(--border);
+			border-radius: 0.5rem;
 		}
 
-		.bold {
-			font-weight: bold;
-			color: var(--foreground);
+		h2 {
+			margin: 0;
 		}
 
-		.system-info-flex {
-			display: flex;
-			flex-direction: column;
-			gap: var(--gap);
-			.system-info-grid {
-				display: grid;
-				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-				gap: var(--gap);
-
-				.description.muted {
-					font-size: 0.8rem;
-				}
-
-				div.title {
-					font-weight: var(--font-weight-semibold);
-					font-size: 1.4rem;
-				}
-			}
+		p {
+			margin: 0;
 		}
+	}
+
+	.cores {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+		gap: 0.5rem;
+	}
+
+	.functions {
+		margin-top: 1.5rem;
+
+		ul {
+			max-height: 24rem;
+			margin: 0.5rem 0 0;
+			padding: 0;
+			overflow: auto;
+			list-style: none;
+		}
+
+		li {
+			padding: 0.25rem 0;
+			border-bottom: 1px solid var(--border);
+			font-size: var(--font-size-sm);
+		}
+	}
+
+	.name {
+		font-family: var(--font-family-mono);
+	}
+
+	.raw {
+		margin-top: 1rem;
+
+		pre {
+			max-height: 24rem;
+			padding: 0.75rem;
+			overflow: auto;
+			border-radius: 0.375rem;
+			background: var(--secondary);
+			font-size: var(--font-size-xs);
+		}
+	}
+
+	.muted {
+		color: var(--muted-foreground);
+	}
+
+	.error {
+		color: var(--destructive);
 	}
 </style>

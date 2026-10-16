@@ -52,7 +52,7 @@
 		border: 1px solid var(--input);
 		border-radius: calc(var(--radius) - 2px);
 		background-color: var(--card);
-		font-size: 1rem;
+		font-size: var(--font-size-md);
 		line-height: 1.5rem;
 		box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 		outline: none;
@@ -84,7 +84,7 @@
 		}
 
 		@media (min-width: 768px) {
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 			line-height: 1.25rem;
 		}
 	}
@@ -97,7 +97,7 @@
 		padding-top: 0.375rem;
 		padding-bottom: 0;
 		background-color: transparent;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		line-height: 1.25rem;
 		font-weight: 500;
 	}

@@ -187,7 +187,7 @@
 
 	p.node-loading {
 		margin: 1rem 0 0;
-		font-size: 0.875rem;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
 	}
 
@@ -204,7 +204,7 @@
 		p {
 			margin: 0;
 			flex-grow: 1;
-			font-size: 0.875rem;
+			font-size: var(--font-size-sm);
 		}
 	}
 
@@ -247,7 +247,7 @@
 
 			p.node-url {
 				margin: 0;
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				color: hsl(0, 0%, 50%);
 				overflow: hidden;
 				text-overflow: ellipsis;
