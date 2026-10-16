@@ -345,3 +345,15 @@ describe('admin-session remembered sign-ins', () => {
 		expect(session.canRememberSignIn()).toBe(false);
 	});
 });
+
+describe('adminPageState', () => {
+	it.each([
+		[null, [], 'pick-node'],
+		['n1', ['n1'], 'ready'],
+		['n1', ['n2'], 'sign-in']
+	] as const)('node %s, sessions %j gives %s', async (id, ids, state) => {
+		const { session } = await load();
+		const picked = id === null ? null : node(id);
+		expect(session.adminPageState(picked, new Set(ids))).toBe(state);
+	});
+});

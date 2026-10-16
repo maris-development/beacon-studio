@@ -199,3 +199,38 @@ describe('withAdmin', () => {
 		await expect(forB).resolves.toBe(false);
 	});
 });
+
+describe('withAdminSession', () => {
+	beforeEach(() => {
+		sessionStorage.clear();
+		vi.restoreAllMocks();
+	});
+
+	it('runs at once with a session', async () => {
+		const session = await load();
+		await session.signIn(node('a'), 'alice', 'pw');
+		const fn = vi.fn().mockResolvedValue('done');
+
+		await expect(session.withAdminSession(node('a'), fn)).resolves.toBe('done');
+	});
+
+	it('returns null with no session and opens no dialog', async () => {
+		const session = await load();
+		const fn = vi.fn().mockResolvedValue('done');
+
+		await expect(session.withAdminSession(node('a'), fn)).resolves.toBeNull();
+		expect(fn).not.toHaveBeenCalled();
+		expect(get(session.signInRequest)).toBeNull();
+	});
+
+	it('signs out on a 401 and opens no dialog', async () => {
+		const session = await load();
+		await session.signIn(node('a'), 'alice', 'pw');
+		const fn = vi.fn().mockRejectedValue(unauthorized());
+
+		await expect(session.withAdminSession(node('a'), fn)).resolves.toBeNull();
+		expect(session.hasAdminSession('a')).toBe(false);
+		expect(get(session.signInRequest)).toBeNull();
+		expect(fn).toHaveBeenCalledTimes(1);
+	});
+});

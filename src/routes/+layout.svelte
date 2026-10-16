@@ -11,7 +11,8 @@
 	import { restoreRememberedSessions } from '@/services/admin-session';
 	import { syncOpenNodes } from '@/services/open-nodes-import';
 	import { initTelemetry, setRoute, track } from '@/telemetry';
-	import { setLanguage } from '@/i18n';
+	import { setLanguage, t } from '@/i18n';
+	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
 	import { getSettings, settings } from '@/stores/settings';
 	import { afterNavigate } from '$app/navigation';
 	import { onMount, type Snippet } from 'svelte';
@@ -23,6 +24,9 @@
 
 	// The width at which the sidebar becomes an overlay.
 	const MOBILE_QUERY = '(max-width: 767px)';
+	const RESTORE_WAIT_MS = 1000;
+	// A restore shorter than this shows no loader, so a normal start does not flash.
+	const LOADER_DELAY_MS = 200;
 
 	let { children }: { children?: Snippet } = $props();
 
@@ -33,8 +37,19 @@
 	// The script runs before any page script, so the first paint has the right language.
 	setLanguage(getSettings().language);
 
-	// The restore must start before a page onMount.
-	void restoreRememberedSessions((id) => findById(id)?.url ?? null);
+	// A page renders only after the restore, so it never sees a session arrive late.
+	// The timeout keeps a blocked IndexedDB from blocking the app.
+	let sessionsReady = $state(false);
+	let showLoader = $state(false);
+	const loaderTimer = setTimeout(() => (showLoader = true), LOADER_DELAY_MS);
+
+	void Promise.race([
+		restoreRememberedSessions((id) => findById(id)?.url ?? null),
+		new Promise((resolve) => setTimeout(resolve, RESTORE_WAIT_MS))
+	]).then(() => {
+		clearTimeout(loaderTimer);
+		sessionsReady = true;
+	});
 
 	$effect(() => setLanguage($settings.language));
 
@@ -84,7 +99,13 @@
 	<div class="app-body">
 		<PageHeader open={!collapsed} onToggle={() => (collapsed = !collapsed)} />
 		<main class="main-content">
-			{@render children?.()}
+			{#if sessionsReady}
+				{@render children?.()}
+			{:else if showLoader}
+				<div class="startup-loader" role="status" aria-label={$t('common.loading')}>
+					<LoadingSpinner ringColor="var(--muted-foreground)" size="48px" />
+				</div>
+			{/if}
 		</main>
 	</div>
 </div>
@@ -116,6 +137,12 @@
 		min-height: 0;
 		display: flex;
 		flex-direction: column;
+
+		.startup-loader {
+			display: grid;
+			flex-grow: 1;
+			place-items: center;
+		}
 
 		margin: 0;
 

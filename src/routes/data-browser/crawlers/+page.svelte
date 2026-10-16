@@ -2,18 +2,27 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
+	import { get } from 'svelte/store';
 	import PlayIcon from '@lucide/svelte/icons/play';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import Button from '@/components/buttons/Button.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import NodePicker from '@/components/NodePicker.svelte';
 	import AdminOnlyNotice from '@/components/data-browser/AdminOnlyNotice.svelte';
+	import AdminSessionRequired from '@/components/AdminSessionRequired.svelte';
 	import CrawlerDialog from '@/components/data-browser/CrawlerDialog.svelte';
 	import CrawlerReport from '@/components/data-browser/CrawlerReport.svelte';
 	import { makeBeaconClient } from '@/beacon-api/client';
 	import { runCrawlerReport, type CrawlReport } from '@/beacon-api/crawler-run';
 	import { currentNode, normalizeUrl } from '@/services/beacon-node';
-	import { adminErrorMessage, credentialsOf, withAdmin } from '@/services/admin-session';
+	import {
+		adminErrorMessage,
+		adminPageState,
+		credentialsOf,
+		signedInNodeIds,
+		withAdmin,
+		withAdminSession
+	} from '@/services/admin-session';
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
 	import { settings } from '@/stores/settings';
@@ -28,7 +37,7 @@
 	} from '@/data-browser/crawlers';
 	import { DATASET_LIST_LIMIT, parseEntries } from '@/data-browser/datasets';
 
-	type Phase = 'idle' | 'loading' | 'needs-sign-in' | 'ready' | 'error';
+	type Phase = 'idle' | 'loading' | 'ready' | 'error';
 
 	let phase: Phase = $state('idle');
 	let crawlers: Crawler[] = $state([]);
@@ -42,15 +51,24 @@
 	let node = $derived($currentNode);
 	let nodeUrl = $derived(node?.url ?? null);
 	let admin = $derived($settings.adminFeatures);
+	let gate = $derived(adminPageState(node, $signedInNodeIds));
 	let running = $derived.by(() => {
 		if (nodeUrl === null) return null;
 		return runningByUrl[nodeUrl] ?? null;
 	});
 
-	// Opening this page counts as an admin action, so it can ask for a sign-in.
+	// The page loads only with a session. Without one it shows the sign-in card, never the dialog.
 	$effect(() => {
-		if (!admin || !nodeUrl) return;
-		untrack(() => load());
+		const ready = admin && nodeUrl !== null && gate === 'ready';
+
+		untrack(() => {
+			if (ready) {
+				void load();
+			} else {
+				phase = 'idle';
+				crawlers = [];
+			}
+		});
 	});
 
 	async function load() {
@@ -66,13 +84,12 @@
 		}
 
 		try {
-			const raw = await withAdmin(current, (client) => client.admin.listCrawlers<unknown>());
-			if (current.url !== nodeUrl) return;
-
-			if (raw === null) {
-				phase = 'needs-sign-in';
-				return;
-			}
+			const raw = await withAdminSession(current, (client) =>
+				client.admin.listCrawlers<unknown>()
+			);
+			// A node switch or a sign-out during the call makes the result stale.
+			if (current.url !== nodeUrl || !get(signedInNodeIds).has(current.id)) return;
+			if (raw === null) return;
 
 			crawlers = parseCrawlers(raw).sort((a, b) => a.name.localeCompare(b.name));
 			phase = 'ready';
@@ -215,13 +232,12 @@
 				{/snippet}
 			</NodePicker>
 
-			{#if !node}
+			{#if !node || gate === 'pick-node'}
 				<p>{$t('dataBrowser.crawlers.pickNode')}</p>
+			{:else if gate === 'sign-in'}
+				<AdminSessionRequired {node} />
 			{:else if phase === 'loading'}
 				<p class="muted">{$t('dataBrowser.crawlers.loading')}</p>
-			{:else if phase === 'needs-sign-in'}
-				<p>{$t('dataBrowser.crawlers.needsSignIn', { node: node.name })}</p>
-				<Button onclick={load}>{$t('dataBrowser.crawlers.signIn')}</Button>
 			{:else if phase === 'error'}
 				<p class="error">{error}</p>
 				<Button variant="outline" onclick={load}>{$t('dataBrowser.crawlers.tryAgain')}</Button>

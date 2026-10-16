@@ -59,6 +59,7 @@ Each line: the decision, then the reason.
 - A 401 removes the session, asks again, and retries one time. A 403 shows a toast and keeps the session.
 - The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows no sign-in state. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Committed (`7d04155`).
 - Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`.
+- An admin-only page with no session shows the `AdminSessionRequired` card. It never opens the dialog by itself (issue #154). The page loads through `withAdminSession`, which never asks; a 401 there shows the card. The actions keep `withAdmin`. The layout renders a page only after the restore of remembered sessions (1 second at most), so a page has no "restoring" state. Plan: [session required](plans/2026-10-16-admin-session-required.md). Built 2026-10-16, not committed.
 
 ### Menu
 - Group names stay the same: "Data Access", "Explore and Analyze", "Node Management", "Beacon Studio".

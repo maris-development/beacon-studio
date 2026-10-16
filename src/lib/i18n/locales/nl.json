@@ -1020,6 +1020,12 @@
 			"beforeLink": "Deze pagina heeft beheerfuncties nodig. Zet \"Beheerfuncties tonen\" aan in",
 			"afterLink": "."
 		},
+		"sessionRequired": {
+			"title": "Beheerderssessie vereist",
+			"textBefore": "Meld u aan op",
+			"textAfter": "met de beheerdersgegevens van de node.",
+			"button": "Aanmelden als beheerder"
+		},
 		"nodePicker": {
 			"label": "Beacon-node",
 			"placeholder": "Kies een node",
@@ -1269,8 +1275,6 @@
 			"newCrawler": "Nieuwe crawler",
 			"pickNode": "Kies een Beacon-node.",
 			"loading": "Crawlers laden…",
-			"needsSignIn": "Meld je aan om de crawlers van {node} te zien.",
-			"signIn": "Aanmelden",
 			"tryAgain": "Opnieuw proberen",
 			"empty": "Geen crawlers op deze node, of de node kon ze niet tonen.",
 			"busy": "Bezig…",

@@ -99,10 +99,11 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
-  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. A remembered sign-in is also saved in `services/admin-vault.ts` (IndexedDB, encrypted). `restoreRememberedSessions` runs at the top of the `+layout.svelte` script. `requireAdminClient` awaits it. The vault stores a secret with a `kind`: the password now, the session token of beacon PR #590 later.)
-  - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
-    therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
-    there, so a first-ever visit has no node list when a page mounts. A page that names a
+  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. A remembered sign-in is also saved in `services/admin-vault.ts` (IndexedDB, encrypted). `restoreRememberedSessions` runs at the top of the `+layout.svelte` script. `requireAdminClient` awaits it. The layout renders the page only after the restore, or after 1 second, so a page never sees a remembered session arrive late. The sidebar and the header render at once. The vault stores a secret with a `kind`: the password now, the session token of beacon PR #590 later.)
+  - The layout `onMount` runs before the page mounts, because the layout holds the page back
+    for the session restore. The `AppSidebar` `onMount` still runs before the layout `onMount`.
+    The public node list is fetched in the layout `onMount`, but the fetch is async, so a
+    first-ever visit has no node list when a page mounts. A page that names a
     node by URL (a share link) must wait for `openNodesSettled` / `whenOpenNodesSettled()`
     (`services/open-nodes-import.ts`) before it reports that node as missing. `AppSidebar`
     blocks a route that needs a node, and waits for the same flag, so a first visit is not
@@ -250,7 +251,7 @@ message the change never reaches production.
 - Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
-- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off.
+- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off. An admin-only page picks its view with `adminPageState`, shows `AdminSessionRequired` without a session, and loads through `withAdminSession`. It never opens the sign-in dialog by itself.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
   Inline expressions in Svelte markup, where a statement is not possible, are exempt.

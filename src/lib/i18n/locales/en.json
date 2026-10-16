@@ -1020,6 +1020,12 @@
 			"beforeLink": "This page needs admin features. Turn on \"Show admin features\" in",
 			"afterLink": "."
 		},
+		"sessionRequired": {
+			"title": "Admin session required",
+			"textBefore": "Sign in on",
+			"textAfter": "with the admin credentials of the node.",
+			"button": "Sign in as admin"
+		},
 		"nodePicker": {
 			"label": "Beacon Node",
 			"placeholder": "Select a node",
@@ -1269,8 +1275,6 @@
 			"newCrawler": "New crawler",
 			"pickNode": "Pick a Beacon node.",
 			"loading": "Loading the crawlers…",
-			"needsSignIn": "Sign in to see the crawlers of {node}.",
-			"signIn": "Sign in",
 			"tryAgain": "Try again",
 			"empty": "No crawlers on this node, or the node could not list them.",
 			"busy": "Busy…",

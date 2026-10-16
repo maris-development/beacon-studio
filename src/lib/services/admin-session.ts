@@ -356,3 +356,41 @@ export async function withAdmin<T>(
 
 	return fn(retry);
 }
+
+/**
+ * Runs one admin action with the current session only. It never asks for a sign-in.
+ * Null means no session. A 401 removes the session and also gives null.
+ */
+export async function withAdminSession<T>(
+	node: BeaconNode,
+	fn: (client: BeaconClient) => Promise<T>
+): Promise<T | null> {
+	await adminSessionsReady;
+
+	const used = credentialsOf(node.id);
+	if (!used) return null;
+
+	try {
+		return await fn(makeAdminClient(node, used));
+	} catch (error) {
+		if (!(error instanceof ApiError) || error.status !== 401) throw error;
+	}
+
+	// Another action can have signed in again while this one ran.
+	if (credentialsOf(node.id) === used) signOut(node.id);
+
+	return null;
+}
+
+export type AdminPageState = 'pick-node' | 'sign-in' | 'ready';
+
+/** What an admin-only page shows for the selected node. The layout renders pages after the restore. */
+export function adminPageState(
+	node: BeaconNode | null,
+	signedIn: ReadonlySet<string>
+): AdminPageState {
+	if (!node) return 'pick-node';
+	if (signedIn.has(node.id)) return 'ready';
+
+	return 'sign-in';
+}

@@ -1020,6 +1020,12 @@
 			"beforeLink": "Questa pagina richiede le funzioni di amministrazione. Attiva \"Mostra funzioni di amministrazione\" in",
 			"afterLink": "."
 		},
+		"sessionRequired": {
+			"title": "Sessione da amministratore richiesta",
+			"textBefore": "Accedi su",
+			"textAfter": "con le credenziali da amministratore del nodo.",
+			"button": "Accedi come amministratore"
+		},
 		"nodePicker": {
 			"label": "Nodo Beacon",
 			"placeholder": "Seleziona un nodo",
@@ -1269,8 +1275,6 @@
 			"newCrawler": "Nuovo crawler",
 			"pickNode": "Scegli un nodo Beacon.",
 			"loading": "Caricamento dei crawler…",
-			"needsSignIn": "Accedi per vedere i crawler di {node}.",
-			"signIn": "Accedi",
 			"tryAgain": "Riprova",
 			"empty": "Nessun crawler su questo nodo, oppure il nodo non ha potuto elencarli.",
 			"busy": "In corso…",

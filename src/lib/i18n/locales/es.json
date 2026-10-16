@@ -1020,6 +1020,12 @@
 			"beforeLink": "Esta página necesita las funciones de administración. Activa \"Mostrar funciones de administración\" en",
 			"afterLink": "."
 		},
+		"sessionRequired": {
+			"title": "Sesión de administrador requerida",
+			"textBefore": "Inicia sesión en",
+			"textAfter": "con las credenciales de administrador del nodo.",
+			"button": "Iniciar sesión como administrador"
+		},
 		"nodePicker": {
 			"label": "Nodo Beacon",
 			"placeholder": "Selecciona un nodo",
@@ -1269,8 +1275,6 @@
 			"newCrawler": "Nuevo rastreador",
 			"pickNode": "Elige un nodo Beacon.",
 			"loading": "Cargando los rastreadores…",
-			"needsSignIn": "Inicia sesión para ver los rastreadores de {node}.",
-			"signIn": "Iniciar sesión",
 			"tryAgain": "Reintentar",
 			"empty": "No hay rastreadores en este nodo, o el nodo no pudo listarlos.",
 			"busy": "Ocupado…",
