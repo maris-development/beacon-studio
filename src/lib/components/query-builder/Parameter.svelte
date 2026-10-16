@@ -77,7 +77,7 @@
 		align-items: start;
 		gap: 0.75rem;
 		border-radius: 0.5rem;
-		border: 1px solid #2563eb;
+		border: 1px solid var(--control-active);
 		background-color: var(--selected-background);
 		padding: 0.6rem;
 		

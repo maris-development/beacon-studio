@@ -63,6 +63,46 @@
 
   --selected-background: hsl(222, 100%, 98%);
 
+  /* Checked boxes, selected cards and the active parameter card. */
+  --control-active: #2563eb;
+  --control-active-foreground: white;
+  --input-border: #ccc;
+  --overlay: rgb(0 0 0 / 0.5);
+
+  --font-family-base: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: var(--font-family-base);
+  --heading-foreground: var(--foreground);
+  --link: #007bff;
+
+  --button-radius: calc(var(--radius) - 2px);
+  --button-font-weight: 500;
+  --button-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --button-text-transform: none;
+  --button-letter-spacing: normal;
+
+  --table-border: #ddd;
+  --table-header-background: #f9f9f9;
+  --table-header-foreground: #666;
+  --table-foreground: #555;
+  --table-row-alternate: #fcfcfc;
+  --table-row-hover: #f1f1f1;
+
+  --crumb-background: #f9fafb;
+  --crumb-border: #e5e7eb;
+
+  --toast-foreground: white;
+  --toast-info: SkyBlue;
+  --toast-success: MediumSeaGreen;
+  --toast-warning: #FF8F5C;
+  --toast-error: IndianRed;
+
+  --network-line: rgba(51, 65, 85, 0.1);
+  --network-dot: rgba(45, 212, 191, 0.55);
+  --network-glow-a: rgba(45, 212, 191, 0.16);
+  --network-glow-b: rgba(139, 92, 246, 0.14);
+
+  /* Terra Draw reads this value in code and takes only a hex color. */
+  --map-draw: #2563eb;
 }
 
 .dark {
@@ -98,6 +138,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+  --network-line: rgba(226, 232, 240, 0.1);
+  --network-dot: rgba(45, 212, 191, 0.45);
+  --network-glow-a: rgba(45, 212, 191, 0.12);
+  --network-glow-b: rgba(139, 92, 246, 0.12);
 }
 
 @theme inline {
@@ -147,6 +191,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-control-active: var(--control-active);
+  --color-control-active-foreground: var(--control-active-foreground);
 }
 
 @layer base {

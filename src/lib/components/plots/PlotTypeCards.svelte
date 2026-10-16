@@ -93,9 +93,9 @@
 			}
 
 			&.selected {
-				border-color: #2563eb;
-				background-color: rgba(37, 99, 235, 0.06);
-				box-shadow: inset 0 0 0 1px #2563eb;
+				border-color: var(--control-active);
+				background-color: color-mix(in srgb, var(--control-active) 6%, transparent);
+				box-shadow: inset 0 0 0 1px var(--control-active);
 			}
 
 			&:disabled {

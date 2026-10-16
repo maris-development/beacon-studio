@@ -55,6 +55,17 @@ $env:STUDIO_TELEMETRY="on"; npm run build
 
 A build without `STUDIO_TELEMETRY=on` sends nothing, and the settings page shows no telemetry settings.
 
+Build with a brand (other fonts, colors, logo, text and links). A brand is a folder in `src/brands/`:
+
+```bash
+STUDIO_BRAND=example npm run build
+```
+```powershell
+$env:STUDIO_BRAND="example"; npm run build
+```
+
+Without `STUDIO_BRAND`, the build uses `default`. See [src/brands/default/README.md](src/brands/default/README.md) to make a brand.
+
 Build downloadable desktop executables (Tauri):
 
 ```bash
@@ -81,6 +92,7 @@ npm run lint
 - Static web output is generated in `build/`.
 - `BASE_PATH` is read by `svelte.config.js` and should be set for subdirectory hosting.
 - `STUDIO_TELEMETRY` is read by `vite.config.ts`. Only the value `on` turns telemetry on.
+- `STUDIO_BRAND` is read by `scripts/brand.js`. The build log shows the active brand.
 
 
 ## Beacon client dependency:

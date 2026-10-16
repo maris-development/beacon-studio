@@ -1,7 +1,7 @@
 <script lang="ts">
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import { resolve } from '$app/paths';
-	import logo from '$lib/assets/logo-gradient.svg';
+	import { BRAND } from '@/brand';
 	import { t } from '@/i18n';
 
 	let { open, onToggle }: { open: boolean; onToggle: () => void } = $props();
@@ -19,8 +19,8 @@
 		<MenuIcon class="toggle-icon" />
 	</button>
 	<a class="header-link" href={resolve('/')}>
-		<img src={logo} alt={$t('app.logoAlt')} class="beacon-logo" />
-		<span class="app-name">{$t('app.name')}</span>
+		<img src={BRAND.logo} alt={$t('app.logoAlt')} class="beacon-logo" />
+		<span class="app-name">{BRAND.name}</span>
 	</a>
 </header>
 

@@ -1,5 +1,8 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import { resolveBrand } from './scripts/brand.js';
+
+const brand = resolveBrand();
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -32,7 +35,9 @@ const config = {
 		},
 		alias: {
 			// when you write `@/foo` → load from `./src/lib/foo`
-			'@/*': './src/lib/*'
+			'@/*': './src/lib/*',
+			// The active brand folder, see AGENTS.md "Brands".
+			$brand: `./src/brands/${brand.name}`
 		}
 	}
 };

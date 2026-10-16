@@ -103,7 +103,7 @@ export default ts.config(
 			'no-restricted-syntax': ['error', ...NO_LITERAL_TOAST_TEXT]
 		}
 	},
-	// The translation layer sits at the bottom. Every layer imports it, so it imports none.
+	// The translation layer sits at the bottom. Every layer imports it, so it imports only the brand.
 	{
 		files: ['src/lib/i18n/**'],
 		rules: {
@@ -112,9 +112,62 @@ export default ts.config(
 				{
 					patterns: [
 						{
-							group: ['@/*', '$lib/*', '../*', '!@/i18n', '!@/i18n/*'],
+							group: ['@/*', '$lib/*', '../*', '!@/i18n', '!@/i18n/*', '!@/brand', '!@/brand/*'],
 							message:
-								'Layer violation: src/lib/i18n imports only svelte-i18n and its catalogs. Every other layer imports it.'
+								'Layer violation: src/lib/i18n imports only svelte-i18n, its catalogs and the brand. Every other layer imports it.'
+						}
+					]
+				}
+			]
+		}
+	},
+	// The brand is pure config below every layer, see AGENTS.md "Brands".
+	{
+		files: ['src/lib/brand/**'],
+		rules: {
+			'no-restricted-imports': [
+				'error',
+				{
+					patterns: [
+						{
+							group: ['@/*', '$lib/*', '!$lib/assets'],
+							message:
+								'Layer violation: src/lib/brand imports only the brand folder and assets. Every other layer imports it.'
+						}
+					]
+				}
+			]
+		}
+	},
+	// A brand folder holds overrides only. A brand feature goes in shared code behind a BrandConfig field.
+	{
+		files: ['src/brands/**'],
+		rules: {
+			'@typescript-eslint/no-restricted-imports': [
+				'error',
+				{
+					paths: [
+						{
+							name: '@/brand',
+							message:
+								'@/brand imports $brand, so a brand that imports it makes a cycle. Import @/brand/define.'
+						}
+					],
+					patterns: [
+						{
+							group: ['$brand', '$brand/*'],
+							message:
+								'$brand is the active brand, not this one. Import a file of this brand with a relative path.'
+						},
+						{
+							group: ['@/*', '$lib/*', '!@/brand', '@/brand/*', '!@/brand/define', '!@/i18n'],
+							message:
+								'A brand is config. It imports only @/brand/define, types of @/i18n and its own files.'
+						},
+						{
+							group: ['@/i18n'],
+							allowTypeImports: true,
+							message: 'A brand imports only types of @/i18n.'
 						}
 					]
 				}

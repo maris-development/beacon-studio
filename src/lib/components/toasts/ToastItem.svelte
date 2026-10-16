@@ -37,7 +37,7 @@
 
 <style lang="scss">
 	article {
-		color: white;
+		color: var(--toast-foreground);
 		padding: 0.5rem;
 		border-radius: 0.5rem;
 		display: flex;
@@ -51,17 +51,17 @@
 	}
 
 	.warning {
-		background: #FF8F5C;
+		background: var(--toast-warning);
 	}
 	
 	.error {
-		background: IndianRed;
+		background: var(--toast-error);
 	}
 	.success {
-		background: MediumSeaGreen;
+		background: var(--toast-success);
 	}
 	.info {
-		background: SkyBlue;
+		background: var(--toast-info);
 	}
 
 	.text {
@@ -71,7 +71,7 @@
 		font-size: var(--font-size-lg);
 	}
 	button {
-		color: white;
+		color: var(--toast-foreground);
 		background: transparent;
 		border: 0 none;
 		padding: 0;

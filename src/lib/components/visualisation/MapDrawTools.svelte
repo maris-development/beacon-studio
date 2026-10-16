@@ -116,10 +116,18 @@
 	/** Identifies the newest count, so a late answer of an old ring falls away. */
 	let countToken = 0;
 
+	// Terra Draw takes only a hex color, so a token with another color form falls back.
+	function drawColor(): `#${string}` {
+		const value = getComputedStyle(document.documentElement).getPropertyValue('--map-draw').trim();
+		if (/^#[0-9a-f]{3,8}$/i.test(value)) return value as `#${string}`;
+		return '#2563eb';
+	}
+
+	const shapeColor = drawColor();
 	const shapeStyle = {
-		fillColor: '#2563eb' as const,
+		fillColor: shapeColor,
 		fillOpacity: 0.15,
-		outlineColor: '#2563eb' as const,
+		outlineColor: shapeColor,
 		outlineWidth: 2
 	};
 
