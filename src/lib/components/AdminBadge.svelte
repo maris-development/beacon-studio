@@ -5,7 +5,8 @@
 </script>
 
 <span class="admin-badge">
-	<ShieldCheckIcon size={14} />
+	<!-- The classes opt out of the muted icon colour and size of a dropdown item. -->
+	<ShieldCheckIcon class="text-current size-3.5" />
 	{$t('admin.badge')}
 </span>
 
