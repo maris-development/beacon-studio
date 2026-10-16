@@ -8,7 +8,7 @@
 /** A feature of the shared code that a brand can turn on. Add the id of a new brand feature here. */
 export type BrandFeature = never;
 
-/** The values a brand can override. `index.ts` holds the upstream default of each one. */
+/** The values a brand can override. `index.ts` holds the default of each one. */
 export type BrandConfig = {
 	/** The app name. It is not translated. A catalog string reads it as `{app}`. */
 	name: string;

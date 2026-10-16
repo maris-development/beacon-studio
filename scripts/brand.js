@@ -8,7 +8,7 @@ import { lookup } from 'mrmime';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const BRANDS_DIR = 'src/brands';
-const UPSTREAM_STATIC_DIR = join(ROOT, 'static');
+const DEFAULT_STATIC_DIR = join(ROOT, 'static');
 
 const DEFAULT_BRAND = 'default';
 const REQUIRED_FILES = ['brand.ts', 'theme.scss', 'locales.ts'];
@@ -60,8 +60,8 @@ function listFiles(dir) {
 }
 
 /**
- * Puts the brand `static/` over the upstream `static/`. A brand file replaces the
- * upstream file at the same path.
+ * Puts the brand `static/` over the default `static/`. A brand file replaces the
+ * default file at the same path.
  * @param {Brand} brand
  * @returns {import('vite').Plugin}
  */
@@ -80,10 +80,10 @@ export function brandPlugin(brand) {
 		buildStart() {
 			if (!hasStatic || !isClient) return;
 
-			// A renamed upstream file leaves the brand file with no effect.
+			// A renamed default file leaves the brand file with no effect.
 			for (const file of listFiles(brand.staticDir)) {
-				if (!existsSync(join(UPSTREAM_STATIC_DIR, file))) {
-					console.warn(`[beacon-studio] brand static file with no upstream file: ${file}`);
+				if (!existsSync(join(DEFAULT_STATIC_DIR, file))) {
+					console.warn(`[beacon-studio] brand static file with no default file: ${file}`);
 				}
 			}
 		},
@@ -101,7 +101,7 @@ export function brandPlugin(brand) {
 			});
 		},
 
-		// Vite copies `static/` before it writes the bundle, so these files replace the upstream files.
+		// Vite copies `static/` before it writes the bundle, so these files replace the default files.
 		writeBundle(options) {
 			if (!hasStatic || !isClient || !options.dir) return;
 			cpSync(brand.staticDir, options.dir, { recursive: true });

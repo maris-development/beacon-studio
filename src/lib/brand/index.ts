@@ -1,5 +1,5 @@
 /**
- * The active brand: the upstream defaults, with the overrides of
+ * The active brand: the defaults, with the overrides of
  * `src/brands/<name>/brand.ts` on top. See AGENTS.md "Brands".
  *
  * This module sits in the bottom layer. It imports only the brand folder and
