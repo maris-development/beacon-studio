@@ -951,7 +951,8 @@
 			"lead": "Tre query reali. Aprine una per esaminare la query nel generatore di query e tracciarla sulla mappa.",
 			"imageAlt": "Il risultato della query {title} nel Visualizzatore mappa",
 			"metricHint": "Misurato su un'esecuzione di riferimento. La tua esecuzione può variare.",
-			"check": "Esamina query"
+			"check": "Esamina query",
+			"loadFailed": "Impossibile caricare gli esempi di avvio rapido."
 		}
 	},
 	"errorPage": {

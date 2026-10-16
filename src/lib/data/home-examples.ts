@@ -1,23 +1,21 @@
 /**
  * The Quick start examples on the home page.
  *
- * `home-examples.default.json` seeds `localStorage` on the very first launch.
- * `loadHomeExamples` then fetches {@link HOME_EXAMPLES_URL} and overwrites
- * `localStorage` with the result, so MARIS can change the list without a
- * release of the app, and the home page always shows the last list it
- * managed to fetch, from any past launch, not the bundled default.
+ * `loadHomeExamples` fetches {@link HOME_EXAMPLES_URL} and writes the result
+ * to `localStorage`, so MARIS can change the list without a release of the
+ * app. A failed fetch keeps the last list, or an empty list on a first visit.
  */
 
 import { get, readonly, type Readable } from 'svelte/store';
 import { persisted } from 'svelte-local-storage-store';
-import bundledExamples from './home-examples.default.json';
-import { BRAND } from '@/brand';
+import { BRAND, BRAND_ID } from '@/brand';
+import { addToast } from '@/stores/toasts';
 
 /** The address of the examples list. A brand can set its own in `brand.ts`. */
 export const HOME_EXAMPLES_URL = BRAND.endpoints.homeExamples;
 
-/** The localStorage key of the cached list. */
-const STORAGE_KEY = 'beacon-studio.home-examples';
+/** The localStorage key of the cached list. Two brands on one domain keep separate lists. (can happen in dev mode, highly unlikely in prod) */
+const STORAGE_KEY = `beacon-studio.${BRAND_ID}.home-examples`;
 
 /** The time after which the fetch of the list counts as a failure. */
 const FETCH_TIMEOUT_MS = 10_000;
@@ -70,34 +68,28 @@ function isHomeExample(value: unknown): value is HomeExample {
 		&& typeof entry.shareQuery === 'string';
 }
 
-/** Keeps the usable entries, in file order, and drops a malformed one. */
+/** Keeps the usable entries, in file order, and drops a malformed one. A payload that is not an array throws. */
 function parseExamples(payload: unknown): HomeExample[] {
 	if (!Array.isArray(payload)) {
-		console.warn('The home examples list is not an array. The cache keeps its last value.');
-		return [];
+		throw new Error('The home examples list is not an array.');
 	}
 
 	return payload.filter(isHomeExample);
 }
 
-/**
- * Seed shown before the first successful fetch: the bundled defaults, run
- * through the same validation as an online payload.
- */
-const homeExamplesStore = persisted<HomeExample[]>(STORAGE_KEY, parseExamples(bundledExamples));
+const homeExamplesStore = persisted<HomeExample[]>(STORAGE_KEY, []);
 
 /**
  * The cached examples, in the order that the home page shows them. Reads from
- * `localStorage` at once, so a component has the last successful fetch to show
- * before `loadHomeExamples` answers. Use `$homeExamples` in a component.
+ * `localStorage` at once, so a component has the last fetch to show before
+ * `loadHomeExamples` answers. Use `$homeExamples` in a component.
  */
 export const homeExamples: Readable<HomeExample[]> = readonly(homeExamplesStore);
 
 /**
  * Reads the examples list from {@link HOME_EXAMPLES_URL} and writes it to
- * `localStorage`, overwriting the bundled defaults or an earlier fetch. A
- * failure leaves the cached list as it was, so the home page still shows the
- * last successful fetch.
+ * `localStorage`. A failure shows a toast and keeps the cached list, which is
+ * empty on a first visit. An empty array from the server is no failure.
  */
 export async function loadHomeExamples(): Promise<HomeExample[]> {
 	try {
@@ -116,6 +108,10 @@ export async function loadHomeExamples(): Promise<HomeExample[]> {
 		return examples;
 	} catch (error) {
 		console.warn(`Could not read the home examples list at ${HOME_EXAMPLES_URL}.`, error);
+
+		let detail = String(error);
+		if (error instanceof Error) detail = error.message;
+		addToast({ key: 'home.examples.loadFailed', type: 'warning', message: detail });
 
 		return get(homeExamplesStore);
 	}

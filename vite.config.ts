@@ -61,7 +61,7 @@ console.log(`[beacon-studio] brand: ${brand.name}`);
 
 export default defineConfig({
 	plugins: [brandPlugin(brand), tailwindcss(), sveltekit(), devtoolsJson()],
-	define: { ...buildInfo(), ...telemetryFlag() },
+	define: { ...buildInfo(), ...telemetryFlag(), __BRAND__: JSON.stringify(brand.name) },
 	resolve: {
 		extensions: ['.mjs', '.js', '.ts', '.svelte', '.json'],
 		dedupe: ['apache-arrow']

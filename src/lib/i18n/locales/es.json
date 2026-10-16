@@ -951,7 +951,8 @@
 			"lead": "Tres consultas reales. Abre una para revisarla en el constructor de consultas y representarla en el mapa.",
 			"imageAlt": "El resultado de la consulta {title} en el visor de mapas",
 			"metricHint": "Medido en una ejecución de referencia. Tu ejecución puede variar.",
-			"check": "Ver consulta"
+			"check": "Ver consulta",
+			"loadFailed": "No se pudieron cargar los ejemplos de inicio rápido."
 		}
 	},
 	"errorPage": {

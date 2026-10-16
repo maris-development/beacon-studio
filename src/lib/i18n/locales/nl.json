@@ -951,7 +951,8 @@
 			"lead": "Drie echte queries. Open er een om de query in de querybouwer te bekijken en op de kaart te plotten.",
 			"imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
 			"metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
-			"check": "Query bekijken"
+			"check": "Query bekijken",
+			"loadFailed": "De snelstartvoorbeelden konden niet worden geladen."
 		}
 	},
 	"errorPage": {

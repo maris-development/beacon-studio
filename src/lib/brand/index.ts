@@ -12,6 +12,11 @@ import type { BrandConfig, BrandFeature, DeepPartial } from './define';
 
 export type { BrandConfig } from './define';
 
+declare const __BRAND__: string;
+
+/** The folder name of the active brand, for example `default`. Use it to scope a storage key per brand. */
+export const BRAND_ID: string = __BRAND__;
+
 const DEFAULTS: BrandConfig = {
 	name: 'Beacon Studio',
 	logo: defaultLogo,
