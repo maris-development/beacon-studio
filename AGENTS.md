@@ -60,6 +60,9 @@ A project fork changes the look through one folder, `src/brands/<name>/`. Guide:
 - `brandPlugin` serves `src/brands/<name>/static/` in dev and copies it over `static/` in the client build. Do not use `kit.files.assets`. SvelteKit 2 marks it deprecated.
 - `--map-draw` must stay a hex color. Terra Draw takes only hex.
 - `--ring` and `--deny` have no definition. Several components read them, some with a fallback. A definition changes their look, so define them in a separate change.
+- A brand can get a feature, for example a table catalog on the home page. Put the feature in upstream code behind a `BrandConfig` field. ESLint limits a brand folder to config, so a feature never goes there or on a brand branch.
+- Never test the brand name in code. Test a `BrandConfig` field, so another brand can enable the feature.
+- Planned home page pattern: `home.sections` in `BrandConfig`, a list of section ids. `HomeSection` maps each id to a lazy component through `Record<HomeSectionId, …>`. Use it when one `{#if}` per section no longer fits. A brand then sets which sections show and their order.
 
 ## High-Level Architecture
 - App shell and navigation:
