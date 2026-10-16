@@ -12,7 +12,6 @@
 	import ExternalLink from '@/components/ExternalLink.svelte';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import NodePicker from '@/components/NodePicker.svelte';
-	import AdminOnlyNotice from '@/components/data-browser/AdminOnlyNotice.svelte';
 	import AdminSessionRequired from '@/components/AdminSessionRequired.svelte';
 	import CrawlerDialog from '@/components/data-browser/CrawlerDialog.svelte';
 	import CrawlerReport from '@/components/data-browser/CrawlerReport.svelte';
@@ -29,7 +28,6 @@
 	} from '@/services/admin-session';
 	import { askConfirm } from '@/stores/confirm';
 	import { addToast } from '@/stores/toasts';
-	import { settings } from '@/stores/settings';
 	import { t, translate } from '@/i18n';
 	import { withBack } from '@/data-browser/back';
 	import {
@@ -55,7 +53,6 @@
 
 	let node = $derived($currentNode);
 	let nodeUrl = $derived(node?.url ?? null);
-	let admin = $derived($settings.adminFeatures);
 	let gate = $derived(adminPageState(node, $signedInNodeIds));
 	let running = $derived.by(() => {
 		if (nodeUrl === null) return null;
@@ -64,7 +61,7 @@
 
 	// The page loads only with a session. Without one it shows the sign-in card, never the dialog.
 	$effect(() => {
-		const ready = admin && nodeUrl !== null && gate === 'ready';
+		const ready = nodeUrl !== null && gate === 'ready';
 
 		untrack(() => {
 			if (ready) {
@@ -221,111 +218,107 @@
 
 		<p>{$t('dataBrowser.crawlers.intro')}</p>
 
-		{#if !admin}
-			<AdminOnlyNotice />
-		{:else}
-			<div class="toolbar">
-				<NodePicker />
-
-				{#if node && gate === 'ready'}
-					<div class="toolbar-actions">
-						<Button
-							variant="outline"
-							size="icon"
-							aria-label={$t('dataBrowser.crawlers.refresh')}
-							title={$t('dataBrowser.crawlers.refresh')}
-							disabled={phase === 'loading'}
-							onclick={load}
-						>
-							<RefreshCwIcon />
-						</Button>
-						<Button disabled={phase !== 'ready'} onclick={() => (dialog = { crawler: null })}>
-							<PlusIcon />
-							{$t('dataBrowser.crawlers.newCrawler')}
-						</Button>
-					</div>
-				{/if}
-			</div>
+		<div class="toolbar">
+			<NodePicker />
 
 			{#if node && gate === 'ready'}
-				<p class="banner">
-					<InfoIcon size={16} />
-					<span>
-						{$t('dataBrowser.crawlers.banner.text')}
-						<ExternalLink href={CRAWLER_DOCS_URL}
-							>{$t('dataBrowser.crawlers.banner.link')}</ExternalLink
-						>
-					</span>
-				</p>
+				<div class="toolbar-actions">
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={$t('dataBrowser.crawlers.refresh')}
+						title={$t('dataBrowser.crawlers.refresh')}
+						disabled={phase === 'loading'}
+						onclick={load}
+					>
+						<RefreshCwIcon />
+					</Button>
+					<Button disabled={phase !== 'ready'} onclick={() => (dialog = { crawler: null })}>
+						<PlusIcon />
+						{$t('dataBrowser.crawlers.newCrawler')}
+					</Button>
+				</div>
 			{/if}
+		</div>
 
-			{#if !node || gate === 'pick-node'}
-				<p>{$t('dataBrowser.crawlers.pickNode')}</p>
-			{:else if gate === 'sign-in'}
-				<AdminSessionRequired {node} />
-			{:else if phase === 'loading'}
-				<p class="muted">{$t('dataBrowser.crawlers.loading')}</p>
-			{:else if phase === 'error'}
-				<p class="error">{error}</p>
-				<Button variant="outline" onclick={load}>{$t('dataBrowser.crawlers.tryAgain')}</Button>
-			{:else if phase === 'ready' && crawlers.length === 0}
-				<section class="empty-state">
-					<RadarIcon size={24} />
-					<h2>{$t('dataBrowser.crawlers.emptyState.title')}</h2>
-					<p class="muted">{$t('dataBrowser.crawlers.emptyState.text')}</p>
-				</section>
-			{:else if phase === 'ready'}
-				<ul class="cards">
-					{#each crawlers as crawler (crawler.name)}
-						<li class="card">
-							<div class="card-head">
-								<h3>{crawler.name}</h3>
-								<div class="card-actions">
-									<Button size="sm" disabled={running !== null} onclick={() => run(crawler)}>
-										<PlayIcon />
-										{#if running === crawler.name}
-											{$t('dataBrowser.crawlers.busy')}
-										{:else}
-											{$t('dataBrowser.crawlers.run')}
-										{/if}
-									</Button>
-									<Button
-										size="sm"
-										variant="outline"
-										disabled={running !== null}
-										onclick={() => (dialog = { crawler })}>{$t('common.edit')}</Button
-									>
-									<Button
-										size="sm"
-										variant="destructive"
-										disabled={running !== null}
-										onclick={() => remove(crawler)}>{$t('common.delete')}</Button
-									>
-								</div>
+		{#if node && gate === 'ready'}
+			<p class="banner">
+				<InfoIcon size={16} />
+				<span>
+					{$t('dataBrowser.crawlers.banner.text')}
+					<ExternalLink href={CRAWLER_DOCS_URL}
+						>{$t('dataBrowser.crawlers.banner.link')}</ExternalLink
+					>
+				</span>
+			</p>
+		{/if}
+
+		{#if !node || gate === 'pick-node'}
+			<p>{$t('dataBrowser.crawlers.pickNode')}</p>
+		{:else if gate === 'sign-in'}
+			<AdminSessionRequired {node} />
+		{:else if phase === 'loading'}
+			<p class="muted">{$t('dataBrowser.crawlers.loading')}</p>
+		{:else if phase === 'error'}
+			<p class="error">{error}</p>
+			<Button variant="outline" onclick={load}>{$t('dataBrowser.crawlers.tryAgain')}</Button>
+		{:else if phase === 'ready' && crawlers.length === 0}
+			<section class="empty-state">
+				<RadarIcon size={24} />
+				<h2>{$t('dataBrowser.crawlers.emptyState.title')}</h2>
+				<p class="muted">{$t('dataBrowser.crawlers.emptyState.text')}</p>
+			</section>
+		{:else if phase === 'ready'}
+			<ul class="cards">
+				{#each crawlers as crawler (crawler.name)}
+					<li class="card">
+						<div class="card-head">
+							<h3>{crawler.name}</h3>
+							<div class="card-actions">
+								<Button size="sm" disabled={running !== null} onclick={() => run(crawler)}>
+									<PlayIcon />
+									{#if running === crawler.name}
+										{$t('dataBrowser.crawlers.busy')}
+									{:else}
+										{$t('dataBrowser.crawlers.run')}
+									{/if}
+								</Button>
+								<Button
+									size="sm"
+									variant="outline"
+									disabled={running !== null}
+									onclick={() => (dialog = { crawler })}>{$t('common.edit')}</Button
+								>
+								<Button
+									size="sm"
+									variant="destructive"
+									disabled={running !== null}
+									onclick={() => remove(crawler)}>{$t('common.delete')}</Button
+								>
 							</div>
+						</div>
 
-							<dl>
-								<dt>{$t('dataBrowser.crawlers.field.folder')}</dt>
-								<dd class="mono">{crawler.targetPrefix}</dd>
-								<dt>{$t('dataBrowser.crawlers.field.formats')}</dt>
-								<dd>{$t(describeFormats(crawler.formatFilter))}</dd>
-								<dt>{$t('dataBrowser.crawlers.field.naming')}</dt>
-								<dd>{$t(describeNaming(crawler.tableNaming))}</dd>
-								<dt>{$t('dataBrowser.crawlers.field.partitions')}</dt>
-								<dd>{$t(crawler.detectPartitions ? 'common.on' : 'common.off')}</dd>
-								<dt>{$t('dataBrowser.crawlers.field.schedule')}</dt>
-								<dd>{$t(describeSchedule(crawler.scheduleSecs))}</dd>
-								<dt>{$t('dataBrowser.crawlers.field.options')}</dt>
-								<dd>{Object.keys(crawler.options).length}</dd>
-							</dl>
+						<dl>
+							<dt>{$t('dataBrowser.crawlers.field.folder')}</dt>
+							<dd class="mono">{crawler.targetPrefix}</dd>
+							<dt>{$t('dataBrowser.crawlers.field.formats')}</dt>
+							<dd>{$t(describeFormats(crawler.formatFilter))}</dd>
+							<dt>{$t('dataBrowser.crawlers.field.naming')}</dt>
+							<dd>{$t(describeNaming(crawler.tableNaming))}</dd>
+							<dt>{$t('dataBrowser.crawlers.field.partitions')}</dt>
+							<dd>{$t(crawler.detectPartitions ? 'common.on' : 'common.off')}</dd>
+							<dt>{$t('dataBrowser.crawlers.field.schedule')}</dt>
+							<dd>{$t(describeSchedule(crawler.scheduleSecs))}</dd>
+							<dt>{$t('dataBrowser.crawlers.field.options')}</dt>
+							<dd>{Object.keys(crawler.options).length}</dd>
+						</dl>
 
-							{#if reports[crawler.name]}
-								<CrawlerReport report={reports[crawler.name]} {tableHref} />
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			{/if}
+						{#if reports[crawler.name]}
+							<CrawlerReport report={reports[crawler.name]} {tableHref} />
+						{/if}
+					</li>
+				{/each}
+			</ul>
 		{/if}
 	</div>
 </div>

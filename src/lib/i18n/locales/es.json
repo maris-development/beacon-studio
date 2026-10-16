@@ -53,6 +53,7 @@
 			"datasets": "Conjuntos de datos",
 			"dataTables": "Tablas de datos",
 			"systemInfo": "Información del sistema",
+			"usersRoles": "Usuarios y roles",
 			"beaconNodes": "Nodos Beacon",
 			"settings": "Ajustes",
 			"aboutStudio": "Más sobre {app}",
@@ -1016,10 +1017,6 @@
 			"unreachable": "No se puede conectar con el nodo Beacon."
 		},
 		"offHint": "Activa \"Mostrar funciones de administración\" en Ajustes",
-		"onlyNotice": {
-			"beforeLink": "Esta página necesita las funciones de administración. Activa \"Mostrar funciones de administración\" en",
-			"afterLink": "."
-		},
 		"sessionRequired": {
 			"title": "Sesión de administrador requerida",
 			"textBefore": "Inicia sesión en",
@@ -1357,5 +1354,157 @@
 				"skippedFiles": "{count, plural, one {# archivo no coincidió con ningún formato.} other {# archivos no coincidieron con ningún formato.}}"
 			}
 		}
+	},
+	"usersRoles": {
+		"ruleCount": "{count, plural, =0 {Sin reglas} one {# regla} other {# reglas}}",
+		"users": {
+			"col": { "user": "Usuario", "roles": "Roles", "access": "Acceso" },
+			"badge": { "superUser": "Superusuario", "anonymous": "Anónimo" },
+			"line": {
+				"superUser": "Definido en la configuración del nodo",
+				"anonymous": "Cada solicitud sin credenciales",
+				"noRole": "Aún sin rol"
+			},
+			"noRoleNeeded": "No necesita rol",
+			"addRole": "Añadir rol",
+			"addRoleTo": "Añadir un rol a {user}",
+			"newRoleItem": "Nuevo rol…",
+			"removeRole": "Quitar {role}",
+			"delete": "Eliminar {user}",
+			"deleteTitle": "¿Eliminar {user}?",
+			"deleteMessage": "{user} ya no puede iniciar sesión en {node}.",
+			"deleted": "{user} se ha eliminado.",
+			"deleteFailed": "No se pudo eliminar el usuario.",
+			"addRoleFailed": "No se pudo asignar el rol.",
+			"removeRoleFailed": "No se pudo quitar el rol.",
+			"footer": "Un usuario lee datos mediante las reglas de sus roles. Las reglas de denegación prevalecen sobre las de concesión.",
+			"noMatch": "Ningún usuario coincide con el filtro."
+		},
+		"roles": {
+			"counts": "{rules, plural, one {# regla} other {# reglas}} · {members, plural, one {# miembro} other {# miembros}}",
+			"addRule": "Añadir regla",
+			"addFirstRule": "Añadir la primera regla",
+			"rules": "Reglas de acceso",
+			"rulesHint": "Las reglas de denegación prevalecen sobre las de concesión. Sin una concesión que coincida, Beacon rechaza la lectura.",
+			"grant": "Concesión",
+			"deny": "Denegación",
+			"noRules": "Este rol no tiene reglas. Sus miembros no leen nada.",
+			"removeRule": "Quitar regla",
+			"members": "Miembros",
+			"addMember": "Añadir miembro",
+			"giveTo": "Dar {role} a",
+			"noRole": "Sin rol",
+			"nobodyToAdd": "Todos los usuarios tienen este rol.",
+			"noMembers": "Ningún usuario tiene este rol.",
+			"removeMember": "Quitar a {user}",
+			"delete": "Eliminar {role}",
+			"deleteTitle": "¿Eliminar {role}?",
+			"deleteMessage": "{count, plural, =0 {Ningún usuario tiene {role}.} one {# usuario pierde {role}: {members}.} other {# usuarios pierden {role}: {members}.}}",
+			"deleted": "{role} se ha eliminado.",
+			"deleteFailed": "No se pudo eliminar el rol.",
+			"removeRuleFailed": "No se pudo quitar la regla."
+		},
+		"access": {
+			"full": {
+				"label": "Acceso total",
+				"line": "El superusuario omite las reglas",
+				"short": "Total"
+			},
+			"none": {
+				"label": "Sin acceso",
+				"noRoles": "El usuario no tiene ningún rol",
+				"noGrants": "Los roles no tienen reglas de concesión",
+				"short": "Ninguno"
+			},
+			"all": {
+				"label": "Todos los datos",
+				"line": "Mediante {roles}",
+				"short": "Todos los datos"
+			},
+			"limited": {
+				"label": "Acceso limitado",
+				"line": "{grants, plural, one {# concesión} other {# concesiones}} · {denies, plural, one {# denegación} other {# denegaciones}}",
+				"short": "Limitado"
+			}
+		},
+		"cards": {
+			"users": "Usuarios",
+			"usersLine": "{count, plural, one {# usuario local} other {# usuarios locales}}",
+			"roles": "Roles",
+			"rolesEmpty": "Crea un rol para dar acceso",
+			"rolesLine": "Asignado a {count, plural, one {# usuario} other {# usuarios}}",
+			"rules": "Reglas",
+			"rulesLine": "{grants, plural, one {# concesión} other {# concesiones}} · {denies, plural, one {# denegación} other {# denegaciones}}",
+			"public": "Acceso público",
+			"publicLine": "Solicitudes sin credenciales",
+			"publicOff": "Desactivado"
+		},
+		"target": {
+			"all": "todos los datos",
+			"table": "TABLA {name}",
+			"path": "RUTA {glob}"
+		},
+		"intro": "Controla quién lee los datos del nodo. Un rol contiene reglas de concesión y denegación sobre todos los datos, una tabla o una ruta. Un usuario recibe las reglas de sus roles.",
+		"pickNode": "Elige un nodo Beacon.",
+		"loading": "Cargando usuarios y roles…",
+		"tryAgain": "Reintentar",
+		"refresh": "Actualizar",
+		"newUser": "Nuevo usuario",
+		"newRole": "Nuevo rol",
+		"loadFailed": "No se pudieron cargar los usuarios y los roles.",
+		"tab": {
+			"users": "Usuarios",
+			"roles": "Roles"
+		},
+		"filter": {
+			"users": "Filtrar usuarios o roles",
+			"roles": "Filtrar roles"
+		},
+		"nameHint": "Letras, dígitos y guiones bajos. No empieces con un dígito.",
+		"newUserDialog": {
+			"title": "Nuevo usuario",
+			"subtitle": "El usuario inicia sesión en {node} con este nombre y esta contraseña.",
+			"username": "Nombre de usuario",
+			"usernamePlaceholder": "jane_doe",
+			"password": "Contraseña",
+			"showPassword": "Mostrar contraseña",
+			"hidePassword": "Ocultar contraseña",
+			"generate": "Generar",
+			"passwordHint": "{app} no guarda la contraseña. Dásela al usuario ahora.",
+			"roles": "Roles",
+			"noRoles": "El nodo aún no tiene roles. Sin rol, el usuario no lee nada.",
+			"create": "Crear usuario",
+			"created": "{user} se ha creado."
+		},
+		"newRoleDialog": {
+			"title": "Nuevo rol",
+			"subtitle": "Un rol contiene las reglas. Añade las reglas y luego da el rol a los usuarios.",
+			"name": "Nombre del rol",
+			"namePlaceholder": "analysts",
+			"startFrom": "Empezar desde",
+			"empty": "Un rol vacío",
+			"copyOf": "Las reglas de {role} ({count, plural, =0 {Sin reglas} one {# regla} other {# reglas}})",
+			"create": "Crear rol",
+			"created": "{role} se ha creado."
+		},
+		"addRuleDialog": {
+			"title": "Añadir una regla a {role}",
+			"effect": "Efecto",
+			"target": "Destino",
+			"all": "Todos los datos",
+			"table": "Tabla",
+			"path": "Ruta",
+			"pathPlaceholder": "argo/**/*.nc",
+			"tableLoading": "Cargando tablas…",
+			"preview": "{effect} SELECT en {target}",
+			"add": "Añadir regla"
+		},
+		"error": {
+			"nameRequired": "Introduce un nombre.",
+			"nameInvalid": "Usa letras, dígitos y guiones bajos. No empieces con un dígito.",
+			"passwordRequired": "Introduce una contraseña.",
+			"exists": "Este nombre ya existe en el nodo."
+		},
+		"partialFailed": "{count, plural, one {Un paso ha fallado: {steps}.} other {# pasos han fallado: {steps}.}} Comprueba el resultado y vuelve a intentarlo."
 	}
 }

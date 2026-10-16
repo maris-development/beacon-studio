@@ -53,6 +53,7 @@
 			"datasets": "Datasets",
 			"dataTables": "Data Tables",
 			"systemInfo": "System Info",
+			"usersRoles": "Users & Roles",
 			"beaconNodes": "Beacon Nodes",
 			"settings": "Settings",
 			"aboutStudio": "More about {app}",
@@ -1016,10 +1017,6 @@
 			"unreachable": "The Beacon node cannot be reached."
 		},
 		"offHint": "Turn on \"Show admin features\" in Settings",
-		"onlyNotice": {
-			"beforeLink": "This page needs admin features. Turn on \"Show admin features\" in",
-			"afterLink": "."
-		},
 		"sessionRequired": {
 			"title": "Admin session required",
 			"textBefore": "Sign in on",
@@ -1357,5 +1354,157 @@
 				"skippedFiles": "{count, plural, one {# file matched no format.} other {# files matched no format.}}"
 			}
 		}
+	},
+	"usersRoles": {
+		"ruleCount": "{count, plural, =0 {No rules} one {# rule} other {# rules}}",
+		"users": {
+			"col": { "user": "User", "roles": "Roles", "access": "Access" },
+			"badge": { "superUser": "Super-user", "anonymous": "Anonymous" },
+			"line": {
+				"superUser": "Set in the node configuration",
+				"anonymous": "Every request with no credentials",
+				"noRole": "No role yet"
+			},
+			"noRoleNeeded": "No role needed",
+			"addRole": "Add role",
+			"addRoleTo": "Add a role to {user}",
+			"newRoleItem": "New role…",
+			"removeRole": "Remove {role}",
+			"delete": "Delete {user}",
+			"deleteTitle": "Delete {user}?",
+			"deleteMessage": "{user} can no longer sign in on {node}.",
+			"deleted": "{user} is deleted.",
+			"deleteFailed": "The user could not be deleted.",
+			"addRoleFailed": "The role could not be given.",
+			"removeRoleFailed": "The role could not be removed.",
+			"footer": "A user reads data through the rules of its roles. Deny rules win over grant rules.",
+			"noMatch": "No user matches the filter."
+		},
+		"roles": {
+			"counts": "{rules, plural, one {# rule} other {# rules}} · {members, plural, one {# member} other {# members}}",
+			"addRule": "Add rule",
+			"addFirstRule": "Add the first rule",
+			"rules": "Access rules",
+			"rulesHint": "Deny rules win over grant rules. With no matching grant, Beacon refuses the read.",
+			"grant": "Grant",
+			"deny": "Deny",
+			"noRules": "This role has no rules. Its members read nothing.",
+			"removeRule": "Remove rule",
+			"members": "Members",
+			"addMember": "Add member",
+			"giveTo": "Give {role} to",
+			"noRole": "No role",
+			"nobodyToAdd": "Every user has this role.",
+			"noMembers": "No user has this role.",
+			"removeMember": "Remove {user}",
+			"delete": "Delete {role}",
+			"deleteTitle": "Delete {role}?",
+			"deleteMessage": "{count, plural, =0 {No user has {role}.} one {# user loses {role}: {members}.} other {# users lose {role}: {members}.}}",
+			"deleted": "{role} is deleted.",
+			"deleteFailed": "The role could not be deleted.",
+			"removeRuleFailed": "The rule could not be removed."
+		},
+		"access": {
+			"full": {
+				"label": "Full access",
+				"line": "The super-user skips the rules",
+				"short": "Full"
+			},
+			"none": {
+				"label": "No access",
+				"noRoles": "The user has no role",
+				"noGrants": "The roles have no grant rules",
+				"short": "None"
+			},
+			"all": {
+				"label": "All data",
+				"line": "Through {roles}",
+				"short": "All data"
+			},
+			"limited": {
+				"label": "Limited access",
+				"line": "{grants, plural, one {# grant} other {# grant}} · {denies, plural, one {# deny} other {# deny}}",
+				"short": "Limited"
+			}
+		},
+		"cards": {
+			"users": "Users",
+			"usersLine": "{count, plural, one {# local user} other {# local users}}",
+			"roles": "Roles",
+			"rolesEmpty": "Create a role to give access",
+			"rolesLine": "Given to {count, plural, one {# user} other {# users}}",
+			"rules": "Rules",
+			"rulesLine": "{grants, plural, one {# grant} other {# grant}} · {denies, plural, one {# deny} other {# deny}}",
+			"public": "Public access",
+			"publicLine": "Requests with no credentials",
+			"publicOff": "Off"
+		},
+		"target": {
+			"all": "all data",
+			"table": "TABLE {name}",
+			"path": "PATH {glob}"
+		},
+		"intro": "Control who reads the data of the node. A role holds grant and deny rules on all data, on a table or on a path. A user gets the rules of its roles.",
+		"pickNode": "Pick a Beacon node.",
+		"loading": "Loading users and roles…",
+		"tryAgain": "Try again",
+		"refresh": "Refresh",
+		"newUser": "New user",
+		"newRole": "New role",
+		"loadFailed": "The users and roles could not be loaded.",
+		"tab": {
+			"users": "Users",
+			"roles": "Roles"
+		},
+		"filter": {
+			"users": "Filter users or roles",
+			"roles": "Filter roles"
+		},
+		"nameHint": "Letters, digits and underscores. Do not start with a digit.",
+		"newUserDialog": {
+			"title": "New user",
+			"subtitle": "The user signs in on {node} with this name and password.",
+			"username": "Username",
+			"usernamePlaceholder": "jane_doe",
+			"password": "Password",
+			"showPassword": "Show password",
+			"hidePassword": "Hide password",
+			"generate": "Generate",
+			"passwordHint": "{app} does not keep the password. Give it to the user now.",
+			"roles": "Roles",
+			"noRoles": "The node has no roles yet. With no role, the user reads nothing.",
+			"create": "Create user",
+			"created": "{user} is created."
+		},
+		"newRoleDialog": {
+			"title": "New role",
+			"subtitle": "A role holds the rules. Add the rules, then give the role to users.",
+			"name": "Role name",
+			"namePlaceholder": "analysts",
+			"startFrom": "Start from",
+			"empty": "An empty role",
+			"copyOf": "The rules of {role} ({count, plural, =0 {No rules} one {# rule} other {# rules}})",
+			"create": "Create role",
+			"created": "{role} is created."
+		},
+		"addRuleDialog": {
+			"title": "Add a rule to {role}",
+			"effect": "Effect",
+			"target": "Target",
+			"all": "All data",
+			"table": "Table",
+			"path": "Path",
+			"pathPlaceholder": "argo/**/*.nc",
+			"tableLoading": "Loading tables…",
+			"preview": "{effect} SELECT on {target}",
+			"add": "Add rule"
+		},
+		"error": {
+			"nameRequired": "Enter a name.",
+			"nameInvalid": "Use letters, digits and underscores. Do not start with a digit.",
+			"passwordRequired": "Enter a password.",
+			"exists": "This name exists already on the node."
+		},
+		"partialFailed": "{count, plural, one {One step failed: {steps}.} other {# steps failed: {steps}.}} Check the result and try again."
 	}
 }

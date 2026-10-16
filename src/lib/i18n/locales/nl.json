@@ -53,6 +53,7 @@
 			"datasets": "Datasets",
 			"dataTables": "Datatabellen",
 			"systemInfo": "Systeeminfo",
+			"usersRoles": "Gebruikers en rollen",
 			"beaconNodes": "Beacon-nodes",
 			"settings": "Instellingen",
 			"aboutStudio": "Meer over {app}",
@@ -1016,10 +1017,6 @@
 			"unreachable": "De Beacon-node is niet bereikbaar."
 		},
 		"offHint": "Zet \"Beheerfuncties tonen\" aan in Instellingen",
-		"onlyNotice": {
-			"beforeLink": "Deze pagina heeft beheerfuncties nodig. Zet \"Beheerfuncties tonen\" aan in",
-			"afterLink": "."
-		},
 		"sessionRequired": {
 			"title": "Beheerderssessie vereist",
 			"textBefore": "Meld u aan op",
@@ -1357,5 +1354,157 @@
 				"skippedFiles": "{count, plural, one {# bestand paste bij geen formaat.} other {# bestanden pasten bij geen formaat.}}"
 			}
 		}
+	},
+	"usersRoles": {
+		"ruleCount": "{count, plural, =0 {Geen regels} one {# regel} other {# regels}}",
+		"users": {
+			"col": { "user": "Gebruiker", "roles": "Rollen", "access": "Toegang" },
+			"badge": { "superUser": "Superuser", "anonymous": "Anoniem" },
+			"line": {
+				"superUser": "Ingesteld in de nodeconfiguratie",
+				"anonymous": "Elk verzoek zonder inloggegevens",
+				"noRole": "Nog geen rol"
+			},
+			"noRoleNeeded": "Geen rol nodig",
+			"addRole": "Rol toevoegen",
+			"addRoleTo": "Rol toevoegen aan {user}",
+			"newRoleItem": "Nieuwe rol…",
+			"removeRole": "{role} verwijderen",
+			"delete": "{user} verwijderen",
+			"deleteTitle": "{user} verwijderen?",
+			"deleteMessage": "{user} kan niet meer inloggen op {node}.",
+			"deleted": "{user} is verwijderd.",
+			"deleteFailed": "De gebruiker kon niet worden verwijderd.",
+			"addRoleFailed": "De rol kon niet worden toegekend.",
+			"removeRoleFailed": "De rol kon niet worden verwijderd.",
+			"footer": "Een gebruiker leest data via de regels van zijn rollen. Weigeringsregels gaan voor op toekenningsregels.",
+			"noMatch": "Geen gebruiker komt overeen met het filter."
+		},
+		"roles": {
+			"counts": "{rules, plural, one {# regel} other {# regels}} · {members, plural, one {# lid} other {# leden}}",
+			"addRule": "Regel toevoegen",
+			"addFirstRule": "Eerste regel toevoegen",
+			"rules": "Toegangsregels",
+			"rulesHint": "Weigeringsregels gaan voor op toekenningsregels. Zonder passende toekenning weigert Beacon de lezing.",
+			"grant": "Toekenning",
+			"deny": "Weigering",
+			"noRules": "Deze rol heeft geen regels. De leden lezen niets.",
+			"removeRule": "Regel verwijderen",
+			"members": "Leden",
+			"addMember": "Lid toevoegen",
+			"giveTo": "Geef {role} aan",
+			"noRole": "Geen rol",
+			"nobodyToAdd": "Elke gebruiker heeft deze rol.",
+			"noMembers": "Geen gebruiker heeft deze rol.",
+			"removeMember": "{user} verwijderen",
+			"delete": "{role} verwijderen",
+			"deleteTitle": "{role} verwijderen?",
+			"deleteMessage": "{count, plural, =0 {Geen gebruiker heeft {role}.} one {# gebruiker verliest {role}: {members}.} other {# gebruikers verliezen {role}: {members}.}}",
+			"deleted": "{role} is verwijderd.",
+			"deleteFailed": "De rol kon niet worden verwijderd.",
+			"removeRuleFailed": "De regel kon niet worden verwijderd."
+		},
+		"access": {
+			"full": {
+				"label": "Volledige toegang",
+				"line": "De superuser slaat de regels over",
+				"short": "Volledig"
+			},
+			"none": {
+				"label": "Geen toegang",
+				"noRoles": "De gebruiker heeft geen rol",
+				"noGrants": "De rollen hebben geen toekenningsregels",
+				"short": "Geen"
+			},
+			"all": {
+				"label": "Alle data",
+				"line": "Via {roles}",
+				"short": "Alle data"
+			},
+			"limited": {
+				"label": "Beperkte toegang",
+				"line": "{grants, plural, one {# toekenning} other {# toekenningen}} · {denies, plural, one {# weigering} other {# weigeringen}}",
+				"short": "Beperkt"
+			}
+		},
+		"cards": {
+			"users": "Gebruikers",
+			"usersLine": "{count, plural, one {# lokale gebruiker} other {# lokale gebruikers}}",
+			"roles": "Rollen",
+			"rolesEmpty": "Maak een rol aan om toegang te geven",
+			"rolesLine": "Toegekend aan {count, plural, one {# gebruiker} other {# gebruikers}}",
+			"rules": "Regels",
+			"rulesLine": "{grants, plural, one {# toekenning} other {# toekenningen}} · {denies, plural, one {# weigering} other {# weigeringen}}",
+			"public": "Openbare toegang",
+			"publicLine": "Verzoeken zonder inloggegevens",
+			"publicOff": "Uit"
+		},
+		"target": {
+			"all": "alle data",
+			"table": "TABEL {name}",
+			"path": "PAD {glob}"
+		},
+		"intro": "Bepaal wie de data van de node leest. Een rol bevat toekennings- en weigeringsregels voor alle data, een tabel of een pad. Een gebruiker krijgt de regels van zijn rollen.",
+		"pickNode": "Kies een Beacon-node.",
+		"loading": "Gebruikers en rollen laden…",
+		"tryAgain": "Opnieuw proberen",
+		"refresh": "Vernieuwen",
+		"newUser": "Nieuwe gebruiker",
+		"newRole": "Nieuwe rol",
+		"loadFailed": "De gebruikers en rollen konden niet worden geladen.",
+		"tab": {
+			"users": "Gebruikers",
+			"roles": "Rollen"
+		},
+		"filter": {
+			"users": "Filter gebruikers of rollen",
+			"roles": "Filter rollen"
+		},
+		"nameHint": "Letters, cijfers en underscores. Begin niet met een cijfer.",
+		"newUserDialog": {
+			"title": "Nieuwe gebruiker",
+			"subtitle": "De gebruiker meldt zich op {node} aan met deze naam en dit wachtwoord.",
+			"username": "Gebruikersnaam",
+			"usernamePlaceholder": "jane_doe",
+			"password": "Wachtwoord",
+			"showPassword": "Wachtwoord tonen",
+			"hidePassword": "Wachtwoord verbergen",
+			"generate": "Genereren",
+			"passwordHint": "{app} bewaart het wachtwoord niet. Geef het nu aan de gebruiker.",
+			"roles": "Rollen",
+			"noRoles": "De node heeft nog geen rollen. Zonder rol leest de gebruiker niets.",
+			"create": "Gebruiker maken",
+			"created": "{user} is gemaakt."
+		},
+		"newRoleDialog": {
+			"title": "Nieuwe rol",
+			"subtitle": "Een rol bevat de regels. Voeg de regels toe en geef de rol daarna aan gebruikers.",
+			"name": "Rolnaam",
+			"namePlaceholder": "analysts",
+			"startFrom": "Beginnen met",
+			"empty": "Een lege rol",
+			"copyOf": "De regels van {role} ({count, plural, =0 {Geen regels} one {# regel} other {# regels}})",
+			"create": "Rol maken",
+			"created": "{role} is gemaakt."
+		},
+		"addRuleDialog": {
+			"title": "Regel toevoegen aan {role}",
+			"effect": "Effect",
+			"target": "Doel",
+			"all": "Alle data",
+			"table": "Tabel",
+			"path": "Pad",
+			"pathPlaceholder": "argo/**/*.nc",
+			"tableLoading": "Tabellen laden…",
+			"preview": "{effect} SELECT op {target}",
+			"add": "Regel toevoegen"
+		},
+		"error": {
+			"nameRequired": "Voer een naam in.",
+			"nameInvalid": "Gebruik letters, cijfers en underscores. Begin niet met een cijfer.",
+			"passwordRequired": "Voer een wachtwoord in.",
+			"exists": "Deze naam bestaat al op de node."
+		},
+		"partialFailed": "{count, plural, one {Eén stap is mislukt: {steps}.} other {# stappen zijn mislukt: {steps}.}} Controleer het resultaat en probeer het opnieuw."
 	}
 }

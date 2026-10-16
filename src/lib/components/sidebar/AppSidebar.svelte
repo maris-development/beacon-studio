@@ -22,6 +22,7 @@
 	import Table2Icon from '@lucide/svelte/icons/table-2';
 	import LinkIcon from '@lucide/svelte/icons/link-2';
 	import CpuIcon from '@lucide/svelte/icons/cpu';
+	import UsersIcon from '@lucide/svelte/icons/users';
 	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import Settings2Icon from '@lucide/svelte/icons/settings-2';
@@ -84,7 +85,13 @@
 						{ title: 'nav.item.crawlers', url: resolve('/data-browser/crawlers'), adminOnly: true }
 					]
 				},
-				{ title: 'nav.item.systemInfo', url: resolve('/system-info'), icon: CpuIcon }
+				{ title: 'nav.item.systemInfo', url: resolve('/system-info'), icon: CpuIcon },
+				{
+					title: 'nav.item.usersRoles',
+					url: resolve('/node-management/users-roles'),
+					icon: UsersIcon,
+					adminOnly: true
+				}
 			]
 		},
 		{

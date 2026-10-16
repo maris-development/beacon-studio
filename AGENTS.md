@@ -91,6 +91,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
   - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
   - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
+  - `src/lib/access/*` (users and roles: name check, password, access summary, multi-step creates. No Svelte and no services.)
   - `src/lib/data-browser/*` (data-browser rules: `backTarget` for the safe "← back" link, folder tree, table statements, external-table body. Shared parts in `components/data-browser/`.)
   - `src/lib/system-info/host.ts` (`readInfo`: a safe read of `GET /api/info`. `cpu_usage` is already a percentage. `system_info` is `null` unless the server runs with `BEACON_ENABLE_SYS_INFO`; the admin route returns the same data.)
   - `src/lib/sql/*` (the SQL editor: tabs, statement rules, catalogue cache, completion, 500-row preview, admin fallback. `withAdminFallback` takes the admin runner as an argument, so this folder imports no service.)
@@ -172,7 +173,7 @@ Sort each persisted value into one class. The class decides whether a change nee
 ## Layer Rule (Important)
 Imports point one way only:
 
-`brand` → `i18n` → `beacon-api` → `query` / `geo` / `sql` / `data-browser` → `stores` → `components` → `routes`
+`brand` → `i18n` → `beacon-api` → `query` / `geo` / `sql` / `data-browser` / `access` → `stores` → `components` → `routes`
 
 - `src/lib/brand/*` is pure config at the bottom. It imports only `$brand` and `$lib/assets`. ESLint enforces this.
 - `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
@@ -291,6 +292,8 @@ message the change never reaches production.
   - `/visualisations/chart-explorer`
   - `/sql-editor`
 - Confirm no regressions in query JSON -> visualization navigation path.
+- Do the smoke test in a browser with the Playwright MCP (`mcp__playwright__*`), against `npm run dev`.
+- If the Playwright MCP is not available, tell the developer. They can install it with `claude mcp add playwright -s user -- npx @playwright/mcp@latest`.
 
 ## Known Repo Facts
 - Static adapter outputs to `build/` and uses `fallback: 'index.html'`.

@@ -3,7 +3,7 @@
 Read this file first. It holds the state of the admin mode work, every decision so far, and the next step.
 Agents: update this file when you finish a stage (spec, plan, build). Keep it short. Link to specs and plans for detail.
 
-**Change of course (2026-10-16):** admin mode now follows the sub-issues of GitHub issue #165 (https://github.com/maris-development/beacon-studio/issues/165). Where a decision below differs from an issue, the issue wins. Crawlers rework: #159, [plan](plans/2026-10-16-crawlers-page-rework.md).
+**Change of course (2026-10-16):** admin mode now follows the sub-issues of GitHub issue #165 (https://github.com/maris-development/beacon-studio/issues/165). Where a decision below differs from an issue, the issue wins. Crawlers rework: #159, [plan](plans/2026-10-16-crawlers-page-rework.md). Users & Roles: #160, [plan](plans/2026-10-16-users-roles-page.md).
 
 ## Goal
 
@@ -19,7 +19,7 @@ Users who are not technical must see almost no change.
 | 3 | Tables | [spec 3+4+5](specs/2026-10-06-data-browser-design.md) (approved) | [plan](plans/2026-10-06-data-browser-tables.md) | Committed (`08adc20`). Verified 2026-10-06: 133 tests pass (29 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 9 Step 3) still open. |
 | 4 | Datasets | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-datasets.md) | Committed (`e824dcc`). Verified 2026-10-06: 157 tests pass (24 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 8 Step 2) still open. |
 | 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) | Committed (`2501af7`). Verified 2026-10-06: 176 tests pass (19 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 5 Step 3) still open. Fixes for steps 4 and 5: [fix plan](plans/2026-10-06-data-browser-fixes.md), built 2026-10-06 (184 tests pass), not committed. |
-| 6 | Users and roles | - | - | - |
+| 6 | Users and roles | Issue #160 | [plan](plans/2026-10-16-users-roles-page.md) | Built 2026-10-16, not committed. Page: `/node-management/users-roles`. |
 | 7 | System info | Design approved in chat 2026-10-07 (bounded, no spec file; summary in the plan) | [plan](plans/2026-10-07-system-info.md) | Built 2026-10-07, not committed. Verified 2026-10-07: 197 tests pass (12 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 4 Step 4) still open. |
 
 Sub-projects 2 to 7 depend only on sub-project 1. Their order is free.
