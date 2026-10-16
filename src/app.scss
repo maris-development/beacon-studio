@@ -1,8 +1,8 @@
 @use 'font';
 
 // The only font sizes and families in the app. Tailwind `text-*` and `font-mono` map to them in tailwind.css.
+// --font-family-base is a brand token in tailwind.css.
 :root {
-	--font-family-base: #{font.$font-family-base};
 	--font-family-mono: ui-monospace, 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, monospace;
 
 	--font-size-xs: 0.75rem;
