@@ -4,7 +4,8 @@
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { removeNode } from '@/services/beacon-node';
 	import { checkNode, testNode } from '@/services/beacon-node-connect';
-	import { signedInNodeIds, signOut } from '@/services/admin-session';
+	import { canRememberSignIn, signedInNodeIds, signOut } from '@/services/admin-session';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import {
 		hasAdminInput,
 		hasCompleteAdminInput,
@@ -50,6 +51,8 @@
 	let token = '';
 	let adminUsername = '';
 	let adminPassword = '';
+	let adminRemember = false;
+	const rememberAvailable = canRememberSignIn();
 	let adminUsernameRef: HTMLInputElement | null = null;
 	let adminPasswordRef: HTMLInputElement | null = null;
 	let input: boolean = false;
@@ -58,7 +61,9 @@
 	// A new URL ends the session on save, so the form then asks for credentials again.
 	$: signedIn = node !== null && $signedInNodeIds.has(node.id) && sessionSurvives(node, url);
 	$: showAdminFields = $settings.adminFeatures && !signedIn;
-	$: adminInput = showAdminFields ? { username: adminUsername, password: adminPassword } : null;
+	$: adminInput = showAdminFields
+		? { username: adminUsername, password: adminPassword, remember: adminRemember }
+		: null;
 	$: adminRequired = hasAdminInput(adminInput);
 
 	onMount(() => {
@@ -127,6 +132,10 @@
 					message: result.adminError,
 					type: 'warning'
 				});
+			}
+
+			if (result.rememberFailed) {
+				addToast({ type: 'warning', key: 'admin.signIn.rememberFailed' });
 			}
 
 			onSave(result.node);
@@ -290,6 +299,23 @@
 						</div>
 					</div>
 
+					<div
+						class="remember"
+						class:unavailable={!rememberAvailable}
+						title={rememberAvailable ? undefined : $t('admin.signIn.rememberUnavailable')}
+					>
+						<Checkbox
+							id="admin-remember"
+							checked={rememberAvailable && adminRemember}
+							disabled={!rememberAvailable}
+							onCheckedChange={(value) => (adminRemember = value === true)}
+						/>
+						<Label for="admin-remember">{$t('admin.signIn.remember')}</Label>
+					</div>
+					{#if rememberAvailable}
+						<p class="hint">{$t('admin.signIn.rememberNote')}</p>
+					{/if}
+
 					{#if adminCheckState === 'valid'}
 						<p class="admin-result valid">{$t('node.form.adminValid')}</p>
 					{:else if adminCheckState === 'invalid'}
@@ -405,6 +431,22 @@
 
 			@media (max-width: 480px) {
 				grid-template-columns: 1fr;
+			}
+		}
+
+		.remember {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+
+			&.unavailable {
+				color: var(--muted-foreground);
+				cursor: not-allowed;
+
+				:global(label) {
+					color: var(--muted-foreground);
+					cursor: not-allowed;
+				}
 			}
 		}
 

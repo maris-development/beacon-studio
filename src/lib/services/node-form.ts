@@ -18,18 +18,25 @@ export function sessionSurvives(node: BeaconNode, url: string): boolean {
 	return normalizeUrl(url) === normalizeUrl(node.url);
 }
 
-/** The saved node, and the error of the sign-in that followed, if any. */
-export type NodeSaveResult = { node: BeaconNode; adminError: string | null };
+/** The admin fields of the form, with the "Remember on this device" choice. */
+export type AdminInput = AdminCredentials & { remember: boolean };
+
+/** The saved node, the error of the sign-in that followed, and whether the remember step failed. */
+export type NodeSaveResult = {
+	node: BeaconNode;
+	adminError: string | null;
+	rememberFailed: boolean;
+};
 
 /** True when the user typed into the admin fields. The form then needs both fields. */
-export function hasAdminInput(admin: AdminCredentials | null): admin is AdminCredentials {
+export function hasAdminInput(admin: AdminInput | null): admin is AdminInput {
 	return admin !== null && (admin.username !== '' || admin.password !== '');
 }
 
 /** Saves the node first, then signs in. A failed sign-in keeps the node. Null for an unknown id. */
 export async function saveNodeForm(
 	values: BeaconNodeInput,
-	admin: AdminCredentials | null,
+	admin: AdminInput | null,
 	editingId: string | null = null
 ): Promise<NodeSaveResult | null> {
 	let node: BeaconNode | null;
@@ -41,25 +48,25 @@ export async function saveNodeForm(
 	}
 
 	if (!node) return null;
-	if (!hasAdminInput(admin)) return { node, adminError: null };
+	if (!hasAdminInput(admin)) return { node, adminError: null, rememberFailed: false };
 
 	try {
-		await signIn(node, admin.username, admin.password);
-		return { node, adminError: null };
+		const saved = await signIn(node, admin.username, admin.password, admin.remember);
+		return { node, adminError: null, rememberFailed: !saved };
 	} catch (error) {
-		return { node, adminError: adminErrorMessage(error) };
+		return { node, adminError: adminErrorMessage(error), rememberFailed: false };
 	}
 }
 
 /** True when both admin fields hold text, so the node can check them. */
-export function hasCompleteAdminInput(admin: AdminCredentials | null): admin is AdminCredentials {
+export function hasCompleteAdminInput(admin: AdminInput | null): admin is AdminInput {
 	return admin !== null && admin.username !== '' && admin.password !== '';
 }
 
 /** Checks the admin fields against the URL. Null means valid, or no complete pair. */
 export async function testAdminInput(
 	url: string,
-	admin: AdminCredentials | null
+	admin: AdminInput | null
 ): Promise<string | null> {
 	if (!hasCompleteAdminInput(admin)) return null;
 

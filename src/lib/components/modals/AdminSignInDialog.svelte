@@ -12,12 +12,18 @@
 		AdminAuthError,
 		adminErrorMessage,
 		answerSignIn,
+		canRememberSignIn,
 		signIn,
 		signInRequest
 	} from '@/services/admin-session';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { addToast } from '@/stores/toasts';
+
+	const rememberAvailable = canRememberSignIn();
 
 	let username = $state('');
 	let password = $state('');
+	let remember = $state(false);
 	let error = $state('');
 	let busy = $state(false);
 
@@ -27,6 +33,7 @@
 
 		username = '';
 		password = '';
+		remember = false;
 		error = '';
 		busy = false;
 	});
@@ -58,7 +65,12 @@
 		error = '';
 
 		try {
-			await signIn(request.node, username, password);
+			const saved = await signIn(request.node, username, password, remember);
+
+			if (!saved) {
+				addToast({ type: 'warning', key: 'admin.signIn.rememberFailed' });
+			}
+
 			answerSignIn(true, request);
 		} catch (caught) {
 			if (caught instanceof AdminAuthError) {
@@ -106,7 +118,25 @@
 					/>
 				</div>
 
-				<p class="help">{$t('admin.signIn.help')}</p>
+				<p class="help">{$t('admin.signIn.helpRemember')}</p>
+
+				<div
+					class="remember"
+					class:unavailable={!rememberAvailable}
+					title={rememberAvailable ? undefined : $t('admin.signIn.rememberUnavailable')}
+				>
+					<Checkbox
+						id="admin-remember"
+						checked={rememberAvailable && remember}
+						disabled={!rememberAvailable}
+						onCheckedChange={(value) => (remember = value === true)}
+					/>
+					<Label for="admin-remember">{$t('admin.signIn.remember')}</Label>
+				</div>
+
+				{#if rememberAvailable}
+					<p class="help">{$t('admin.signIn.rememberNote')}</p>
+				{/if}
 
 				{#if error}
 					<p class="error" role="alert">{error}</p>
@@ -144,6 +174,22 @@
 	.field {
 		display: grid;
 		gap: 0.375rem;
+	}
+
+	.remember {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		&.unavailable {
+			color: var(--muted-foreground);
+			cursor: not-allowed;
+
+			:global(label) {
+				color: var(--muted-foreground);
+				cursor: not-allowed;
+			}
+		}
 	}
 
 	.help {

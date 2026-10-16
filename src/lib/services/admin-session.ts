@@ -2,8 +2,9 @@
  * The admin sign-in of each Beacon node.
  *
  * A session holds the Basic auth credentials of one node. The app keeps them in
- * `sessionStorage`, so they go away when the tab closes. A session on one node
- * gives no rights on another node.
+ * `sessionStorage`, so they go away when the tab closes. A remembered session is
+ * also in the encrypted vault (`admin-vault.ts`), and comes back after a restart.
+ * A session on one node gives no rights on another node.
  */
 
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
@@ -11,6 +12,14 @@ import { ApiError, BeaconClient, ConnectionError } from '@maris-development/beac
 import type { BeaconNode } from '@/beacon-api/types';
 import { translate } from '@/i18n';
 import { normalizeUrl } from './beacon-node-url';
+import {
+	forgetAllRemembered,
+	forgetRemembered,
+	loadRemembered,
+	saveRemembered,
+	vaultAvailable,
+	type RememberedSecret
+} from './admin-vault';
 
 export type AdminCredentials = { username: string; password: string };
 
@@ -94,14 +103,85 @@ export async function checkAdminCredentials(
 	}
 }
 
-/** Checks the credentials with the node, and saves them on success. */
-export async function signIn(node: BeaconNode, username: string, password: string): Promise<void> {
+/** Resolves when the restore of the remembered sessions ends. Admin actions wait for it. */
+export let adminSessionsReady: Promise<void> = Promise.resolve();
+
+let restoresRunning = 0;
+
+// A sign-in or sign-out during a restore wins over the remembered entry.
+const touchedDuringRestore = new Set<string>();
+
+function touch(nodeId: string): void {
+	if (restoresRunning > 0) touchedDuringRestore.add(nodeId);
+}
+
+const vaultQueue = new Map<string, Promise<void>>();
+
+// Vault writes of one node run in call order, so a later sign-out wins over an earlier save.
+function queueVault<T>(nodeId: string, write: () => Promise<T>): Promise<T> {
+	const result = (vaultQueue.get(nodeId) ?? Promise.resolve()).then(write);
+	const tail = result.then(
+		() => {},
+		() => {}
+	);
+
+	vaultQueue.set(nodeId, tail);
+	void tail.then(() => {
+		if (vaultQueue.get(nodeId) === tail) vaultQueue.delete(nodeId);
+	});
+
+	return result;
+}
+
+function forgetQuietly(nodeId: string): Promise<void> {
+	return queueVault(nodeId, () => forgetRemembered(nodeId)).catch((error) => {
+		console.warn('Cannot forget the remembered admin sign-in', error);
+	});
+}
+
+/** True when this browser can remember a sign-in. */
+export function canRememberSignIn(): boolean {
+	return vaultAvailable();
+}
+
+/**
+ * Checks the credentials with the node, and saves them on success.
+ * Resolves false only when `remember` is set and the vault save failed. The tab session exists then too.
+ */
+export async function signIn(
+	node: BeaconNode,
+	username: string,
+	password: string,
+	remember = false
+): Promise<boolean> {
 	await checkAdminCredentials(node.url, { username, password });
 
+	touch(node.id);
 	sessions.update((value) => ({ ...value, [node.id]: { username, password } }));
+
+	if (!remember) {
+		void forgetQuietly(node.id);
+		return true;
+	}
+
+	try {
+		const entry: RememberedSecret = {
+			nodeId: node.id,
+			nodeUrl: normalizeUrl(node.url),
+			username,
+			kind: 'password',
+			secret: password
+		};
+		await queueVault(node.id, () => saveRemembered(entry));
+		return true;
+	} catch (error) {
+		console.warn('Cannot remember the admin sign-in', error);
+		return false;
+	}
 }
 
 export function signOut(nodeId: string): void {
+	touch(nodeId);
 	sessions.update((value) => {
 		if (!(nodeId in value)) return value;
 
@@ -109,6 +189,73 @@ export function signOut(nodeId: string): void {
 		delete next[nodeId];
 		return next;
 	});
+
+	void forgetQuietly(nodeId);
+}
+
+/** Forgets every remembered sign-in. The open tab sessions stay. */
+export function forgetAllAdminSignIns(): Promise<void> {
+	return forgetAllRemembered();
+}
+
+// The one place that maps a vault secret to credentials.
+function credentialsFromSecret(entry: RememberedSecret): AdminCredentials | null {
+	if (entry.kind !== 'password') return null;
+
+	return { username: entry.username, password: entry.secret };
+}
+
+function urlMatches(entry: RememberedSecret, nodeUrl: string | null): boolean {
+	if (nodeUrl === null) return false;
+
+	try {
+		return normalizeUrl(nodeUrl) === entry.nodeUrl;
+	} catch {
+		return false;
+	}
+}
+
+async function restore(nodeUrlOf: (nodeId: string) => string | null): Promise<void> {
+	restoresRunning += 1;
+
+	try {
+		const restored: Sessions = {};
+
+		for (const entry of await loadRemembered()) {
+			const credentials = credentialsFromSecret(entry);
+
+			if (credentials && urlMatches(entry, nodeUrlOf(entry.nodeId))) {
+				restored[entry.nodeId] = credentials;
+			} else if (!touchedDuringRestore.has(entry.nodeId)) {
+				await forgetQuietly(entry.nodeId);
+			}
+		}
+
+		sessions.update((value) => {
+			const next = { ...value };
+			for (const [nodeId, credentials] of Object.entries(restored)) {
+				if (!(nodeId in next) && !touchedDuringRestore.has(nodeId)) next[nodeId] = credentials;
+			}
+			return next;
+		});
+	} catch (error) {
+		console.warn('Cannot restore the remembered admin sign-ins', error);
+	} finally {
+		restoresRunning -= 1;
+		if (restoresRunning === 0) touchedDuringRestore.clear();
+	}
+}
+
+/**
+ * Puts the remembered sessions back. `nodeUrlOf` gives the current URL of a node, or null.
+ * An entry for a missing node or another URL is removed. Never rejects.
+ */
+export function restoreRememberedSessions(
+	nodeUrlOf: (nodeId: string) => string | null
+): Promise<void> {
+	const running = restore(nodeUrlOf);
+	adminSessionsReady = running;
+	return running;
 }
 
 /** A message for a toast after a failed admin action. */
@@ -168,6 +315,8 @@ export function answerSignIn(signedIn: boolean, only?: SignInRequest): void {
 
 /** An admin client for this node. Asks for a sign-in first if needed. Null on cancel. */
 export async function requireAdminClient(node: BeaconNode): Promise<BeaconClient | null> {
+	await adminSessionsReady;
+
 	let credentials = credentialsOf(node.id);
 
 	if (!credentials) {

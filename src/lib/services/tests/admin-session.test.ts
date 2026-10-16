@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IDBFactory } from 'fake-indexeddb';
 import type { BeaconNode } from '@/beacon-api/types';
 
 const STORAGE_KEY = 'beacon-studio.admin-sessions';
@@ -143,5 +144,204 @@ describe('admin-session', () => {
 			'The Beacon node cannot be reached.'
 		);
 		expect(session.adminErrorMessage(new Error('x'))).toBe('x');
+	});
+});
+
+describe('admin-session remembered sign-ins', () => {
+	const A_URL = 'https://a.example.org';
+
+	beforeEach(() => {
+		sessionStorage.clear();
+		vi.restoreAllMocks();
+		vi.stubGlobal('indexedDB', new IDBFactory());
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	// Signs in on a fresh module, then gives a fresh module with an empty sessionStorage.
+	async function rememberThenRestart(nodeId = 'a', username = 'alice', password = 'pw') {
+		const first = await load();
+		vi.spyOn(first.sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await expect(first.session.signIn(node(nodeId), username, password, true)).resolves.toBe(true);
+
+		sessionStorage.clear();
+		const second = await load();
+		vi.spyOn(second.sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		return second;
+	}
+
+	it('remembers a sign-in across a restart', async () => {
+		const first = await load();
+		let session = first.session;
+		vi.spyOn(first.sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await expect(session.signIn(node('a'), 'alice', 'pw', true)).resolves.toBe(true);
+
+		sessionStorage.clear();
+		({ session } = await load());
+		expect(session.hasAdminSession('a')).toBe(false);
+
+		await session.restoreRememberedSessions(() => A_URL);
+		expect(session.credentialsOf('a')).toEqual({ username: 'alice', password: 'pw' });
+	});
+
+	it('saves nothing without remember', async () => {
+		const first = await load();
+		let session = first.session;
+		vi.spyOn(first.sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await expect(session.signIn(node('a'), 'alice', 'pw', false)).resolves.toBe(true);
+
+		sessionStorage.clear();
+		({ session } = await load());
+		await session.restoreRememberedSessions(() => A_URL);
+
+		expect(session.hasAdminSession('a')).toBe(false);
+	});
+
+	it('forgets an older remembered user on a sign-in without remember', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await session.signIn(node('a'), 'alice', 'pw', true);
+		await session.signIn(node('a'), 'bob', 'pw2', false);
+		const vault = await import('../admin-vault');
+		await vi.waitFor(async () => expect(await vault.loadRemembered()).toEqual([]));
+
+		sessionStorage.clear();
+		const next = await load();
+		await next.session.restoreRememberedSessions(() => A_URL);
+
+		expect(next.session.hasAdminSession('a')).toBe(false);
+	});
+
+	it('signOut forgets the remembered entry', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await session.signIn(node('a'), 'alice', 'pw', true);
+
+		session.signOut('a');
+		const vault = await import('../admin-vault');
+		await vi.waitFor(async () => expect(await vault.loadRemembered()).toEqual([]));
+
+		sessionStorage.clear();
+		const next = await load();
+		await next.session.restoreRememberedSessions(() => A_URL);
+		expect(next.session.hasAdminSession('a')).toBe(false);
+	});
+
+	it('forgets the entry on a signOut during the save', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		const vault = await import('../admin-vault');
+		const realSave = vault.saveRemembered;
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => (release = resolve));
+		// The save writes only after the signOut, as a slow key or encrypt step does.
+		const save = vi.spyOn(vault, 'saveRemembered').mockImplementation(async (entry) => {
+			await gate;
+			await realSave(entry);
+		});
+
+		const signingIn = session.signIn(node('a'), 'alice', 'pw', true);
+		await vi.waitFor(() => expect(save).toHaveBeenCalled());
+		session.signOut('a');
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		release();
+
+		await expect(signingIn).resolves.toBe(true);
+		await vi.waitFor(async () => expect(await vault.loadRemembered()).toEqual([]));
+
+		sessionStorage.clear();
+		const next = await load();
+		await next.session.restoreRememberedSessions(() => A_URL);
+		expect(next.session.hasAdminSession('a')).toBe(false);
+	});
+
+	it('discards an entry for another URL', async () => {
+		const { session } = await rememberThenRestart();
+
+		await session.restoreRememberedSessions(() => 'https://other.example.org');
+
+		expect(session.hasAdminSession('a')).toBe(false);
+		const vault = await import('../admin-vault');
+		expect(await vault.loadRemembered()).toEqual([]);
+	});
+
+	it('discards an entry for a removed node', async () => {
+		const { session } = await rememberThenRestart();
+
+		await session.restoreRememberedSessions(() => null);
+
+		expect(session.hasAdminSession('a')).toBe(false);
+		const vault = await import('../admin-vault');
+		expect(await vault.loadRemembered()).toEqual([]);
+	});
+
+	it('compares URLs after normalizeUrl', async () => {
+		const { session } = await rememberThenRestart();
+
+		await session.restoreRememberedSessions(() => 'https://A.example.org/');
+
+		expect(session.credentialsOf('a')).toEqual({ username: 'alice', password: 'pw' });
+	});
+
+	it('keeps a sign-in made during the restore', async () => {
+		const { session } = await rememberThenRestart();
+
+		const restore = session.restoreRememberedSessions(() => A_URL);
+		await session.signIn(node('a'), 'bob', 'pw2');
+		await restore;
+
+		expect(session.credentialsOf('a')?.username).toBe('bob');
+	});
+
+	it('keeps a sign-out made during the restore', async () => {
+		const { session } = await rememberThenRestart();
+
+		const restore = session.restoreRememberedSessions(() => A_URL);
+		session.signOut('a');
+		await restore;
+
+		expect(session.hasAdminSession('a')).toBe(false);
+	});
+
+	it('keeps the tab session when the save fails', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		const vault = await import('../admin-vault');
+		vi.spyOn(vault, 'saveRemembered').mockRejectedValue(new Error('quota'));
+		vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+		await expect(session.signIn(node('a'), 'alice', 'pw', true)).resolves.toBe(false);
+
+		expect(session.hasAdminSession('a')).toBe(true);
+	});
+
+	it('sets adminSessionsReady to the running restore', async () => {
+		const { session } = await rememberThenRestart();
+
+		const restore = session.restoreRememberedSessions(() => A_URL);
+
+		expect(session.adminSessionsReady).toBe(restore);
+		await restore;
+	});
+
+	it('forgets all remembered sign-ins and keeps the tab sessions', async () => {
+		const { session } = await rememberThenRestart();
+		await session.restoreRememberedSessions(() => A_URL);
+
+		await session.forgetAllAdminSignIns();
+
+		expect(session.hasAdminSession('a')).toBe(true);
+		const vault = await import('../admin-vault');
+		expect(await vault.loadRemembered()).toEqual([]);
+	});
+
+	it('reports the vault availability', async () => {
+		const { session } = await load();
+		expect(session.canRememberSignIn()).toBe(true);
+
+		vi.stubGlobal('indexedDB', undefined);
+		expect(session.canRememberSignIn()).toBe(false);
 	});
 });

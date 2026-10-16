@@ -7,6 +7,8 @@
 	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
 	import { loadHomeExamples } from '@/data/home-examples';
 	import { FRESH_MS } from '@/services/beacon-node-health';
+	import { findById } from '@/services/beacon-node';
+	import { restoreRememberedSessions } from '@/services/admin-session';
 	import { syncOpenNodes } from '@/services/open-nodes-import';
 	import { initTelemetry, setRoute, track } from '@/telemetry';
 	import { setLanguage } from '@/i18n';
@@ -30,6 +32,10 @@
 
 	// The script runs before any page script, so the first paint has the right language.
 	setLanguage(getSettings().language);
+
+	// The restore must start before a page onMount.
+	void restoreRememberedSessions((id) => findById(id)?.url ?? null);
+
 	$effect(() => setLanguage($settings.language));
 
 	// One monitor for the whole app. It checks every node each hour.

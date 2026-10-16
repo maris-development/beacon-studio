@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
+import { IDBFactory } from 'fake-indexeddb';
 import type { BeaconNode } from '@/beacon-api/types';
 
 function node(id: string): BeaconNode {
@@ -156,6 +157,33 @@ describe('withAdmin', () => {
 		await expect(session.withAdmin(node('a'), fn)).resolves.toBe('done');
 		expect(get(session.signInRequest)).toBeNull();
 		expect(fn).toHaveBeenCalledTimes(2);
+	});
+
+	it('waits for the restore before it asks', async () => {
+		vi.stubGlobal('indexedDB', new IDBFactory());
+		try {
+			const first = await load();
+			await first.signIn(node('a'), 'alice', 'pw', true);
+			sessionStorage.clear();
+
+			const session = await load();
+			const requests: unknown[] = [];
+			session.signInRequest.subscribe((r) => {
+				if (r) requests.push(r);
+			});
+			const fn = vi.fn().mockResolvedValue('done');
+
+			const restore = session.restoreRememberedSessions(() => 'https://a.example.org');
+			const result = session.withAdmin(node('a'), fn);
+
+			await expect(result).resolves.toBe('done');
+			await restore;
+			expect(fn).toHaveBeenCalledTimes(1);
+			expect(requests).toHaveLength(0);
+			expect(get(session.signInRequest)).toBeNull();
+		} finally {
+			vi.unstubAllGlobals();
+		}
 	});
 
 	it('cancels the open request when another node asks', async () => {
