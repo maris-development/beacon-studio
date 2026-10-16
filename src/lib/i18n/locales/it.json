@@ -43,12 +43,7 @@
 		"item": {
 			"queries": "Query",
 			"queryBuilder": "Generatore di query",
-			"savedQueries": "Query salvate",
-			"queryHistory": "Cronologia query",
 			"workspace": "Spazio di lavoro",
-			"mapViewer": "Visualizzatore mappa",
-			"tableExplorer": "Esplora tabelle",
-			"chartExplorer": "Esplora grafici",
 			"dataBrowser": "Browser dati",
 			"datasets": "Dataset",
 			"dataTables": "Tabelle dati",
@@ -60,8 +55,12 @@
 			"documentation": "Documentazione",
 			"github": "GitHub",
 			"feedback": "Feedback",
-			"sqlEditor": "Editor SQL",
+			"sqlConsole": "Console SQL",
 			"crawlers": "Crawler"
+		},
+		"adminLock": {
+			"signIn": "Accedi come amministratore su {node} per usare questa pagina.",
+			"noNode": "Accedi come amministratore per usare questa pagina."
 		},
 		"needsNode": "Questa pagina richiede un nodo Beacon. Aggiungine uno nella pagina Nodi Beacon.",
 		"waitForNodes": "{app} legge i nodi Beacon pubblici. Questo avviene solo alla prima visita. La tua query parte quando arrivano."
@@ -1136,7 +1135,7 @@
 				"pageTitle": "Tabella {name}",
 				"back": "Tabelle",
 				"notFound": "Il nodo non ha la tabella \"{name}\" in {schema}.",
-				"openInEditor": "Apri nell'editor SQL",
+				"openInEditor": "Apri nella console SQL",
 				"drop": "Elimina",
 				"loading": "Caricamento della tabella…",
 				"refreshed": "{name} aggiornata.",
@@ -1221,7 +1220,7 @@
 			"detail": {
 				"title": "Dataset {name}",
 				"missingParam": "Manca il parametro di query `{name}`.",
-				"openInEditor": "Apri nell'editor SQL",
+				"openInEditor": "Apri nella console SQL",
 				"download": "Scarica",
 				"downloadFailed": "Beacon non ha potuto inviare il file.",
 				"schema": "Schema",

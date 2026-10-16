@@ -43,12 +43,7 @@
 		"item": {
 			"queries": "Queries",
 			"queryBuilder": "Query Builder",
-			"savedQueries": "Saved Queries",
-			"queryHistory": "Query History",
 			"workspace": "Workspace",
-			"mapViewer": "Map Viewer",
-			"tableExplorer": "Table Explorer",
-			"chartExplorer": "Chart Explorer",
 			"dataBrowser": "Data Browser",
 			"datasets": "Datasets",
 			"dataTables": "Data Tables",
@@ -60,8 +55,12 @@
 			"documentation": "Documentation",
 			"github": "GitHub",
 			"feedback": "Feedback",
-			"sqlEditor": "SQL Editor",
+			"sqlConsole": "SQL Console",
 			"crawlers": "Crawlers"
+		},
+		"adminLock": {
+			"signIn": "Sign in as admin on {node} to use this page.",
+			"noNode": "Sign in as admin to use this page."
 		},
 		"needsNode": "This page needs a Beacon node. Add one on the Beacon Nodes page.",
 		"waitForNodes": "{app} reads the public Beacon nodes. This happens on the first visit only. Your query starts when they arrive."
@@ -1136,7 +1135,7 @@
 				"pageTitle": "Table {name}",
 				"back": "Tables",
 				"notFound": "The node has no table \"{name}\" in {schema}.",
-				"openInEditor": "Open in SQL Editor",
+				"openInEditor": "Open in SQL Console",
 				"drop": "Drop",
 				"loading": "Loading the table…",
 				"refreshed": "Refreshed {name}.",
@@ -1221,7 +1220,7 @@
 			"detail": {
 				"title": "Dataset {name}",
 				"missingParam": "The `{name}` query parameter is missing.",
-				"openInEditor": "Open in SQL Editor",
+				"openInEditor": "Open in SQL Console",
 				"download": "Download",
 				"downloadFailed": "Beacon could not send the file.",
 				"schema": "Schema",

@@ -3,7 +3,7 @@
 Read this file first. It holds the state of the admin mode work, every decision so far, and the next step.
 Agents: update this file when you finish a stage (spec, plan, build). Keep it short. Link to specs and plans for detail.
 
-**Change of course (2026-10-16):** admin mode now follows the sub-issues of GitHub issue #165 (https://github.com/maris-development/beacon-studio/issues/165). Where a decision below differs from an issue, the issue wins. Crawlers rework: #159, [plan](plans/2026-10-16-crawlers-page-rework.md). Users & Roles: #160, [plan](plans/2026-10-16-users-roles-page.md).
+**Change of course (2026-10-16):** admin mode now follows the sub-issues of GitHub issue #165 (https://github.com/maris-development/beacon-studio/issues/165). Where a decision below differs from an issue, the issue wins. Crawlers rework: #159, [plan](plans/2026-10-16-crawlers-page-rework.md). Users & Roles: #160, [plan](plans/2026-10-16-users-roles-page.md). Sidebar restructure: #161, [plan](plans/2026-10-16-sidebar-restructure.md). Built 2026-10-16, not committed. Verified 2026-10-16: 309 tests pass, `npm run check` clean, no new lint errors, headless smoke test passes. A real sign-in through the dialog is not tested yet.
 
 ## Goal
 
@@ -19,7 +19,7 @@ Users who are not technical must see almost no change.
 | 3 | Tables | [spec 3+4+5](specs/2026-10-06-data-browser-design.md) (approved) | [plan](plans/2026-10-06-data-browser-tables.md) | Committed (`08adc20`). Verified 2026-10-06: 133 tests pass (29 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 9 Step 3) still open. |
 | 4 | Datasets | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-datasets.md) | Committed (`e824dcc`). Verified 2026-10-06: 157 tests pass (24 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 8 Step 2) still open. |
 | 5 | Crawlers | (in the 3+4+5 spec) | [plan](plans/2026-10-06-data-browser-crawlers.md) | Committed (`2501af7`). Verified 2026-10-06: 176 tests pass (19 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 5 Step 3) still open. Fixes for steps 4 and 5: [fix plan](plans/2026-10-06-data-browser-fixes.md), built 2026-10-06 (184 tests pass), not committed. |
-| 6 | Users and roles | Issue #160 | [plan](plans/2026-10-16-users-roles-page.md) | Built 2026-10-16, not committed. Page: `/node-management/users-roles`. |
+| 6 | Users and roles | Issue #160 | [plan](plans/2026-10-16-users-roles-page.md) | Committed (`d0a6cea`). Page: `/node-management/users-roles`. |
 | 7 | System info | Design approved in chat 2026-10-07 (bounded, no spec file; summary in the plan) | [plan](plans/2026-10-07-system-info.md) | Built 2026-10-07, not committed. Verified 2026-10-07: 197 tests pass (12 new), `npm run check` clean, no lint errors in touched paths, `npm run build` passes. Manual test (plan Task 4 Step 4) still open. |
 
 Sub-projects 2 to 7 depend only on sub-project 1. Their order is free.
@@ -37,7 +37,7 @@ Rules from the user for this work:
 - Put tests in a `tests/` folder next to the code (`src/lib/sql/tests/x.test.ts`), not beside the file. Older plans show the beside form; follow this rule instead.
 - Edit files with the Edit tool. Never with `sed`, `perl` or `echo`: they break backslashes.
 - Wrap each page in `<div class="page-wrapper"><div class="page-container">`, as `routes/queries/history/+page.svelte` does.
-- Translate every user-visible string (AGENTS.md, "Translations"). Add each key to `en.json`, `nl.json` and `it.json`. Admin keys live under `admin`, `sqlEditor`, `dataBrowser` and `systemInfo`.
+- Translate every user-visible string (AGENTS.md, "Translations"). Add each key to `en.json`, `es.json`, `nl.json` and `it.json`. Admin keys live under `admin`, `sqlEditor`, `dataBrowser` and `systemInfo`.
 - Check a fact in the code before you state it. An earlier wrong guess: "the node picker changes the node of query blocks". It does not. A block keeps its own node.
 
 ## Decisions
@@ -45,10 +45,10 @@ Rules from the user for this work:
 Each line: the decision, then the reason.
 
 ### Setting and visibility
-- One setting, "Show admin features" (`adminFeatures`), group `System`, default off. There is no sidebar toggle. The setting keeps the UI the same for normal users.
-- Pages with no value for normal users (Crawlers, Users & Roles) are `adminOnly` menu items. They are hidden while the setting is off.
-- Pages for everyone (Datasets, Data Tables, System Info, SQL Editor) always show. Their admin controls are greyed out while the setting is off, with the hint `Turn on "Show admin features" in Settings`.
-- An admin-only page opened by URL with the setting off shows a short notice with a link to Settings. Sub-project 5 adds it, because it adds the first admin-only page.
+- One setting, "Show admin features" (`adminFeatures`), group `System`, default on (#161). There is no sidebar toggle. `setSetting` stores the whole settings object, so every user who changed any setting before #161 keeps `false`. Only a user with no stored settings gets the new default.
+- Admin-only pages (SQL Console, Crawlers, Users & Roles) are `adminOnly` menu items. They are hidden while the setting is off. While the current node has no admin session, each shows a lock (`isLocked` in `components/sidebar/menu.ts`). The lock is a hint; the item stays clickable.
+- Pages for everyone (Datasets, Data Tables, System Info) always show. Their admin controls are greyed out while the setting is off, with the hint `Turn on "Show admin features" in Settings`. "Open in SQL Console" on a detail page is such a control until #155.
+- An admin-only page ignores the setting. Without a session it shows only the `AdminSessionRequired` card (#160).
 
 ### Sign-in
 - A sign-in belongs to one node. A session on node A gives no rights on node B.
@@ -59,14 +59,14 @@ Each line: the decision, then the reason.
 - Every sign-out removes the saved entry: "Close admin session", a 401, a removed node, a URL change. A second open tab keeps its own tab session until it closes.
 - Temporary: the saved password goes away when Studio uses the session tokens of beacon PR [#590](https://github.com/maris-development/beacon/pull/590). The vault then stores the `bst_` token (kind `'session-token'`), and `VAULT_VERSION` goes up. The checkbox then also sends `remember: true` to `POST /api/auth/session`. A follow-up issue does that switch after #590 lands and the SDK supports it.
 - A 401 removes the session, asks again, and retries one time. A 403 shows a toast and keeps the session.
-- The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows no sign-in state. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Committed (`7d04155`).
+- The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows a lock on an admin item while the current node has no session. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Committed (`7d04155`).
 - Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`.
 - An admin-only page with no session shows the `AdminSessionRequired` card. It never opens the dialog by itself (issue #154). The page loads through `withAdminSession`, which never asks; a 401 there shows the card. The actions keep `withAdmin`. The layout renders a page only after the restore of remembered sessions (1 second at most), so a page has no "restoring" state. Plan: [session required](plans/2026-10-16-admin-session-required.md). Built 2026-10-16, not committed.
 
 ### Menu
 - Group names stay the same: "Data Access", "Explore and Analyze", "Node Management", "Beacon Studio".
-- The SQL Editor goes in "Data Access", and is always visible.
-- Crawlers goes under Data Browser (Data Browser > Crawlers), as an `adminOnly` sub-item (changed 2026-10-06, data-browser spec). Users & Roles goes in "Node Management", as an `adminOnly` item.
+- The menu of #161: "Data Access" holds Query Workbench (label "Query Builder" until #149). "Explore and Analyze" holds Workspace (the three viewers, name not final). "Node Management" holds Data Browser (Datasets, Data Tables), SQL Console, Crawlers, Users & Roles and System Info. Query Workbench and Workspace have no children.
+- A parent item with no `match` is active on its own URL and on its children only (`isItemActive`). So Data Browser is not active on `/data-browser/crawlers`.
 
 ### Node
 - Admin and browse pages use the global node (`$currentNode`) through one shared `NodePicker`.
@@ -88,7 +88,7 @@ The `beacon-web` pages set the minimum. See the table in the [step 1 spec](specs
 
 Short notes that are not in a spec yet. Move them into the spec when it is written.
 
-- 2 SQL editor: for power users too, not admin only. Includes a catalogue of tables and their fields.
+- 2 SQL editor (now "SQL Console"): admin only since #161. Every user gets SQL through the SQL mode of the workbench (#155). Includes a catalogue of tables and their fields.
   - Decision (2026-10-06): option C. Step 2 is a separate page, outside the query store, blocks and share links. The result shape stays ready for a later "open in viewers" handover. That handover is its own sub-project.
   - Decision (2026-10-06): privileged SQL runs as admin only when the server refuses it. Run as a normal user first. On refusal with "Show admin features" on, run again through `withAdmin`. With the setting off, show the error and the settings hint.
   - Server signal for that refusal: status **400** (not 401/403), body `operation not permitted: this statement requires super-user privileges`. The server refuses during plan validation, before it runs anything, so the retry cannot run a statement twice. Match the text `requires super-user privileges`.

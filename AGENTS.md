@@ -252,7 +252,8 @@ message the change never reaches production.
 - Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
-- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off. An admin-only page picks its view with `adminPageState`, shows `AdminSessionRequired` without a session, and loads through `withAdminSession`. It never opens the sign-in dialog by itself.
+- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off. An admin-only page picks its view with `adminPageState`, shows `AdminSessionRequired` without a session, and loads through `withAdminSession`. It never opens the sign-in dialog by itself. The sidebar shows a lock on an admin item while the current node has no session (`isLocked`). The lock is a hint only.
+- A sidebar parent with children and no `match` is active only on its own URL and on its children (`isItemActive`). A top-level item below its URL, for example Crawlers at `/data-browser/crawlers`, does not activate the parent.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
   Inline expressions in Svelte markup, where a statement is not possible, are exempt.

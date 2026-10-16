@@ -20,8 +20,8 @@
 	import { saveBlob } from '@/components/sql-editor/save-blob';
 	import { makeBeaconClient } from '@/beacon-api/client';
 	import { currentNode } from '@/services/beacon-node';
-	import { withAdmin } from '@/services/admin-session';
-	import { settings } from '@/stores/settings';
+	import { adminPageState, signedInNodeIds, withAdmin } from '@/services/admin-session';
+	import AdminSessionRequired from '@/components/AdminSessionRequired.svelte';
 	import { CatalogCache, type CatalogTree as Tree, type SchemaColumn } from '@/sql/catalog';
 	import { buildCompletions, parseFunctions, type FnMeta } from '@/sql/completion';
 	import { downloadFileName, type DownloadFormat } from '@/sql/download';
@@ -91,6 +91,7 @@
 	let node = $derived($currentNode);
 	// The node object changes on every health check. The URL changes only on a real switch.
 	let nodeUrl = $derived(node?.url ?? null);
+	let gate = $derived(adminPageState(node, $signedInNodeIds));
 	let outcome = $derived(outcomes[activeTab.id] ?? null);
 
 	let completions = $derived.by(() => {
@@ -106,8 +107,9 @@
 		saveTabs($state.snapshot(tabs));
 	});
 
+	// The catalogue loads only with a session, because the page shows the editor only then.
 	$effect(() => {
-		if (!nodeUrl) return;
+		if (!nodeUrl || gate !== 'ready') return;
 		untrack(() => loadCatalogue(false));
 	});
 
@@ -202,7 +204,8 @@
 		try {
 			const result = await withAdminFallback((client: SdkClient) => work(client, sql, own.signal), {
 				client: makeBeaconClient(current),
-				adminFeatures: $settings.adminFeatures,
+				// An admin page ignores "Show admin features".
+				adminFeatures: true,
 				asAdmin: (run) => withAdmin(current, run)
 			});
 
@@ -269,7 +272,7 @@
 
 			const result = await withAdminFallback(fetchFile, {
 				client: makeBeaconClient(current),
-				adminFeatures: $settings.adminFeatures,
+				adminFeatures: true,
 				asAdmin: (fn) => withAdmin(current, fn)
 			});
 
@@ -302,130 +305,132 @@
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('nav.item.sqlEditor') })}</title>
+	<title>{$t('app.pageTitle', { page: $t('nav.item.sqlConsole') })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: $t('nav.item.sqlEditor'), href: resolve('/sql-editor') }]} />
+<Cookiecrumb crumbs={[{ label: $t('nav.item.sqlConsole'), href: resolve('/sql-editor') }]} />
 
 <div class="page-wrapper sql-wrapper">
 	<div class="page-container sql-page">
 		<header class="page-head">
-			<h1>{$t('nav.item.sqlEditor')}</h1>
+			<h1>{$t('nav.item.sqlConsole')}</h1>
 			<NodePicker />
 		</header>
 
-		{#if !node}
+		{#if !node || gate === 'pick-node'}
 			<p>{$t('sqlEditor.pickNode')}</p>
-		{/if}
-
-		<div class="workspace">
-			<section class="main">
-				<SqlTabs
-					state={tabs}
-					onSelect={(id) => (tabs = selectTab(tabs, id))}
-					onAdd={() => (tabs = addTab(tabs, titleOf))}
-					{onClose}
-					onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
-				/>
-
-				<div class="toolbar">
-					<Button
-						class="catalog-toggle"
-						variant="outline"
-						onclick={() => (catalogOpen = !catalogOpen)}
-						aria-label={$t('sqlEditor.toolbar.tables')}
-					>
-						<PanelRightIcon />
-					</Button>
-
-					{#if busy}
-						<Button variant="destructive" onclick={stop}>
-							<SquareIcon />
-							{$t('sqlEditor.toolbar.stop')}
-						</Button>
-					{:else}
-						<Button disabled={!node} onclick={run} title={$t('sqlEditor.toolbar.runShortcut')}>
-							<PlayIcon />
-							{$t('sqlEditor.toolbar.run')}
-						</Button>
-					{/if}
-					<Button variant="outline" disabled={!node || busy} onclick={() => explain(false)}>
-						<ListTreeIcon />
-						{$t('sqlEditor.toolbar.explain')}
-					</Button>
-					<Button variant="outline" disabled={!node || busy} onclick={() => explain(true)}>
-						{$t('sqlEditor.toolbar.analyze')}
-					</Button>
-					<DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
-					<span class="hint">{$t('sqlEditor.toolbar.hint')}</span>
-				</div>
-
-				<div class="editor-area">
-					<SqlEditor
-						bind:this={editor}
-						tabId={activeTab.id}
-						value={activeTab.sql}
-						tabIds={tabs.tabs.map((tab) => tab.id)}
-						{completions}
-						onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
-						onRun={() => {
-							if (!busy) run();
-						}}
+		{:else if gate === 'sign-in'}
+			<AdminSessionRequired {node} />
+		{:else}
+			<div class="workspace">
+				<section class="main">
+					<SqlTabs
+						state={tabs}
+						onSelect={(id) => (tabs = selectTab(tabs, id))}
+						onAdd={() => (tabs = addTab(tabs, titleOf))}
+						{onClose}
+						onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
 					/>
-				</div>
 
-				<div class="result-area">
-					{#if outcome?.kind === 'plan'}
-						{@const root = planRoot(outcome.plan)}
-						{#if root}
-							<PlanTree node={root} />
+					<div class="toolbar">
+						<Button
+							class="catalog-toggle"
+							variant="outline"
+							onclick={() => (catalogOpen = !catalogOpen)}
+							aria-label={$t('sqlEditor.toolbar.tables')}
+						>
+							<PanelRightIcon />
+						</Button>
+
+						{#if busy}
+							<Button variant="destructive" onclick={stop}>
+								<SquareIcon />
+								{$t('sqlEditor.toolbar.stop')}
+							</Button>
 						{:else}
-							<p class="muted">{$t('sqlEditor.result.noPlan')}</p>
+							<Button disabled={!node} onclick={run} title={$t('sqlEditor.toolbar.runShortcut')}>
+								<PlayIcon />
+								{$t('sqlEditor.toolbar.run')}
+							</Button>
 						{/if}
-					{:else}
-						{#if outcome?.kind === 'rows'}
-							{@const result = outcome.result}
-							{#if result.cancelled && result.rows.length > 0}
-								<p class="notice">{$t('sqlEditor.result.stoppedPartial')}</p>
-							{:else if result.cancelled}
-								<p class="notice">{$t('sqlEditor.result.stopped')}</p>
-							{:else if result.truncated}
-								<p class="notice">
-									{$t('sqlEditor.result.truncated', { count: PREVIEW_ROW_LIMIT })}
-								</p>
-							{/if}
-						{:else if outcome?.kind === 'error'}
-							<div class="error-block" role="alert">
-								<pre>{$t(outcome.message)}</pre>
-								{#if outcome.adminHint}
-									<p>{$t('admin.offHint')}</p>
-								{/if}
-							</div>
-						{:else if outcome?.kind === 'notice'}
-							<p class="notice">{$t(outcome.message)}</p>
-						{/if}
+						<Button variant="outline" disabled={!node || busy} onclick={() => explain(false)}>
+							<ListTreeIcon />
+							{$t('sqlEditor.toolbar.explain')}
+						</Button>
+						<Button variant="outline" disabled={!node || busy} onclick={() => explain(true)}>
+							{$t('sqlEditor.toolbar.analyze')}
+						</Button>
+						<DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
+						<span class="hint">{$t('sqlEditor.toolbar.hint')}</span>
+					</div>
 
-						<ResultGrid
-							columns={outcome?.kind === 'rows' ? outcome.result.columns : []}
-							types={outcome?.kind === 'rows' ? outcome.result.types : []}
-							rows={outcome?.kind === 'rows' ? outcome.result.rows : []}
-							loading={outcome?.kind === 'busy'}
+					<div class="editor-area">
+						<SqlEditor
+							bind:this={editor}
+							tabId={activeTab.id}
+							value={activeTab.sql}
+							tabIds={tabs.tabs.map((tab) => tab.id)}
+							{completions}
+							onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
+							onRun={() => {
+								if (!busy) run();
+							}}
 						/>
-					{/if}
-				</div>
-			</section>
+					</div>
 
-			<aside class="catalog-panel" class:open={catalogOpen}>
-				<CatalogTree
-					{tree}
-					loading={treeLoading}
-					error={treeError}
-					{loadColumns}
-					onInsert={(text) => editor?.insert(text)}
-					onRefresh={() => loadCatalogue(true)}
-				/>
-			</aside>
-		</div>
+					<div class="result-area">
+						{#if outcome?.kind === 'plan'}
+							{@const root = planRoot(outcome.plan)}
+							{#if root}
+								<PlanTree node={root} />
+							{:else}
+								<p class="muted">{$t('sqlEditor.result.noPlan')}</p>
+							{/if}
+						{:else}
+							{#if outcome?.kind === 'rows'}
+								{@const result = outcome.result}
+								{#if result.cancelled && result.rows.length > 0}
+									<p class="notice">{$t('sqlEditor.result.stoppedPartial')}</p>
+								{:else if result.cancelled}
+									<p class="notice">{$t('sqlEditor.result.stopped')}</p>
+								{:else if result.truncated}
+									<p class="notice">
+										{$t('sqlEditor.result.truncated', { count: PREVIEW_ROW_LIMIT })}
+									</p>
+								{/if}
+							{:else if outcome?.kind === 'error'}
+								<div class="error-block" role="alert">
+									<pre>{$t(outcome.message)}</pre>
+									{#if outcome.adminHint}
+										<p>{$t('admin.offHint')}</p>
+									{/if}
+								</div>
+							{:else if outcome?.kind === 'notice'}
+								<p class="notice">{$t(outcome.message)}</p>
+							{/if}
+
+							<ResultGrid
+								columns={outcome?.kind === 'rows' ? outcome.result.columns : []}
+								types={outcome?.kind === 'rows' ? outcome.result.types : []}
+								rows={outcome?.kind === 'rows' ? outcome.result.rows : []}
+								loading={outcome?.kind === 'busy'}
+							/>
+						{/if}
+					</div>
+				</section>
+
+				<aside class="catalog-panel" class:open={catalogOpen}>
+					<CatalogTree
+						{tree}
+						loading={treeLoading}
+						error={treeError}
+						{loadColumns}
+						onInsert={(text) => editor?.insert(text)}
+						onRefresh={() => loadCatalogue(true)}
+					/>
+				</aside>
+			</div>
+		{/if}
 	</div>
 </div>
 

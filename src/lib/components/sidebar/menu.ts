@@ -35,3 +35,28 @@ export function visibleGroups(groups: Group[], adminFeatures: boolean): Group[] 
 
 	return result;
 }
+
+/** True on `url` and on every path below it. */
+export function isPathActive(pathname: string, url: string): boolean {
+	return pathname === url || pathname.startsWith(url + '/');
+}
+
+/** A parent with no `match` is active on its own URL and on its children only, not on a sibling page below it. */
+export function isItemActive(
+	pathname: string,
+	item: { url: string; match?: string; children?: { url: string }[] }
+): boolean {
+	if (item.match) return isPathActive(pathname, item.match);
+	if (item.children) {
+		return (
+			pathname === item.url || item.children.some((child) => isPathActive(pathname, child.url))
+		);
+	}
+
+	return isPathActive(pathname, item.url);
+}
+
+/** An admin item shows a lock while the current node has no admin session. */
+export function isLocked(item: { adminOnly?: boolean }, hasSession: boolean): boolean {
+	return !!item.adminOnly && !hasSession;
+}

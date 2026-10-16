@@ -6,14 +6,14 @@ describe('adminFeatures setting', () => {
 		localStorage.clear();
 	});
 
-	it('is off by default', () => {
-		expect(getSettings().adminFeatures).toBe(false);
+	it('is on by default', () => {
+		expect(getSettings().adminFeatures).toBe(true);
 	});
 
 	it('stores a new value', () => {
-		setSetting('adminFeatures', true);
-		expect(getSettings().adminFeatures).toBe(true);
 		setSetting('adminFeatures', false);
+		expect(getSettings().adminFeatures).toBe(false);
+		setSetting('adminFeatures', true);
 	});
 
 	it('has a definition in the System group', () => {

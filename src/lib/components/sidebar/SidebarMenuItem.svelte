@@ -1,27 +1,33 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import LockIcon from '@lucide/svelte/icons/lock';
+	import { isItemActive } from './menu';
 
 	let {
 		title,
 		url = undefined,
+		match = undefined,
 		icon: Icon = undefined,
 		target = undefined,
+		lock = undefined,
 		onclick = undefined,
 		buttonProps = undefined
 	}: {
 		title: string;
 		url?: string;
+		/** Section root the item highlights on. Defaults to `url`. */
+		match?: string;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		icon?: any;
 		target?: string;
+		/** Tooltip of the lock icon. The icon shows only with a value. */
+		lock?: string;
 		onclick?: () => void;
 		/** Props of a menu trigger. They make the item a button. */
 		buttonProps?: Record<string, unknown>;
 	} = $props();
 
-	const isActive = $derived(
-		!!url && (page.url.pathname === url || page.url.pathname.startsWith(url + '/'))
-	);
+	const isActive = $derived(!!url && isItemActive(page.url.pathname, { url, match }));
 </script>
 
 {#if onclick || buttonProps}
@@ -37,6 +43,9 @@
 			<span class="menu-icon"><Icon /></span>
 		{/if}
 		<span class="item-title">{title}</span>
+		{#if lock}
+			<span class="lock" title={lock} aria-label={lock}><LockIcon /></span>
+		{/if}
 	</a>
 {/if}
 
@@ -65,6 +74,21 @@
 			:global(svg) {
 				width: 1rem;
 				height: 1rem;
+			}
+		}
+
+		.item-title {
+			flex-grow: 1;
+		}
+
+		.lock {
+			display: flex;
+			flex-shrink: 0;
+			color: var(--muted-foreground);
+
+			:global(svg) {
+				width: 0.875rem;
+				height: 0.875rem;
 			}
 		}
 

@@ -236,10 +236,15 @@
 			</div>
 
 			<div class="actions">
-				<Button variant="outline" onclick={openInEditor}>
-					<SquareTerminalIcon />
-					{$t('dataBrowser.datasets.detail.openInEditor')}
-				</Button>
+				<!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
+				<AdminAction>
+					{#snippet children({ disabled })}
+						<Button variant="outline" onclick={openInEditor} {disabled}>
+							<SquareTerminalIcon />
+							{$t('dataBrowser.datasets.detail.openInEditor')}
+						</Button>
+					{/snippet}
+				</AdminAction>
 
 				{#if savedNode}
 					<AdminAction>

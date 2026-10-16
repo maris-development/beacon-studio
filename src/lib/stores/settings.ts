@@ -106,7 +106,7 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
 	sampleAfterRows: 500_000,
 
 	systemInfoUpdateIntervalMs: 1000,
-	adminFeatures: false,
+	adminFeatures: true,
 
 	telemetryEnabled: true,
 	telemetryQueryDetails: true,

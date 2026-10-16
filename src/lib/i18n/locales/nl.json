@@ -43,12 +43,7 @@
 		"item": {
 			"queries": "Queries",
 			"queryBuilder": "Querybouwer",
-			"savedQueries": "Opgeslagen queries",
-			"queryHistory": "Querygeschiedenis",
 			"workspace": "Werkruimte",
-			"mapViewer": "Kaartviewer",
-			"tableExplorer": "Tabelverkenner",
-			"chartExplorer": "Grafiekverkenner",
 			"dataBrowser": "Databrowser",
 			"datasets": "Datasets",
 			"dataTables": "Datatabellen",
@@ -60,8 +55,12 @@
 			"documentation": "Documentatie",
 			"github": "GitHub",
 			"feedback": "Feedback",
-			"sqlEditor": "SQL-editor",
+			"sqlConsole": "SQL-console",
 			"crawlers": "Crawlers"
+		},
+		"adminLock": {
+			"signIn": "Meld je aan als beheerder op {node} om deze pagina te gebruiken.",
+			"noNode": "Meld je aan als beheerder om deze pagina te gebruiken."
 		},
 		"needsNode": "Deze pagina heeft een Beacon-node nodig. Voeg er een toe op de pagina Beacon-nodes.",
 		"waitForNodes": "{app} leest de openbare Beacon-nodes. Dit gebeurt alleen bij het eerste bezoek. Je query start zodra ze binnen zijn."
@@ -1136,7 +1135,7 @@
 				"pageTitle": "Tabel {name}",
 				"back": "Tabellen",
 				"notFound": "De node heeft geen tabel \"{name}\" in {schema}.",
-				"openInEditor": "Openen in SQL-editor",
+				"openInEditor": "Openen in SQL-console",
 				"drop": "Verwijderen",
 				"loading": "Tabel laden…",
 				"refreshed": "{name} is ververst.",
@@ -1221,7 +1220,7 @@
 			"detail": {
 				"title": "Dataset {name}",
 				"missingParam": "De queryparameter `{name}` ontbreekt.",
-				"openInEditor": "Openen in SQL-editor",
+				"openInEditor": "Openen in SQL-console",
 				"download": "Downloaden",
 				"downloadFailed": "Beacon kon het bestand niet versturen.",
 				"schema": "Schema",

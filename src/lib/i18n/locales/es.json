@@ -43,12 +43,7 @@
 		"item": {
 			"queries": "Consultas",
 			"queryBuilder": "Constructor de consultas",
-			"savedQueries": "Consultas guardadas",
-			"queryHistory": "Historial de consultas",
 			"workspace": "Espacio de trabajo",
-			"mapViewer": "Visor de mapas",
-			"tableExplorer": "Explorador de tablas",
-			"chartExplorer": "Explorador de gráficos",
 			"dataBrowser": "Navegador de datos",
 			"datasets": "Conjuntos de datos",
 			"dataTables": "Tablas de datos",
@@ -60,8 +55,12 @@
 			"documentation": "Documentación",
 			"github": "GitHub",
 			"feedback": "Comentarios",
-			"sqlEditor": "Editor SQL",
+			"sqlConsole": "Consola SQL",
 			"crawlers": "Rastreadores"
+		},
+		"adminLock": {
+			"signIn": "Inicia sesión como administrador en {node} para usar esta página.",
+			"noNode": "Inicia sesión como administrador para usar esta página."
 		},
 		"needsNode": "Esta página necesita un nodo Beacon. Añade uno en la página Nodos Beacon.",
 		"waitForNodes": "{app} lee los nodos Beacon públicos. Esto ocurre solo en la primera visita. Tu consulta empieza cuando llegan."
@@ -1136,7 +1135,7 @@
 				"pageTitle": "Tabla {name}",
 				"back": "Tablas",
 				"notFound": "El nodo no tiene la tabla \"{name}\" en {schema}.",
-				"openInEditor": "Abrir en el editor SQL",
+				"openInEditor": "Abrir en la consola SQL",
 				"drop": "Eliminar",
 				"loading": "Cargando la tabla…",
 				"refreshed": "{name} actualizada.",
@@ -1221,7 +1220,7 @@
 			"detail": {
 				"title": "Conjunto de datos {name}",
 				"missingParam": "Falta el parámetro de consulta `{name}`.",
-				"openInEditor": "Abrir en el editor SQL",
+				"openInEditor": "Abrir en la consola SQL",
 				"download": "Descargar",
 				"downloadFailed": "Beacon no pudo enviar el archivo.",
 				"schema": "Esquema",
