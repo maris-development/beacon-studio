@@ -818,7 +818,21 @@
 			"editTitle": "Modifica nodo Beacon",
 			"closeTitle": "Chiudi senza salvare",
 			"closeMessage": "Questo modulo contiene modifiche che l'app non ha ancora salvato.",
-			"closeNote": "Le modifiche andranno perse."
+			"closeNote": "Le modifiche andranno perse.",
+			"intro": "Collega {app} a un nodo Beacon.",
+			"namePlaceholder": "Il mio Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "L'URL radice del nodo. {app} aggiunge /api da solo.",
+			"tokenPlaceholder": "Facoltativo",
+			"tokenHint": "{app} lo invia come bearer token nelle richieste di visualizzazione.",
+			"adminTitle": "Accesso amministratore (facoltativo)",
+			"adminUsername": "Nome utente amministratore",
+			"adminPassword": "Password amministratore",
+			"adminSignedIn": "Accesso effettuato come amministratore.",
+			"adminSignOut": "Chiudi sessione amministratore",
+			"adminValid": "Le credenziali di amministratore sono valide.",
+			"adminFailed": "Il nodo \"{name}\" esiste, ma senza accesso amministratore.",
+			"submitAdd": "Aggiungi nodo"
 		},
 		"delete": {
 			"title": "Elimina nodo Beacon",
@@ -976,8 +990,12 @@
 		"raw": "Risposta grezza"
 	},
 	"admin": {
+		"badge": "Admin",
 		"signIn": {
-			"title": "Accedi al nodo Beacon {name}",
+			"title": "Accedi come amministratore",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Usa BEACON_ADMIN_USERNAME e BEACON_ADMIN_PASSWORD del nodo. {app} conserva le credenziali solo per questa scheda del browser.",
 			"username": "Nome utente",
 			"password": "Password",
 			"submit": "Accedi",
@@ -997,9 +1015,14 @@
 		"nodePicker": {
 			"label": "Nodo Beacon",
 			"placeholder": "Seleziona un nodo",
-			"group": "Nodi",
-			"signedIn": "Accesso effettuato",
-			"signOut": "Esci"
+			"group": "Nodi Beacon",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Accedi come amministratore",
+			"signInHint": "Sblocca le funzioni di amministrazione di {name}",
+			"closeSession": "Chiudi sessione amministratore",
+			"closeSessionHint": "Accesso effettuato come amministratore",
+			"addNode": "Aggiungi nodo",
+			"manageNodes": "Gestisci nodi"
 		}
 	},
 	"sqlEditor": {

@@ -818,7 +818,21 @@
 			"editTitle": "Beacon-node bewerken",
 			"closeTitle": "Sluiten zonder opslaan",
 			"closeMessage": "Dit formulier bevat wijzigingen die de app nog niet heeft opgeslagen.",
-			"closeNote": "De wijzigingen gaan verloren."
+			"closeNote": "De wijzigingen gaan verloren.",
+			"intro": "Verbind {app} met een Beacon-node.",
+			"namePlaceholder": "Mijn Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "De basis-URL van de node. {app} voegt zelf /api toe.",
+			"tokenPlaceholder": "Optioneel",
+			"tokenHint": "{app} stuurt het als bearer-token mee bij kijkverzoeken.",
+			"adminTitle": "Beheerderstoegang (optioneel)",
+			"adminUsername": "Gebruikersnaam beheerder",
+			"adminPassword": "Wachtwoord beheerder",
+			"adminSignedIn": "Aangemeld als beheerder.",
+			"adminSignOut": "Beheerderssessie sluiten",
+			"adminValid": "De beheerdersgegevens zijn geldig.",
+			"adminFailed": "De node \"{name}\" bestaat, maar zonder beheerderstoegang.",
+			"submitAdd": "Node toevoegen"
 		},
 		"delete": {
 			"title": "Beacon-node verwijderen",
@@ -976,8 +990,12 @@
 		"raw": "Ruw antwoord"
 	},
 	"admin": {
+		"badge": "Admin",
 		"signIn": {
-			"title": "Aanmelden bij Beacon-node {name}",
+			"title": "Aanmelden als beheerder",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Gebruik BEACON_ADMIN_USERNAME en BEACON_ADMIN_PASSWORD van de node. {app} bewaart de gegevens alleen voor dit browsertabblad.",
 			"username": "Gebruikersnaam",
 			"password": "Wachtwoord",
 			"submit": "Aanmelden",
@@ -997,9 +1015,14 @@
 		"nodePicker": {
 			"label": "Beacon-node",
 			"placeholder": "Kies een node",
-			"group": "Nodes",
-			"signedIn": "Aangemeld",
-			"signOut": "Afmelden"
+			"group": "Beacon-nodes",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Aanmelden als beheerder",
+			"signInHint": "Ontgrendel de beheerfuncties van {name}",
+			"closeSession": "Beheerderssessie sluiten",
+			"closeSessionHint": "Aangemeld als beheerder",
+			"addNode": "Node toevoegen",
+			"manageNodes": "Nodes beheren"
 		}
 	},
 	"sqlEditor": {

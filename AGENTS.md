@@ -99,7 +99,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
-  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. Never ask for admin credentials in a page or a modal.)
+  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401.)
   - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
     therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
     there, so a first-ever visit has no node list when a page mounts. A page that names a

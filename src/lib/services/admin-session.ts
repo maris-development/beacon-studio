@@ -67,7 +67,10 @@ export function credentialsOf(nodeId: string): AdminCredentials | null {
 }
 
 /** An SDK client with Basic auth. The bearer token of the node shares the header, so it stays out. */
-export function makeAdminClient(node: BeaconNode, credentials: AdminCredentials): BeaconClient {
+export function makeAdminClient(
+	node: { url: string; token?: string },
+	credentials: AdminCredentials
+): BeaconClient {
 	return new BeaconClient({
 		url: normalizeUrl(node.url),
 		username: credentials.username,
@@ -76,9 +79,12 @@ export function makeAdminClient(node: BeaconNode, credentials: AdminCredentials)
 	});
 }
 
-/** Checks the credentials with the node, and saves them on success. */
-export async function signIn(node: BeaconNode, username: string, password: string): Promise<void> {
-	const client = makeAdminClient(node, { username, password });
+/** Checks the credentials with the node at this URL. Saves nothing. */
+export async function checkAdminCredentials(
+	url: string,
+	credentials: AdminCredentials
+): Promise<void> {
+	const client = makeAdminClient({ url }, credentials);
 
 	try {
 		await client.admin.check();
@@ -86,6 +92,11 @@ export async function signIn(node: BeaconNode, username: string, password: strin
 		if (error instanceof ApiError && error.status === 401) throw new AdminAuthError();
 		throw error;
 	}
+}
+
+/** Checks the credentials with the node, and saves them on success. */
+export async function signIn(node: BeaconNode, username: string, password: string): Promise<void> {
+	await checkAdminCredentials(node.url, { username, password });
 
 	sessions.update((value) => ({ ...value, [node.id]: { username, password } }));
 }

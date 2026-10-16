@@ -818,7 +818,21 @@
 			"editTitle": "Edit Beacon node",
 			"closeTitle": "Close without saving",
 			"closeMessage": "This form holds changes that the app did not save yet.",
-			"closeNote": "The changes go away."
+			"closeNote": "The changes go away.",
+			"intro": "Connect {app} to a Beacon node.",
+			"namePlaceholder": "My Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "The root URL of the node. {app} adds /api itself.",
+			"tokenPlaceholder": "Optional",
+			"tokenHint": "{app} sends it as a bearer token on viewer requests.",
+			"adminTitle": "Admin access (optional)",
+			"adminUsername": "Admin username",
+			"adminPassword": "Admin password",
+			"adminSignedIn": "Signed in as admin.",
+			"adminSignOut": "Close admin session",
+			"adminValid": "The admin credentials are valid.",
+			"adminFailed": "The node \"{name}\" exists, but without admin access.",
+			"submitAdd": "Add node"
 		},
 		"delete": {
 			"title": "Delete Beacon node",
@@ -976,8 +990,12 @@
 		"raw": "Raw answer"
 	},
 	"admin": {
+		"badge": "Admin",
 		"signIn": {
-			"title": "Sign in to Beacon node {name}",
+			"title": "Sign in as admin",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Use BEACON_ADMIN_USERNAME and BEACON_ADMIN_PASSWORD of the node. {app} keeps the credentials for this browser tab only.",
 			"username": "Username",
 			"password": "Password",
 			"submit": "Sign in",
@@ -997,9 +1015,14 @@
 		"nodePicker": {
 			"label": "Beacon Node",
 			"placeholder": "Select a node",
-			"group": "Nodes",
-			"signedIn": "Signed in",
-			"signOut": "Sign out"
+			"group": "Beacon nodes",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Sign in as admin",
+			"signInHint": "Unlock the admin features of {name}",
+			"closeSession": "Close admin session",
+			"closeSessionHint": "Signed in as admin",
+			"addNode": "Add node",
+			"manageNodes": "Manage nodes"
 		}
 	},
 	"sqlEditor": {

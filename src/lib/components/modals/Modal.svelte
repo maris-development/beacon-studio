@@ -8,6 +8,7 @@
 	export let canCloseModal: boolean = true;
 	export let title: string = '';
 	export let width: string = '500px';
+	export let subtitle: string = '';
 
 	let shortRandomString = Utils.randomUUID().slice(0, 8);
 
@@ -48,6 +49,9 @@
 	>
 		<header id="modal-title-{shortRandomString}">
 			<h2>{title}</h2>
+			{#if subtitle}
+				<p class="subtitle">{subtitle}</p>
+			{/if}
 			{#if canCloseModal}
 				<button class="close-button" on:click={onClose} aria-label={$t('modal.close')}> &times; </button>
 			{/if}
@@ -94,6 +98,13 @@
 			header {
 				font-size: var(--font-size-xl);
 				margin-bottom: 1rem;
+
+				.subtitle {
+					margin: 0.25rem 0 0;
+					font-size: var(--font-size-sm);
+					color: var(--muted-foreground);
+					word-break: break-all;
+				}
 
 				.close-button {
 					background: none;

@@ -50,12 +50,13 @@ Each line: the decision, then the reason.
 
 ### Sign-in
 - A sign-in belongs to one node. A session on node A gives no rights on node B.
-- Studio asks for a sign-in only when the user starts an admin action. The dialog title is "Sign in to Beacon node <name>".
+- Studio asks for a sign-in when the user starts an admin action, or picks "Sign in as admin" in the node picker. The dialog title is "Sign in as admin", with "<name> · <url>" under it.
+- The add-node modal has an optional admin box. It saves the node first, then signs in. A failed sign-in keeps the node (decision 2026-10-16).
 - Credentials go in `sessionStorage` (option A). They go away when the tab closes. Reason: Basic auth sends the real super-user password.
 - Future work (user goal): a set-and-forget admin sign-in, so an admin does not sign in again every session. It needs the convenience of saved credentials with the security of `sessionStorage`. One option: a non-extractable `CryptoKey` in IndexedDB that encrypts the saved password.
 - A 401 removes the session, asks again, and retries one time. A 403 shows a toast and keeps the session.
-- "Signed in" and a "Sign out" link show under the node picker. No username shows. The sidebar shows no sign-in state.
-- Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`. No page or modal asks for credentials itself.
+- The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows no sign-in state. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Built 2026-10-16, not committed.
+- Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`.
 
 ### Menu
 - Group names stay the same: "Data Access", "Explore and Analyze", "Node Management", "Beacon Studio".

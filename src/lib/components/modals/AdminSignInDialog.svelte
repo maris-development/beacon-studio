@@ -6,6 +6,7 @@
 	import Modal from '@/components/modals/Modal.svelte';
 	import { Input } from '@/components/ui/input';
 	import { Label } from '@/components/ui/label';
+	import LogInIcon from '@lucide/svelte/icons/log-in';
 	import { t } from '@/i18n';
 	import {
 		AdminAuthError,
@@ -74,16 +75,24 @@
 {#if $signInRequest}
 	<div class="sign-in-layer">
 		<Modal
-			title={$t('admin.signIn.title', { name: $signInRequest.node.name })}
+			title={$t('admin.signIn.title')}
+			subtitle={$t('admin.signIn.subtitle', {
+				name: $signInRequest.node.name,
+				url: $signInRequest.node.url
+			})}
 			onClose={() => answerSignIn(false)}
 			width="440px"
 		>
 			<form id="admin-sign-in" onsubmit={submit}>
-				<p class="node-url">{$signInRequest.node.url}</p>
-
 				<div class="field">
 					<Label for="admin-username">{$t('admin.signIn.username')}</Label>
-					<Input id="admin-username" autocomplete="username" bind:value={username} required />
+					<Input
+						id="admin-username"
+						autocomplete="username"
+						placeholder={$t('admin.signIn.usernamePlaceholder')}
+						bind:value={username}
+						required
+					/>
 				</div>
 
 				<div class="field">
@@ -97,6 +106,8 @@
 					/>
 				</div>
 
+				<p class="help">{$t('admin.signIn.help')}</p>
+
 				{#if error}
 					<p class="error" role="alert">{error}</p>
 				{/if}
@@ -105,6 +116,7 @@
 			<div slot="footer" class="actions">
 				<Button variant="outline" onclick={() => answerSignIn(false)}>{$t('common.cancel')}</Button>
 				<Button type="submit" form="admin-sign-in" disabled={busy}>
+					<LogInIcon />
 					{#if busy}
 						{$t('admin.signIn.busy')}
 					{:else}
@@ -134,10 +146,10 @@
 		gap: 0.375rem;
 	}
 
-	.node-url {
+	.help {
 		margin: 0;
+		font-size: var(--font-size-sm);
 		color: var(--muted-foreground);
-		word-break: break-all;
 	}
 
 	.error {

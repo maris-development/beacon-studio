@@ -818,7 +818,21 @@
 			"editTitle": "Editar nodo Beacon",
 			"closeTitle": "Cerrar sin guardar",
 			"closeMessage": "Este formulario contiene cambios que la aplicación todavía no ha guardado.",
-			"closeNote": "Los cambios se pierden."
+			"closeNote": "Los cambios se pierden.",
+			"intro": "Conecta {app} a un nodo Beacon.",
+			"namePlaceholder": "Mi Beacon",
+			"urlPlaceholder": "https://beacon.example.org",
+			"urlHint": "La URL raíz del nodo. {app} añade /api por sí mismo.",
+			"tokenPlaceholder": "Opcional",
+			"tokenHint": "{app} lo envía como bearer token en las solicitudes de visualización.",
+			"adminTitle": "Acceso de administrador (opcional)",
+			"adminUsername": "Usuario administrador",
+			"adminPassword": "Contraseña de administrador",
+			"adminSignedIn": "Sesión iniciada como administrador.",
+			"adminSignOut": "Cerrar sesión de administrador",
+			"adminValid": "Las credenciales de administrador son válidas.",
+			"adminFailed": "El nodo \"{name}\" existe, pero sin acceso de administrador.",
+			"submitAdd": "Añadir nodo"
 		},
 		"delete": {
 			"title": "Eliminar nodo Beacon",
@@ -976,8 +990,12 @@
 		"raw": "Respuesta sin procesar"
 	},
 	"admin": {
+		"badge": "Admin",
 		"signIn": {
-			"title": "Iniciar sesión en el nodo Beacon {name}",
+			"title": "Iniciar sesión como administrador",
+			"subtitle": "{name} · {url}",
+			"usernamePlaceholder": "beacon-admin",
+			"help": "Usa BEACON_ADMIN_USERNAME y BEACON_ADMIN_PASSWORD del nodo. {app} guarda las credenciales solo para esta pestaña del navegador.",
 			"username": "Usuario",
 			"password": "Contraseña",
 			"submit": "Iniciar sesión",
@@ -997,9 +1015,14 @@
 		"nodePicker": {
 			"label": "Nodo Beacon",
 			"placeholder": "Selecciona un nodo",
-			"group": "Nodos",
-			"signedIn": "Sesión iniciada",
-			"signOut": "Cerrar sesión"
+			"group": "Nodos Beacon",
+			"hostLatency": "{host} · {latency} ms",
+			"signIn": "Iniciar sesión como administrador",
+			"signInHint": "Desbloquea las funciones de administración de {name}",
+			"closeSession": "Cerrar sesión de administrador",
+			"closeSessionHint": "Sesión iniciada como administrador",
+			"addNode": "Añadir nodo",
+			"manageNodes": "Gestionar nodos"
 		}
 	},
 	"sqlEditor": {

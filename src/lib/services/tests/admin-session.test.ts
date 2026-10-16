@@ -55,6 +55,28 @@ describe('admin-session', () => {
 		await expect(session.signIn(node('a'), 'alice', 'pw')).rejects.toBe(error);
 	});
 
+	it('checks credentials without a session', async () => {
+		const { session, sdk } = await load();
+		const check = vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+
+		await session.checkAdminCredentials('https://a.example.org', { username: 'alice', password: 'pw' });
+
+		expect(check).toHaveBeenCalledOnce();
+		expect(session.hasAdminSession('a')).toBe(false);
+		expect(sessionStorage.getItem(STORAGE_KEY)).toBe('{}');
+	});
+
+	it('throws AdminAuthError from checkAdminCredentials on a 401', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockRejectedValue(
+			new sdk.ApiError(401, 'unauthorized', 'https://a.example.org/api/admin/check')
+		);
+
+		await expect(
+			session.checkAdminCredentials('https://a.example.org', { username: 'alice', password: 'bad' })
+		).rejects.toBeInstanceOf(session.AdminAuthError);
+	});
+
 	it('signs out one node', async () => {
 		sessionStorage.setItem(
 			STORAGE_KEY,
