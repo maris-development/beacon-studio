@@ -52,10 +52,12 @@ Each line: the decision, then the reason.
 - A sign-in belongs to one node. A session on node A gives no rights on node B.
 - Studio asks for a sign-in when the user starts an admin action, or picks "Sign in as admin" in the node picker. The dialog title is "Sign in as admin", with "<name> · <url>" under it.
 - The add-node modal has an optional admin box. It saves the node first, then signs in. A failed sign-in keeps the node (decision 2026-10-16).
-- Credentials go in `sessionStorage` (option A). They go away when the tab closes. Reason: Basic auth sends the real super-user password.
-- Future work (user goal): a set-and-forget admin sign-in, so an admin does not sign in again every session. It needs the convenience of saved credentials with the security of `sessionStorage`. One option: a non-extractable `CryptoKey` in IndexedDB that encrypts the saved password.
+- Credentials go in `sessionStorage` by default. They go away when the tab closes. Reason: Basic auth sends the real super-user password.
+- "Remember on this device" (issue #153, off by default) also saves them in IndexedDB (`services/admin-vault.ts`). A non-extractable AES-GCM key encrypts the password. No script can read the key bytes, and devtools shows no password. A script in the Studio origin can still decrypt it. A full copy of the browser profile holds the key too. Plan: [remember sign-in](plans/2026-10-16-remember-admin-sign-in.md). Built 2026-10-16, not committed. Manual test (plan Task 5 Steps 4-5) still open. Verified 2026-10-16: 245 tests pass.
+- Every sign-out removes the saved entry: "Close admin session", a 401, a removed node, a URL change. A second open tab keeps its own tab session until it closes.
+- Temporary: the saved password goes away when Studio uses the session tokens of beacon PR [#590](https://github.com/maris-development/beacon/pull/590). The vault then stores the `bst_` token (kind `'session-token'`), and `VAULT_VERSION` goes up. The checkbox then also sends `remember: true` to `POST /api/auth/session`. A follow-up issue does that switch after #590 lands and the SDK supports it.
 - A 401 removes the session, asks again, and retries one time. A 403 shows a toast and keeps the session.
-- The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows no sign-in state. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Built 2026-10-16, not committed.
+- The node picker shows an "Admin" badge on each node with a session, and a "Close admin session" action. No username shows. The sidebar shows no sign-in state. Plan: [node picker](plans/2026-10-16-node-picker-admin.md). Committed (`7d04155`).
 - Every admin call goes through `withAdmin(node, fn)` in `services/admin-session.ts`.
 
 ### Menu

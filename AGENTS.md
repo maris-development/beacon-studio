@@ -99,7 +99,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
-  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401.)
+  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. A remembered sign-in is also saved in `services/admin-vault.ts` (IndexedDB, encrypted). `restoreRememberedSessions` runs at the top of the `+layout.svelte` script. `requireAdminClient` awaits it. The vault stores a secret with a `kind`: the password now, the session token of beacon PR #590 later.)
   - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
     therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
     there, so a first-ever visit has no node list when a page mounts. A page that names a
@@ -155,7 +155,7 @@ Sort each persisted value into one class. The class decides whether a change nee
 
 | Class | Examples | Rule |
 |---|---|---|
-| Cache | OPFS Arrow cache, `datasetKey`, query history | Never migrate. Bump a version and discard. |
+| Cache | OPFS Arrow cache, `datasetKey`, query history, remembered admin sign-ins (`admin-vault.ts`, bump `VAULT_VERSION`) | Never migrate. Bump a version and discard. |
 | Preference or UI state | settings, selected node, data-browser node, blocks-state, `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
 | User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
 | External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
