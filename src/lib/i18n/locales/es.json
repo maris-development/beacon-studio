@@ -950,45 +950,64 @@
 	},
 	"systemInfo": {
 		"title": "Información del sistema",
-		"intro": "La versión, el estado y los recursos del servidor de un nodo Beacon.",
+		"intro": "Consulta la versión, el estado, la CPU, la memoria y las funciones de un nodo Beacon.",
 		"noNode": "Elige un nodo Beacon.",
+		"live": "En vivo ({seconds} s)",
+		"paused": "En pausa",
+		"liveStop": "Detener la actualización en vivo",
+		"liveStart": "Iniciar la actualización en vivo",
+		"refresh": "Leer ahora",
 		"version": "Versión de Beacon",
-		"health": "Estado",
 		"host": "Servidor",
-		"noHost": "Este nodo no informa datos del servidor. El servidor funciona sin {variable}.",
+		"noHostBefore": "El nodo no muestra métricas del servidor. Inicia el servidor con",
+		"noHostAfter": "para ver la CPU, la memoria y la carga.",
 		"uptime": {
 			"label": "Tiempo activo",
 			"days": "{days} d {hours} h {minutes} min",
 			"hours": "{hours} h {minutes} min",
-			"minutes": "{minutes} min"
+			"minutes": "{minutes} min",
+			"kernel": "kernel {kernel}"
 		},
 		"cpu": {
 			"title": "CPU",
-			"overall": "Uso total",
-			"physicalCores": "{count, plural, one {# núcleo físico} other {# núcleos físicos}}"
+			"total": "Uso total",
+			"cores": "{count, plural, one {# núcleo} other {# núcleos}}"
 		},
 		"memory": {
-			"title": "Memoria",
-			"available": "Disponible: {size}",
-			"swap": "Swap",
-			"noSwap": "Sin swap.",
-			"usage": "{used} de {total}"
+			"title": "Memoria y carga",
+			"used": "{size} en uso",
+			"of": "de {total}",
+			"available": "Disponible {size}",
+			"availableFree": "Disponible {available} · Libre {free}",
+			"swap": "{size} de swap",
+			"noSwap": "Sin swap."
 		},
 		"load": {
-			"title": "Carga media",
-			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
-			"perCore": "Por núcleo: {percent} en 1 min."
+			"one": "Carga 1 min",
+			"five": "Carga 5 min",
+			"fifteen": "Carga 15 min"
 		},
 		"admin": {
-			"title": "Administración",
+			"signInNeeded": "El espacio en disco del almacén de datasets necesita una sesión de administrador.",
 			"users": "Usuarios",
 			"roles": "Roles"
+		},
+		"store": {
+			"title": "Almacén de datasets",
+			"usedFree": "{used} en uso · {free} libre",
+			"percentOf": "{percent} de {total}",
+			"folder": "Carpeta",
+			"mountPoint": "Punto de montaje"
 		},
 		"functions": {
 			"title": "Funciones",
 			"loading": "Cargando las funciones…",
 			"filter": "Filtrar funciones",
-			"count": "{shown} de {total, plural, one {# función} other {# funciones}}"
+			"total": "({total})",
+			"count": "({shown} de {total})",
+			"noteBefore": "Las funciones de tabla (read_parquet, read_netcdf, …) no están en esta lista. Consulta la",
+			"noteLink": "documentación",
+			"noteAfter": "."
 		},
 		"raw": "Respuesta sin procesar"
 	},

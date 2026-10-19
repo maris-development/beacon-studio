@@ -950,45 +950,64 @@
 	},
 	"systemInfo": {
 		"title": "System Information",
-		"intro": "The version, health and host resources of a Beacon node.",
+		"intro": "View the version, health, CPU, memory and functions of a Beacon node.",
 		"noNode": "Pick a Beacon node.",
+		"live": "Live ({seconds} s)",
+		"paused": "Paused",
+		"liveStop": "Stop live updates",
+		"liveStart": "Start live updates",
+		"refresh": "Read now",
 		"version": "Beacon version",
-		"health": "Health",
 		"host": "Host",
-		"noHost": "This node does not report host data. The server runs without {variable}.",
+		"noHostBefore": "The node shows no host metrics. Start the server with",
+		"noHostAfter": "to see CPU, memory and load.",
 		"uptime": {
 			"label": "Uptime",
 			"days": "{days}d {hours}h {minutes}m",
 			"hours": "{hours}h {minutes}m",
-			"minutes": "{minutes}m"
+			"minutes": "{minutes}m",
+			"kernel": "kernel {kernel}"
 		},
 		"cpu": {
 			"title": "CPU",
-			"overall": "Overall usage",
-			"physicalCores": "{count, plural, one {# physical core} other {# physical cores}}"
+			"total": "Total use",
+			"cores": "{count, plural, one {# core} other {# cores}}"
 		},
 		"memory": {
-			"title": "Memory",
-			"available": "Available: {size}",
-			"swap": "Swap",
-			"noSwap": "No swap.",
-			"usage": "{used} of {total}"
+			"title": "Memory and load",
+			"used": "{size} used",
+			"of": "of {total}",
+			"available": "Available {size}",
+			"availableFree": "Available {available} · Free {free}",
+			"swap": "{size} swap",
+			"noSwap": "No swap."
 		},
 		"load": {
-			"title": "Load average",
-			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
-			"perCore": "Per core: {percent} over 1 min."
+			"one": "Load 1 min",
+			"five": "Load 5 min",
+			"fifteen": "Load 15 min"
 		},
 		"admin": {
-			"title": "Admin",
+			"signInNeeded": "The disk space of the datasets store needs an admin session.",
 			"users": "Users",
 			"roles": "Roles"
+		},
+		"store": {
+			"title": "Datasets store",
+			"usedFree": "{used} used · {free} free",
+			"percentOf": "{percent} of {total}",
+			"folder": "Folder",
+			"mountPoint": "Mount point"
 		},
 		"functions": {
 			"title": "Functions",
 			"loading": "Loading the functions…",
 			"filter": "Filter functions",
-			"count": "{shown} of {total, plural, one {# function} other {# functions}}"
+			"total": "({total})",
+			"count": "({shown} of {total})",
+			"noteBefore": "Table functions (read_parquet, read_netcdf, …) are not in this list. See the",
+			"noteLink": "documentation",
+			"noteAfter": "."
 		},
 		"raw": "Raw answer"
 	},

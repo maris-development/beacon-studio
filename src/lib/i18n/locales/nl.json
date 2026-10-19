@@ -950,45 +950,64 @@
 	},
 	"systemInfo": {
 		"title": "Systeeminformatie",
-		"intro": "De versie, de status en de hostbronnen van een Beacon-node.",
+		"intro": "Bekijk de versie, de status, de CPU, het geheugen en de functies van een Beacon-node.",
 		"noNode": "Kies een Beacon-node.",
+		"live": "Live ({seconds} s)",
+		"paused": "Gepauzeerd",
+		"liveStop": "Live bijwerken stoppen",
+		"liveStart": "Live bijwerken starten",
+		"refresh": "Nu lezen",
 		"version": "Beacon-versie",
-		"health": "Status",
 		"host": "Host",
-		"noHost": "Deze node geeft geen hostgegevens. De server draait zonder {variable}.",
+		"noHostBefore": "De node toont geen hostgegevens. Start de server met",
+		"noHostAfter": "om CPU, geheugen en belasting te zien.",
 		"uptime": {
 			"label": "Uptime",
 			"days": "{days}d {hours}u {minutes}m",
 			"hours": "{hours}u {minutes}m",
-			"minutes": "{minutes}m"
+			"minutes": "{minutes}m",
+			"kernel": "kernel {kernel}"
 		},
 		"cpu": {
 			"title": "CPU",
-			"overall": "Totaal gebruik",
-			"physicalCores": "{count, plural, one {# fysieke kern} other {# fysieke kernen}}"
+			"total": "Totaal gebruik",
+			"cores": "{count, plural, one {# kern} other {# kernen}}"
 		},
 		"memory": {
-			"title": "Geheugen",
-			"available": "Beschikbaar: {size}",
-			"swap": "Swap",
-			"noSwap": "Geen swap.",
-			"usage": "{used} van {total}"
+			"title": "Geheugen en belasting",
+			"used": "{size} in gebruik",
+			"of": "van {total}",
+			"available": "Beschikbaar {size}",
+			"availableFree": "Beschikbaar {available} · Vrij {free}",
+			"swap": "{size} swap",
+			"noSwap": "Geen swap."
 		},
 		"load": {
-			"title": "Gemiddelde belasting",
-			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
-			"perCore": "Per kern: {percent} over 1 min."
+			"one": "Belasting 1 min",
+			"five": "Belasting 5 min",
+			"fifteen": "Belasting 15 min"
 		},
 		"admin": {
-			"title": "Beheer",
+			"signInNeeded": "De schijfruimte van de datasetopslag vraagt een beheersessie.",
 			"users": "Gebruikers",
 			"roles": "Rollen"
+		},
+		"store": {
+			"title": "Datasetopslag",
+			"usedFree": "{used} in gebruik · {free} vrij",
+			"percentOf": "{percent} van {total}",
+			"folder": "Map",
+			"mountPoint": "Koppelpunt"
 		},
 		"functions": {
 			"title": "Functies",
 			"loading": "Functies laden…",
 			"filter": "Functies filteren",
-			"count": "{shown} van {total, plural, one {# functie} other {# functies}}"
+			"total": "({total})",
+			"count": "({shown} van {total})",
+			"noteBefore": "Tabelfuncties (read_parquet, read_netcdf, …) staan niet in deze lijst. Zie de",
+			"noteLink": "documentatie",
+			"noteAfter": "."
 		},
 		"raw": "Ruw antwoord"
 	},

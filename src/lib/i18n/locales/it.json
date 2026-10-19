@@ -950,45 +950,64 @@
 	},
 	"systemInfo": {
 		"title": "Informazioni di sistema",
-		"intro": "La versione, lo stato e le risorse host di un nodo Beacon.",
+		"intro": "Visualizza la versione, lo stato, la CPU, la memoria e le funzioni di un nodo Beacon.",
 		"noNode": "Scegli un nodo Beacon.",
+		"live": "Live ({seconds} s)",
+		"paused": "In pausa",
+		"liveStop": "Ferma gli aggiornamenti live",
+		"liveStart": "Avvia gli aggiornamenti live",
+		"refresh": "Leggi ora",
 		"version": "Versione di Beacon",
-		"health": "Stato",
 		"host": "Host",
-		"noHost": "Questo nodo non fornisce dati sull'host. Il server funziona senza {variable}.",
+		"noHostBefore": "Il nodo non mostra metriche dell'host. Avvia il server con",
+		"noHostAfter": "per vedere CPU, memoria e carico.",
 		"uptime": {
 			"label": "Tempo di attività",
 			"days": "{days}g {hours}h {minutes}m",
 			"hours": "{hours}h {minutes}m",
-			"minutes": "{minutes}m"
+			"minutes": "{minutes}m",
+			"kernel": "kernel {kernel}"
 		},
 		"cpu": {
 			"title": "CPU",
-			"overall": "Utilizzo totale",
-			"physicalCores": "{count, plural, one {# core fisico} other {# core fisici}}"
+			"total": "Utilizzo totale",
+			"cores": "{count, plural, one {# core} other {# core}}"
 		},
 		"memory": {
-			"title": "Memoria",
-			"available": "Disponibile: {size}",
-			"swap": "Swap",
-			"noSwap": "Nessuno swap.",
-			"usage": "{used} di {total}"
+			"title": "Memoria e carico",
+			"used": "{size} in uso",
+			"of": "di {total}",
+			"available": "Disponibile {size}",
+			"availableFree": "Disponibile {available} · Libera {free}",
+			"swap": "{size} di swap",
+			"noSwap": "Nessuno swap."
 		},
 		"load": {
-			"title": "Carico medio",
-			"values": "1 min {one} · 5 min {five} · 15 min {fifteen}",
-			"perCore": "Per core: {percent} su 1 min."
+			"one": "Carico 1 min",
+			"five": "Carico 5 min",
+			"fifteen": "Carico 15 min"
 		},
 		"admin": {
-			"title": "Amministrazione",
+			"signInNeeded": "Lo spazio su disco dell'archivio dei dataset richiede una sessione di amministratore.",
 			"users": "Utenti",
 			"roles": "Ruoli"
+		},
+		"store": {
+			"title": "Archivio dei dataset",
+			"usedFree": "{used} in uso · {free} liberi",
+			"percentOf": "{percent} di {total}",
+			"folder": "Cartella",
+			"mountPoint": "Punto di montaggio"
 		},
 		"functions": {
 			"title": "Funzioni",
 			"loading": "Caricamento delle funzioni…",
 			"filter": "Filtra funzioni",
-			"count": "{shown} di {total, plural, one {# funzione} other {# funzioni}}"
+			"total": "({total})",
+			"count": "({shown} di {total})",
+			"noteBefore": "Le funzioni di tabella (read_parquet, read_netcdf, …) non sono in questo elenco. Vedi la",
+			"noteLink": "documentazione",
+			"noteAfter": "."
 		},
 		"raw": "Risposta grezza"
 	},

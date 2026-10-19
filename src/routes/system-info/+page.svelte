@@ -1,13 +1,26 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
+	import ClockIcon from '@lucide/svelte/icons/clock';
+	import CpuIcon from '@lucide/svelte/icons/cpu';
+	import GaugeIcon from '@lucide/svelte/icons/gauge';
+	import InfoIcon from '@lucide/svelte/icons/info';
+	import MemoryStickIcon from '@lucide/svelte/icons/memory-stick';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import SearchIcon from '@lucide/svelte/icons/search';
+	import ServerIcon from '@lucide/svelte/icons/server';
+	import SquareFunctionIcon from '@lucide/svelte/icons/square-function';
+	import TagIcon from '@lucide/svelte/icons/tag';
+	import TimerIcon from '@lucide/svelte/icons/timer';
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import NodePicker from '@/components/NodePicker.svelte';
 	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
+	import Button from '@/components/buttons/Button.svelte';
 	import Meter from '@/components/system-info/Meter.svelte';
 	import StatTile from '@/components/system-info/StatTile.svelte';
 	import AdminSummary from '@/components/system-info/AdminSummary.svelte';
 	import { Input } from '@/components/ui/input';
+	import { BRAND } from '@/brand';
 	import { makeBeaconClient } from '@/beacon-api/client';
 	import { currentNode } from '@/services/beacon-node';
 	import { settings } from '@/stores/settings';
@@ -17,13 +30,14 @@
 	import {
 		formatBytesOrDash,
 		formatUptime,
-		PERCENT_FORMAT,
 		readInfo,
-		type HostView,
 		type InfoView,
 		type Usage
 	} from '@/system-info/host';
 	import { poll } from '@/system-info/poll';
+
+	// A server setting, so it stays the same in every language.
+	const SYS_INFO_FLAG = 'BEACON_ENABLE_SYS_INFO=true';
 
 	let info: InfoView | null = $state(null);
 	let raw: unknown = $state(null);
@@ -31,10 +45,18 @@
 	let functions: FnMeta[] | null = $state(null);
 	let functionsError: Message | null = $state(null);
 	let needle = $state('');
+	// Live is on at each page load.
+	let live = $state(true);
+	let refreshing = $state(false);
+
+	// Plain values: the effect writes them, and nothing renders them.
+	let lastUrl: string | null = null;
+	let readNow: (() => Promise<void>) | null = null;
 
 	let node = $derived($currentNode);
 	let nodeUrl = $derived(node?.url ?? null);
 	let period = $derived($settings.systemInfoUpdateIntervalMs);
+	let host = $derived(info?.host ?? null);
 
 	let matches = $derived.by(() => {
 		if (!functions) return [];
@@ -43,15 +65,23 @@
 		return functions.filter((fn) => fn.name.toLowerCase().includes(query));
 	});
 
-	// The info repeats on the period from Settings. Only a node or period change restarts it.
+	// A node change clears the page. A Live toggle or a period change keeps the last answer.
 	$effect(() => {
 		const url = nodeUrl;
 		const every = period;
-		if (!url) return;
+		const on = live;
+		if (!url) {
+			lastUrl = null;
+			return;
+		}
 
-		info = null;
-		raw = null;
-		error = null;
+		const changed = url !== lastUrl;
+		lastUrl = url;
+		if (changed) {
+			info = null;
+			raw = null;
+			error = null;
+		}
 
 		const current = untrack(() => node);
 		if (!current) return;
@@ -70,12 +100,22 @@
 				if (alive) error = sqlError(caught);
 			}
 		};
+		readNow = read;
 
-		const stop = poll(read, every);
+		let stop = () => {};
+		if (on) {
+			stop = poll(read, every);
+		} else if (changed) {
+			// Paused, but the page must not show the data of the previous node.
+			void read();
+		}
 
 		return () => {
 			alive = false;
 			stop();
+			readNow = null;
+			// A hanging read of the previous node must not block Refresh on the next node.
+			refreshing = false;
 		};
 	});
 
@@ -105,23 +145,29 @@
 		return () => (alive = false);
 	});
 
-	function systemDetail(host: HostView): string | undefined {
-		const parts = [host.osName, host.kernel].filter(Boolean);
-		if (parts.length === 0) return undefined;
-		return parts.join(' · ');
+	async function refresh() {
+		const read = readNow;
+		if (!read || refreshing) return;
+
+		refreshing = true;
+		try {
+			await read();
+		} finally {
+			refreshing = false;
+		}
 	}
 
-	function coresDetail(host: HostView): string | undefined {
-		if (host.physicalCores === null) return undefined;
-		return $t('systemInfo.cpu.physicalCores', { count: host.physicalCores });
+	function size(bytes: number | null): string {
+		return formatBytesOrDash(bytes, $formatNumber);
 	}
 
-	function usageDetail(value: Usage | null): string {
+	function usedText(value: Usage | null, key: 'systemInfo.memory.used' | 'systemInfo.memory.swap') {
+		return $t(key, { size: size(value?.used ?? null) });
+	}
+
+	function ofText(value: Usage | null): string {
 		if (!value) return '—';
-		return $t('systemInfo.memory.usage', {
-			used: formatBytesOrDash(value.used, $formatNumber),
-			total: formatBytesOrDash(value.total, $formatNumber)
-		});
+		return $t('systemInfo.memory.of', { total: size(value.total) });
 	}
 
 	function uptimeText(secs: number | null): string {
@@ -130,8 +176,14 @@
 		return $t(uptime);
 	}
 
-	function percentText(value: number): string {
-		return $formatNumber(value / 100, PERCENT_FORMAT);
+	function kernelText(kernel: string | null | undefined): string | undefined {
+		if (!kernel) return undefined;
+		return $t('systemInfo.uptime.kernel', { kernel });
+	}
+
+	function coresText(count: number | undefined): string | undefined {
+		if (!count) return undefined;
+		return $t('systemInfo.cpu.cores', { count });
 	}
 
 	function loadText(value: number): string {
@@ -149,9 +201,41 @@
 	<div class="page-container">
 		<h1>{$t('systemInfo.title')}</h1>
 
-		<p>{$t('systemInfo.intro')}</p>
+		<p class="intro">{$t('systemInfo.intro')}</p>
 
-		<NodePicker />
+		<div class="toolbar">
+			<NodePicker />
+
+			{#if node}
+				<div class="actions">
+					<BeaconNodeStatus health={node} variant="compact" />
+					<Button
+						variant="outline"
+						size="sm"
+						aria-pressed={live}
+						title={live ? $t('systemInfo.liveStop') : $t('systemInfo.liveStart')}
+						onclick={() => (live = !live)}
+					>
+						<TimerIcon />
+						{#if live}
+							{$t('systemInfo.live', { seconds: $formatNumber(period / 1000) })}
+						{:else}
+							{$t('systemInfo.paused')}
+						{/if}
+					</Button>
+					<Button
+						variant="outline"
+						size="icon"
+						aria-label={$t('systemInfo.refresh')}
+						title={$t('systemInfo.refresh')}
+						disabled={refreshing}
+						onclick={() => void refresh()}
+					>
+						<RefreshCwIcon class={refreshing ? 'spin' : ''} />
+					</Button>
+				</div>
+			{/if}
+		</div>
 
 		{#if !node}
 			<p>{$t('systemInfo.noNode')}</p>
@@ -161,120 +245,155 @@
 			{/if}
 
 			<div class="tiles">
-				<StatTile label={$t('systemInfo.version')} value={info?.version ?? '—'} />
-				<div class="health">
-					<span class="label">{$t('systemInfo.health')}</span>
-					<BeaconNodeStatus health={node} variant="compact" />
-				</div>
-				{#if info?.host}
-					<StatTile
-						label={$t('systemInfo.host')}
-						value={info.host.hostName ?? '—'}
-						detail={systemDetail(info.host)}
-					/>
-					<StatTile
-						label={$t('systemInfo.uptime.label')}
-						value={uptimeText(info.host.uptimeSecs)}
-					/>
-					<StatTile
-						label={$t('systemInfo.cpu.title')}
-						value={info.host.cpuBrand ?? '—'}
-						detail={coresDetail(info.host)}
-					/>
-				{/if}
+				<StatTile icon={TagIcon} label={$t('systemInfo.version')} value={info?.version ?? '—'} />
+				<StatTile
+					icon={ServerIcon}
+					label={$t('systemInfo.host')}
+					value={host?.hostName ?? '—'}
+					detail={host?.osName ?? undefined}
+				/>
+				<StatTile
+					icon={ClockIcon}
+					label={$t('systemInfo.uptime.label')}
+					value={uptimeText(host?.uptimeSecs ?? null)}
+					detail={kernelText(host?.kernel)}
+				/>
+				<StatTile
+					icon={CpuIcon}
+					label={$t('systemInfo.cpu.title')}
+					value={host?.cpuBrand ?? '—'}
+					detail={coresText(host?.cores.length)}
+				/>
 			</div>
-
-			{#if info && !info.host}
-				<p class="muted">
-					{$t('systemInfo.noHost', { variable: 'BEACON_ENABLE_SYS_INFO' })}
-				</p>
-			{/if}
-
-			{#if info?.host}
-				{@const host = info.host}
-				<div class="panels">
-					<section>
-						<h2>{$t('systemInfo.cpu.title')}</h2>
-						<Meter label={$t('systemInfo.cpu.overall')} percent={host.cpuPercent} />
-						<div class="cores">
-							{#each host.cores as core, index (index)}
-								<Meter label={core.name} percent={core.percent} />
-							{/each}
-						</div>
-					</section>
-
-					<section>
-						<h2>{$t('systemInfo.memory.title')}</h2>
-						<Meter
-							label={$t('systemInfo.memory.title')}
-							percent={host.memory?.percent ?? null}
-							detail={usageDetail(host.memory)}
-						/>
-						<p class="muted">
-							{$t('systemInfo.memory.available', { size: formatBytesOrDash(host.availableMemory, $formatNumber) })}
-						</p>
-						{#if host.swap}
-							<Meter
-								label={$t('systemInfo.memory.swap')}
-								percent={host.swap.percent}
-								detail={usageDetail(host.swap)}
-							/>
-						{:else}
-							<p class="muted">{$t('systemInfo.memory.noSwap')}</p>
-						{/if}
-					</section>
-
-					{#if host.load}
-						<section>
-							<h2>{$t('systemInfo.load.title')}</h2>
-							<p>
-								{$t('systemInfo.load.values', {
-									one: loadText(host.load.one),
-									five: loadText(host.load.five),
-									fifteen: loadText(host.load.fifteen)
-								})}
-							</p>
-							{#if host.physicalCores}
-								<p class="muted">
-									{$t('systemInfo.load.perCore', {
-										percent: percentText((host.load.one / host.physicalCores) * 100)
-									})}
-								</p>
-							{/if}
-						</section>
-					{/if}
-				</div>
-			{/if}
 
 			<AdminSummary {node} />
 
-			<section class="functions">
-				<h2>{$t('systemInfo.functions.title')}</h2>
-				{#if functionsError}
-					<p class="error">{$t(functionsError)}</p>
-				{:else if !functions}
-					<p class="muted">{$t('systemInfo.functions.loading')}</p>
-				{:else}
-					<Input
-						type="search"
-						placeholder={$t('systemInfo.functions.filter')}
-						bind:value={needle}
-					/>
-					<p class="muted">
-						{$t('systemInfo.functions.count', {
-							shown: $formatNumber(matches.length),
-							total: functions.length
-						})}
-					</p>
-					<ul>
-						{#each matches as fn (fn.name)}
-							<li>
-								<span class="name">{fn.name}</span>
-								<span class="muted">{fn.description ?? ''}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+			{#if info && !info.host}
+				<p class="info-banner">
+					<InfoIcon size={14} />
+					<span>
+						{$t('systemInfo.noHostBefore')}
+						<code>{SYS_INFO_FLAG}</code>
+						{$t('systemInfo.noHostAfter')}
+					</span>
+				</p>
+			{/if}
+
+			{#if host}
+				<div class="panels">
+					<section class="card">
+						<header>
+							<GaugeIcon size={16} />
+							<h2>{$t('systemInfo.cpu.title')}</h2>
+						</header>
+						<div class="body">
+							<Meter label={$t('systemInfo.cpu.total')} percent={host.cpuPercent} />
+							<div class="cores">
+								{#each host.cores as core, index (index)}
+									<Meter label="#{core.name}" percent={core.percent} size="compact" />
+								{/each}
+							</div>
+						</div>
+					</section>
+
+					<section class="card">
+						<header>
+							<MemoryStickIcon size={16} />
+							<h2>{$t('systemInfo.memory.title')}</h2>
+						</header>
+						<div class="body">
+							<div class="group">
+								<Meter
+									label={usedText(host.memory, 'systemInfo.memory.used')}
+									percent={host.memory?.percent ?? null}
+									end={ofText(host.memory)}
+								/>
+								<p class="muted">
+									{#if host.freeMemory !== null}
+										{$t('systemInfo.memory.availableFree', {
+											available: size(host.availableMemory),
+											free: size(host.freeMemory)
+										})}
+									{:else}
+										{$t('systemInfo.memory.available', { size: size(host.availableMemory) })}
+									{/if}
+								</p>
+							</div>
+
+							{#if host.swap}
+								<Meter
+									label={usedText(host.swap, 'systemInfo.memory.swap')}
+									percent={host.swap.percent}
+									end={ofText(host.swap)}
+								/>
+							{:else}
+								<p class="muted">{$t('systemInfo.memory.noSwap')}</p>
+							{/if}
+
+							{#if host.load}
+								<dl class="load">
+									<dt>{$t('systemInfo.load.one')}</dt>
+									<dd>{loadText(host.load.one)}</dd>
+									<dt>{$t('systemInfo.load.five')}</dt>
+									<dd>{loadText(host.load.five)}</dd>
+									<dt>{$t('systemInfo.load.fifteen')}</dt>
+									<dd>{loadText(host.load.fifteen)}</dd>
+								</dl>
+							{/if}
+						</div>
+					</section>
+				</div>
+			{/if}
+
+			<section class="card functions">
+				<header>
+					<SquareFunctionIcon size={16} />
+					<h2>{$t('systemInfo.functions.title')}</h2>
+					{#if functions}
+						<span class="muted">
+							{#if needle.trim()}
+								{$t('systemInfo.functions.count', {
+									shown: $formatNumber(matches.length),
+									total: $formatNumber(functions.length)
+								})}
+							{:else}
+								{$t('systemInfo.functions.total', { total: $formatNumber(functions.length) })}
+							{/if}
+						</span>
+						<div class="search">
+							<SearchIcon size={16} />
+							<Input
+								type="search"
+								placeholder={$t('systemInfo.functions.filter')}
+								bind:value={needle}
+							/>
+						</div>
+					{/if}
+				</header>
+
+				<div class="body">
+					{#if functionsError}
+						<p class="error">{$t(functionsError)}</p>
+					{:else if !functions}
+						<p class="muted">{$t('systemInfo.functions.loading')}</p>
+					{:else}
+						<ul>
+							{#each matches as fn (fn.name)}
+								<li>
+									<span class="name">{fn.name}</span>
+									{#if fn.description}<span class="muted">{fn.description}</span>{/if}
+								</li>
+							{/each}
+						</ul>
+						<p class="note">
+							{$t('systemInfo.functions.noteBefore')}
+							{#if BRAND.links.docs}
+								<a href={BRAND.links.docs} target="_blank" rel="noreferrer"
+									>{$t('systemInfo.functions.noteLink')}</a
+								>{:else}{$t('systemInfo.functions.noteLink')}{/if}{$t('systemInfo.functions.noteAfter')}
+						</p>
+					{/if}
+				</div>
 			</section>
 
 			{#if raw}
@@ -288,42 +407,104 @@
 </div>
 
 <style lang="scss">
-	.tiles {
+	.page-container {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-		gap: 0.75rem;
-		margin-bottom: 1rem;
+		// Without the minmax, the open raw answer widens the page past the screen.
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
 	}
 
-	.health {
-		display: grid;
-		gap: 0.25rem;
-		padding: 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
+	h1,
+	.intro {
+		margin: 0;
+	}
 
-		.label {
-			color: var(--muted-foreground);
-			font-size: var(--font-size-sm);
+	.intro {
+		margin-top: -0.75rem;
+		color: var(--muted-foreground);
+	}
+
+	.toolbar {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		:global(.spin) {
+			animation: spin 1s linear infinite;
+		}
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+		gap: 0.75rem;
+	}
+
+	.info-banner {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.625rem 1rem;
+		border-radius: 0.5rem;
+		background: color-mix(in oklch, var(--primary) 8%, var(--card));
+		font-size: var(--font-size-sm);
+
+		:global(svg) {
+			flex: 0 0 auto;
+			color: var(--primary);
+		}
+
+		code {
+			font-family: var(--font-family-mono);
+			font-size: var(--font-size-xs);
 		}
 	}
 
 	.panels {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(min(22rem, 100%), 1fr));
 		gap: 1rem;
+		align-items: start;
+	}
 
-		section {
-			display: grid;
-			align-content: start;
+	.card {
+		min-width: 0;
+		border: 1px solid var(--card-border);
+		border-radius: 0.5rem;
+		background: var(--card);
+
+		header {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
 			gap: 0.5rem;
-			padding: 0.75rem;
-			border: 1px solid var(--border);
-			border-radius: 0.5rem;
+			padding: 0.75rem 1rem;
+			border-bottom: 1px solid var(--card-border);
+
+			h2 {
+				margin: 0;
+			}
 		}
 
-		h2 {
-			margin: 0;
+		.body {
+			display: grid;
+			gap: 1rem;
+			padding: 0.75rem 1rem;
 		}
 
 		p {
@@ -331,37 +512,95 @@
 		}
 	}
 
+	.group {
+		display: grid;
+		gap: 0.375rem;
+	}
+
 	.cores {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
-		gap: 0.5rem;
+		grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+		gap: 0.75rem 1rem;
+	}
+
+	.load {
+		display: grid;
+		grid-template-columns: max-content max-content;
+		gap: 0.25rem 1rem;
+		margin: 0;
+		font-size: var(--font-size-sm);
+
+		dt {
+			color: var(--muted-foreground);
+		}
+
+		dd {
+			margin: 0;
+		}
 	}
 
 	.functions {
-		margin-top: 1.5rem;
+		.search {
+			position: relative;
+			width: 100%;
+			max-width: 16rem;
+			margin-left: auto;
+
+			:global(svg) {
+				position: absolute;
+				top: 50%;
+				left: 0.75rem;
+				transform: translateY(-50%);
+				color: var(--muted-foreground);
+				pointer-events: none;
+			}
+
+			:global(input) {
+				padding-left: 2.25rem;
+			}
+		}
 
 		ul {
-			max-height: 24rem;
-			margin: 0.5rem 0 0;
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 0.75rem 2rem;
+			max-height: 28rem;
+			margin: 0;
 			padding: 0;
 			overflow: auto;
 			list-style: none;
+
+			@media (max-width: 48rem) {
+				grid-template-columns: minmax(0, 1fr);
+			}
 		}
 
 		li {
-			padding: 0.25rem 0;
-			border-bottom: 1px solid var(--border);
-			font-size: var(--font-size-sm);
+			display: grid;
+			gap: 0.125rem;
+			font-size: var(--font-size-xs);
+			// Some descriptions hold a long URL.
+			overflow-wrap: anywhere;
+		}
+
+		.note {
+			color: var(--muted-foreground);
+			font-size: var(--font-size-xs);
+
+			a {
+				color: inherit;
+				text-decoration: underline;
+			}
 		}
 	}
 
 	.name {
 		font-family: var(--font-family-mono);
+		font-weight: 600;
+		overflow-wrap: anywhere;
 	}
 
 	.raw {
-		margin-top: 1rem;
-
 		pre {
 			max-height: 24rem;
 			padding: 0.75rem;
@@ -377,6 +616,7 @@
 	}
 
 	.error {
+		margin: 0;
 		color: var(--destructive);
 	}
 </style>

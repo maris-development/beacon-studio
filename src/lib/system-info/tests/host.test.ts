@@ -3,6 +3,7 @@ import {
 	clampPercent,
 	formatBytesOrDash,
 	formatUptime,
+	meterTone,
 	readInfo,
 	usage
 } from '../host';
@@ -21,6 +22,7 @@ const host = {
 	total_memory: 1000,
 	used_memory: 250,
 	available_memory: 700,
+	free_memory: 100,
 	total_swap: 200,
 	used_swap: 50,
 	load_average: { one: 0.5, five: 0.25, fifteen: 0.1 }
@@ -44,6 +46,7 @@ describe('readInfo', () => {
 			],
 			memory: { used: 250, total: 1000, percent: 25 },
 			availableMemory: 700,
+			freeMemory: 100,
 			swap: { used: 50, total: 200, percent: 25 },
 			load: { one: 0.5, five: 0.25, fifteen: 0.1 }
 		});
@@ -84,6 +87,28 @@ describe('readInfo', () => {
 
 	it('gives an empty view for a value of the wrong shape', () => {
 		expect(readInfo('junk')).toEqual({ version: null, host: null });
+	});
+
+	it('reads a free memory of zero', () => {
+		expect(readInfo({ system_info: { ...host, free_memory: 0 } }).host?.freeMemory).toBe(0);
+	});
+
+	it('gives no free memory when the server sends none', () => {
+		const rest: Record<string, unknown> = { ...host };
+		delete rest.free_memory;
+		expect(readInfo({ system_info: rest }).host?.freeMemory).toBeNull();
+	});
+});
+
+describe('meterTone', () => {
+	it('is high from 90 percent', () => {
+		expect(meterTone(89.9)).toBe('normal');
+		expect(meterTone(90)).toBe('high');
+		expect(meterTone(100)).toBe('high');
+	});
+
+	it('is normal without a value', () => {
+		expect(meterTone(null)).toBe('normal');
 	});
 });
 

@@ -19,6 +19,7 @@ export interface HostView {
 	cores: { name: string; percent: number }[];
 	memory: Usage | null;
 	availableMemory: number | null;
+	freeMemory: number | null;
 	swap: Usage | null;
 	load: { one: number; five: number; fifteen: number } | null;
 }
@@ -97,6 +98,7 @@ function readHost(value: Record<string, unknown>): HostView {
 		cores,
 		memory: usage(value.used_memory, value.total_memory),
 		availableMemory: count(value.available_memory),
+		freeMemory: count(value.free_memory),
 		swap: usage(value.used_swap, value.total_swap),
 		load: readLoad(value.load_average)
 	};
@@ -134,6 +136,21 @@ export const PERCENT_FORMAT: Intl.NumberFormatOptions = {
 	minimumFractionDigits: 1,
 	maximumFractionDigits: 1
 };
+
+/** Options for a meter: `8%`, not `8.0%`. */
+export const WHOLE_PERCENT_FORMAT: Intl.NumberFormatOptions = {
+	style: 'percent',
+	maximumFractionDigits: 0
+};
+
+export type MeterTone = 'normal' | 'high';
+
+export const HIGH_PERCENT = 90;
+
+export function meterTone(percent: number | null): MeterTone {
+	if (percent !== null && percent >= HIGH_PERCENT) return 'high';
+	return 'normal';
+}
 
 export function formatBytesOrDash(bytes: number | null, format: NumberFormatter): string {
 	if (bytes === null) return '—';
