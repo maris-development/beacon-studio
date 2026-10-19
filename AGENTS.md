@@ -38,8 +38,17 @@ This file is a quick operational guide for coding agents working in this reposit
 - Dev server: `npm run dev`
 - Build: `npm run build`
 - Preview: `npm run preview`
-- Type/lint checks: `npm run check` and `npm run lint`
-- Format: `npm run format`
+- Type check: `npm run check`
+- Lint: `npm run lint`. Use this command for every lint check. Do not run `eslint` or `prettier --check` by hand.
+- Format one file: `npx prettier --write <file>`. Do not run `npm run format`.
+
+## Formatting (Prettier)
+- `.prettierrc` sets the house style: 4 spaces, double quotes, width 120. Most files still have the old style (tabs, single quotes, width 100).
+- The new style comes in step by step. Do not format the whole repository, and do not run `npm run format`. One large format commit causes merge conflicts in every open branch.
+- `npm run lint` runs ESLint on all of `src`, and the Prettier check only on the `src` files that differ from `main` (`scripts/prettier-changed.js`). Set `PRETTIER_BASE` for another base branch.
+- When `npm run lint` reports a file, format it with `npx prettier --write <file>`. Format only the files that the task changes.
+- Fix every ESLint error in a file that the task changes.
+- When you commit, put the formatting in its own commit, before the commit with the real change. A reviewer then sees the real change apart from the formatting. This rule does not ask for a commit.
 
 ## Deployment/Base Path
 - `svelte.config.js` sets `kit.paths.base` from `BASE_PATH` env var.
