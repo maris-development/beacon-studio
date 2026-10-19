@@ -145,10 +145,6 @@ export function hasNodeRef(ref: NodeRef | null | undefined): boolean {
 	return !!ref && (!!ref.id || !!ref.url);
 }
 
-export function createId(): string {
-	return `sq-${Utils.randomUUID()}` ;
-}
-
 /**
  * Build a record. This function adds the identity, the timestamps and empty run
  * stats. If the input has a `draft` but no `compiled`, it derives the compiled
@@ -179,7 +175,7 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
 	coordinateColumns ??= coordinateColumnsOf(compiled?.filters);
 
 	return {
-		id: createId(),
+		id: Utils.createId('sq'),
 		role: input.role,
 		name: input.name ?? translate('query.untitled'),
 		draft,
@@ -235,7 +231,7 @@ export function cloneStoredQuery(
 
 	return {
 		...source,
-		id: createId(),
+		id: Utils.createId('sq'),
 		draft,
 		compiled,
 		coordinateColumns,

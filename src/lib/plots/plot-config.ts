@@ -22,7 +22,7 @@
  * first. That function repairs a partial record and drops a broken one.
  */
 
-import { createId } from '@/stores/stored-query';
+import { Utils } from '@/utils';
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palettes';
 import type { MessageKey } from '@/i18n';
 
@@ -282,7 +282,7 @@ export function makeAxisConfig(overrides: Partial<PlotAxisConfig> = {}): PlotAxi
 
 export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig {
 	return {
-		id: createId(),
+		id: Utils.createId('plot'),
 		name: 'Plot 1',
 		type: 'scatter',
 		title: '',
@@ -315,7 +315,7 @@ export function clonePlotConfig(
 
 	return {
 		...source,
-		id: createId(),
+		id: Utils.createId('plot'),
 		x: { ...source.x },
 		y: { ...source.y },
 		z,
@@ -632,7 +632,7 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
 	if (record.z) z = normaliseAxis(record.z);
 
 	return {
-		id: asString(record.id, '') || createId(),
+		id: asString(record.id, '') || Utils.createId('plot'),
 		name: asString(record.name, 'Plot'),
 		type,
 		title: asString(record.title, ''),
@@ -668,7 +668,7 @@ export function normaliseChartView(raw: unknown): ChartViewState | null {
 		if (!plot) continue;
 
 		// A duplicate id would make the plot list ambiguous. Give the copy a new one.
-		if (seenIds.has(plot.id)) plot.id = createId();
+		if (seenIds.has(plot.id)) plot.id = Utils.createId('plot');
 		seenIds.add(plot.id);
 
 		plots.push(plot);

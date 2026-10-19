@@ -85,6 +85,11 @@ export class Utils {
 		return uuidv4();
 	}
 
+	/** A unique id that starts with the prefix of the caller, for example `sq-<uuid>`. */
+	static createId(prefix: string): string {
+		return `${prefix}-${Utils.randomUUID()}`;
+	}
+
 	static async sleep(ms) {
 		return new Promise((resolve) => setTimeout(resolve, ms));
 	}
