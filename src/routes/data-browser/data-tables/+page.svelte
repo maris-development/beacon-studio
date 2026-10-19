@@ -29,7 +29,8 @@
 	let defaultTable: string | null = $state(null);
 	let loading = $state(false);
 	let error: Message | null = $state(null);
-	let needle = $state(page.url.searchParams.get('q') ?? '');
+	// `q` is the parameter of old bookmarks.
+	let needle = $state(page.url.searchParams.get('search') ?? page.url.searchParams.get('q') ?? '');
 	let othersOpen = $state(false);
 	let dialog: Dialog = $state(null);
 
@@ -94,10 +95,11 @@
 
 	function listUrl(): string {
 		const url = new URL(page.url);
+		url.searchParams.delete('q');
 		if (needle.trim() === '') {
-			url.searchParams.delete('q');
+			url.searchParams.delete('search');
 		} else {
-			url.searchParams.set('q', needle.trim());
+			url.searchParams.set('search', needle.trim());
 		}
 		return `${url.pathname}${url.search}`;
 	}

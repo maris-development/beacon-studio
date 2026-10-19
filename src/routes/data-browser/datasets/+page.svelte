@@ -43,7 +43,8 @@
 	let loading = $state(false);
 	let error: Message | null = $state(null);
 	let uploadOpen = $state(false);
-	let needle = $state(page.url.searchParams.get('q') ?? '');
+	// `q` is the parameter of old bookmarks.
+	let needle = $state(page.url.searchParams.get('search') ?? page.url.searchParams.get('q') ?? '');
 	let sortKey: FileSort = $state('name');
 	let sortDirection: 'asc' | 'desc' = $state('asc');
 	// The page lives in the URL, so browser Back restores it with the folder.
@@ -128,10 +129,11 @@
 
 	function backUrl(): string {
 		const url = new URL(page.url);
+		url.searchParams.delete('q');
 		if (needle.trim()) {
-			url.searchParams.set('q', needle.trim());
+			url.searchParams.set('search', needle.trim());
 		} else {
-			url.searchParams.delete('q');
+			url.searchParams.delete('search');
 		}
 		url.searchParams.set('page', String(pageIndex));
 		return `${url.pathname}${url.search}`;

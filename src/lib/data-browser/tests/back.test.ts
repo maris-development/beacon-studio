@@ -44,8 +44,8 @@ describe('backTarget', () => {
 
 describe('withBack', () => {
 	it('adds back to a URL with no parameters', () => {
-		expect(withBack('/data-browser/data-tables/detail', '/data-browser/data-tables?q=a')).toBe(
-			'/data-browser/data-tables/detail?back=%2Fdata-browser%2Fdata-tables%3Fq%3Da'
+		expect(withBack('/data-browser/data-tables/detail', '/data-browser/data-tables?search=a')).toBe(
+			'/data-browser/data-tables/detail?back=%2Fdata-browser%2Fdata-tables%3Fsearch%3Da'
 		);
 	});
 
