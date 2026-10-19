@@ -1,428 +1,446 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { error as kitError } from '@sveltejs/kit';
-	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
-	import CopyIcon from '@lucide/svelte/icons/copy';
-	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
-	import Button from '@/components/buttons/Button.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import AdminAction from '@/components/AdminAction.svelte';
-	import BackLink from '@/components/data-browser/BackLink.svelte';
-	import SchemaTable from '@/components/data-browser/SchemaTable.svelte';
-	import PreviewGrid from '@/components/data-browser/PreviewGrid.svelte';
-	import DetailTabs from '@/components/data-browser/DetailTabs.svelte';
-	import { makeBeaconClient } from '@/beacon-api/client';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { findByUrl } from '@/services/beacon-node';
-	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
-	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
-	import { askConfirm } from '@/stores/confirm';
-	import { addToast } from '@/stores/toasts';
-	import { settings } from '@/stores/settings';
-	import { track } from '@/telemetry';
-	import { backTarget } from '@/data-browser/back';
-	import { editorLink } from '@/data-browser/editor-link';
-	import {
-		canManage,
-		dropSql,
-		editorSql,
-		previewSql,
-		refreshSql,
-		tableKind
-	} from '@/data-browser/tables';
-	import type { CatalogDefaults, TableRef } from '@/sql/identifiers';
-	import { sqlError } from '@/sql/statement';
-	import { message, t, translate, type Message } from '@/i18n';
+    import { onMount } from "svelte";
+    import { page } from "$app/state";
+    import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
+    import { error as kitError } from "@sveltejs/kit";
+    import type { BeaconClient as SdkClient } from "@maris-development/beacon-client";
+    import CopyIcon from "@lucide/svelte/icons/copy";
+    import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
+    import Button from "@/components/buttons/Button.svelte";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import AdminAction from "@/components/AdminAction.svelte";
+    import BackLink from "@/components/data-browser/BackLink.svelte";
+    import SchemaTable from "@/components/data-browser/SchemaTable.svelte";
+    import PreviewGrid from "@/components/data-browser/PreviewGrid.svelte";
+    import DetailTabs from "@/components/data-browser/DetailTabs.svelte";
+    import { makeBeaconClient } from "@/beacon-api/client";
+    import type { BeaconNode } from "@/beacon-api/types";
+    import { findByUrl } from "@/services/beacon-node";
+    import { whenOpenNodesSettled } from "@/services/open-nodes-import";
+    import { adminErrorMessage, withAdmin } from "@/services/admin-session";
+    import { askConfirm } from "@/stores/confirm";
+    import { addToast } from "@/stores/toasts";
+    import { settings } from "@/stores/settings";
+    import { track } from "@/telemetry";
+    import { backTarget } from "@/data-browser/back";
+    import { editorLink } from "@/data-browser/editor-link";
+    import {
+        canManage,
+        dropSql,
+        editorSql,
+        previewSql,
+        refreshSql,
+        tableKind
+    } from "@/data-browser/tables";
+    import type { CatalogDefaults, TableRef } from "@/sql/identifiers";
+    import { sqlError } from "@/sql/statement";
+    import { message, t, translate, type Message } from "@/i18n";
 
-	const LIST = resolve('/data-browser/data-tables');
-	// The base path without its trailing slash.
-	const PREFIX = resolve('/').replace(/\/$/, '');
+    const LIST = resolve("/data-browser/data-tables");
+    // The base path without its trailing slash.
+    const PREFIX = resolve("/").replace(/\/$/, "");
 
-	const tableName = page.url.searchParams.get('table_name') ?? '';
-	if (!tableName) {
-		throw kitError(400, translate('dataBrowser.common.missingParam', { name: 'table_name' }));
-	}
+    const tableName = page.url.searchParams.get("table_name") ?? "";
+    if (!tableName) {
+        throw kitError(400, translate("dataBrowser.common.missingParam", { name: "table_name" }));
+    }
 
-	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
-	const nodeUrl = page.url.searchParams.get('node') ?? '';
-	if (!nodeUrl) throw kitError(400, translate('dataBrowser.common.missingParam', { name: 'node' }));
+    // The node URL, not its id. An id exists in one browser only, so a shared link names the node.
+    const nodeUrl = page.url.searchParams.get("node") ?? "";
+    if (!nodeUrl)
+        throw kitError(400, translate("dataBrowser.common.missingParam", { name: "node" }));
 
-	// Admin actions need a saved node: the sign-in session belongs to its id.
-	let savedNode: BeaconNode | null = $state(null);
-	let client: SdkClient | null = $state(null);
+    // Admin actions need a saved node: the sign-in session belongs to its id.
+    let savedNode: BeaconNode | null = $state(null);
+    let client: SdkClient | null = $state(null);
 
-	let defaults: CatalogDefaults | null = $state(null);
-	let tableType = $state('');
-	let found = $state(false);
-	let loadError: Message | null = $state(null);
-	let tab = $state('schema');
-	let definition: string | null | undefined = $state(undefined);
-	// A Message, or the raw text of a server error.
-	let definitionError: Message | string = $state('');
-	let busy = $state(false);
+    let defaults: CatalogDefaults | null = $state(null);
+    let tableType = $state("");
+    let found = $state(false);
+    let loadError: Message | null = $state(null);
+    let tab = $state("schema");
+    let definition: string | null | undefined = $state(undefined);
+    // A Message, or the raw text of a server error.
+    let definitionError: Message | string = $state("");
+    let busy = $state(false);
 
-	let ref: TableRef | null = $derived.by(() => {
-		if (!defaults) return null;
-		return {
-			catalog: page.url.searchParams.get('catalog') ?? defaults.catalog,
-			schema: page.url.searchParams.get('schema') ?? defaults.schema,
-			name: tableName
-		};
-	});
+    let ref: TableRef | null = $derived.by(() => {
+        if (!defaults) return null;
+        return {
+            catalog: page.url.searchParams.get("catalog") ?? defaults.catalog,
+            schema: page.url.searchParams.get("schema") ?? defaults.schema,
+            name: tableName
+        };
+    });
 
-	let listTarget = $derived(backTarget(page.url.searchParams.get('back'), PREFIX, LIST));
-	let isView = $derived(tableKind(tableType) === 'view');
-	let manageable = $derived(
-		found && savedNode !== null && ref !== null && defaults !== null && canManage(ref, defaults)
-	);
+    let listTarget = $derived(backTarget(page.url.searchParams.get("back"), PREFIX, LIST));
+    let isView = $derived(tableKind(tableType) === "view");
+    let manageable = $derived(
+        found && savedNode !== null && ref !== null && defaults !== null && canManage(ref, defaults)
+    );
 
-	// A node outside the list gets a client with no token.
-	function readNode(): BeaconNode {
-		if (savedNode) return savedNode;
+    // A node outside the list gets a client with no token.
+    function readNode(): BeaconNode {
+        if (savedNode) return savedNode;
 
-		return {
-			id: '',
-			name: nodeUrl,
-			url: nodeUrl,
-			status: 'unknown',
-			latencyMs: null,
-			lastCheckedAt: null
-		};
-	}
+        return {
+            id: "",
+            name: nodeUrl,
+            url: nodeUrl,
+            status: "unknown",
+            latencyMs: null,
+            lastCheckedAt: null
+        };
+    }
 
-	onMount(async () => {
-		track('browser.table.open', { nodeHost: nodeUrl, props: { table: tableName } });
+    onMount(async () => {
+        track("browser.table.open", { nodeHost: nodeUrl, props: { table: tableName } });
 
-		// On a first visit the public nodes arrive after this page mounts.
-		await whenOpenNodesSettled();
-		savedNode = findByUrl(nodeUrl);
-		const current = makeBeaconClient(readNode());
+        // On a first visit the public nodes arrive after this page mounts.
+        await whenOpenNodesSettled();
+        savedNode = findByUrl(nodeUrl);
+        const current = makeBeaconClient(readNode());
 
-		try {
-			const view = await current.catalogs();
+        try {
+            const view = await current.catalogs();
 
-			const catalog = page.url.searchParams.get('catalog') ?? view.default_catalog;
-			const schema = page.url.searchParams.get('schema') ?? view.default_schema;
-			const table = view.catalogs
-				.find((c) => c.name === catalog)
-				?.schemas.find((s) => s.name === schema)
-				?.tables.find((t) => t.name === tableName);
+            const catalog = page.url.searchParams.get("catalog") ?? view.default_catalog;
+            const schema = page.url.searchParams.get("schema") ?? view.default_schema;
+            const table = view.catalogs
+                .find((c) => c.name === catalog)
+                ?.schemas.find((s) => s.name === schema)
+                ?.tables.find((t) => t.name === tableName);
 
-			if (table) {
-				tableType = table.table_type;
-				found = true;
-			} else {
-				loadError = message('dataBrowser.tables.detail.notFound', {
-					name: tableName,
-					schema: `${catalog}.${schema}`
-				});
-			}
+            if (table) {
+                tableType = table.table_type;
+                found = true;
+            } else {
+                loadError = message("dataBrowser.tables.detail.notFound", {
+                    name: tableName,
+                    schema: `${catalog}.${schema}`
+                });
+            }
 
-			client = current;
-			defaults = { catalog: view.default_catalog, schema: view.default_schema };
-		} catch (caught) {
-			loadError = sqlError(caught);
-		}
-	});
+            client = current;
+            defaults = { catalog: view.default_catalog, schema: view.default_schema };
+        } catch (caught) {
+            loadError = sqlError(caught);
+        }
+    });
 
-	let schemaLoad: Promise<unknown> | null = null;
+    let schemaLoad: Promise<unknown> | null = null;
 
-	// One request per page: a tab switch mounts the schema table again.
-	function loadSchema(): Promise<unknown> {
-		if (!client || !ref) return Promise.resolve(null);
+    // One request per page: a tab switch mounts the schema table again.
+    function loadSchema(): Promise<unknown> {
+        if (!client || !ref) return Promise.resolve(null);
 
-		if (!schemaLoad) {
-			const load = client.tableSchema(tableName, { catalog: ref.catalog, schema: ref.schema });
-			// A failure can be tried again on the next open.
-			load.catch(() => (schemaLoad = null));
-			schemaLoad = load;
-		}
+        if (!schemaLoad) {
+            const load = client.tableSchema(tableName, {
+                catalog: ref.catalog,
+                schema: ref.schema
+            });
+            // A failure can be tried again on the next open.
+            load.catch(() => (schemaLoad = null));
+            schemaLoad = load;
+        }
 
-		return schemaLoad;
-	}
+        return schemaLoad;
+    }
 
-	function onFilter(term: string, results: number) {
-		track('browser.search', {
-			props: { scope: 'table-fields', term: term.slice(0, 60), results }
-		});
-	}
+    function onFilter(term: string, results: number) {
+        track("browser.search", {
+            props: { scope: "table-fields", term: term.slice(0, 60), results }
+        });
+    }
 
-	async function loadDefinition() {
-		if (!savedNode || !ref || definition !== undefined) return;
+    async function loadDefinition() {
+        if (!savedNode || !ref || definition !== undefined) return;
 
-		definitionError = '';
-		const current = ref;
+        definitionError = "";
+        const current = ref;
 
-		try {
-			const result = await withAdmin(savedNode, (admin) =>
-				admin.admin.tableDefinition(current.name, {
-					catalog: current.catalog,
-					schema: current.schema
-				})
-			);
-			if (result === null) {
-				definitionError = message('dataBrowser.tables.detail.definitionSignIn');
-			} else {
-				definition = result.definition;
-			}
-		} catch (caught) {
-			definitionError = adminErrorMessage(caught);
-		}
-	}
+        try {
+            const result = await withAdmin(savedNode, (admin) =>
+                admin.admin.tableDefinition(current.name, {
+                    catalog: current.catalog,
+                    schema: current.schema
+                })
+            );
+            if (result === null) {
+                definitionError = message("dataBrowser.tables.detail.definitionSignIn");
+            } else {
+                definition = result.definition;
+            }
+        } catch (caught) {
+            definitionError = adminErrorMessage(caught);
+        }
+    }
 
-	function selectTab(id: string) {
-		tab = id;
-		if (id === 'definition' && $settings.adminFeatures) void loadDefinition();
-	}
+    function selectTab(id: string) {
+        tab = id;
+        if (id === "definition" && $settings.adminFeatures) void loadDefinition();
+    }
 
-	async function refresh() {
-		if (!savedNode || !ref || !defaults) return;
+    async function refresh() {
+        if (!savedNode || !ref || !defaults) return;
 
-		busy = true;
-		const sql = refreshSql(ref, defaults);
+        busy = true;
+        const sql = refreshSql(ref, defaults);
 
-		try {
-			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
-			if (done !== null) {
-				addToast({
-					type: 'success',
-					key: 'dataBrowser.tables.detail.refreshed',
-					values: { name: tableName }
-				});
-			}
-		} catch (caught) {
-			addToast({
-				type: 'error',
-				key: 'dataBrowser.tables.detail.refreshFailed',
-				values: { name: tableName },
-				message: adminErrorMessage(caught)
-			});
-		} finally {
-			busy = false;
-		}
-	}
+        try {
+            const done = await withAdmin(savedNode, (admin) => admin.query(sql));
+            if (done !== null) {
+                addToast({
+                    type: "success",
+                    key: "dataBrowser.tables.detail.refreshed",
+                    values: { name: tableName }
+                });
+            }
+        } catch (caught) {
+            addToast({
+                type: "error",
+                key: "dataBrowser.tables.detail.refreshFailed",
+                values: { name: tableName },
+                message: adminErrorMessage(caught)
+            });
+        } finally {
+            busy = false;
+        }
+    }
 
-	async function drop() {
-		if (!savedNode || !ref || !defaults) return;
+    async function drop() {
+        if (!savedNode || !ref || !defaults) return;
 
-		const sure = await askConfirm({
-			title: translate('dataBrowser.tables.detail.dropTitle', { name: tableName }),
-			message: translate('dataBrowser.tables.detail.dropMessage', {
-				name: tableName,
-				node: savedNode.name
-			}),
-			note: translate('dataBrowser.tables.detail.dropNote'),
-			confirmLabel: translate('dataBrowser.tables.detail.drop'),
-			destructive: true
-		});
-		if (!sure) return;
+        const sure = await askConfirm({
+            title: translate("dataBrowser.tables.detail.dropTitle", { name: tableName }),
+            message: translate("dataBrowser.tables.detail.dropMessage", {
+                name: tableName,
+                node: savedNode.name
+            }),
+            note: translate("dataBrowser.tables.detail.dropNote"),
+            confirmLabel: translate("dataBrowser.tables.detail.drop"),
+            destructive: true
+        });
+        if (!sure) return;
 
-		busy = true;
-		const sql = dropSql(ref, defaults);
+        busy = true;
+        const sql = dropSql(ref, defaults);
 
-		try {
-			const done = await withAdmin(savedNode, (admin) => admin.query(sql));
-			if (done !== null) {
-				addToast({
-					type: 'success',
-					key: 'dataBrowser.tables.detail.dropped',
-					values: { name: tableName }
-				});
-				goto(listTarget);
-			}
-		} catch (caught) {
-			addToast({
-				type: 'error',
-				key: 'dataBrowser.tables.detail.dropFailed',
-				values: { name: tableName },
-				message: adminErrorMessage(caught)
-			});
-		} finally {
-			busy = false;
-		}
-	}
+        try {
+            const done = await withAdmin(savedNode, (admin) => admin.query(sql));
+            if (done !== null) {
+                addToast({
+                    type: "success",
+                    key: "dataBrowser.tables.detail.dropped",
+                    values: { name: tableName }
+                });
+                goto(listTarget);
+            }
+        } catch (caught) {
+            addToast({
+                type: "error",
+                key: "dataBrowser.tables.detail.dropFailed",
+                values: { name: tableName },
+                message: adminErrorMessage(caught)
+            });
+        } finally {
+            busy = false;
+        }
+    }
 
-	function openInEditor() {
-		if (!ref || !defaults) return;
-		goto(editorLink(resolve('/sql-editor'), editorSql(ref, defaults), nodeUrl));
-	}
+    function openInEditor() {
+        if (!ref || !defaults) return;
+        goto(editorLink(resolve("/sql-editor"), editorSql(ref, defaults), nodeUrl));
+    }
 
-	async function copyDefinition() {
-		if (!definition) return;
-		await navigator.clipboard.writeText(definition);
-		addToast({ type: 'success', key: 'dataBrowser.tables.detail.copied' });
-	}
+    async function copyDefinition() {
+        if (!definition) return;
+        await navigator.clipboard.writeText(definition);
+        addToast({ type: "success", key: "dataBrowser.tables.detail.copied" });
+    }
 </script>
 
 <svelte:head>
-	<title>
-		{$t('app.pageTitle', {
-			page: $t('dataBrowser.tables.detail.pageTitle', { name: tableName })
-		})}
-	</title>
+    <title>
+        {$t("app.pageTitle", {
+            page: $t("dataBrowser.tables.detail.pageTitle", { name: tableName })
+        })}
+    </title>
 </svelte:head>
 
 <Cookiecrumb
-	crumbs={[
-		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
-		{ label: $t('nav.item.dataTables'), href: LIST },
-		{ label: $t('dataBrowser.tables.detail.pageTitle', { name: tableName }), href: '' }
-	]}
+    crumbs={[
+        { label: $t("nav.item.dataBrowser"), href: resolve("/data-browser") },
+        { label: $t("nav.item.dataTables"), href: LIST },
+        { label: $t("dataBrowser.tables.detail.pageTitle", { name: tableName }), href: "" }
+    ]}
 />
 
 <div class="page-wrapper">
-	<div class="page-container">
-		<BackLink label={$t('dataBrowser.tables.detail.back')} fallback={LIST} />
+    <div class="page-container">
+        <BackLink label={$t("dataBrowser.tables.detail.back")} fallback={LIST} />
 
-		<header class="head">
-			<div>
-				<h1>{tableName}</h1>
-				<p class="meta">
-					{#if ref}{ref.catalog}.{ref.schema}{/if}
-					{#if tableType}
-						<span class="badge">
-							{isView ? $t('dataBrowser.tables.kindView') : $t('dataBrowser.tables.kindTable')}
-						</span>
-					{/if}
-					<span class="node">· {savedNode?.name ?? nodeUrl}</span>
-				</p>
-			</div>
+        <header class="head">
+            <div>
+                <h1>{tableName}</h1>
+                <p class="meta">
+                    {#if ref}{ref.catalog}.{ref.schema}{/if}
+                    {#if tableType}
+                        <span class="badge">
+                            {isView
+                                ? $t("dataBrowser.tables.kindView")
+                                : $t("dataBrowser.tables.kindTable")}
+                        </span>
+                    {/if}
+                    <span class="node">· {savedNode?.name ?? nodeUrl}</span>
+                </p>
+            </div>
 
-			<div class="actions">
-				<!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
-				<AdminAction>
-					{#snippet children({ disabled })}
-						<Button variant="outline" onclick={openInEditor} disabled={disabled || !ref}>
-							<SquareTerminalIcon />
-							{$t('dataBrowser.tables.detail.openInEditor')}
-						</Button>
-					{/snippet}
-				</AdminAction>
+            <div class="actions">
+                <!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
+                <AdminAction>
+                    {#snippet children({ disabled })}
+                        <Button
+                            variant="outline"
+                            onclick={openInEditor}
+                            disabled={disabled || !ref}
+                        >
+                            <SquareTerminalIcon />
+                            {$t("dataBrowser.tables.detail.openInEditor")}
+                        </Button>
+                    {/snippet}
+                </AdminAction>
 
-				{#if manageable}
-					{#if !isView}
-						<AdminAction>
-							{#snippet children({ disabled })}
-								<Button variant="outline" disabled={disabled || busy} onclick={refresh}>
-									{$t('common.refresh')}
-								</Button>
-							{/snippet}
-						</AdminAction>
-					{/if}
-					<AdminAction>
-						{#snippet children({ disabled })}
-							<Button variant="destructive" disabled={disabled || busy} onclick={drop}>
-								{$t('dataBrowser.tables.detail.drop')}
-							</Button>
-						{/snippet}
-					</AdminAction>
-				{/if}
-			</div>
-		</header>
+                {#if manageable}
+                    {#if !isView}
+                        <AdminAction>
+                            {#snippet children({ disabled })}
+                                <Button
+                                    variant="outline"
+                                    disabled={disabled || busy}
+                                    onclick={refresh}
+                                >
+                                    {$t("common.refresh")}
+                                </Button>
+                            {/snippet}
+                        </AdminAction>
+                    {/if}
+                    <AdminAction>
+                        {#snippet children({ disabled })}
+                            <Button
+                                variant="destructive"
+                                disabled={disabled || busy}
+                                onclick={drop}
+                            >
+                                {$t("dataBrowser.tables.detail.drop")}
+                            </Button>
+                        {/snippet}
+                    </AdminAction>
+                {/if}
+            </div>
+        </header>
 
-		{#if loadError}
-			<p class="error">{$t(loadError)}</p>
-		{:else if !ref || !defaults || !client}
-			<p class="muted">{$t('dataBrowser.tables.detail.loading')}</p>
-		{:else}
-			<DetailTabs
-				tabs={[
-					{ id: 'schema', label: $t('dataBrowser.common.tab.schema') },
-					{ id: 'preview', label: $t('dataBrowser.common.tab.preview') },
-					{ id: 'definition', label: $t('dataBrowser.common.tab.definition') }
-				]}
-				active={tab}
-				onSelect={selectTab}
-			/>
+        {#if loadError}
+            <p class="error">{$t(loadError)}</p>
+        {:else if !ref || !defaults || !client}
+            <p class="muted">{$t("dataBrowser.tables.detail.loading")}</p>
+        {:else}
+            <DetailTabs
+                tabs={[
+                    { id: "schema", label: $t("dataBrowser.common.tab.schema") },
+                    { id: "preview", label: $t("dataBrowser.common.tab.preview") },
+                    { id: "definition", label: $t("dataBrowser.common.tab.definition") }
+                ]}
+                active={tab}
+                onSelect={selectTab}
+            />
 
-			{#if tab === 'schema'}
-				<SchemaTable load={loadSchema} {onFilter} />
-			{:else if tab === 'preview'}
-				<PreviewGrid source={client} query={previewSql(ref, defaults)} />
-			{:else if !$settings.adminFeatures}
-				<p class="muted">{$t('dataBrowser.tables.detail.definitionNeedsAdmin')}</p>
-			{:else if !savedNode}
-				<p class="muted">{$t('dataBrowser.tables.detail.definitionNeedsNode')}</p>
-			{:else if typeof definitionError !== 'string'}
-				<p class="error">{$t(definitionError)}</p>
-			{:else if definitionError}
-				<p class="error">{definitionError}</p>
-			{:else if definition === undefined}
-				<p class="muted">{$t('dataBrowser.tables.detail.definitionLoading')}</p>
-			{:else if definition === null}
-				<p class="muted">{$t('dataBrowser.tables.detail.definitionNone')}</p>
-			{:else}
-				<div class="definition">
-					<Button variant="outline" size="sm" onclick={copyDefinition}>
-						<CopyIcon />
-						{$t('dataBrowser.tables.detail.copy')}
-					</Button>
-					<pre>{definition}</pre>
-				</div>
-			{/if}
-		{/if}
-	</div>
+            {#if tab === "schema"}
+                <SchemaTable load={loadSchema} {onFilter} />
+            {:else if tab === "preview"}
+                <PreviewGrid source={client} query={previewSql(ref, defaults)} />
+            {:else if !$settings.adminFeatures}
+                <p class="muted">{$t("dataBrowser.tables.detail.definitionNeedsAdmin")}</p>
+            {:else if !savedNode}
+                <p class="muted">{$t("dataBrowser.tables.detail.definitionNeedsNode")}</p>
+            {:else if typeof definitionError !== "string"}
+                <p class="error">{$t(definitionError)}</p>
+            {:else if definitionError}
+                <p class="error">{definitionError}</p>
+            {:else if definition === undefined}
+                <p class="muted">{$t("dataBrowser.tables.detail.definitionLoading")}</p>
+            {:else if definition === null}
+                <p class="muted">{$t("dataBrowser.tables.detail.definitionNone")}</p>
+            {:else}
+                <div class="definition">
+                    <Button variant="outline" size="sm" onclick={copyDefinition}>
+                        <CopyIcon />
+                        {$t("dataBrowser.tables.detail.copy")}
+                    </Button>
+                    <pre>{definition}</pre>
+                </div>
+            {/if}
+        {/if}
+    </div>
 </div>
 
 <style lang="scss">
-	.head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
+    .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
 
-		h1 {
-			margin: 0;
-			word-break: break-all;
-		}
-	}
+        h1 {
+            margin: 0;
+            word-break: break-all;
+        }
+    }
 
-	.meta {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0.25rem 0 0;
-		color: var(--muted-foreground);
-	}
+    .meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.25rem 0 0;
+        color: var(--muted-foreground);
+    }
 
-	.badge {
-		padding: 0 0.375rem;
-		border-radius: 0.25rem;
-		background: var(--secondary);
-		font-size: var(--font-size-xs);
-	}
+    .badge {
+        padding: 0 0.375rem;
+        border-radius: 0.25rem;
+        background: var(--secondary);
+        font-size: var(--font-size-xs);
+    }
 
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
 
-	.definition {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-start;
-		gap: 0.5rem;
+    .definition {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
 
-		pre {
-			width: 100%;
-			padding: 0.75rem;
-			overflow: auto;
-			border-radius: 0.375rem;
-			background: var(--secondary);
-			white-space: pre-wrap;
-		}
-	}
+        pre {
+            width: 100%;
+            padding: 0.75rem;
+            overflow: auto;
+            border-radius: 0.375rem;
+            background: var(--secondary);
+            white-space: pre-wrap;
+        }
+    }
 
-	.muted {
-		color: var(--muted-foreground);
-	}
+    .muted {
+        color: var(--muted-foreground);
+    }
 
-	.error {
-		color: var(--destructive);
-	}
+    .error {
+        color: var(--destructive);
+    }
 </style>

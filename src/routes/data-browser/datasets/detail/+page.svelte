@@ -1,334 +1,348 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { page } from '$app/state';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { error as kitError } from '@sveltejs/kit';
-	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
-	import SquareTerminalIcon from '@lucide/svelte/icons/square-terminal';
-	import Button from '@/components/buttons/Button.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import AdminAction from '@/components/AdminAction.svelte';
-	import BackLink from '@/components/data-browser/BackLink.svelte';
-	import SchemaTable from '@/components/data-browser/SchemaTable.svelte';
-	import PreviewGrid from '@/components/data-browser/PreviewGrid.svelte';
-	import DetailTabs from '@/components/data-browser/DetailTabs.svelte';
-	import { saveBlob } from '@/components/sql-editor/save-blob';
-	import { makeBeaconClient } from '@/beacon-api/client';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { findByUrl } from '@/services/beacon-node';
-	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
-	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
-	import { askConfirm } from '@/stores/confirm';
-	import { addToast } from '@/stores/toasts';
-	import { track } from '@/telemetry';
-	import { backTarget } from '@/data-browser/back';
-	import { editorLink, parseDate } from '@/data-browser/editor-link';
-	import {
-		datasetEditorSql,
-		fileName,
-		folderOf,
-		formatFromPath,
-		formatSize,
-		parseEntries,
-		previewQuery,
-		type DatasetEntry
-	} from '@/data-browser/datasets';
-	import { parseSchema } from '@/sql/catalog';
-	import { sqlError } from '@/sql/statement';
-	import { formatDate, formatNumber, t, translate, type Message } from '@/i18n';
+    import { onMount } from "svelte";
+    import { page } from "$app/state";
+    import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
+    import { error as kitError } from "@sveltejs/kit";
+    import type { BeaconClient as SdkClient } from "@maris-development/beacon-client";
+    import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
+    import Button from "@/components/buttons/Button.svelte";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import AdminAction from "@/components/AdminAction.svelte";
+    import BackLink from "@/components/data-browser/BackLink.svelte";
+    import SchemaTable from "@/components/data-browser/SchemaTable.svelte";
+    import PreviewGrid from "@/components/data-browser/PreviewGrid.svelte";
+    import DetailTabs from "@/components/data-browser/DetailTabs.svelte";
+    import { saveBlob } from "@/components/sql-editor/save-blob";
+    import { makeBeaconClient } from "@/beacon-api/client";
+    import type { BeaconNode } from "@/beacon-api/types";
+    import { findByUrl } from "@/services/beacon-node";
+    import { whenOpenNodesSettled } from "@/services/open-nodes-import";
+    import { adminErrorMessage, withAdmin } from "@/services/admin-session";
+    import { askConfirm } from "@/stores/confirm";
+    import { addToast } from "@/stores/toasts";
+    import { track } from "@/telemetry";
+    import { backTarget } from "@/data-browser/back";
+    import { editorLink, parseDate } from "@/data-browser/editor-link";
+    import {
+        datasetEditorSql,
+        fileName,
+        folderOf,
+        formatFromPath,
+        formatSize,
+        parseEntries,
+        previewQuery,
+        type DatasetEntry
+    } from "@/data-browser/datasets";
+    import { parseSchema } from "@/sql/catalog";
+    import { sqlError } from "@/sql/statement";
+    import { formatDate, formatNumber, t, translate, type Message } from "@/i18n";
 
-	const LIST = resolve('/data-browser/datasets');
+    const LIST = resolve("/data-browser/datasets");
 
-	const file = page.url.searchParams.get('file') ?? '';
-	if (!file) {
-		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'file' }));
-	}
+    const file = page.url.searchParams.get("file") ?? "";
+    if (!file) {
+        throw kitError(
+            400,
+            translate("dataBrowser.datasets.detail.missingParam", { name: "file" })
+        );
+    }
 
-	// The node URL, not its id. An id exists in one browser only, so a shared link names the node.
-	const nodeUrl = page.url.searchParams.get('node') ?? '';
-	if (!nodeUrl) {
-		throw kitError(400, translate('dataBrowser.datasets.detail.missingParam', { name: 'node' }));
-	}
+    // The node URL, not its id. An id exists in one browser only, so a shared link names the node.
+    const nodeUrl = page.url.searchParams.get("node") ?? "";
+    if (!nodeUrl) {
+        throw kitError(
+            400,
+            translate("dataBrowser.datasets.detail.missingParam", { name: "node" })
+        );
+    }
 
-	const FOLDER_LIST = `${LIST}?folder=${encodeURIComponent(folderOf(file))}`;
-	// The base path without its trailing slash.
-	const PREFIX = resolve('/').replace(/\/$/, '');
+    const FOLDER_LIST = `${LIST}?folder=${encodeURIComponent(folderOf(file))}`;
+    // The base path without its trailing slash.
+    const PREFIX = resolve("/").replace(/\/$/, "");
 
-	// Admin actions need a saved node: the sign-in session belongs to its id.
-	let savedNode: BeaconNode | null = $state(null);
-	let client: SdkClient | null = $state(null);
+    // Admin actions need a saved node: the sign-in session belongs to its id.
+    let savedNode: BeaconNode | null = $state(null);
+    let client: SdkClient | null = $state(null);
 
-	// The list builds the detail link from a known entry. A share link has only the path.
-	let entry: DatasetEntry = $state({
-		path: file,
-		format: formatFromPath(file),
-		canInspect: true,
-		size: null,
-		lastModified: null
-	});
-	let tab = $state('schema');
-	let columns: string[] | null = $state(null);
-	let columnsError: Message | null = $state(null);
-	let busy = $state(false);
+    // The list builds the detail link from a known entry. A share link has only the path.
+    let entry: DatasetEntry = $state({
+        path: file,
+        format: formatFromPath(file),
+        canInspect: true,
+        size: null,
+        lastModified: null
+    });
+    let tab = $state("schema");
+    let columns: string[] | null = $state(null);
+    let columnsError: Message | null = $state(null);
+    let busy = $state(false);
 
-	let modified = $derived(parseDate(entry.lastModified));
-	let folderList = $derived(backTarget(page.url.searchParams.get('back'), PREFIX, FOLDER_LIST));
+    let modified = $derived(parseDate(entry.lastModified));
+    let folderList = $derived(backTarget(page.url.searchParams.get("back"), PREFIX, FOLDER_LIST));
 
-	// A node outside the list gets a client with no token.
-	function readNode(): BeaconNode {
-		if (savedNode) return savedNode;
+    // A node outside the list gets a client with no token.
+    function readNode(): BeaconNode {
+        if (savedNode) return savedNode;
 
-		return {
-			id: '',
-			name: nodeUrl,
-			url: nodeUrl,
-			status: 'unknown',
-			latencyMs: null,
-			lastCheckedAt: null
-		};
-	}
+        return {
+            id: "",
+            name: nodeUrl,
+            url: nodeUrl,
+            status: "unknown",
+            latencyMs: null,
+            lastCheckedAt: null
+        };
+    }
 
-	onMount(async () => {
-		track('browser.dataset.open', { nodeHost: nodeUrl, props: { file } });
+    onMount(async () => {
+        track("browser.dataset.open", { nodeHost: nodeUrl, props: { file } });
 
-		// On a first visit the public nodes arrive after this page mounts.
-		await whenOpenNodesSettled();
-		savedNode = findByUrl(nodeUrl);
-		const current = makeBeaconClient(readNode());
+        // On a first visit the public nodes arrive after this page mounts.
+        await whenOpenNodesSettled();
+        savedNode = findByUrl(nodeUrl);
+        const current = makeBeaconClient(readNode());
 
-		try {
-			const found = parseEntries(await current.datasets({ pattern: file, limit: 1 }));
-			if (found[0]?.path === file) entry = found[0];
-		} catch {
-			// The details stay unknown. Schema and preview still try.
-		}
+        try {
+            const found = parseEntries(await current.datasets({ pattern: file, limit: 1 }));
+            if (found[0]?.path === file) entry = found[0];
+        } catch {
+            // The details stay unknown. Schema and preview still try.
+        }
 
-		client = current;
-		// The user can open Preview before the client is ready.
-		void loadColumns();
-	});
+        client = current;
+        // The user can open Preview before the client is ready.
+        void loadColumns();
+    });
 
-	let schemaLoad: Promise<unknown> | null = null;
+    let schemaLoad: Promise<unknown> | null = null;
 
-	// One request per page: the schema tab and the preview columns share it.
-	function loadSchema(): Promise<unknown> {
-		if (!client) return Promise.resolve(null);
+    // One request per page: the schema tab and the preview columns share it.
+    function loadSchema(): Promise<unknown> {
+        if (!client) return Promise.resolve(null);
 
-		if (!schemaLoad) {
-			const load = client.datasetSchema(file).then((schema) => {
-				columns = parseSchema(schema).map((column) => column.name);
-				return schema;
-			});
-			// A failure can be tried again on the next open.
-			load.catch(() => (schemaLoad = null));
-			schemaLoad = load;
-		}
+        if (!schemaLoad) {
+            const load = client.datasetSchema(file).then((schema) => {
+                columns = parseSchema(schema).map((column) => column.name);
+                return schema;
+            });
+            // A failure can be tried again on the next open.
+            load.catch(() => (schemaLoad = null));
+            schemaLoad = load;
+        }
 
-		return schemaLoad;
-	}
+        return schemaLoad;
+    }
 
-	async function loadColumns() {
-		if (tab !== 'preview' || columns !== null || !client || !entry.canInspect) return;
+    async function loadColumns() {
+        if (tab !== "preview" || columns !== null || !client || !entry.canInspect) return;
 
-		columnsError = null;
+        columnsError = null;
 
-		try {
-			await loadSchema();
-		} catch (caught) {
-			columnsError = sqlError(caught);
-		}
-	}
+        try {
+            await loadSchema();
+        } catch (caught) {
+            columnsError = sqlError(caught);
+        }
+    }
 
-	function selectTab(id: string) {
-		tab = id;
-		void loadColumns();
-	}
+    function selectTab(id: string) {
+        tab = id;
+        void loadColumns();
+    }
 
-	async function download() {
-		if (!savedNode) return;
-		busy = true;
+    async function download() {
+        if (!savedNode) return;
+        busy = true;
 
-		try {
-			const blob = await withAdmin(savedNode, (admin) => admin.admin.downloadDataset(file));
-			if (blob !== null) saveBlob(blob, fileName(file));
-		} catch (caught) {
-			addToast({
-				type: 'error',
-				key: 'dataBrowser.datasets.detail.downloadFailed',
-				message: adminErrorMessage(caught)
-			});
-		} finally {
-			busy = false;
-		}
-	}
+        try {
+            const blob = await withAdmin(savedNode, (admin) => admin.admin.downloadDataset(file));
+            if (blob !== null) saveBlob(blob, fileName(file));
+        } catch (caught) {
+            addToast({
+                type: "error",
+                key: "dataBrowser.datasets.detail.downloadFailed",
+                message: adminErrorMessage(caught)
+            });
+        } finally {
+            busy = false;
+        }
+    }
 
-	async function remove() {
-		if (!savedNode) return;
+    async function remove() {
+        if (!savedNode) return;
 
-		const sure = await askConfirm({
-			title: translate('dataBrowser.datasets.detail.deleteTitle', { name: fileName(file) }),
-			message: translate('dataBrowser.datasets.detail.deleteMessage', {
-				path: file,
-				node: savedNode.name
-			}),
-			note: translate('dataBrowser.datasets.detail.deleteNote'),
-			confirmLabel: translate('common.delete'),
-			destructive: true
-		});
-		if (!sure) return;
+        const sure = await askConfirm({
+            title: translate("dataBrowser.datasets.detail.deleteTitle", { name: fileName(file) }),
+            message: translate("dataBrowser.datasets.detail.deleteMessage", {
+                path: file,
+                node: savedNode.name
+            }),
+            note: translate("dataBrowser.datasets.detail.deleteNote"),
+            confirmLabel: translate("common.delete"),
+            destructive: true
+        });
+        if (!sure) return;
 
-		busy = true;
+        busy = true;
 
-		try {
-			const done = await withAdmin(savedNode, async (admin) => {
-				await admin.admin.deleteDataset(file);
-				return true;
-			});
-			if (done) {
-				addToast({
-					type: 'success',
-					key: 'dataBrowser.datasets.detail.deleted',
-					values: { name: fileName(file) }
-				});
-				goto(folderList);
-			}
-		} catch (caught) {
-			addToast({
-				type: 'error',
-				key: 'dataBrowser.datasets.detail.deleteFailed',
-				message: adminErrorMessage(caught)
-			});
-		} finally {
-			busy = false;
-		}
-	}
+        try {
+            const done = await withAdmin(savedNode, async (admin) => {
+                await admin.admin.deleteDataset(file);
+                return true;
+            });
+            if (done) {
+                addToast({
+                    type: "success",
+                    key: "dataBrowser.datasets.detail.deleted",
+                    values: { name: fileName(file) }
+                });
+                goto(folderList);
+            }
+        } catch (caught) {
+            addToast({
+                type: "error",
+                key: "dataBrowser.datasets.detail.deleteFailed",
+                message: adminErrorMessage(caught)
+            });
+        } finally {
+            busy = false;
+        }
+    }
 
-	function openInEditor() {
-		goto(editorLink(resolve('/sql-editor'), datasetEditorSql(entry), nodeUrl));
-	}
+    function openInEditor() {
+        goto(editorLink(resolve("/sql-editor"), datasetEditorSql(entry), nodeUrl));
+    }
 </script>
 
 <svelte:head>
-	<title>
-		{$t('app.pageTitle', {
-			page: $t('dataBrowser.datasets.detail.title', { name: fileName(file) })
-		})}
-	</title>
+    <title>
+        {$t("app.pageTitle", {
+            page: $t("dataBrowser.datasets.detail.title", { name: fileName(file) })
+        })}
+    </title>
 </svelte:head>
 
 <Cookiecrumb
-	crumbs={[
-		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
-		{ label: $t('nav.item.datasets'), href: LIST },
-		{ label: fileName(file), href: '' }
-	]}
+    crumbs={[
+        { label: $t("nav.item.dataBrowser"), href: resolve("/data-browser") },
+        { label: $t("nav.item.datasets"), href: LIST },
+        { label: fileName(file), href: "" }
+    ]}
 />
 
 <div class="page-wrapper">
-	<div class="page-container">
-		<BackLink label={$t('nav.item.datasets')} fallback={FOLDER_LIST} />
+    <div class="page-container">
+        <BackLink label={$t("nav.item.datasets")} fallback={FOLDER_LIST} />
 
-		<header class="head">
-			<div>
-				<h1>{fileName(file)}</h1>
-				<p class="meta">
-					<span class="mono">{file}</span>
-					{#if entry.format}· {entry.format}{/if}
-					{#if entry.size !== null}· {formatSize(entry.size, $formatNumber)}{/if}
-					{#if modified}· {$formatDate(modified)}{/if}
-					· {savedNode?.name ?? nodeUrl}
-				</p>
-			</div>
+        <header class="head">
+            <div>
+                <h1>{fileName(file)}</h1>
+                <p class="meta">
+                    <span class="mono">{file}</span>
+                    {#if entry.format}· {entry.format}{/if}
+                    {#if entry.size !== null}· {formatSize(entry.size, $formatNumber)}{/if}
+                    {#if modified}· {$formatDate(modified)}{/if}
+                    · {savedNode?.name ?? nodeUrl}
+                </p>
+            </div>
 
-			<div class="actions">
-				<!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
-				<AdminAction>
-					{#snippet children({ disabled })}
-						<Button variant="outline" onclick={openInEditor} {disabled}>
-							<SquareTerminalIcon />
-							{$t('dataBrowser.datasets.detail.openInEditor')}
-						</Button>
-					{/snippet}
-				</AdminAction>
+            <div class="actions">
+                <!-- TODO(#155): open the SQL in the SQL mode of the workbench, for every user. -->
+                <AdminAction>
+                    {#snippet children({ disabled })}
+                        <Button variant="outline" onclick={openInEditor} {disabled}>
+                            <SquareTerminalIcon />
+                            {$t("dataBrowser.datasets.detail.openInEditor")}
+                        </Button>
+                    {/snippet}
+                </AdminAction>
 
-				{#if savedNode}
-					<AdminAction>
-						{#snippet children({ disabled })}
-							<Button variant="outline" disabled={disabled || busy} onclick={download}>
-								{$t('dataBrowser.datasets.detail.download')}
-							</Button>
-						{/snippet}
-					</AdminAction>
-					<AdminAction>
-						{#snippet children({ disabled })}
-							<Button variant="destructive" disabled={disabled || busy} onclick={remove}>
-								{$t('common.delete')}
-							</Button>
-						{/snippet}
-					</AdminAction>
-				{/if}
-			</div>
-		</header>
+                {#if savedNode}
+                    <AdminAction>
+                        {#snippet children({ disabled })}
+                            <Button
+                                variant="outline"
+                                disabled={disabled || busy}
+                                onclick={download}
+                            >
+                                {$t("dataBrowser.datasets.detail.download")}
+                            </Button>
+                        {/snippet}
+                    </AdminAction>
+                    <AdminAction>
+                        {#snippet children({ disabled })}
+                            <Button
+                                variant="destructive"
+                                disabled={disabled || busy}
+                                onclick={remove}
+                            >
+                                {$t("common.delete")}
+                            </Button>
+                        {/snippet}
+                    </AdminAction>
+                {/if}
+            </div>
+        </header>
 
-		<DetailTabs
-			tabs={[
-				{ id: 'schema', label: $t('dataBrowser.datasets.detail.schema') },
-				{ id: 'preview', label: $t('dataBrowser.datasets.detail.preview') }
-			]}
-			active={tab}
-			onSelect={selectTab}
-		/>
+        <DetailTabs
+            tabs={[
+                { id: "schema", label: $t("dataBrowser.datasets.detail.schema") },
+                { id: "preview", label: $t("dataBrowser.datasets.detail.preview") }
+            ]}
+            active={tab}
+            onSelect={selectTab}
+        />
 
-		{#if !client}
-			<p class="muted">{$t('dataBrowser.datasets.detail.loadingFile')}</p>
-		{:else if !entry.canInspect}
-			<p class="muted">{$t('dataBrowser.datasets.detail.cannotRead')}</p>
-		{:else if tab === 'schema'}
-			<SchemaTable load={loadSchema} />
-		{:else if columnsError}
-			<p class="error">{$t(columnsError)}</p>
-		{:else if columns === null}
-			<p class="muted">{$t('dataBrowser.datasets.detail.loadingColumns')}</p>
-		{:else if columns.length === 0}
-			<p class="muted">{$t('dataBrowser.datasets.detail.noColumns')}</p>
-		{:else}
-			<PreviewGrid source={client} query={previewQuery(entry, columns)} />
-		{/if}
-	</div>
+        {#if !client}
+            <p class="muted">{$t("dataBrowser.datasets.detail.loadingFile")}</p>
+        {:else if !entry.canInspect}
+            <p class="muted">{$t("dataBrowser.datasets.detail.cannotRead")}</p>
+        {:else if tab === "schema"}
+            <SchemaTable load={loadSchema} />
+        {:else if columnsError}
+            <p class="error">{$t(columnsError)}</p>
+        {:else if columns === null}
+            <p class="muted">{$t("dataBrowser.datasets.detail.loadingColumns")}</p>
+        {:else if columns.length === 0}
+            <p class="muted">{$t("dataBrowser.datasets.detail.noColumns")}</p>
+        {:else}
+            <PreviewGrid source={client} query={previewQuery(entry, columns)} />
+        {/if}
+    </div>
 </div>
 
 <style lang="scss">
-	.head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: 1rem;
+    .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
 
-		h1 {
-			margin: 0;
-			word-break: break-all;
-		}
-	}
+        h1 {
+            margin: 0;
+            word-break: break-all;
+        }
+    }
 
-	.meta {
-		margin: 0.25rem 0 0;
-		color: var(--muted-foreground);
-		word-break: break-all;
-	}
+    .meta {
+        margin: 0.25rem 0 0;
+        color: var(--muted-foreground);
+        word-break: break-all;
+    }
 
-	.actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
 
-	.muted {
-		color: var(--muted-foreground);
-	}
+    .muted {
+        color: var(--muted-foreground);
+    }
 
-	.error {
-		color: var(--destructive);
-	}
+    .error {
+        color: var(--destructive);
+    }
 </style>

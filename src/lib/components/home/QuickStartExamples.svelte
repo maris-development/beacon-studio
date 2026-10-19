@@ -6,203 +6,205 @@
 -->
 
 <script lang="ts">
-	import { asset, resolve } from '$app/paths';
-	import BracesIcon from '@lucide/svelte/icons/braces';
-	import GlobeIcon from '@lucide/svelte/icons/globe';
-	import Button from '@/components/buttons/Button.svelte';
-	import Card from '@/components/card/Card.svelte';
-	import { Badge } from '@/components/ui/badge/index.js';
-	import { homeExamples, type HomeExample } from '@/data/home-examples';
-	import { track } from '@/telemetry';
-	import { SHARE_LINK_PATH } from '@/stores/stored-query';
-	import { t, formatNumber } from '@/i18n';
+    import { asset, resolve } from "$app/paths";
+    import BracesIcon from "@lucide/svelte/icons/braces";
+    import GlobeIcon from "@lucide/svelte/icons/globe";
+    import Button from "@/components/buttons/Button.svelte";
+    import Card from "@/components/card/Card.svelte";
+    import { Badge } from "@/components/ui/badge/index.js";
+    import { homeExamples, type HomeExample } from "@/data/home-examples";
+    import { track } from "@/telemetry";
+    import { SHARE_LINK_PATH } from "@/stores/stored-query";
+    import { t, formatNumber } from "@/i18n";
 
-	/** The share link of one example. */
-	function exampleHref(example: HomeExample): string {
-		return `${resolve(SHARE_LINK_PATH)}${example.shareQuery}`;
-	}
+    /** The share link of one example. */
+    function exampleHref(example: HomeExample): string {
+        return `${resolve(SHARE_LINK_PATH)}${example.shareQuery}`;
+    }
 </script>
 
 <div class="section-head">
-	<h2>{$t('home.examples.title')}</h2>
-	<p class="lead">{$t('home.examples.lead')}</p>
-	<!-- <span class="pending" title={PENDING_HINT}>
+    <h2>{$t("home.examples.title")}</h2>
+    <p class="lead">{$t("home.examples.lead")}</p>
+    <!-- <span class="pending" title={PENDING_HINT}>
 		<Button variant="link" disabled>View all examples</Button>
 	</span> -->
 </div>
 
 <div class="examples">
-	{#each $homeExamples as example (example.title)}
-		<Card class="example">
-			<img
-				class="shot"
-				src={asset(`/images/${example.image}`)}
-				alt={$t('home.examples.imageAlt', { title: example.title })}
-				width="1382"
-				height="760"
-				loading="lazy"
-				decoding="async"
-			/>
+    {#each $homeExamples as example (example.title)}
+        <Card class="example">
+            <img
+                class="shot"
+                src={asset(`/images/${example.image}`)}
+                alt={$t("home.examples.imageAlt", { title: example.title })}
+                width="1382"
+                height="760"
+                loading="lazy"
+                decoding="async"
+            />
 
-			<div class="body">
-				<div class="source">
-					<GlobeIcon />
-					<span class="source-name">{example.sourceName}</span>
-					<Badge variant="outline" class="table-name">{example.tableName}</Badge>
-				</div>
+            <div class="body">
+                <div class="source">
+                    <GlobeIcon />
+                    <span class="source-name">{example.sourceName}</span>
+                    <Badge variant="outline" class="table-name">{example.tableName}</Badge>
+                </div>
 
-				<h3>{example.title}</h3>
-				<p class="description">{example.description}</p>
+                <h3>{example.title}</h3>
+                <p class="description">{example.description}</p>
 
-				<div class="metrics" title={$t('home.examples.metricHint')}>
-					<Badge variant="outline" class="rows">{$t('common.rows', { count: example.rows })}</Badge>
-					<Badge variant="outline">{$formatNumber(example.seconds)} s</Badge>
-					<Badge variant="outline">{example.format}</Badge>
-				</div>
+                <div class="metrics" title={$t("home.examples.metricHint")}>
+                    <Badge variant="outline" class="rows"
+                        >{$t("common.rows", { count: example.rows })}</Badge
+                    >
+                    <Badge variant="outline">{$formatNumber(example.seconds)} s</Badge>
+                    <Badge variant="outline">{example.format}</Badge>
+                </div>
 
-				<div class="actions">
-					<Button
-						variant="outline"
-						href={exampleHref(example)}
-						onclick={() =>
-							track('example.start', {
-								props: {
-									title: example.title,
-									table: example.tableName,
-									source: example.sourceName
-								}
-							})}
-					>
-						<BracesIcon />
-						{$t('home.examples.check')}
-					</Button>
-				</div>
-			</div>
-		</Card>
-	{/each}
+                <div class="actions">
+                    <Button
+                        variant="outline"
+                        href={exampleHref(example)}
+                        onclick={() =>
+                            track("example.start", {
+                                props: {
+                                    title: example.title,
+                                    table: example.tableName,
+                                    source: example.sourceName
+                                }
+                            })}
+                    >
+                        <BracesIcon />
+                        {$t("home.examples.check")}
+                    </Button>
+                </div>
+            </div>
+        </Card>
+    {/each}
 </div>
 
 <style lang="scss">
-	.section-head {
-		display: flex;
-		flex-direction: row;
-		align-items: baseline;
-		gap: 0.75rem;
-		margin-bottom: 1rem;
+    .section-head {
+        display: flex;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
 
-		h2 {
-			margin: 0;
-		}
+        h2 {
+            margin: 0;
+        }
 
-		.lead {
-			margin: 0;
-			flex: 1;
-			color: var(--muted-foreground);
-		}
-	}
+        .lead {
+            margin: 0;
+            flex: 1;
+            color: var(--muted-foreground);
+        }
+    }
 
-	.examples {
-		display: grid;
-		gap: 1rem;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    .examples {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 
-		// The screenshot reaches the card edge, so the card holds no padding of
-		// its own. The body below it supplies the padding instead.
-		:global(.card.example) {
-			padding: 0;
-			overflow: hidden;
-			height: 100%;
-		}
+        // The screenshot reaches the card edge, so the card holds no padding of
+        // its own. The body below it supplies the padding instead.
+        :global(.card.example) {
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+        }
 
-		// `Card` puts every child inside this wrapper. The wrapper must fill the
-		// card, else `flex` on the body below it has nothing to divide.
-		:global(.card.example > .card-content) {
-			display: flex;
-			flex-direction: column;
-			flex: 1;
-		}
+        // `Card` puts every child inside this wrapper. The wrapper must fill the
+        // card, else `flex` on the body below it has nothing to divide.
+        :global(.card.example > .card-content) {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
 
-		.shot {
-			display: block;
-			width: 100%;
-			height: auto;
-			aspect-ratio: 16 / 9;
-			object-fit: cover;
-			object-position: center;
-			border-bottom: 1px solid var(--card-border);
-			background-color: var(--muted);
-		}
+        .shot {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            object-position: center;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--muted);
+        }
 
-		.body {
-			display: flex;
-			flex-direction: column;
-			gap: 0.5rem;
-			padding: 1rem;
-			// The card stretches to the tallest of the row. This pushes the
-			// actions of every card to the same edge.
-			flex: 1;
+        .body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 1rem;
+            // The card stretches to the tallest of the row. This pushes the
+            // actions of every card to the same edge.
+            flex: 1;
 
-			h3 {
-				margin: 0;
-			}
-		}
+            h3 {
+                margin: 0;
+            }
+        }
 
-		.source {
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			gap: 0.375rem;
-			color: var(--muted-foreground);
-			font-size: var(--font-size-sm);
+        .source {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.375rem;
+            color: var(--muted-foreground);
+            font-size: var(--font-size-sm);
 
-			:global(svg) {
-				width: 0.875rem;
-				height: 0.875rem;
-				flex-shrink: 0;
-			}
-		}
+            :global(svg) {
+                width: 0.875rem;
+                height: 0.875rem;
+                flex-shrink: 0;
+            }
+        }
 
-		.description {
-			margin: 0;
-			// The descriptions differ in length. This keeps the action rows of
-			// the three cards on one line.
-			flex: 1;
-		}
+        .description {
+            margin: 0;
+            // The descriptions differ in length. This keeps the action rows of
+            // the three cards on one line.
+            flex: 1;
+        }
 
-		.metrics {
-			display: flex;
-			flex-direction: row;
-			flex-wrap: wrap;
-			gap: 0.375rem;
+        .metrics {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 0.375rem;
 
-			// The row count is the number that a user reads first.
-			:global(.rows) {
-				background-color: var(--selected-background);
-				border-color: var(--border);
-				color: var(--primary);
-			}
-		}
+            // The row count is the number that a user reads first.
+            :global(.rows) {
+                background-color: var(--selected-background);
+                border-color: var(--border);
+                color: var(--primary);
+            }
+        }
 
-		.actions {
-			display: flex;
-			flex-direction: row;
-			gap: 0.5rem;
-			width: 100%;
-			margin-top: 0.25rem;
+        .actions {
+            display: flex;
+            flex-direction: row;
+            gap: 0.5rem;
+            width: 100%;
+            margin-top: 0.25rem;
 
-			// Both actions share the width. The wrapper must grow the same way
-			// the sibling button does.
-			> :global(.btn) {
-				flex: 1;
-			}
-		}
-	}
+            // Both actions share the width. The wrapper must grow the same way
+            // the sibling button does.
+            > :global(.btn) {
+                flex: 1;
+            }
+        }
+    }
 
-	@media (max-width: 60rem) {
-		.section-head {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 0.25rem;
-		}
-	}
+    @media (max-width: 60rem) {
+        .section-head {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+        }
+    }
 </style>

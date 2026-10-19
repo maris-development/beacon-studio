@@ -18,15 +18,15 @@
  * reaches local storage.
  */
 
-import { browser } from '$app/environment';
-import { derived, get, type Readable } from 'svelte/store';
-import { persisted } from 'svelte-local-storage-store';
-import type { BeaconNode, BeaconNodeHealth, NodeRef, StoredBeaconNode } from '@/beacon-api/types';
-import { Utils } from '@/utils';
-import { track } from '@/telemetry';
-import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from './beacon-node-health';
-import { normalizeUrl } from './beacon-node-url';
-import { signOut } from './admin-session';
+import { browser } from "$app/environment";
+import { derived, get, type Readable } from "svelte/store";
+import { persisted } from "svelte-local-storage-store";
+import type { BeaconNode, BeaconNodeHealth, NodeRef, StoredBeaconNode } from "@/beacon-api/types";
+import { Utils } from "@/utils";
+import { track } from "@/telemetry";
+import { dropHealth, getHealthOf, healthMap, UNKNOWN_HEALTH } from "./beacon-node-health";
+import { normalizeUrl } from "./beacon-node-url";
+import { signOut } from "./admin-session";
 
 export type { BeaconNode, NodeRef, StoredBeaconNode };
 export { normalizeUrl };
@@ -36,18 +36,18 @@ export { normalizeUrl };
  * `import` is the public list at startup, and `host` is the node of the current
  * host root. The value goes into the telemetry event.
  */
-export type NodeActionSource = 'user' | 'import' | 'host';
+export type NodeActionSource = "user" | "import" | "host";
 
 /** The fields a caller supplies. The service owns id, createdAt and updatedAt. */
 export type BeaconNodeInput = {
-	name: string;
-	url: string;
-	description?: string;
-	token?: string;
+    name: string;
+    url: string;
+    description?: string;
+    token?: string;
 };
 
-const LIST_KEY = 'beacon-nodes';
-const SELECTED_KEY = 'current-beacon-node-id';
+const LIST_KEY = "beacon-nodes";
+const SELECTED_KEY = "current-beacon-node-id";
 
 /**
  * Moves the raw value of a renamed local storage key. The function writes only
@@ -55,22 +55,22 @@ const SELECTED_KEY = 'current-beacon-node-id';
  * `persisted()` store reads the new key.
  */
 function migrateKey(oldKey: string, newKey: string): void {
-	if (!browser) return;
+    if (!browser) return;
 
-	const value = window.localStorage.getItem(oldKey);
-	if (value === null) return;
+    const value = window.localStorage.getItem(oldKey);
+    if (value === null) return;
 
-	if (window.localStorage.getItem(newKey) === null) {
-		window.localStorage.setItem(newKey, value);
-	}
+    if (window.localStorage.getItem(newKey) === null) {
+        window.localStorage.setItem(newKey, value);
+    }
 
-	window.localStorage.removeItem(oldKey);
+    window.localStorage.removeItem(oldKey);
 }
 
 // The first argument of each call is a storage key of an older app version.
 // It is a data format, not a term. Never rename one.
-migrateKey('beacon-instances', LIST_KEY);
-migrateKey('current-beacon-instance-id', SELECTED_KEY);
+migrateKey("beacon-instances", LIST_KEY);
+migrateKey("current-beacon-instance-id", SELECTED_KEY);
 
 const listStore = persisted<StoredBeaconNode[]>(LIST_KEY, []);
 const selectedIdStore = persisted<string | null>(SELECTED_KEY, null);
@@ -79,12 +79,12 @@ const selectedIdStore = persisted<string | null>(SELECTED_KEY, null);
 
 /** Puts the live health on a stored record. */
 function withHealth(stored: StoredBeaconNode, map: Record<string, BeaconNodeHealth>): BeaconNode {
-	return { ...stored, ...(map[normalizeUrl(stored.url)] ?? UNKNOWN_HEALTH) };
+    return { ...stored, ...(map[normalizeUrl(stored.url)] ?? UNKNOWN_HEALTH) };
 }
 
 /** Every configured node, with its health. Use `$nodes` in a component. */
 export const nodes: Readable<BeaconNode[]> = derived([listStore, healthMap], ([list, map]) =>
-	list.map((stored) => withHealth(stored, map))
+    list.map((stored) => withHealth(stored, map))
 );
 
 /**
@@ -92,41 +92,41 @@ export const nodes: Readable<BeaconNode[]> = derived([listStore, healthMap], ([l
  * follows an edit of the selected node, and a health check.
  */
 export const currentNode: Readable<BeaconNode | null> = derived(
-	[nodes, selectedIdStore],
-	([list, id]) => list.find((node) => node.id === id) ?? null
+    [nodes, selectedIdStore],
+    ([list, id]) => list.find((node) => node.id === id) ?? null
 );
 
 /** A snapshot of the list, for plain modules. Call it at the point of use. */
 export function getNodes(): BeaconNode[] {
-	return get(nodes);
+    return get(nodes);
 }
 
 /** A snapshot of the selection, for plain modules. Call it at the point of use. */
 export function getCurrentNode(): BeaconNode | null {
-	return get(currentNode);
+    return get(currentNode);
 }
 
 /** The selection, or an error. Use it where the caller cannot continue without one. */
 export function requireCurrentNode(): BeaconNode {
-	const node = getCurrentNode();
+    const node = getCurrentNode();
 
-	if (!node) {
-		throw new Error('No Beacon node selected.');
-	}
+    if (!node) {
+        throw new Error("No Beacon node selected.");
+    }
 
-	return node;
+    return node;
 }
 
 /** The node with this id, or `null`. */
 export function findById(id: string): BeaconNode | null {
-	return getNodes().find((node) => node.id === id) ?? null;
+    return getNodes().find((node) => node.id === id) ?? null;
 }
 
 /** The node with this URL, or `null`. The compare uses {@link normalizeUrl}. */
 export function findByUrl(url: string): BeaconNode | null {
-	const target = normalizeUrl(url);
+    const target = normalizeUrl(url);
 
-	return getNodes().find((node) => normalizeUrl(node.url) === target) ?? null;
+    return getNodes().find((node) => normalizeUrl(node.url) === target) ?? null;
 }
 
 /**
@@ -140,66 +140,66 @@ export function findByUrl(url: string): BeaconNode | null {
  * mirror of the list. See `resolveRef` for the snapshot form.
  */
 export function matchRef(list: BeaconNode[], ref: NodeRef | null | undefined): BeaconNode | null {
-	if (!ref) return null;
+    if (!ref) return null;
 
-	if (ref.id) {
-		const byId = list.find((node) => node.id === ref.id);
-		if (byId) return byId;
-	}
+    if (ref.id) {
+        const byId = list.find((node) => node.id === ref.id);
+        if (byId) return byId;
+    }
 
-	if (ref.url) {
-		const target = normalizeUrl(ref.url);
-		return list.find((node) => normalizeUrl(node.url) === target) ?? null;
-	}
+    if (ref.url) {
+        const target = normalizeUrl(ref.url);
+        return list.find((node) => normalizeUrl(node.url) === target) ?? null;
+    }
 
-	return null;
+    return null;
 }
 
 /** {@link matchRef} against the list of now. Use it in a plain module. */
 export function resolveRef(ref: NodeRef | null | undefined): BeaconNode | null {
-	return matchRef(getNodes(), ref);
+    return matchRef(getNodes(), ref);
 }
 
 // -- Writes -----------------------------------------------------------------
 
 /** Applies the given fields only. An absent field keeps its value. */
 function applyInput(node: StoredBeaconNode, input: Partial<BeaconNodeInput>): StoredBeaconNode {
-	const next: StoredBeaconNode = { ...node, updatedAt: new Date() };
+    const next: StoredBeaconNode = { ...node, updatedAt: new Date() };
 
-	if (input.name !== undefined) next.name = input.name.trim();
-	if (input.url !== undefined) next.url = normalizeUrl(input.url);
-	if (input.description !== undefined) next.description = input.description.trim();
-	if (input.token !== undefined) next.token = input.token.trim();
+    if (input.name !== undefined) next.name = input.name.trim();
+    if (input.url !== undefined) next.url = normalizeUrl(input.url);
+    if (input.description !== undefined) next.description = input.description.trim();
+    if (input.token !== undefined) next.token = input.token.trim();
 
-	return next;
+    return next;
 }
 
 /**
  * Adds a node to the end of the list. The function selects the new node when
  * the app has no selection. It never replaces a selection.
  */
-export function addNode(input: BeaconNodeInput, source: NodeActionSource = 'user'): BeaconNode {
-	const now = new Date();
+export function addNode(input: BeaconNodeInput, source: NodeActionSource = "user"): BeaconNode {
+    const now = new Date();
 
-	const stored: StoredBeaconNode = {
-		id: Utils.randomUUID(),
-		name: input.name.trim(),
-		url: normalizeUrl(input.url),
-		description: input.description?.trim() ?? '',
-		token: input.token?.trim() ?? '',
-		createdAt: now,
-		updatedAt: now
-	};
+    const stored: StoredBeaconNode = {
+        id: Utils.randomUUID(),
+        name: input.name.trim(),
+        url: normalizeUrl(input.url),
+        description: input.description?.trim() ?? "",
+        token: input.token?.trim() ?? "",
+        createdAt: now,
+        updatedAt: now
+    };
 
-	listStore.update((list) => [...list, stored]);
+    listStore.update((list) => [...list, stored]);
 
-	if (getCurrentNode() === null) {
-		selectedIdStore.set(stored.id);
-	}
+    if (getCurrentNode() === null) {
+        selectedIdStore.set(stored.id);
+    }
 
-	track('node.add', { nodeHost: stored.url, props: { hasToken: stored.token !== '', source } });
+    track("node.add", { nodeHost: stored.url, props: { hasToken: stored.token !== "", source } });
 
-	return { ...stored, ...UNKNOWN_HEALTH };
+    return { ...stored, ...UNKNOWN_HEALTH };
 }
 
 /**
@@ -211,37 +211,37 @@ export function addNode(input: BeaconNodeInput, source: NodeActionSource = 'user
  * health. A new URL needs no drop, because the health store keys by URL.
  */
 export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconNode | null {
-	const previous = findById(id);
-	if (!previous) return null;
+    const previous = findById(id);
+    if (!previous) return null;
 
-	let updated: StoredBeaconNode = previous;
+    let updated: StoredBeaconNode = previous;
 
-	listStore.update((list) =>
-		list.map((node) => {
-			if (node.id !== id) return node;
+    listStore.update((list) =>
+        list.map((node) => {
+            if (node.id !== id) return node;
 
-			updated = applyInput(node, input);
-			return updated;
-		})
-	);
+            updated = applyInput(node, input);
+            return updated;
+        })
+    );
 
-	track('node.update', {
-		nodeHost: updated.url,
-		props: {
-			urlChanged: updated.url !== previous.url,
-			tokenChanged: updated.token !== previous.token
-		}
-	});
+    track("node.update", {
+        nodeHost: updated.url,
+        props: {
+            urlChanged: updated.url !== previous.url,
+            tokenChanged: updated.token !== previous.token
+        }
+    });
 
-	// A session belongs to the server at the old URL.
-	if (updated.url !== previous.url) signOut(id);
+    // A session belongs to the server at the old URL.
+    if (updated.url !== previous.url) signOut(id);
 
-	if (updated.token !== previous.token) {
-		dropHealth(updated.url);
-		return { ...updated, ...UNKNOWN_HEALTH };
-	}
+    if (updated.token !== previous.token) {
+        dropHealth(updated.url);
+        return { ...updated, ...UNKNOWN_HEALTH };
+    }
 
-	return { ...updated, ...getHealthOf(updated.url) };
+    return { ...updated, ...getHealthOf(updated.url) };
 }
 
 /**
@@ -250,44 +250,44 @@ export function updateNode(id: string, input: Partial<BeaconNodeInput>): BeaconN
  * one.
  */
 export function removeNode(id: string): BeaconNode | null {
-	const removed = findById(id);
-	if (!removed) return null;
+    const removed = findById(id);
+    if (!removed) return null;
 
-	const wasSelected = get(selectedIdStore) === id;
+    const wasSelected = get(selectedIdStore) === id;
 
-	listStore.update((list) => list.filter((node) => node.id !== id));
-	signOut(id);
+    listStore.update((list) => list.filter((node) => node.id !== id));
+    signOut(id);
 
-	// Another record can point at the same node. Keep the health for it.
-	if (findByUrl(removed.url) === null) {
-		dropHealth(removed.url);
-	}
+    // Another record can point at the same node. Keep the health for it.
+    if (findByUrl(removed.url) === null) {
+        dropHealth(removed.url);
+    }
 
-	if (wasSelected) {
-		selectedIdStore.set(null);
-		selectFirstIfNone();
-	}
+    if (wasSelected) {
+        selectedIdStore.set(null);
+        selectFirstIfNone();
+    }
 
-	track('node.remove', { nodeHost: removed.url, props: { wasSelected } });
+    track("node.remove", { nodeHost: removed.url, props: { wasSelected } });
 
-	return removed;
+    return removed;
 }
 
 /** Selects a node. Pass `null` to clear the selection. */
-export function selectNode(id: string | null, source: NodeActionSource = 'user'): void {
-	if (id !== null && findById(id) === null) {
-		console.warn(`No Beacon node has the id "${id}". The app keeps the selection.`);
-		return;
-	}
+export function selectNode(id: string | null, source: NodeActionSource = "user"): void {
+    if (id !== null && findById(id) === null) {
+        console.warn(`No Beacon node has the id "${id}". The app keeps the selection.`);
+        return;
+    }
 
-	selectedIdStore.set(id);
+    selectedIdStore.set(id);
 
-	const selected = id === null ? null : findById(id);
+    const selected = id === null ? null : findById(id);
 
-	track('node.select', {
-		nodeHost: selected?.url,
-		props: { status: selected ? getHealthOf(selected.url).status : 'none', source }
-	});
+    track("node.select", {
+        nodeHost: selected?.url,
+        props: { status: selected ? getHealthOf(selected.url).status : "none", source }
+    });
 }
 
 /**
@@ -295,11 +295,11 @@ export function selectNode(id: string | null, source: NodeActionSource = 'user')
  * selection, or `null` if the list is empty.
  */
 export function selectFirstIfNone(): BeaconNode | null {
-	const current = getCurrentNode();
-	if (current) return current;
+    const current = getCurrentNode();
+    if (current) return current;
 
-	const first = getNodes()[0] ?? null;
-	if (first) selectedIdStore.set(first.id);
+    const first = getNodes()[0] ?? null;
+    if (first) selectedIdStore.set(first.id);
 
-	return first;
+    return first;
 }

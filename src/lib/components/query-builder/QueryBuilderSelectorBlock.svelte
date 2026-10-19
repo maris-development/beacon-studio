@@ -5,376 +5,385 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
  -->
 
 <script lang="ts">
-	import Button from '$lib/components/buttons/Button.svelte';
-	import { Badge } from '$lib/components/ui/badge/index.js';
-	import Card from '../card/Card.svelte';
-	import CirclePlusIcon from '@lucide/svelte/icons/circle-plus';
-	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
-	import CopyIcon from '@lucide/svelte/icons/copy';
-	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
-	import XIcon from '@lucide/svelte/icons/x';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import BeaconNodeStatus from '../BeaconNodeStatus.svelte';
-	import { addToast } from '@/stores/toasts';
-	// import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
-	import { QueryWorkspace } from './QueryWorkspace.svelte';
-	import type { StoredQuery } from '@/stores/stored-query';
-	import { runBlockReason } from '@/query/query-guard';
-	import { settings } from '@/stores/settings';
-	import { t, type Message } from '@/i18n';
+    import Button from "$lib/components/buttons/Button.svelte";
+    import { Badge } from "$lib/components/ui/badge/index.js";
+    import Card from "../card/Card.svelte";
+    import CirclePlusIcon from "@lucide/svelte/icons/circle-plus";
+    import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+    import CopyIcon from "@lucide/svelte/icons/copy";
+    import PencilLineIcon from "@lucide/svelte/icons/pencil-line";
+    import XIcon from "@lucide/svelte/icons/x";
+    import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+    import BeaconNodeStatus from "../BeaconNodeStatus.svelte";
+    import { addToast } from "@/stores/toasts";
+    // import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
+    import { QueryWorkspace } from "./QueryWorkspace.svelte";
+    import type { StoredQuery } from "@/stores/stored-query";
+    import { runBlockReason } from "@/query/query-guard";
+    import { settings } from "@/stores/settings";
+    import { t, type Message } from "@/i18n";
 
-	// All state lives in the workspace; this component only reads/acts on it.
-	let {
-		workspace,
-		handleDoubleClick = null
-	}: {
-		workspace: QueryWorkspace;
-		handleDoubleClick?: ((block: StoredQuery) => void) | null;
-	} = $props();
+    // All state lives in the workspace; this component only reads/acts on it.
+    let {
+        workspace,
+        handleDoubleClick = null
+    }: {
+        workspace: QueryWorkspace;
+        handleDoubleClick?: ((block: StoredQuery) => void) | null;
+    } = $props();
 
-	const COLUMN_PREVIEW_LIMIT = 3;
+    const COLUMN_PREVIEW_LIMIT = 3;
 
-	/**
-	 * The reason that a block must not run, or null. The card shows a warning
-	 * triangle with this text.
-	 *
-	 * The switch is read here as well. `runBlockReason` reads a snapshot of the
-	 * settings, so without this read the cards keep the triangle after the user
-	 * turns the safeguard off on the settings page.
-	 */
-	function blockReasonFor(block: StoredQuery): Message | null {
-		if (!$settings.requireQueryFilters) return null;
-		return runBlockReason(QueryWorkspace.getQuery(block));
-	}
+    /**
+     * The reason that a block must not run, or null. The card shows a warning
+     * triangle with this text.
+     *
+     * The switch is read here as well. `runBlockReason` reads a snapshot of the
+     * settings, so without this read the cards keep the triangle after the user
+     * turns the safeguard off on the settings page.
+     */
+    function blockReasonFor(block: StoredQuery): Message | null {
+        if (!$settings.requireQueryFilters) return null;
+        return runBlockReason(QueryWorkspace.getQuery(block));
+    }
 
-	let editingBlockId: string | null = $state(null);
-	let editingName = $state('');
-	let isCommittingFromKeyboard: boolean = $state(false);
+    let editingBlockId: string | null = $state(null);
+    let editingName = $state("");
+    let isCommittingFromKeyboard: boolean = $state(false);
 
-	function handleBlockKeydown(id: string, event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			workspace.selectBlock(id);
-		}
-	}
+    function handleBlockKeydown(id: string, event: KeyboardEvent) {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            workspace.selectBlock(id);
+        }
+    }
 
-	function startRenameBlock(id: string, currentName: string): void {
-		editingBlockId = id;
-		editingName = currentName;
-	}
+    function startRenameBlock(id: string, currentName: string): void {
+        editingBlockId = id;
+        editingName = currentName;
+    }
 
-	// The native `autofocus` attribute is unreliable for inputs mounted after
-	// initial page load, so the input never gains focus and never blurs on an
-	// outside click. This action focuses it explicitly when it is created.
-	function focusAndSelect(node: HTMLInputElement): void {
-		node.focus();
-		node.select();
-	}
+    // The native `autofocus` attribute is unreliable for inputs mounted after
+    // initial page load, so the input never gains focus and never blurs on an
+    // outside click. This action focuses it explicitly when it is created.
+    function focusAndSelect(node: HTMLInputElement): void {
+        node.focus();
+        node.select();
+    }
 
-	function cancelRenameBlock(): void {
-		editingBlockId = null;
-		editingName = '';
-	}
+    function cancelRenameBlock(): void {
+        editingBlockId = null;
+        editingName = "";
+    }
 
-	function commitRenameBlock(id: string): void {
-		const trimmedName = editingName.trim();
+    function commitRenameBlock(id: string): void {
+        const trimmedName = editingName.trim();
 
-		console.log('commitRenameBlock', editingName, trimmedName);
+        console.log("commitRenameBlock", editingName, trimmedName);
 
-		if (!trimmedName) {
-			addToast({ key: 'workbench.toast.nameEmpty', type: 'warning' });
-			return;
-		}
+        if (!trimmedName) {
+            addToast({ key: "workbench.toast.nameEmpty", type: "warning" });
+            return;
+        }
 
-		const didRename = workspace.renameBlock(id, trimmedName);
-		if (!didRename) {
-			addToast({ key: 'workbench.toast.renameFailed', type: 'error' });
-			return;
-		}
+        const didRename = workspace.renameBlock(id, trimmedName);
+        if (!didRename) {
+            addToast({ key: "workbench.toast.renameFailed", type: "error" });
+            return;
+        }
 
-		cancelRenameBlock();
-	}
+        cancelRenameBlock();
+    }
 
-	function handleRenameInputKeydown(id: string, event: KeyboardEvent): void {
-		event.stopPropagation();
+    function handleRenameInputKeydown(id: string, event: KeyboardEvent): void {
+        event.stopPropagation();
 
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			isCommittingFromKeyboard = true;
-			commitRenameBlock(id);
-			return;
-		}
+        if (event.key === "Enter") {
+            event.preventDefault();
+            isCommittingFromKeyboard = true;
+            commitRenameBlock(id);
+            return;
+        }
 
-		if (event.key === 'Escape') {
-			event.preventDefault();
-			isCommittingFromKeyboard = true;
-			cancelRenameBlock();
-		}
-	}
+        if (event.key === "Escape") {
+            event.preventDefault();
+            isCommittingFromKeyboard = true;
+            cancelRenameBlock();
+        }
+    }
 
-	// I think we could also just remove {editingName = '';} from the cancelRenameBlock()
-	function handleRenameBlur(id: string): void {
-		if (isCommittingFromKeyboard) {
-			isCommittingFromKeyboard = false;
-			return;
-		}
+    // I think we could also just remove {editingName = '';} from the cancelRenameBlock()
+    function handleRenameBlur(id: string): void {
+        if (isCommittingFromKeyboard) {
+            isCommittingFromKeyboard = false;
+            return;
+        }
 
-		// Removing the focused input from the DOM (e.g. right after the finish
-		// button already committed and closed the editor) fires a blur on it too.
-		// Ignore that: this block is no longer the one being edited.
-		if (editingBlockId !== id) {
-			return;
-		}
+        // Removing the focused input from the DOM (e.g. right after the finish
+        // button already committed and closed the editor) fires a blur on it too.
+        // Ignore that: this block is no longer the one being edited.
+        if (editingBlockId !== id) {
+            return;
+        }
 
-		commitRenameBlock(id);
-	}
+        commitRenameBlock(id);
+    }
 
-	function handleClick(block: StoredQuery) {
-		workspace.selectBlock(block.id);
-	}
+    function handleClick(block: StoredQuery) {
+        workspace.selectBlock(block.id);
+    }
 
-	function _handleDoubleClick(block: StoredQuery) {
-		if (handleDoubleClick) {
-			handleDoubleClick(block);
-		}
-	}
+    function _handleDoubleClick(block: StoredQuery) {
+        if (handleDoubleClick) {
+            handleDoubleClick(block);
+        }
+    }
 
-	function handleQueryBlocksWheel(event: WheelEvent): void {
-		const row = event.currentTarget as HTMLDivElement;
+    function handleQueryBlocksWheel(event: WheelEvent): void {
+        const row = event.currentTarget as HTMLDivElement;
 
-		if (event.deltaY === 0 || row.scrollWidth <= row.clientWidth) {
-			return;
-		}
+        if (event.deltaY === 0 || row.scrollWidth <= row.clientWidth) {
+            return;
+        }
 
-		event.preventDefault();
-		row.scrollBy({
-			left: event.deltaY
-		});
-	}
+        event.preventDefault();
+        row.scrollBy({
+            left: event.deltaY
+        });
+    }
 
-	let rowEl: HTMLDivElement | undefined = $state();
+    let rowEl: HTMLDivElement | undefined = $state();
 
-	function scrollActiveBlockIntoView(): void {
-		const activeId = workspace.activeBlockId;
-		if (!rowEl || !activeId) return;
+    function scrollActiveBlockIntoView(): void {
+        const activeId = workspace.activeBlockId;
+        if (!rowEl || !activeId) return;
 
-		const activeEl = rowEl.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(activeId)}"]`);
-		activeEl?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-	}
+        const activeEl = rowEl.querySelector<HTMLElement>(
+            `[data-block-id="${CSS.escape(activeId)}"]`
+        );
+        activeEl?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
 
-	// Keep the active block fully in view, including right after a page load/reload.
-	$effect(() => {
-		scrollActiveBlockIntoView();
-	});
+    // Keep the active block fully in view, including right after a page load/reload.
+    $effect(() => {
+        scrollActiveBlockIntoView();
+    });
 
-	// Re-correct on width changes, e.g. the page scrollbar appearing/disappearing
-	// shrinks this row without changing activeBlockId, which would otherwise leave
-	// an edge block clipped.
-	$effect(() => {
-		if (!rowEl) return;
+    // Re-correct on width changes, e.g. the page scrollbar appearing/disappearing
+    // shrinks this row without changing activeBlockId, which would otherwise leave
+    // an edge block clipped.
+    $effect(() => {
+        if (!rowEl) return;
 
-		const observer = new ResizeObserver(() => scrollActiveBlockIntoView());
-		observer.observe(rowEl);
+        const observer = new ResizeObserver(() => scrollActiveBlockIntoView());
+        observer.observe(rowEl);
 
-		return () => observer.disconnect();
-	});
+        return () => observer.disconnect();
+    });
 </script>
 
 <div class="query-blocks">
-	<div class="query-blocks-row" bind:this={rowEl} onwheel={handleQueryBlocksWheel}>
-		{#each workspace.blocks as block (block.id)}
-			<!-- Derive display data for this block from the workspace. -->
-			{@const status = QueryWorkspace.getStatus(block)}
-			{@const columns = QueryWorkspace.getSelectedColumns(block)}
-			{@const run = workspace.getRunState(block)}
-			<!--
+    <div class="query-blocks-row" bind:this={rowEl} onwheel={handleQueryBlocksWheel}>
+        {#each workspace.blocks as block (block.id)}
+            <!-- Derive display data for this block from the workspace. -->
+            {@const status = QueryWorkspace.getStatus(block)}
+            {@const columns = QueryWorkspace.getSelectedColumns(block)}
+            {@const run = workspace.getRunState(block)}
+            <!--
 				Each block runs on its own node, so every card names it. `node` is
 				null when the node is gone, and `missingUrl` then holds the address
 				that the block asks for.
 			-->
-			{@const node = workspace.nodeFor(block)}
-			{@const missingUrl = workspace.missingNodeUrlFor(block)}
-			{@const blockReason = blockReasonFor(block)}
-			<div
-				data-block-id={block.id}
-				class="query-block-wrapper"
-				class:query-block-wrapper--active={block.id === workspace.activeBlockId}
-				role="button"
-				tabindex="0"
-				aria-pressed={block.id === workspace.activeBlockId}
-				onclick={() => handleClick(block)}
-				ondblclick={() => _handleDoubleClick(block)}
-				onkeydown={(event) => handleBlockKeydown(block.id, event)}
-			>
-				<Card class="query-block">
-					<div class="query-block-header">
-						<div class="query-block-name-wrapper">
-							{#if editingBlockId === block.id}
-								<input
-									class="query-block-name-input"
-									value={editingName}
-									use:focusAndSelect
-									title={$t('workbench.block.nameInput')}
-									aria-label={$t('workbench.block.nameInput')}
-									oninput={(event) => (editingName = event.currentTarget.value)}
-									onkeydown={(event) => handleRenameInputKeydown(block.id, event)}
-									onblur={() => handleRenameBlur(block.id)}
-									onclick={(event) => event.stopPropagation()}
-								/>
-							{:else}
-								<span class="query-block-name" title={block.name}>
-									{block.name}
-								</span>
-							{/if}
-						</div>
+            {@const node = workspace.nodeFor(block)}
+            {@const missingUrl = workspace.missingNodeUrlFor(block)}
+            {@const blockReason = blockReasonFor(block)}
+            <div
+                data-block-id={block.id}
+                class="query-block-wrapper"
+                class:query-block-wrapper--active={block.id === workspace.activeBlockId}
+                role="button"
+                tabindex="0"
+                aria-pressed={block.id === workspace.activeBlockId}
+                onclick={() => handleClick(block)}
+                ondblclick={() => _handleDoubleClick(block)}
+                onkeydown={(event) => handleBlockKeydown(block.id, event)}
+            >
+                <Card class="query-block">
+                    <div class="query-block-header">
+                        <div class="query-block-name-wrapper">
+                            {#if editingBlockId === block.id}
+                                <input
+                                    class="query-block-name-input"
+                                    value={editingName}
+                                    use:focusAndSelect
+                                    title={$t("workbench.block.nameInput")}
+                                    aria-label={$t("workbench.block.nameInput")}
+                                    oninput={(event) => (editingName = event.currentTarget.value)}
+                                    onkeydown={(event) => handleRenameInputKeydown(block.id, event)}
+                                    onblur={() => handleRenameBlur(block.id)}
+                                    onclick={(event) => event.stopPropagation()}
+                                />
+                            {:else}
+                                <span class="query-block-name" title={block.name}>
+                                    {block.name}
+                                </span>
+                            {/if}
+                        </div>
 
-						<div class="query-block-actions">
-							<Button
-								variant="ghost"
-								size="icon"
-								class="query-block-icon-button"
-								title={editingBlockId === block.id
-									? $t('workbench.block.finishRename')
-									: $t('workbench.block.rename')}
-								aria-label={editingBlockId === block.id
-									? $t('workbench.block.finishRename')
-									: $t('workbench.block.rename')}
-								onmousedown={(event: MouseEvent) => {
-									// Keep focus on the input so this click can't trigger a blur-commit
-									// followed by the click handler re-opening the editor (two-click bug).
-									if (editingBlockId === block.id) event.preventDefault();
-								}}
-								onclick={(event) => {
-									event.stopPropagation();
-									if (editingBlockId === block.id) {
-										commitRenameBlock(block.id);
-										return;
-									}
+                        <div class="query-block-actions">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="query-block-icon-button"
+                                title={editingBlockId === block.id
+                                    ? $t("workbench.block.finishRename")
+                                    : $t("workbench.block.rename")}
+                                aria-label={editingBlockId === block.id
+                                    ? $t("workbench.block.finishRename")
+                                    : $t("workbench.block.rename")}
+                                onmousedown={(event: MouseEvent) => {
+                                    // Keep focus on the input so this click can't trigger a blur-commit
+                                    // followed by the click handler re-opening the editor (two-click bug).
+                                    if (editingBlockId === block.id) event.preventDefault();
+                                }}
+                                onclick={(event) => {
+                                    event.stopPropagation();
+                                    if (editingBlockId === block.id) {
+                                        commitRenameBlock(block.id);
+                                        return;
+                                    }
 
-									startRenameBlock(block.id, block.name);
-								}}
-							>
-								{#if editingBlockId === block.id}
-									<CircleCheckIcon />
-								{:else}
-									<PencilLineIcon />
-								{/if}
-							</Button>
+                                    startRenameBlock(block.id, block.name);
+                                }}
+                            >
+                                {#if editingBlockId === block.id}
+                                    <CircleCheckIcon />
+                                {:else}
+                                    <PencilLineIcon />
+                                {/if}
+                            </Button>
 
-							<Button
-								variant="ghost"
-								size="icon"
-								class="query-block-icon-button"
-								title={$t('workbench.block.duplicate')}
-								aria-label={$t('workbench.block.duplicate')}
-								onclick={(event) => {
-									event.stopPropagation();
-									workspace.duplicateBlock(block.id);
-								}}
-							>
-								<CopyIcon />
-							</Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="query-block-icon-button"
+                                title={$t("workbench.block.duplicate")}
+                                aria-label={$t("workbench.block.duplicate")}
+                                onclick={(event) => {
+                                    event.stopPropagation();
+                                    workspace.duplicateBlock(block.id);
+                                }}
+                            >
+                                <CopyIcon />
+                            </Button>
 
-							<Button
-								variant="ghost"
-								size="icon"
-								class="query-block-icon-button"
-								title={$t('workbench.block.close')}
-								aria-label={$t('workbench.block.close')}
-								disabled={workspace.blocks.length === 1}
-								onclick={(event) => {
-									event.stopPropagation();
-									void workspace.closeBlock(block.id);
-								}}
-							>
-								<XIcon />
-							</Button>
-						</div>
-					</div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                class="query-block-icon-button"
+                                title={$t("workbench.block.close")}
+                                aria-label={$t("workbench.block.close")}
+                                disabled={workspace.blocks.length === 1}
+                                onclick={(event) => {
+                                    event.stopPropagation();
+                                    void workspace.closeBlock(block.id);
+                                }}
+                            >
+                                <XIcon />
+                            </Button>
+                        </div>
+                    </div>
 
-					<div class="query-block-body">
-						<!-- <div class="query-block-line">
+                    <div class="query-block-body">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Table</span>
                             <span class="query-block-value" title={status.dataTable}>
                                 {status.dataTable || 'No table'}
                             </span>
                         </div> -->
 
-						<div class="query-stats">
-							{#if node}
-								<span
-									class="query-stat node-stat"
-									title={$t('workbench.block.nodeTitle', { url: node.url })}
-								>
-									<BeaconNodeStatus health={node} variant="dot" />
-									{node.name || node.url}
-								</span>
-							{:else if missingUrl}
-								<span
-									class="query-stat node-stat missing"
-									title={$t('workbench.block.nodeMissing')}
-								>
-									<TriangleAlertIcon size="0.75rem" />
-									{missingUrl}
-								</span>
-							{:else}
-								<span class="query-stat node-stat missing" title={$t('workbench.block.pickNode')}>
-									{$t('workbench.block.noNode')}
-								</span>
-							{/if}
-							<span class="query-stat" title={$t('workbench.block.tableTitle')}>
-								{status.dataTable || $t('workbench.block.noTable')}
-							</span>
-							<span class="query-stat" title={$t('workbench.block.columnsTitle')}>
-								{$t('common.columns', { count: status.columns })}
-							</span>
-							<span
-								class="query-stat filter-stat"
-								class:missing={blockReason}
-								title={blockReason ? $t(blockReason) : $t('workbench.block.filtersTitle')}
-							>
-								{#if blockReason}
-									<TriangleAlertIcon size="0.75rem" />
-								{/if}
-								{$t('query.filterCount', { count: status.filters })}
-							</span>
-							<span class="query-stat" title={$t('workbench.block.runTitle')}>
-								{#if run.isRunning}
-									{$t('workbench.block.running')}
-								{:else if run.hasRun}
-									{$t('common.rows', { count: run.rows ?? 0 })}
-								{:else}
-									{$t('workbench.block.notCached')}
-								{/if}
-							</span>
-						</div>
+                        <div class="query-stats">
+                            {#if node}
+                                <span
+                                    class="query-stat node-stat"
+                                    title={$t("workbench.block.nodeTitle", { url: node.url })}
+                                >
+                                    <BeaconNodeStatus health={node} variant="dot" />
+                                    {node.name || node.url}
+                                </span>
+                            {:else if missingUrl}
+                                <span
+                                    class="query-stat node-stat missing"
+                                    title={$t("workbench.block.nodeMissing")}
+                                >
+                                    <TriangleAlertIcon size="0.75rem" />
+                                    {missingUrl}
+                                </span>
+                            {:else}
+                                <span
+                                    class="query-stat node-stat missing"
+                                    title={$t("workbench.block.pickNode")}
+                                >
+                                    {$t("workbench.block.noNode")}
+                                </span>
+                            {/if}
+                            <span class="query-stat" title={$t("workbench.block.tableTitle")}>
+                                {status.dataTable || $t("workbench.block.noTable")}
+                            </span>
+                            <span class="query-stat" title={$t("workbench.block.columnsTitle")}>
+                                {$t("common.columns", { count: status.columns })}
+                            </span>
+                            <span
+                                class="query-stat filter-stat"
+                                class:missing={blockReason}
+                                title={blockReason
+                                    ? $t(blockReason)
+                                    : $t("workbench.block.filtersTitle")}
+                            >
+                                {#if blockReason}
+                                    <TriangleAlertIcon size="0.75rem" />
+                                {/if}
+                                {$t("query.filterCount", { count: status.filters })}
+                            </span>
+                            <span class="query-stat" title={$t("workbench.block.runTitle")}>
+                                {#if run.isRunning}
+                                    {$t("workbench.block.running")}
+                                {:else if run.hasRun}
+                                    {$t("common.rows", { count: run.rows ?? 0 })}
+                                {:else}
+                                    {$t("workbench.block.notCached")}
+                                {/if}
+                            </span>
+                        </div>
 
-						<!-- <div class="query-block-line">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Columns</span>
                             <span class="query-block-value">{status.columns} selected</span>
                         </div> -->
 
-						<div
-							class="query-block-columns"
-							title={$t('workbench.block.selectedColumns', {
-								columns: '\n\t' + columns.join(', \n\t')
-							})}
-						>
-							{#if columns.length > 0}
-								{#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
-									<Badge variant="secondary">{column}</Badge>
-								{/each}
-								{#if columns.length > COLUMN_PREVIEW_LIMIT}
-									<Badge variant="outline">
-										+{columns.length - COLUMN_PREVIEW_LIMIT}
-									</Badge>
-								{/if}
-							{:else}
-								<span class="query-block-muted">{$t('workbench.block.noColumns')}</span>
-							{/if}
-						</div>
+                        <div
+                            class="query-block-columns"
+                            title={$t("workbench.block.selectedColumns", {
+                                columns: "\n\t" + columns.join(", \n\t")
+                            })}
+                        >
+                            {#if columns.length > 0}
+                                {#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}
+                                    <Badge variant="secondary">{column}</Badge>
+                                {/each}
+                                {#if columns.length > COLUMN_PREVIEW_LIMIT}
+                                    <Badge variant="outline">
+                                        +{columns.length - COLUMN_PREVIEW_LIMIT}
+                                    </Badge>
+                                {/if}
+                            {:else}
+                                <span class="query-block-muted"
+                                    >{$t("workbench.block.noColumns")}</span
+                                >
+                            {/if}
+                        </div>
 
-						<!-- <div class="query-block-line">
+                        <!-- <div class="query-block-line">
                             <span class="query-block-label">Rows</span>
                             <span class="query-block-value">{run.rows ?? 'N/A'}</span>
                         </div>
@@ -391,231 +400,231 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                                 <span>Not run yet</span>
                             {/if}
                         </div> -->
-					</div>
-				</Card>
-			</div>
-		{/each}
+                    </div>
+                </Card>
+            </div>
+        {/each}
 
-		<button
-			type="button"
-			class="query-block-add"
-			title={$t('workbench.block.add')}
-			aria-label={$t('workbench.block.add')}
-			onclick={() => workspace.addBlock()}
-		>
-			<CirclePlusIcon />
-		</button>
-	</div>
+        <button
+            type="button"
+            class="query-block-add"
+            title={$t("workbench.block.add")}
+            aria-label={$t("workbench.block.add")}
+            onclick={() => workspace.addBlock()}
+        >
+            <CirclePlusIcon />
+        </button>
+    </div>
 </div>
 
 <style lang="scss">
-	div.query-stats {
-		display: flex;
-		flex-direction: row;
+    div.query-stats {
+        display: flex;
+        flex-direction: row;
 
-		.query-stat {
-			font-size: var(--font-size-xs);
-			color: var(--muted-foreground);
-			text-wrap: nowrap;
-			&:not(:last-child)::after {
-				content: '•';
-				margin-left: 0.5rem;
-				margin-right: 0.5rem;
-			}
-		}
+        .query-stat {
+            font-size: var(--font-size-xs);
+            color: var(--muted-foreground);
+            text-wrap: nowrap;
+            &:not(:last-child)::after {
+                content: "•";
+                margin-left: 0.5rem;
+                margin-right: 0.5rem;
+            }
+        }
 
-		// The filter count of the block. The triangle sits on the text baseline.
-		.filter-stat {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.25rem;
+        // The filter count of the block. The triangle sits on the text baseline.
+        .filter-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
 
-			&.missing {
-				color: IndianRed;
-			}
-		}
+            &.missing {
+                color: IndianRed;
+            }
+        }
 
-		// The node of the block. The dot and the icon sit on the text baseline.
-		.node-stat {
-			display: inline-flex;
-			align-items: center;
-			gap: 0.25rem;
-			max-width: 12rem;
-			overflow: hidden;
-			text-overflow: ellipsis;
+        // The node of the block. The dot and the icon sit on the text baseline.
+        .node-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            max-width: 12rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
 
-			&.missing {
-				color: IndianRed;
-			}
-		}
-	}
+            &.missing {
+                color: IndianRed;
+            }
+        }
+    }
 
-	.query-blocks {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
+    .query-blocks {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
 
-		.query-blocks-row {
-			display: flex;
-			align-items: stretch;
-			gap: 0.75rem;
-			overflow-x: auto;
-			overflow-y: hidden;
-			padding-bottom: 0.25rem;
-			scrollbar-width: thin;
-		}
-	}
+        .query-blocks-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.75rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.25rem;
+            scrollbar-width: thin;
+        }
+    }
 
-	.query-block-wrapper {
-		display: flex;
-		flex: 0 0 15rem;
-		cursor: pointer;
+    .query-block-wrapper {
+        display: flex;
+        flex: 0 0 15rem;
+        cursor: pointer;
 
-		:global(.query-block.card) {
-			width: auto;
-			gap: 0.5rem;
-			padding: 0.75rem;
-			transition:
-				border-color 0.15s ease,
-				box-shadow 0.15s ease;
-		}
+        :global(.query-block.card) {
+            width: auto;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            transition:
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+        }
 
-		&:hover {
-			:global(.query-block.card) {
-				border-color: var(--primary);
-			}
-		}
+        &:hover {
+            :global(.query-block.card) {
+                border-color: var(--primary);
+            }
+        }
 
-		&.query-block-wrapper--active {
-			:global(.query-block.card) {
-				border-color: var(--primary);
-			}
-		}
-	}
+        &.query-block-wrapper--active {
+            :global(.query-block.card) {
+                border-color: var(--primary);
+            }
+        }
+    }
 
-	.query-blocks {
-		.query-block-header {
-			display: flex;
-			align-items: center;
-			justify-content: space-between;
-			gap: 0.5rem;
-			.query-block-name-wrapper {
-				display: flex;
-				align-items: center;
-				flex: 1 1 auto;
-				min-width: 0;
-				overflow: hidden;
-				max-width: 100%;
+    .query-blocks {
+        .query-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+            .query-block-name-wrapper {
+                display: flex;
+                align-items: center;
+                flex: 1 1 auto;
+                min-width: 0;
+                overflow: hidden;
+                max-width: 100%;
 
-				span.query-block-name {
-					display: block;
-					font-weight: 600;
-					overflow: hidden;
-					text-overflow: ellipsis;
-					white-space: nowrap;
-				}
+                span.query-block-name {
+                    display: block;
+                    font-weight: 600;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
 
-				input.query-block-name-input {
-					box-sizing: border-box;
-					width: 0;
-					min-width: 0;
-					max-width: 100%;
-					flex-grow: 1;
-					flex-shrink: 1;
-					font: inherit;
-					font-weight: 600;
-					color: inherit;
-					border: 1px solid var(--border);
-					border-radius: 4px;
-					background-color: var(--background);
-					padding: 0; // .2rem 0.4rem;
-				}
-			}
+                input.query-block-name-input {
+                    box-sizing: border-box;
+                    width: 0;
+                    min-width: 0;
+                    max-width: 100%;
+                    flex-grow: 1;
+                    flex-shrink: 1;
+                    font: inherit;
+                    font-weight: 600;
+                    color: inherit;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                    background-color: var(--background);
+                    padding: 0; // .2rem 0.4rem;
+                }
+            }
 
-			.query-block-actions {
-				display: flex;
-				align-items: center;
-				gap: 0.25rem;
-				flex-shrink: 0;
-			}
-		}
+            .query-block-actions {
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
+                flex-shrink: 0;
+            }
+        }
 
-		.query-block-body {
-			display: flex;
-			flex-direction: column;
-			gap: 0.375rem;
-			font-size: var(--font-size-sm);
-		}
+        .query-block-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            font-size: var(--font-size-sm);
+        }
 
-		// .query-block-line {
-		//     display: flex;
-		//     align-items: center;
-		//     justify-content: space-between;
-		//     gap: 0.5rem;
-		// }
+        // .query-block-line {
+        //     display: flex;
+        //     align-items: center;
+        //     justify-content: space-between;
+        //     gap: 0.5rem;
+        // }
 
-		// .query-block-label {
-		//     color: var(--muted-foreground);
-		// }
+        // .query-block-label {
+        //     color: var(--muted-foreground);
+        // }
 
-		// .query-block-value {
-		//     font-weight: 500;
-		//     overflow: hidden;
-		//     text-overflow: ellipsis;
-		//     white-space: nowrap;
-		// }
+        // .query-block-value {
+        //     font-weight: 500;
+        //     overflow: hidden;
+        //     text-overflow: ellipsis;
+        //     white-space: nowrap;
+        // }
 
-		.query-block-columns {
-			// display: flex;
-			// flex-wrap: wrap;
-			// gap: 0.25rem;
-			// min-height: 1.5rem;
-			visibility: hidden;
-			height: 0;
-		}
+        .query-block-columns {
+            // display: flex;
+            // flex-wrap: wrap;
+            // gap: 0.25rem;
+            // min-height: 1.5rem;
+            visibility: hidden;
+            height: 0;
+        }
 
-		.query-block-muted {
-			color: var(--muted-foreground);
-		}
+        .query-block-muted {
+            color: var(--muted-foreground);
+        }
 
-		// .query-block-status {
-		//     display: flex;
-		//     align-items: center;
-		//     gap: 0.375rem;
-		//     color: var(--muted-foreground);
-		// }
+        // .query-block-status {
+        //     display: flex;
+        //     align-items: center;
+        //     gap: 0.375rem;
+        //     color: var(--muted-foreground);
+        // }
 
-		.query-block-add {
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			min-width: 3rem;
-			border: 1px dashed var(--border);
-			border-radius: var(--radius, 0.5rem);
-			background: transparent;
-			cursor: pointer;
-			transition:
-				border-color 0.15s ease,
-				color 0.15s ease;
+        .query-block-add {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3rem;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius, 0.5rem);
+            background: transparent;
+            cursor: pointer;
+            transition:
+                border-color 0.15s ease,
+                color 0.15s ease;
 
-			&:hover {
-				border-color: var(--primary);
-				color: var(--primary);
-			}
-		}
+            &:hover {
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+        }
 
-		:global(.query-block-icon-button) {
-			width: 1.75rem;
-			height: 1.75rem;
-		}
+        :global(.query-block-icon-button) {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
 
-		:global(.query-block-status-icon) {
-			width: 1rem;
-			height: 1rem;
-		}
+        :global(.query-block-status-icon) {
+            width: 1rem;
+            height: 1rem;
+        }
 
-		:global(.query-block-status-icon--ok) {
-			color: var(--primary);
-		}
-	}
+        :global(.query-block-status-icon--ok) {
+            color: var(--primary);
+        }
+    }
 </style>

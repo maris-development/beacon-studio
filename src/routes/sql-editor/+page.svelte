@@ -1,576 +1,593 @@
 <script lang="ts">
-	import { onMount, tick, untrack } from 'svelte';
-	import { page } from '$app/state';
-	import { replaceState } from '$app/navigation';
-	import type { BeaconClient as SdkClient } from '@maris-development/beacon-client';
-	import PlayIcon from '@lucide/svelte/icons/play';
-	import SquareIcon from '@lucide/svelte/icons/square';
-	import ListTreeIcon from '@lucide/svelte/icons/list-tree';
-	import PanelRightIcon from '@lucide/svelte/icons/panel-right';
-	import Button from '@/components/buttons/Button.svelte';
-	import NodePicker from '@/components/NodePicker.svelte';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { resolve } from '$app/paths';
-	import SqlEditor from '@/components/sql-editor/SqlEditor.svelte';
-	import SqlTabs from '@/components/sql-editor/SqlTabs.svelte';
-	import CatalogTree from '@/components/sql-editor/CatalogTree.svelte';
-	import ResultGrid from '@/components/sql-editor/ResultGrid.svelte';
-	import PlanTree from '@/components/sql-editor/PlanTree.svelte';
-	import DownloadMenu from '@/components/sql-editor/DownloadMenu.svelte';
-	import { saveBlob } from '@/components/sql-editor/save-blob';
-	import { makeBeaconClient } from '@/beacon-api/client';
-	import { currentNode, findByUrl, selectNode } from '@/services/beacon-node';
-	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
-	import { addToast } from '@/stores/toasts';
-	import { adminPageState, signedInNodeIds, withAdmin } from '@/services/admin-session';
-	import AdminSessionRequired from '@/components/AdminSessionRequired.svelte';
-	import { CatalogCache, type CatalogTree as Tree, type SchemaColumn } from '@/sql/catalog';
-	import { buildCompletions, parseFunctions, type FnMeta } from '@/sql/completion';
-	import { downloadFileName, type DownloadFormat } from '@/sql/download';
-	import type { TableRef } from '@/sql/identifiers';
-	import { planRoot } from '@/sql/plan';
-	import { withAdminFallback } from '@/sql/privilege';
-	import { PREVIEW_ROW_LIMIT, runPreview, type PreviewResult } from '@/sql/run';
-	import { isSqlDisabled, sqlError, sqlToRun } from '@/sql/statement';
-	import {
-		addTab,
-		closeTab,
-		loadTabs,
-		openInNewTab,
-		renameTab,
-		saveTabs,
-		selectTab,
-		setTabSql,
-		type TabsState
-	} from '@/sql/tabs';
-	import { t, translate, type Message, type MessageKey } from '@/i18n';
+    import { onMount, tick, untrack } from "svelte";
+    import { page } from "$app/state";
+    import { replaceState } from "$app/navigation";
+    import type { BeaconClient as SdkClient } from "@maris-development/beacon-client";
+    import PlayIcon from "@lucide/svelte/icons/play";
+    import SquareIcon from "@lucide/svelte/icons/square";
+    import ListTreeIcon from "@lucide/svelte/icons/list-tree";
+    import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+    import Button from "@/components/buttons/Button.svelte";
+    import NodePicker from "@/components/NodePicker.svelte";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import { resolve } from "$app/paths";
+    import SqlEditor from "@/components/sql-editor/SqlEditor.svelte";
+    import SqlTabs from "@/components/sql-editor/SqlTabs.svelte";
+    import CatalogTree from "@/components/sql-editor/CatalogTree.svelte";
+    import ResultGrid from "@/components/sql-editor/ResultGrid.svelte";
+    import PlanTree from "@/components/sql-editor/PlanTree.svelte";
+    import DownloadMenu from "@/components/sql-editor/DownloadMenu.svelte";
+    import { saveBlob } from "@/components/sql-editor/save-blob";
+    import { makeBeaconClient } from "@/beacon-api/client";
+    import { currentNode, findByUrl, selectNode } from "@/services/beacon-node";
+    import { whenOpenNodesSettled } from "@/services/open-nodes-import";
+    import { addToast } from "@/stores/toasts";
+    import { adminPageState, signedInNodeIds, withAdmin } from "@/services/admin-session";
+    import AdminSessionRequired from "@/components/AdminSessionRequired.svelte";
+    import { CatalogCache, type CatalogTree as Tree, type SchemaColumn } from "@/sql/catalog";
+    import { buildCompletions, parseFunctions, type FnMeta } from "@/sql/completion";
+    import { downloadFileName, type DownloadFormat } from "@/sql/download";
+    import type { TableRef } from "@/sql/identifiers";
+    import { planRoot } from "@/sql/plan";
+    import { withAdminFallback } from "@/sql/privilege";
+    import { PREVIEW_ROW_LIMIT, runPreview, type PreviewResult } from "@/sql/run";
+    import { isSqlDisabled, sqlError, sqlToRun } from "@/sql/statement";
+    import {
+        addTab,
+        closeTab,
+        loadTabs,
+        openInNewTab,
+        renameTab,
+        saveTabs,
+        selectTab,
+        setTabSql,
+        type TabsState
+    } from "@/sql/tabs";
+    import { t, translate, type Message, type MessageKey } from "@/i18n";
 
-	type Action = 'run' | 'explain' | 'analyze';
+    type Action = "run" | "explain" | "analyze";
 
-	type Outcome =
-		| { kind: 'busy'; action: Action }
-		| { kind: 'rows'; result: PreviewResult }
-		| { kind: 'plan'; plan: unknown; analyzed: boolean }
-		| { kind: 'error'; message: Message }
-		| { kind: 'notice'; message: MessageKey };
+    type Outcome =
+        | { kind: "busy"; action: Action }
+        | { kind: "rows"; result: PreviewResult }
+        | { kind: "plan"; plan: unknown; analyzed: boolean }
+        | { kind: "error"; message: Message }
+        | { kind: "notice"; message: MessageKey };
 
-	const titleOf = (number: number) => translate('sqlEditor.tabs.defaultTitle', { number });
+    const titleOf = (number: number) => translate("sqlEditor.tabs.defaultTitle", { number });
 
-	let tabs: TabsState = $state(loadTabs(titleOf));
+    let tabs: TabsState = $state(loadTabs(titleOf));
 
-	// Another page hands SQL over in `?sql=` and its node in `?node=`. Both leave the URL.
-	onMount(async () => {
-		const handed = page.url.searchParams.get('sql');
-		const handedNode = page.url.searchParams.get('node');
-		const hasSql = handed !== null && handed.trim() !== '';
-		if (!hasSql && handedNode === null) return;
+    // Another page hands SQL over in `?sql=` and its node in `?node=`. Both leave the URL.
+    onMount(async () => {
+        const handed = page.url.searchParams.get("sql");
+        const handedNode = page.url.searchParams.get("node");
+        const hasSql = handed !== null && handed.trim() !== "";
+        if (!hasSql && handedNode === null) return;
 
-		if (handedNode) {
-			// On a first visit the public nodes arrive after this page mounts.
-			await whenOpenNodesSettled();
-			const target = findByUrl(handedNode);
-			if (target) {
-				selectNode(target.id, 'host');
-			} else {
-				addToast({ type: 'error', key: 'sqlEditor.nodeNotFound' });
-			}
-		}
+        if (handedNode) {
+            // On a first visit the public nodes arrive after this page mounts.
+            await whenOpenNodesSettled();
+            const target = findByUrl(handedNode);
+            if (target) {
+                selectNode(target.id, "host");
+            } else {
+                addToast({ type: "error", key: "sqlEditor.nodeNotFound" });
+            }
+        }
 
-		// The tab opens after the node switch, so Run uses the handed node.
-		if (hasSql) tabs = openInNewTab(tabs, handed, titleOf);
+        // The tab opens after the node switch, so Run uses the handed node.
+        if (hasSql) tabs = openInNewTab(tabs, handed, titleOf);
 
-		// In dev, replaceState throws until the router has started.
-		await tick();
-		const url = new URL(page.url);
-		url.searchParams.delete('sql');
-		url.searchParams.delete('node');
-		replaceState(url, {});
-	});
-	let outcomes: Record<string, Outcome> = $state({});
-	let busy = $state(false);
-	let downloading = $state(false);
-	let catalogOpen = $state(false);
-	let editor: SqlEditor | undefined = $state();
+        // In dev, replaceState throws until the router has started.
+        await tick();
+        const url = new URL(page.url);
+        url.searchParams.delete("sql");
+        url.searchParams.delete("node");
+        replaceState(url, {});
+    });
+    let outcomes: Record<string, Outcome> = $state({});
+    let busy = $state(false);
+    let downloading = $state(false);
+    let catalogOpen = $state(false);
+    let editor: SqlEditor | undefined = $state();
 
-	// The action that owns the result area of each tab. A newer action on the tab replaces it.
-	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- owners are not view state
-	const owners = new Map<string, AbortController>();
-	let controller: AbortController | null = null;
+    // The action that owns the result area of each tab. A newer action on the tab replaces it.
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- owners are not view state
+    const owners = new Map<string, AbortController>();
+    let controller: AbortController | null = null;
 
-	const cache = new CatalogCache();
-	let tree: Tree | null = $state(null);
-	let treeLoading = $state(false);
-	let treeError: Message | null = $state(null);
-	let functions: FnMeta[] = $state([]);
-	let columnsVersion = $state(0);
+    const cache = new CatalogCache();
+    let tree: Tree | null = $state(null);
+    let treeLoading = $state(false);
+    let treeError: Message | null = $state(null);
+    let functions: FnMeta[] = $state([]);
+    let columnsVersion = $state(0);
 
-	let activeTab = $derived(tabs.tabs.find((tab) => tab.id === tabs.activeId) ?? tabs.tabs[0]);
-	let node = $derived($currentNode);
-	// The node object changes on every health check. The URL changes only on a real switch.
-	let nodeUrl = $derived(node?.url ?? null);
-	let gate = $derived(adminPageState(node, $signedInNodeIds));
-	let outcome = $derived(outcomes[activeTab.id] ?? null);
+    let activeTab = $derived(tabs.tabs.find((tab) => tab.id === tabs.activeId) ?? tabs.tabs[0]);
+    let node = $derived($currentNode);
+    // The node object changes on every health check. The URL changes only on a real switch.
+    let nodeUrl = $derived(node?.url ?? null);
+    let gate = $derived(adminPageState(node, $signedInNodeIds));
+    let outcome = $derived(outcomes[activeTab.id] ?? null);
 
-	let completions = $derived.by(() => {
-		void columnsVersion;
+    let completions = $derived.by(() => {
+        void columnsVersion;
 
-		let loaded: ReturnType<CatalogCache['loadedColumns']> = [];
-		if (nodeUrl) loaded = cache.loadedColumns(nodeUrl);
+        let loaded: ReturnType<CatalogCache["loadedColumns"]> = [];
+        if (nodeUrl) loaded = cache.loadedColumns(nodeUrl);
 
-		return buildCompletions({ tree, functions, columns: loaded });
-	});
+        return buildCompletions({ tree, functions, columns: loaded });
+    });
 
-	$effect(() => {
-		saveTabs($state.snapshot(tabs));
-	});
+    $effect(() => {
+        saveTabs($state.snapshot(tabs));
+    });
 
-	// The catalogue loads only with a session, because the page shows the editor only then.
-	$effect(() => {
-		if (!nodeUrl || gate !== 'ready') return;
-		untrack(() => loadCatalogue(false));
-	});
+    // The catalogue loads only with a session, because the page shows the editor only then.
+    $effect(() => {
+        if (!nodeUrl || gate !== "ready") return;
+        untrack(() => loadCatalogue(false));
+    });
 
-	async function loadCatalogue(refresh: boolean) {
-		const current = node;
-		if (!current) return;
+    async function loadCatalogue(refresh: boolean) {
+        const current = node;
+        if (!current) return;
 
-		const client = makeBeaconClient(current);
-		treeLoading = true;
-		treeError = null;
+        const client = makeBeaconClient(current);
+        treeLoading = true;
+        treeError = null;
 
-		try {
-			const result = await cache.tree(current.url, client, refresh);
-			// A node switch during the load makes this answer stale.
-			if (current.url === nodeUrl) tree = result;
-		} catch (error) {
-			if (current.url === nodeUrl) {
-				tree = null;
-				treeError = sqlError(error);
-			}
-		} finally {
-			if (current.url === nodeUrl) treeLoading = false;
-		}
+        try {
+            const result = await cache.tree(current.url, client, refresh);
+            // A node switch during the load makes this answer stale.
+            if (current.url === nodeUrl) tree = result;
+        } catch (error) {
+            if (current.url === nodeUrl) {
+                tree = null;
+                treeError = sqlError(error);
+            }
+        } finally {
+            if (current.url === nodeUrl) treeLoading = false;
+        }
 
-		// A failure removes the function suggestions only.
-		client.functions().then(
-			(raw) => {
-				if (current.url === nodeUrl) functions = parseFunctions(raw);
-			},
-			() => {
-				if (current.url === nodeUrl) functions = [];
-			}
-		);
-	}
+        // A failure removes the function suggestions only.
+        client.functions().then(
+            (raw) => {
+                if (current.url === nodeUrl) functions = parseFunctions(raw);
+            },
+            () => {
+                if (current.url === nodeUrl) functions = [];
+            }
+        );
+    }
 
-	async function loadColumns(ref: TableRef): Promise<SchemaColumn[]> {
-		const current = node;
-		if (!current) return [];
+    async function loadColumns(ref: TableRef): Promise<SchemaColumn[]> {
+        const current = node;
+        if (!current) return [];
 
-		const result = await cache.columnsOf(current.url, makeBeaconClient(current), ref);
-		columnsVersion += 1;
+        const result = await cache.columnsOf(current.url, makeBeaconClient(current), ref);
+        columnsVersion += 1;
 
-		return result;
-	}
+        return result;
+    }
 
-	function begin(action: Action): { own: AbortController; tabId: string } {
-		controller?.abort();
+    function begin(action: Action): { own: AbortController; tabId: string } {
+        controller?.abort();
 
-		const own = new AbortController();
-		controller = own;
-		busy = true;
+        const own = new AbortController();
+        controller = own;
+        busy = true;
 
-		const tabId = activeTab.id;
-		owners.set(tabId, own);
-		outcomes[tabId] = { kind: 'busy', action };
+        const tabId = activeTab.id;
+        owners.set(tabId, own);
+        outcomes[tabId] = { kind: "busy", action };
 
-		return { own, tabId };
-	}
+        return { own, tabId };
+    }
 
-	function finish(own: AbortController, tabId: string, result: Outcome) {
-		if (owners.get(tabId) === own) {
-			owners.delete(tabId);
-			outcomes[tabId] = result;
-		}
+    function finish(own: AbortController, tabId: string, result: Outcome) {
+        if (owners.get(tabId) === own) {
+            owners.delete(tabId);
+            outcomes[tabId] = result;
+        }
 
-		if (controller === own) {
-			controller = null;
-			busy = false;
-		}
-	}
+        if (controller === own) {
+            controller = null;
+            busy = false;
+        }
+    }
 
-	function stop() {
-		controller?.abort();
-	}
+    function stop() {
+        controller?.abort();
+    }
 
-	function statement(): string {
-		return sqlToRun(activeTab.sql, editor?.selectedText() ?? '');
-	}
+    function statement(): string {
+        return sqlToRun(activeTab.sql, editor?.selectedText() ?? "");
+    }
 
-	async function perform(
-		action: Action,
-		work: (client: SdkClient, sql: string, signal: AbortSignal) => Promise<Outcome>
-	) {
-		const current = node;
-		if (!current) return;
+    async function perform(
+        action: Action,
+        work: (client: SdkClient, sql: string, signal: AbortSignal) => Promise<Outcome>
+    ) {
+        const current = node;
+        if (!current) return;
 
-		const sql = statement();
-		if (sql === '') return;
+        const sql = statement();
+        if (sql === "") return;
 
-		const { own, tabId } = begin(action);
+        const { own, tabId } = begin(action);
 
-		try {
-			const result = await withAdminFallback((client: SdkClient) => work(client, sql, own.signal), {
-				client: makeBeaconClient(current),
-				// An admin page ignores "Show admin features".
-				adminFeatures: true,
-				asAdmin: (run) => withAdmin(current, run)
-			});
+        try {
+            const result = await withAdminFallback(
+                (client: SdkClient) => work(client, sql, own.signal),
+                {
+                    client: makeBeaconClient(current),
+                    // An admin page ignores "Show admin features".
+                    adminFeatures: true,
+                    asAdmin: (run) => withAdmin(current, run)
+                }
+            );
 
-			if (result.kind === 'done') {
-				finish(own, tabId, result.value);
-			} else if (result.kind === 'cancelled') {
-				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.cancelled' });
-			} else {
-				finish(own, tabId, { kind: 'error', message: sqlError(result.error) });
-			}
-		} catch (error) {
-			if (own.signal.aborted) {
-				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.stopped' });
-			} else if (isSqlDisabled(error)) {
-				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.sqlDisabled' });
-			} else {
-				finish(own, tabId, { kind: 'error', message: sqlError(error) });
-			}
-		}
-	}
+            if (result.kind === "done") {
+                finish(own, tabId, result.value);
+            } else if (result.kind === "cancelled") {
+                finish(own, tabId, { kind: "notice", message: "sqlEditor.result.cancelled" });
+            } else {
+                finish(own, tabId, { kind: "error", message: sqlError(result.error) });
+            }
+        } catch (error) {
+            if (own.signal.aborted) {
+                finish(own, tabId, { kind: "notice", message: "sqlEditor.result.stopped" });
+            } else if (isSqlDisabled(error)) {
+                finish(own, tabId, { kind: "notice", message: "sqlEditor.result.sqlDisabled" });
+            } else {
+                finish(own, tabId, { kind: "error", message: sqlError(error) });
+            }
+        }
+    }
 
-	function run() {
-		void perform('run', async (client, sql, signal) => {
-			const result = await runPreview(client, sql, { signal });
-			return { kind: 'rows', result };
-		});
-	}
+    function run() {
+        void perform("run", async (client, sql, signal) => {
+            const result = await runPreview(client, sql, { signal });
+            return { kind: "rows", result };
+        });
+    }
 
-	function explain(analyzed: boolean) {
-		let action: Action = 'explain';
-		if (analyzed) action = 'analyze';
+    function explain(analyzed: boolean) {
+        let action: Action = "explain";
+        if (analyzed) action = "analyze";
 
-		void perform(action, async (client, sql, signal) => {
-			let plan: unknown;
-			if (analyzed) {
-				plan = await client.explainAnalyzeQuery(sql, signal);
-			} else {
-				plan = await client.explainQuery(sql, signal);
-			}
-			return { kind: 'plan', plan, analyzed };
-		});
-	}
+        void perform(action, async (client, sql, signal) => {
+            let plan: unknown;
+            if (analyzed) {
+                plan = await client.explainAnalyzeQuery(sql, signal);
+            } else {
+                plan = await client.explainQuery(sql, signal);
+            }
+            return { kind: "plan", plan, analyzed };
+        });
+    }
 
-	// Download leaves the result area alone, unless it fails.
-	async function download(format: DownloadFormat) {
-		const current = node;
-		if (!current || downloading) return;
+    // Download leaves the result area alone, unless it fails.
+    async function download(format: DownloadFormat) {
+        const current = node;
+        if (!current || downloading) return;
 
-		const sql = statement();
-		if (sql === '') return;
+        const sql = statement();
+        if (sql === "") return;
 
-		const tabId = activeTab.id;
-		downloading = true;
+        const tabId = activeTab.id;
+        downloading = true;
 
-		try {
-			const fetchFile = async (client: SdkClient) => {
-				const response = await client.queryRaw(sql, format.format);
-				return response.blob();
-			};
+        try {
+            const fetchFile = async (client: SdkClient) => {
+                const response = await client.queryRaw(sql, format.format);
+                return response.blob();
+            };
 
-			const result = await withAdminFallback(fetchFile, {
-				client: makeBeaconClient(current),
-				adminFeatures: true,
-				asAdmin: (fn) => withAdmin(current, fn)
-			});
+            const result = await withAdminFallback(fetchFile, {
+                client: makeBeaconClient(current),
+                adminFeatures: true,
+                asAdmin: (fn) => withAdmin(current, fn)
+            });
 
-			if (result.kind === 'done') {
-				saveBlob(result.value, downloadFileName(format, new Date()));
-			} else if (result.kind !== 'cancelled') {
-				outcomes[tabId] = { kind: 'error', message: sqlError(result.error) };
-			}
-		} catch (error) {
-			if (isSqlDisabled(error)) {
-				outcomes[tabId] = { kind: 'notice', message: 'sqlEditor.result.sqlDisabled' };
-			} else {
-				outcomes[tabId] = { kind: 'error', message: sqlError(error) };
-			}
-		} finally {
-			downloading = false;
-		}
-	}
+            if (result.kind === "done") {
+                saveBlob(result.value, downloadFileName(format, new Date()));
+            } else if (result.kind !== "cancelled") {
+                outcomes[tabId] = { kind: "error", message: sqlError(result.error) };
+            }
+        } catch (error) {
+            if (isSqlDisabled(error)) {
+                outcomes[tabId] = { kind: "notice", message: "sqlEditor.result.sqlDisabled" };
+            } else {
+                outcomes[tabId] = { kind: "error", message: sqlError(error) };
+            }
+        } finally {
+            downloading = false;
+        }
+    }
 
-	function onClose(id: string) {
-		owners.get(id)?.abort();
-		owners.delete(id);
-		delete outcomes[id];
-		tabs = closeTab(tabs, id, titleOf);
-	}
+    function onClose(id: string) {
+        owners.get(id)?.abort();
+        owners.delete(id);
+        delete outcomes[id];
+        tabs = closeTab(tabs, id, titleOf);
+    }
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('nav.item.sqlConsole') })}</title>
+    <title>{$t("app.pageTitle", { page: $t("nav.item.sqlConsole") })}</title>
 </svelte:head>
 
-<Cookiecrumb crumbs={[{ label: $t('nav.item.sqlConsole'), href: resolve('/sql-editor') }]} />
+<Cookiecrumb crumbs={[{ label: $t("nav.item.sqlConsole"), href: resolve("/sql-editor") }]} />
 
 <div class="page-wrapper sql-wrapper">
-	<div class="page-container sql-page">
-		<header class="page-head">
-			<h1>{$t('nav.item.sqlConsole')}</h1>
-			<NodePicker />
-		</header>
+    <div class="page-container sql-page">
+        <header class="page-head">
+            <h1>{$t("nav.item.sqlConsole")}</h1>
+            <NodePicker />
+        </header>
 
-		{#if !node || gate === 'pick-node'}
-			<p>{$t('sqlEditor.pickNode')}</p>
-		{:else if gate === 'sign-in'}
-			<AdminSessionRequired {node} />
-		{:else}
-			<div class="workspace">
-				<section class="main">
-					<SqlTabs
-						state={tabs}
-						onSelect={(id) => (tabs = selectTab(tabs, id))}
-						onAdd={() => (tabs = addTab(tabs, titleOf))}
-						{onClose}
-						onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
-					/>
+        {#if !node || gate === "pick-node"}
+            <p>{$t("sqlEditor.pickNode")}</p>
+        {:else if gate === "sign-in"}
+            <AdminSessionRequired {node} />
+        {:else}
+            <div class="workspace">
+                <section class="main">
+                    <SqlTabs
+                        state={tabs}
+                        onSelect={(id) => (tabs = selectTab(tabs, id))}
+                        onAdd={() => (tabs = addTab(tabs, titleOf))}
+                        {onClose}
+                        onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
+                    />
 
-					<div class="toolbar">
-						<Button
-							class="catalog-toggle"
-							variant="outline"
-							onclick={() => (catalogOpen = !catalogOpen)}
-							aria-label={$t('sqlEditor.toolbar.tables')}
-						>
-							<PanelRightIcon />
-						</Button>
+                    <div class="toolbar">
+                        <Button
+                            class="catalog-toggle"
+                            variant="outline"
+                            onclick={() => (catalogOpen = !catalogOpen)}
+                            aria-label={$t("sqlEditor.toolbar.tables")}
+                        >
+                            <PanelRightIcon />
+                        </Button>
 
-						{#if busy}
-							<Button variant="destructive" onclick={stop}>
-								<SquareIcon />
-								{$t('sqlEditor.toolbar.stop')}
-							</Button>
-						{:else}
-							<Button disabled={!node} onclick={run} title={$t('sqlEditor.toolbar.runShortcut')}>
-								<PlayIcon />
-								{$t('sqlEditor.toolbar.run')}
-							</Button>
-						{/if}
-						<Button variant="outline" disabled={!node || busy} onclick={() => explain(false)}>
-							<ListTreeIcon />
-							{$t('sqlEditor.toolbar.explain')}
-						</Button>
-						<Button variant="outline" disabled={!node || busy} onclick={() => explain(true)}>
-							{$t('sqlEditor.toolbar.analyze')}
-						</Button>
-						<DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
-						<span class="hint">{$t('sqlEditor.toolbar.hint')}</span>
-					</div>
+                        {#if busy}
+                            <Button variant="destructive" onclick={stop}>
+                                <SquareIcon />
+                                {$t("sqlEditor.toolbar.stop")}
+                            </Button>
+                        {:else}
+                            <Button
+                                disabled={!node}
+                                onclick={run}
+                                title={$t("sqlEditor.toolbar.runShortcut")}
+                            >
+                                <PlayIcon />
+                                {$t("sqlEditor.toolbar.run")}
+                            </Button>
+                        {/if}
+                        <Button
+                            variant="outline"
+                            disabled={!node || busy}
+                            onclick={() => explain(false)}
+                        >
+                            <ListTreeIcon />
+                            {$t("sqlEditor.toolbar.explain")}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            disabled={!node || busy}
+                            onclick={() => explain(true)}
+                        >
+                            {$t("sqlEditor.toolbar.analyze")}
+                        </Button>
+                        <DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
+                        <span class="hint">{$t("sqlEditor.toolbar.hint")}</span>
+                    </div>
 
-					<div class="editor-area">
-						<SqlEditor
-							bind:this={editor}
-							tabId={activeTab.id}
-							value={activeTab.sql}
-							tabIds={tabs.tabs.map((tab) => tab.id)}
-							{completions}
-							onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
-							onRun={() => {
-								if (!busy) run();
-							}}
-						/>
-					</div>
+                    <div class="editor-area">
+                        <SqlEditor
+                            bind:this={editor}
+                            tabId={activeTab.id}
+                            value={activeTab.sql}
+                            tabIds={tabs.tabs.map((tab) => tab.id)}
+                            {completions}
+                            onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
+                            onRun={() => {
+                                if (!busy) run();
+                            }}
+                        />
+                    </div>
 
-					<div class="result-area">
-						{#if outcome?.kind === 'plan'}
-							{@const root = planRoot(outcome.plan)}
-							{#if root}
-								<PlanTree node={root} />
-							{:else}
-								<p class="muted">{$t('sqlEditor.result.noPlan')}</p>
-							{/if}
-						{:else}
-							{#if outcome?.kind === 'rows'}
-								{@const result = outcome.result}
-								{#if result.cancelled && result.rows.length > 0}
-									<p class="notice">{$t('sqlEditor.result.stoppedPartial')}</p>
-								{:else if result.cancelled}
-									<p class="notice">{$t('sqlEditor.result.stopped')}</p>
-								{:else if result.rows.length === 0}
-									<p class="notice">{$t('sqlEditor.result.noRows')}</p>
-								{:else if result.truncated}
-									<p class="notice">
-										{$t('sqlEditor.result.truncated', { count: PREVIEW_ROW_LIMIT })}
-									</p>
-								{/if}
-							{:else if outcome?.kind === 'error'}
-								<div class="error-block" role="alert">
-									<pre>{$t(outcome.message)}</pre>
-								</div>
-							{:else if outcome?.kind === 'notice'}
-								<p class="notice">{$t(outcome.message)}</p>
-							{/if}
+                    <div class="result-area">
+                        {#if outcome?.kind === "plan"}
+                            {@const root = planRoot(outcome.plan)}
+                            {#if root}
+                                <PlanTree node={root} />
+                            {:else}
+                                <p class="muted">{$t("sqlEditor.result.noPlan")}</p>
+                            {/if}
+                        {:else}
+                            {#if outcome?.kind === "rows"}
+                                {@const result = outcome.result}
+                                {#if result.cancelled && result.rows.length > 0}
+                                    <p class="notice">{$t("sqlEditor.result.stoppedPartial")}</p>
+                                {:else if result.cancelled}
+                                    <p class="notice">{$t("sqlEditor.result.stopped")}</p>
+                                {:else if result.rows.length === 0}
+                                    <p class="notice">{$t("sqlEditor.result.noRows")}</p>
+                                {:else if result.truncated}
+                                    <p class="notice">
+                                        {$t("sqlEditor.result.truncated", {
+                                            count: PREVIEW_ROW_LIMIT
+                                        })}
+                                    </p>
+                                {/if}
+                            {:else if outcome?.kind === "error"}
+                                <div class="error-block" role="alert">
+                                    <pre>{$t(outcome.message)}</pre>
+                                </div>
+                            {:else if outcome?.kind === "notice"}
+                                <p class="notice">{$t(outcome.message)}</p>
+                            {/if}
 
-							<ResultGrid
-								columns={outcome?.kind === 'rows' ? outcome.result.columns : []}
-								types={outcome?.kind === 'rows' ? outcome.result.types : []}
-								rows={outcome?.kind === 'rows' ? outcome.result.rows : []}
-								loading={outcome?.kind === 'busy'}
-							/>
-						{/if}
-					</div>
-				</section>
+                            <ResultGrid
+                                columns={outcome?.kind === "rows" ? outcome.result.columns : []}
+                                types={outcome?.kind === "rows" ? outcome.result.types : []}
+                                rows={outcome?.kind === "rows" ? outcome.result.rows : []}
+                                loading={outcome?.kind === "busy"}
+                            />
+                        {/if}
+                    </div>
+                </section>
 
-				<aside class="catalog-panel" class:open={catalogOpen}>
-					<CatalogTree
-						{tree}
-						loading={treeLoading}
-						error={treeError}
-						{loadColumns}
-						onInsert={(text) => editor?.insert(text)}
-						onRefresh={() => loadCatalogue(true)}
-					/>
-				</aside>
-			</div>
-		{/if}
-	</div>
+                <aside class="catalog-panel" class:open={catalogOpen}>
+                    <CatalogTree
+                        {tree}
+                        loading={treeLoading}
+                        error={treeError}
+                        {loadColumns}
+                        onInsert={(text) => editor?.insert(text)}
+                        onRefresh={() => loadCatalogue(true)}
+                    />
+                </aside>
+            </div>
+        {/if}
+    </div>
 </div>
 
 <style lang="scss">
-	// The editor fills the height of the page, so the wrapper and the card stretch.
-	.sql-wrapper {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-height: 0;
-	}
+    // The editor fills the height of the page, so the wrapper and the card stretch.
+    .sql-wrapper {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
 
-	.sql-page {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		flex: 1;
-		min-height: 0;
-	}
+    .sql-page {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        flex: 1;
+        min-height: 0;
+    }
 
-	.page-head {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: flex-end;
-		justify-content: space-between;
-		gap: 1rem;
+    .page-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 1rem;
 
-		h1 {
-			margin: 0;
-		}
+        h1 {
+            margin: 0;
+        }
 
-		// Aligns the select with the bottom of the title.
-		:global(.node-picker) {
-			margin-bottom: 0;
-		}
-	}
+        // Aligns the select with the bottom of the title.
+        :global(.node-picker) {
+            margin-bottom: 0;
+        }
+    }
 
-	.workspace {
-		display: flex;
-		gap: 1rem;
-		flex: 1;
-		min-height: 0;
-	}
+    .workspace {
+        display: flex;
+        gap: 1rem;
+        flex: 1;
+        min-height: 0;
+    }
 
-	.catalog-panel {
-		flex: 0 0 16rem;
-		min-height: 0;
-		padding-left: 1rem;
-		border-left: 1px solid var(--border);
-	}
+    .catalog-panel {
+        flex: 0 0 16rem;
+        min-height: 0;
+        padding-left: 1rem;
+        border-left: 1px solid var(--border);
+    }
 
-	.main {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		flex: 1;
-		min-width: 0;
-		min-height: 0;
-	}
+    .main {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 1;
+        min-width: 0;
+        min-height: 0;
+    }
 
-	.toolbar {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
 
-		:global(.catalog-toggle) {
-			display: none;
-		}
-	}
+        :global(.catalog-toggle) {
+            display: none;
+        }
+    }
 
-	.hint {
-		color: var(--muted-foreground);
-		font-size: var(--font-size-xs);
-	}
+    .hint {
+        color: var(--muted-foreground);
+        font-size: var(--font-size-xs);
+    }
 
-	.editor-area {
-		flex: 0 0 38%;
-		min-height: 8rem;
-	}
+    .editor-area {
+        flex: 0 0 38%;
+        min-height: 8rem;
+    }
 
-	// A flex column lets the grid shrink, so its body scrolls between a fixed header and footer.
-	.result-area {
-		display: flex;
-		flex-direction: column;
-		flex: 1;
-		min-height: 12rem;
-		overflow: auto;
-	}
+    // A flex column lets the grid shrink, so its body scrolls between a fixed header and footer.
+    .result-area {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 12rem;
+        overflow: auto;
+    }
 
-	.muted {
-		color: var(--muted-foreground);
-	}
+    .muted {
+        color: var(--muted-foreground);
+    }
 
-	.notice {
-		margin: 0 0 0.5rem;
-		color: var(--muted-foreground);
-	}
+    .notice {
+        margin: 0 0 0.5rem;
+        color: var(--muted-foreground);
+    }
 
-	.error-block {
-		padding: 0.75rem;
-		border: 1px solid var(--destructive);
-		border-radius: 0.5rem;
-		color: var(--destructive);
+    .error-block {
+        padding: 0.75rem;
+        border: 1px solid var(--destructive);
+        border-radius: 0.5rem;
+        color: var(--destructive);
 
-		pre {
-			margin: 0;
-			white-space: pre-wrap;
-			word-break: break-word;
-		}
-	}
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+    }
 
-	@media (max-width: 767px) {
-		.workspace {
-			flex-direction: column;
-		}
+    @media (max-width: 767px) {
+        .workspace {
+            flex-direction: column;
+        }
 
-		.catalog-panel {
-			display: none;
-			flex-basis: auto;
-			max-height: 40vh;
-			order: -1;
-			padding-left: 0;
-			border-left: 0;
+        .catalog-panel {
+            display: none;
+            flex-basis: auto;
+            max-height: 40vh;
+            order: -1;
+            padding-left: 0;
+            border-left: 0;
 
-			&.open {
-				display: block;
-			}
-		}
+            &.open {
+                display: block;
+            }
+        }
 
-		.toolbar :global(.catalog-toggle) {
-			display: inline-flex;
-		}
-	}
+        .toolbar :global(.catalog-toggle) {
+            display: inline-flex;
+        }
+    }
 </style>

@@ -22,52 +22,51 @@
  * first. That function repairs a partial record and drops a broken one.
  */
 
-import { Utils } from '@/utils';
-import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from '@/colors/palettes';
-import type { MessageKey } from '@/i18n';
+import { Utils } from "@/utils";
+import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from "@/colors/palettes";
+import type { MessageKey } from "@/i18n";
 
-export type PlotType = 'scatter' | 'cross-section' | 'line' | 'histogram';
-export type ColorScale = 'linear' | 'logarithmic' | 'exponential';
-export type PlotInterpolationMethod = 'gaussian' | 'delaunay-barycentric';
+export type PlotType = "scatter" | "cross-section" | "line" | "histogram";
+export type ColorScale = "linear" | "logarithmic" | "exponential";
+export type PlotInterpolationMethod = "gaussian" | "delaunay-barycentric";
 export type PlotTypeConfig = { id: PlotType; labelKey: MessageKey; descriptionKey: MessageKey };
 
 export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
-	{
-		id: 'scatter',
-		labelKey: 'plot.type.scatter.label',
-		descriptionKey: 'plot.type.scatter.description'
-	},
-	{
-		id: 'cross-section',
-		labelKey: 'plot.type.crossSection.label',
-		descriptionKey: 'plot.type.crossSection.description'
-	},
-	// {
-	// 	id: 'line',
-	// 	label: 'Line / profile',
-	// 	description: 'The rows join into a stroke. A group column draws one stroke per cast.'
-	// },
-	{
-		id: 'histogram',
-		labelKey: 'plot.type.histogram.label',
-		descriptionKey: 'plot.type.histogram.description'
-	}
+    {
+        id: "scatter",
+        labelKey: "plot.type.scatter.label",
+        descriptionKey: "plot.type.scatter.description"
+    },
+    {
+        id: "cross-section",
+        labelKey: "plot.type.crossSection.label",
+        descriptionKey: "plot.type.crossSection.description"
+    },
+    // {
+    // 	id: 'line',
+    // 	label: 'Line / profile',
+    // 	description: 'The rows join into a stroke. A group column draws one stroke per cast.'
+    // },
+    {
+        id: "histogram",
+        labelKey: "plot.type.histogram.label",
+        descriptionKey: "plot.type.histogram.description"
+    }
 ];
 
 /** True when the plot type requires sampling above a certain amount of rows. */
 export function needsSampling(type: PlotType): boolean {
-	return type === 'scatter' || type === 'cross-section';
+    return type === "scatter" || type === "cross-section";
 }
-
 
 /** True when the type puts a column on both X and Y. */
 export function usesXColumn(type: PlotType): boolean {
-	return type !== 'cross-section';
+    return type !== "cross-section";
 }
 
 /** True when the type reads the Y column. A histogram counts rows instead. */
 export function usesYColumn(type: PlotType): boolean {
-	return type !== 'histogram';
+    return type !== "histogram";
 }
 
 /**
@@ -77,7 +76,7 @@ export function usesYColumn(type: PlotType): boolean {
  * so neither has a per-row colour to show.
  */
 export function usesZColumn(type: PlotType): boolean {
-	return type === 'scatter' || type === 'cross-section';
+    return type === "scatter" || type === "cross-section";
 }
 
 /**
@@ -90,44 +89,44 @@ export function usesZColumn(type: PlotType): boolean {
  * downward. On the Z axis it turns the palette around instead.
  */
 export interface PlotAxisConfig {
-	/** The column that feeds the axis. Null for the X axis of a cross section. */
-	column: string | null;
-	/** The axis title. Null means that the renderer uses the column name. */
-	label: string | null;
-	min: number | null;
-	max: number | null;
-	reverse: boolean;
-	/** The value transform used when this axis drives the colour palette. */
-	scale: ColorScale;
+    /** The column that feeds the axis. Null for the X axis of a cross section. */
+    column: string | null;
+    /** The axis title. Null means that the renderer uses the column name. */
+    label: string | null;
+    min: number | null;
+    max: number | null;
+    reverse: boolean;
+    /** The value transform used when this axis drives the colour palette. */
+    scale: ColorScale;
 }
 
 export interface PlotContourConfig {
-	enabled: boolean;
-	/** How many contour levels to draw over the range of the Z values. */
-	levelCount: number;
-	/** Cells per axis of the grid that the contour algorithm reads. */
-	gridResolution: number;
-	lineWidth: number;
-	showLabels: boolean;
-	labelFontSize: number;
+    enabled: boolean;
+    /** How many contour levels to draw over the range of the Z values. */
+    levelCount: number;
+    /** Cells per axis of the grid that the contour algorithm reads. */
+    gridResolution: number;
+    lineWidth: number;
+    showLabels: boolean;
+    labelFontSize: number;
 }
 
 export interface PlotInterpolationConfig {
-	enabled: boolean;
-	/** The algorithm that fills the interpolation grid. */
-	method: PlotInterpolationMethod;
-	/** Cells along the X axis of the interpolation grid. */
-	xGridResolution: number;
-	/** Cells along the Y axis of the interpolation grid. */
-	yGridResolution: number;
-	/** Gaussian blur radius, in grid cells. */
-	gaussianSigma: number;
-	/** Lower percentile for colour clipping. */
-	percentileMin: number;
-	/** Upper percentile for colour clipping. */
-	percentileMax: number;
-	/** Filled colour bands that approximate the interpolated surface. */
-	bandCount: number;
+    enabled: boolean;
+    /** The algorithm that fills the interpolation grid. */
+    method: PlotInterpolationMethod;
+    /** Cells along the X axis of the interpolation grid. */
+    xGridResolution: number;
+    /** Cells along the Y axis of the interpolation grid. */
+    yGridResolution: number;
+    /** Gaussian blur radius, in grid cells. */
+    gaussianSigma: number;
+    /** Lower percentile for colour clipping. */
+    percentileMin: number;
+    /** Upper percentile for colour clipping. */
+    percentileMax: number;
+    /** Filled colour bands that approximate the interpolated surface. */
+    bandCount: number;
 }
 
 /**
@@ -143,209 +142,209 @@ export interface PlotInterpolationConfig {
  * X and the depth is on Y.
  */
 export interface PlotLineConfig {
-	groupColumn: string | null;
-	sortBy: 'x' | 'y';
-	width: number;
-	/** Draw a dot on every row as well as the stroke. */
-	showPoints: boolean;
+    groupColumn: string | null;
+    sortBy: "x" | "y";
+    width: number;
+    /** Draw a dot on every row as well as the stroke. */
+    showPoints: boolean;
 }
 
 export interface PlotHistogramConfig {
-	/** How many bins the X range is cut into. */
-	binCount: number;
+    /** How many bins the X range is cut into. */
+    binCount: number;
 }
 
 export interface PlotStyleConfig {
-	palette: PaletteId;
-	/** Draw the raw datapoints for scatter and cross-section plots. */
-	showPoints: boolean;
-	pointRadius: number;
-	/** 0 to 1. A dense scatter needs a low value to show its structure. */
-	pointOpacity: number;
-	gridlines: boolean;
-	xAxisTitleFontSize: number;
-	yAxisTitleFontSize: number;
-	/** Optional title shared by the group legend and the colour scale. */
-	legendTitle: string;
-	legendTitleFontSize: number;
-	tickFontSize: number;
-	titleFontSize: number;
-	/** Draw the counts of the data at the foot of the plot. */
-	showCaption: boolean;
-	/** CSS colour. The renderer paints it behind the plot, and into the export. */
-	backgroundColor: string;
-	/** CSS colour of the gridlines and axis ticks. */
-	gridlineColor: string;
-	/** 0 to 1. Controls the opacity of the gridlines and axis ticks. */
-	gridlineOpacity: number;
-	/** CSS colour of the title, the axis titles and the tick labels. */
-	textColor: string;
+    palette: PaletteId;
+    /** Draw the raw datapoints for scatter and cross-section plots. */
+    showPoints: boolean;
+    pointRadius: number;
+    /** 0 to 1. A dense scatter needs a low value to show its structure. */
+    pointOpacity: number;
+    gridlines: boolean;
+    xAxisTitleFontSize: number;
+    yAxisTitleFontSize: number;
+    /** Optional title shared by the group legend and the colour scale. */
+    legendTitle: string;
+    legendTitleFontSize: number;
+    tickFontSize: number;
+    titleFontSize: number;
+    /** Draw the counts of the data at the foot of the plot. */
+    showCaption: boolean;
+    /** CSS colour. The renderer paints it behind the plot, and into the export. */
+    backgroundColor: string;
+    /** CSS colour of the gridlines and axis ticks. */
+    gridlineColor: string;
+    /** 0 to 1. Controls the opacity of the gridlines and axis ticks. */
+    gridlineOpacity: number;
+    /** CSS colour of the title, the axis titles and the tick labels. */
+    textColor: string;
 }
 
 export interface PlotConfig {
-	/** Stable identity inside one query. {@link ChartViewState.activePlotId} points at it. */
-	id: string;
-	/** The name in the plot list. */
-	name: string;
-	type: PlotType;
-	/** The heading over the plot. Empty means no heading. */
-	title: string;
-	x: PlotAxisConfig;
-	y: PlotAxisConfig;
-	/** The colour axis. Null means that every point takes one colour. */
-	z: PlotAxisConfig | null;
-	contour: PlotContourConfig;
-	interpolation: PlotInterpolationConfig;
-	line: PlotLineConfig;
-	histogram: PlotHistogramConfig;
-	style: PlotStyleConfig;
+    /** Stable identity inside one query. {@link ChartViewState.activePlotId} points at it. */
+    id: string;
+    /** The name in the plot list. */
+    name: string;
+    type: PlotType;
+    /** The heading over the plot. Empty means no heading. */
+    title: string;
+    x: PlotAxisConfig;
+    y: PlotAxisConfig;
+    /** The colour axis. Null means that every point takes one colour. */
+    z: PlotAxisConfig | null;
+    contour: PlotContourConfig;
+    interpolation: PlotInterpolationConfig;
+    line: PlotLineConfig;
+    histogram: PlotHistogramConfig;
+    style: PlotStyleConfig;
 }
 
 /** The display state of the chart explorer for one query. */
 export interface ChartViewState {
-	plots: PlotConfig[];
-	activePlotId: string | null;
+    plots: PlotConfig[];
+    activePlotId: string | null;
 }
 
 // -- defaults ----------------------------------------------------------------
 
 export const DEFAULT_CONTOUR: PlotContourConfig = {
-	enabled: false,
-	levelCount: 10,
-	gridResolution: 120,
-	lineWidth: 1,
-	showLabels: true,
-	labelFontSize: 10
+    enabled: false,
+    levelCount: 10,
+    gridResolution: 120,
+    lineWidth: 1,
+    showLabels: true,
+    labelFontSize: 10
 };
 
 export const DEFAULT_INTERPOLATION: PlotInterpolationConfig = {
-	enabled: false,
-	method: 'gaussian',
-	xGridResolution: 120,
-	yGridResolution: 120,
-	gaussianSigma: 1.2,
-	percentileMin: 1,
-	percentileMax: 99,
-	bandCount: 25
+    enabled: false,
+    method: "gaussian",
+    xGridResolution: 120,
+    yGridResolution: 120,
+    gaussianSigma: 1.2,
+    percentileMin: 1,
+    percentileMax: 99,
+    bandCount: 25
 };
 
 export const DEFAULT_LINE: PlotLineConfig = {
-	groupColumn: null,
-	sortBy: 'x',
-	width: 1.5,
-	showPoints: false
+    groupColumn: null,
+    sortBy: "x",
+    width: 1.5,
+    showPoints: false
 };
 
 export const DEFAULT_HISTOGRAM: PlotHistogramConfig = {
-	binCount: 30
+    binCount: 30
 };
 
 /** The most groups a line plot draws. Beyond this the picture reads as noise. */
 export const MAX_LINE_GROUPS = 40;
 
 export const DEFAULT_STYLE: PlotStyleConfig = {
-	palette: DEFAULT_PALETTE_ID,
-	showPoints: true,
-	pointRadius: 3,
-	pointOpacity: 0.85,
-	gridlines: true,
-	xAxisTitleFontSize: 13,
-	yAxisTitleFontSize: 13,
-	legendTitle: '',
-	legendTitleFontSize: 13,
-	tickFontSize: 11,
-	titleFontSize: 16,
-	showCaption: true,
-	backgroundColor: '#ffffff',
-	gridlineColor: '#1f2937',
-	gridlineOpacity: 0.15,
-	textColor: '#1f2937'
+    palette: DEFAULT_PALETTE_ID,
+    showPoints: true,
+    pointRadius: 3,
+    pointOpacity: 0.85,
+    gridlines: true,
+    xAxisTitleFontSize: 13,
+    yAxisTitleFontSize: 13,
+    legendTitle: "",
+    legendTitleFontSize: 13,
+    tickFontSize: 11,
+    titleFontSize: 16,
+    showCaption: true,
+    backgroundColor: "#ffffff",
+    gridlineColor: "#1f2937",
+    gridlineOpacity: 0.15,
+    textColor: "#1f2937"
 };
 
 /**
  * Solid blue, the colour of a point when the plot has no Z axis. It matches the
  * `solid_blue` palette, and it stands in for it before the colormaps load.
  */
-export const DEFAULT_POINT_COLOR = '#4678c8';
+export const DEFAULT_POINT_COLOR = "#4678c8";
 
 export function makeAxisConfig(overrides: Partial<PlotAxisConfig> = {}): PlotAxisConfig {
-	return {
-		column: null,
-		label: null,
-		min: null,
-		max: null,
-		reverse: false,
-		scale: 'linear',
-		...overrides
-	};
+    return {
+        column: null,
+        label: null,
+        min: null,
+        max: null,
+        reverse: false,
+        scale: "linear",
+        ...overrides
+    };
 }
 
 export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig {
-	return {
-		id: Utils.createId('plot'),
-		name: 'Plot 1',
-		type: 'scatter',
-		title: '',
-		x: makeAxisConfig(),
-		y: makeAxisConfig(),
-		z: null,
-		contour: { ...DEFAULT_CONTOUR },
-		interpolation: { ...DEFAULT_INTERPOLATION },
-		line: { ...DEFAULT_LINE },
-		histogram: { ...DEFAULT_HISTOGRAM },
-		style: { ...DEFAULT_STYLE },
-		...overrides
-	};
+    return {
+        id: Utils.createId("plot"),
+        name: "Plot 1",
+        type: "scatter",
+        title: "",
+        x: makeAxisConfig(),
+        y: makeAxisConfig(),
+        z: null,
+        contour: { ...DEFAULT_CONTOUR },
+        interpolation: { ...DEFAULT_INTERPOLATION },
+        line: { ...DEFAULT_LINE },
+        histogram: { ...DEFAULT_HISTOGRAM },
+        style: { ...DEFAULT_STYLE },
+        ...overrides
+    };
 }
 
 export function makeChartViewState(plots: PlotConfig[] = []): ChartViewState {
-	let activePlotId: string | null = null;
-	if (plots.length > 0) activePlotId = plots[0].id;
+    let activePlotId: string | null = null;
+    if (plots.length > 0) activePlotId = plots[0].id;
 
-	return { plots, activePlotId };
+    return { plots, activePlotId };
 }
 
 /** Copy a plot under a new identity. "Duplicate plot" uses this function. */
 export function clonePlotConfig(
-	source: PlotConfig,
-	overrides: Partial<PlotConfig> = {}
+    source: PlotConfig,
+    overrides: Partial<PlotConfig> = {}
 ): PlotConfig {
-	let z: PlotAxisConfig | null = null;
-	if (source.z) z = { ...source.z };
+    let z: PlotAxisConfig | null = null;
+    if (source.z) z = { ...source.z };
 
-	return {
-		...source,
-		id: Utils.createId('plot'),
-		x: { ...source.x },
-		y: { ...source.y },
-		z,
-		contour: { ...source.contour },
-		interpolation: { ...source.interpolation },
-		line: { ...source.line },
-		histogram: { ...source.histogram },
-		style: { ...source.style },
-		...overrides
-	};
+    return {
+        ...source,
+        id: Utils.createId("plot"),
+        x: { ...source.x },
+        y: { ...source.y },
+        z,
+        contour: { ...source.contour },
+        interpolation: { ...source.interpolation },
+        line: { ...source.line },
+        histogram: { ...source.histogram },
+        style: { ...source.style },
+        ...overrides
+    };
 }
 
 /** The next free "Plot n" name in a list. */
 export function nextPlotName(plots: ReadonlyArray<PlotConfig>): string {
-	let number = plots.length + 1;
+    let number = plots.length + 1;
 
-	while (plots.some((plot) => plot.name === `Plot ${number}`)) {
-		number++;
-	}
+    while (plots.some((plot) => plot.name === `Plot ${number}`)) {
+        number++;
+    }
 
-	return `Plot ${number}`;
+    return `Plot ${number}`;
 }
 
 // -- reading a plot ----------------------------------------------------------
 
 /** The title of an axis: the override, or the column name, or an empty string. */
-export function axisTitle(axis: PlotAxisConfig | null, fallback = ''): string {
-	if (!axis) return fallback;
-	if (axis.label !== null && axis.label !== '') return axis.label;
-	return axis.column ?? fallback;
+export function axisTitle(axis: PlotAxisConfig | null, fallback = ""): string {
+    if (!axis) return fallback;
+    if (axis.label !== null && axis.label !== "") return axis.label;
+    return axis.column ?? fallback;
 }
 
 /**
@@ -356,10 +355,10 @@ export function axisTitle(axis: PlotAxisConfig | null, fallback = ''): string {
  * one column, so it needs an X column alone.
  */
 export function isPlotRenderable(plot: PlotConfig | null | undefined): boolean {
-	if (!plot) return false;
-	if (usesXColumn(plot.type) && !plot.x.column) return false;
-	if (usesYColumn(plot.type) && !plot.y.column) return false;
-	return true;
+    if (!plot) return false;
+    if (usesXColumn(plot.type) && !plot.x.column) return false;
+    if (usesYColumn(plot.type) && !plot.y.column) return false;
+    return true;
 }
 
 /**
@@ -377,274 +376,282 @@ export function isPlotRenderable(plot: PlotConfig | null | undefined): boolean {
  * from: that one may hold text, so it is not in `columns`.
  */
 export function pruneMissingColumns(
-	plot: PlotConfig,
-	columns: ReadonlyArray<string>,
-	groupColumns: ReadonlyArray<string> = columns
+    plot: PlotConfig,
+    columns: ReadonlyArray<string>,
+    groupColumns: ReadonlyArray<string> = columns
 ): PlotConfig {
-	const exists = (name: string | null): boolean => !!name && columns.includes(name);
+    const exists = (name: string | null): boolean => !!name && columns.includes(name);
 
-	const keepX = !usesXColumn(plot.type) || exists(plot.x.column);
-	const keepY = !usesYColumn(plot.type) || exists(plot.y.column);
-	const keepZ = !plot.z || exists(plot.z.column);
+    const keepX = !usesXColumn(plot.type) || exists(plot.x.column);
+    const keepY = !usesYColumn(plot.type) || exists(plot.y.column);
+    const keepZ = !plot.z || exists(plot.z.column);
 
-	const group = plot.line.groupColumn;
-	const keepGroup = !group || groupColumns.includes(group);
+    const group = plot.line.groupColumn;
+    const keepGroup = !group || groupColumns.includes(group);
 
-	if (keepX && keepY && keepZ && keepGroup) return plot;
+    if (keepX && keepY && keepZ && keepGroup) return plot;
 
-	const pruned: PlotConfig = { ...plot, x: { ...plot.x }, y: { ...plot.y } };
-	if (!keepX) pruned.x.column = null;
-	if (!keepY) pruned.y.column = null;
+    const pruned: PlotConfig = { ...plot, x: { ...plot.x }, y: { ...plot.y } };
+    if (!keepX) pruned.x.column = null;
+    if (!keepY) pruned.y.column = null;
 
-	if (!keepGroup) pruned.line = { ...plot.line, groupColumn: null };
+    if (!keepGroup) pruned.line = { ...plot.line, groupColumn: null };
 
-	if (plot.z && !keepZ) {
-		pruned.z = { ...plot.z, column: null };
-	} else if (plot.z) {
-		pruned.z = { ...plot.z };
-	}
+    if (plot.z && !keepZ) {
+        pruned.z = { ...plot.z, column: null };
+    } else if (plot.z) {
+        pruned.z = { ...plot.z };
+    }
 
-	return pruned;
+    return pruned;
 }
 
 // -- reading from storage ----------------------------------------------------
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-	if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-	return value as Record<string, unknown>;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    return value as Record<string, unknown>;
 }
 
 /** A finite number, or the fallback. A stored `null` and a stored string both fail. */
 function asNumber(value: unknown, fallback: number): number {
-	if (typeof value === 'number' && Number.isFinite(value)) return value;
-	return fallback;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    return fallback;
 }
 
 /** A finite number, or null. This is the "auto" of an axis range. */
 function asNullableNumber(value: unknown): number | null {
-	if (typeof value === 'number' && Number.isFinite(value)) return value;
-	return null;
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    return null;
 }
 
 function asBoolean(value: unknown, fallback: boolean): boolean {
-	if (typeof value === 'boolean') return value;
-	return fallback;
+    if (typeof value === "boolean") return value;
+    return fallback;
 }
 
 function asColorScale(value: unknown): ColorScale {
-	if (value === 'logarithmic' || value === 'exponential') return value;
-	return 'linear';
+    if (value === "logarithmic" || value === "exponential") return value;
+    return "linear";
 }
 
 function asInterpolationMethod(value: unknown): PlotInterpolationMethod {
-	if (value === 'delaunay-barycentric') return value;
-	return 'gaussian';
+    if (value === "delaunay-barycentric") return value;
+    return "gaussian";
 }
 
 function asString(value: unknown, fallback: string): string {
-	if (typeof value === 'string') return value;
-	return fallback;
+    if (typeof value === "string") return value;
+    return fallback;
 }
 
 function asNullableString(value: unknown): string | null {
-	if (typeof value === 'string' && value !== '') return value;
-	return null;
+    if (typeof value === "string" && value !== "") return value;
+    return null;
 }
 
 function clamp(value: number, min: number, max: number): number {
-	if (value < min) return min;
-	if (value > max) return max;
-	return value;
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
 }
 
 function normaliseAxis(raw: unknown): PlotAxisConfig {
-	const record = asRecord(raw);
-	if (!record) return makeAxisConfig();
+    const record = asRecord(raw);
+    if (!record) return makeAxisConfig();
 
-	return {
-		column: asNullableString(record.column),
-		label: asNullableString(record.label),
-		min: asNullableNumber(record.min),
-		max: asNullableNumber(record.max),
-		reverse: asBoolean(record.reverse, false),
-		scale: asColorScale(record.scale)
-	};
+    return {
+        column: asNullableString(record.column),
+        label: asNullableString(record.label),
+        min: asNullableNumber(record.min),
+        max: asNullableNumber(record.max),
+        reverse: asBoolean(record.reverse, false),
+        scale: asColorScale(record.scale)
+    };
 }
 
 function normaliseContour(raw: unknown): PlotContourConfig {
-	const record = asRecord(raw);
-	if (!record) return { ...DEFAULT_CONTOUR };
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_CONTOUR };
 
-	return {
-		enabled: asBoolean(record.enabled, DEFAULT_CONTOUR.enabled),
-		levelCount: clamp(Math.round(asNumber(record.levelCount, DEFAULT_CONTOUR.levelCount)), 2, 50),
-		gridResolution: clamp(
-			Math.round(asNumber(record.gridResolution, DEFAULT_CONTOUR.gridResolution)),
-			10,
-			500
-		),
-		lineWidth: clamp(asNumber(record.lineWidth, DEFAULT_CONTOUR.lineWidth), 0.25, 10),
-		showLabels: asBoolean(record.showLabels, DEFAULT_CONTOUR.showLabels),
-		labelFontSize: clamp(asNumber(record.labelFontSize, DEFAULT_CONTOUR.labelFontSize), 6, 48)
-	};
+    return {
+        enabled: asBoolean(record.enabled, DEFAULT_CONTOUR.enabled),
+        levelCount: clamp(
+            Math.round(asNumber(record.levelCount, DEFAULT_CONTOUR.levelCount)),
+            2,
+            50
+        ),
+        gridResolution: clamp(
+            Math.round(asNumber(record.gridResolution, DEFAULT_CONTOUR.gridResolution)),
+            10,
+            500
+        ),
+        lineWidth: clamp(asNumber(record.lineWidth, DEFAULT_CONTOUR.lineWidth), 0.25, 10),
+        showLabels: asBoolean(record.showLabels, DEFAULT_CONTOUR.showLabels),
+        labelFontSize: clamp(asNumber(record.labelFontSize, DEFAULT_CONTOUR.labelFontSize), 6, 48)
+    };
 }
 
 function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
-	const record = asRecord(raw);
-	if (!record) return { ...DEFAULT_INTERPOLATION };
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_INTERPOLATION };
 
-	let percentileMin = clamp(
-		asNumber(record.percentileMin, DEFAULT_INTERPOLATION.percentileMin),
-		0,
-		100
-	);
-	let percentileMax = clamp(
-		asNumber(record.percentileMax, DEFAULT_INTERPOLATION.percentileMax),
-		0,
-		100
-	);
+    let percentileMin = clamp(
+        asNumber(record.percentileMin, DEFAULT_INTERPOLATION.percentileMin),
+        0,
+        100
+    );
+    let percentileMax = clamp(
+        asNumber(record.percentileMax, DEFAULT_INTERPOLATION.percentileMax),
+        0,
+        100
+    );
 
-	if (percentileMax <= percentileMin) {
-		percentileMin = DEFAULT_INTERPOLATION.percentileMin;
-		percentileMax = DEFAULT_INTERPOLATION.percentileMax;
-	}
+    if (percentileMax <= percentileMin) {
+        percentileMin = DEFAULT_INTERPOLATION.percentileMin;
+        percentileMax = DEFAULT_INTERPOLATION.percentileMax;
+    }
 
-	return {
-		enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
-		method: asInterpolationMethod(record.method),
-		xGridResolution: clamp(
-			Math.round(
-				asNumber(
-					record.xGridResolution,
-					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
-				)
-			),
-			20,
-			300
-		),
-		yGridResolution: clamp(
-			Math.round(
-				asNumber(
-					record.yGridResolution,
-					asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
-				)
-			),
-			20,
-			300
-		),
-		gaussianSigma: clamp(
-			asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),
-			0,
-			20
-		),
-		percentileMin,
-		percentileMax,
-		bandCount: clamp(
-			Math.round(asNumber(record.bandCount, DEFAULT_INTERPOLATION.bandCount)),
-			2,
-			100
-		)
-	};
+    return {
+        enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
+        method: asInterpolationMethod(record.method),
+        xGridResolution: clamp(
+            Math.round(
+                asNumber(
+                    record.xGridResolution,
+                    asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
+                )
+            ),
+            20,
+            300
+        ),
+        yGridResolution: clamp(
+            Math.round(
+                asNumber(
+                    record.yGridResolution,
+                    asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
+                )
+            ),
+            20,
+            300
+        ),
+        gaussianSigma: clamp(
+            asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),
+            0,
+            20
+        ),
+        percentileMin,
+        percentileMax,
+        bandCount: clamp(
+            Math.round(asNumber(record.bandCount, DEFAULT_INTERPOLATION.bandCount)),
+            2,
+            100
+        )
+    };
 }
 
 function normaliseLine(raw: unknown): PlotLineConfig {
-	const record = asRecord(raw);
-	if (!record) return { ...DEFAULT_LINE };
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_LINE };
 
-	let sortBy: 'x' | 'y' = DEFAULT_LINE.sortBy;
-	if (record.sortBy === 'x' || record.sortBy === 'y') sortBy = record.sortBy;
+    let sortBy: "x" | "y" = DEFAULT_LINE.sortBy;
+    if (record.sortBy === "x" || record.sortBy === "y") sortBy = record.sortBy;
 
-	return {
-		groupColumn: asNullableString(record.groupColumn),
-		sortBy,
-		width: clamp(asNumber(record.width, DEFAULT_LINE.width), 0.25, 10),
-		showPoints: asBoolean(record.showPoints, DEFAULT_LINE.showPoints)
-	};
+    return {
+        groupColumn: asNullableString(record.groupColumn),
+        sortBy,
+        width: clamp(asNumber(record.width, DEFAULT_LINE.width), 0.25, 10),
+        showPoints: asBoolean(record.showPoints, DEFAULT_LINE.showPoints)
+    };
 }
 
 function normaliseHistogram(raw: unknown): PlotHistogramConfig {
-	const record = asRecord(raw);
-	if (!record) return { ...DEFAULT_HISTOGRAM };
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_HISTOGRAM };
 
-	return {
-		binCount: clamp(Math.round(asNumber(record.binCount, DEFAULT_HISTOGRAM.binCount)), 2, 200)
-	};
+    return {
+        binCount: clamp(Math.round(asNumber(record.binCount, DEFAULT_HISTOGRAM.binCount)), 2, 200)
+    };
 }
 
 function normaliseStyle(raw: unknown): PlotStyleConfig {
-	const record = asRecord(raw);
-	if (!record) return { ...DEFAULT_STYLE };
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_STYLE };
 
-	let palette: PaletteId = DEFAULT_STYLE.palette;
-	if (isPaletteId(record.palette)) palette = record.palette;
+    let palette: PaletteId = DEFAULT_STYLE.palette;
+    if (isPaletteId(record.palette)) palette = record.palette;
 
-	return {
-		palette,
-		showPoints: asBoolean(record.showPoints, DEFAULT_STYLE.showPoints),
-		pointRadius: clamp(asNumber(record.pointRadius, DEFAULT_STYLE.pointRadius), 0.5, 30),
-		pointOpacity: clamp(asNumber(record.pointOpacity, DEFAULT_STYLE.pointOpacity), 0.05, 1),
-		gridlines: asBoolean(record.gridlines, DEFAULT_STYLE.gridlines),
-		xAxisTitleFontSize: clamp(
-			asNumber(
-				record.xAxisTitleFontSize,
-				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.xAxisTitleFontSize)
-			),
-			6,
-			48
-		),
-		yAxisTitleFontSize: clamp(
-			asNumber(
-				record.yAxisTitleFontSize,
-				asNumber(record.axisTitleFontSize, DEFAULT_STYLE.yAxisTitleFontSize)
-			),
-			6,
-			48
-		),
-		legendTitle: asString(record.legendTitle, DEFAULT_STYLE.legendTitle),
-		legendTitleFontSize: clamp(
-			asNumber(record.legendTitleFontSize, DEFAULT_STYLE.legendTitleFontSize),
-			6,
-			48
-		),
-		tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
-		titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
-		// A plot stored before the caption existed has no key here, and takes the
-		// default. Therefore an old plot draws its caption too.
-		showCaption: asBoolean(record.showCaption, DEFAULT_STYLE.showCaption),
-		backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
-		gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
-		gridlineOpacity: clamp(asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity), 0, 1),
-		textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
-	};
+    return {
+        palette,
+        showPoints: asBoolean(record.showPoints, DEFAULT_STYLE.showPoints),
+        pointRadius: clamp(asNumber(record.pointRadius, DEFAULT_STYLE.pointRadius), 0.5, 30),
+        pointOpacity: clamp(asNumber(record.pointOpacity, DEFAULT_STYLE.pointOpacity), 0.05, 1),
+        gridlines: asBoolean(record.gridlines, DEFAULT_STYLE.gridlines),
+        xAxisTitleFontSize: clamp(
+            asNumber(
+                record.xAxisTitleFontSize,
+                asNumber(record.axisTitleFontSize, DEFAULT_STYLE.xAxisTitleFontSize)
+            ),
+            6,
+            48
+        ),
+        yAxisTitleFontSize: clamp(
+            asNumber(
+                record.yAxisTitleFontSize,
+                asNumber(record.axisTitleFontSize, DEFAULT_STYLE.yAxisTitleFontSize)
+            ),
+            6,
+            48
+        ),
+        legendTitle: asString(record.legendTitle, DEFAULT_STYLE.legendTitle),
+        legendTitleFontSize: clamp(
+            asNumber(record.legendTitleFontSize, DEFAULT_STYLE.legendTitleFontSize),
+            6,
+            48
+        ),
+        tickFontSize: clamp(asNumber(record.tickFontSize, DEFAULT_STYLE.tickFontSize), 6, 48),
+        titleFontSize: clamp(asNumber(record.titleFontSize, DEFAULT_STYLE.titleFontSize), 8, 72),
+        // A plot stored before the caption existed has no key here, and takes the
+        // default. Therefore an old plot draws its caption too.
+        showCaption: asBoolean(record.showCaption, DEFAULT_STYLE.showCaption),
+        backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
+        gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
+        gridlineOpacity: clamp(
+            asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity),
+            0,
+            1
+        ),
+        textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
+    };
 }
 
 /** Repair one stored plot. Returns null when the value is not an object at all. */
 export function normalisePlotConfig(raw: unknown): PlotConfig | null {
-	const record = asRecord(raw);
-	if (!record) return null;
+    const record = asRecord(raw);
+    if (!record) return null;
 
-	// An unknown type comes from a newer version of the app, or from a corrupt
-	// record. A scatter needs the fewest settings, so it is the safe fallback.
-	let type: PlotType = 'scatter';
-	if (PLOT_TYPES.some((entry) => entry.id === record.type)) type = record.type as PlotType;
+    // An unknown type comes from a newer version of the app, or from a corrupt
+    // record. A scatter needs the fewest settings, so it is the safe fallback.
+    let type: PlotType = "scatter";
+    if (PLOT_TYPES.some((entry) => entry.id === record.type)) type = record.type as PlotType;
 
-	let z: PlotAxisConfig | null = null;
-	if (record.z) z = normaliseAxis(record.z);
+    let z: PlotAxisConfig | null = null;
+    if (record.z) z = normaliseAxis(record.z);
 
-	return {
-		id: asString(record.id, '') || Utils.createId('plot'),
-		name: asString(record.name, 'Plot'),
-		type,
-		title: asString(record.title, ''),
-		x: normaliseAxis(record.x),
-		y: normaliseAxis(record.y),
-		z,
-		contour: normaliseContour(record.contour),
-		interpolation: normaliseInterpolation(record.interpolation),
-		line: normaliseLine(record.line),
-		histogram: normaliseHistogram(record.histogram),
-		style: normaliseStyle(record.style)
-	};
+    return {
+        id: asString(record.id, "") || Utils.createId("plot"),
+        name: asString(record.name, "Plot"),
+        type,
+        title: asString(record.title, ""),
+        x: normaliseAxis(record.x),
+        y: normaliseAxis(record.y),
+        z,
+        contour: normaliseContour(record.contour),
+        interpolation: normaliseInterpolation(record.interpolation),
+        line: normaliseLine(record.line),
+        histogram: normaliseHistogram(record.histogram),
+        style: normaliseStyle(record.style)
+    };
 }
 
 /**
@@ -657,29 +664,29 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
  * that a later version removed.
  */
 export function normaliseChartView(raw: unknown): ChartViewState | null {
-	const record = asRecord(raw);
-	if (!record || !Array.isArray(record.plots)) return null;
+    const record = asRecord(raw);
+    if (!record || !Array.isArray(record.plots)) return null;
 
-	const plots: PlotConfig[] = [];
-	const seenIds = new Set<string>();
+    const plots: PlotConfig[] = [];
+    const seenIds = new Set<string>();
 
-	for (const entry of record.plots) {
-		const plot = normalisePlotConfig(entry);
-		if (!plot) continue;
+    for (const entry of record.plots) {
+        const plot = normalisePlotConfig(entry);
+        if (!plot) continue;
 
-		// A duplicate id would make the plot list ambiguous. Give the copy a new one.
-		if (seenIds.has(plot.id)) plot.id = Utils.createId('plot');
-		seenIds.add(plot.id);
+        // A duplicate id would make the plot list ambiguous. Give the copy a new one.
+        if (seenIds.has(plot.id)) plot.id = Utils.createId("plot");
+        seenIds.add(plot.id);
 
-		plots.push(plot);
-	}
+        plots.push(plot);
+    }
 
-	if (plots.length === 0) return null;
+    if (plots.length === 0) return null;
 
-	let activePlotId = asNullableString(record.activePlotId);
-	if (!activePlotId || !seenIds.has(activePlotId)) {
-		activePlotId = plots[0].id;
-	}
+    let activePlotId = asNullableString(record.activePlotId);
+    if (!activePlotId || !seenIds.has(activePlotId)) {
+        activePlotId = plots[0].id;
+    }
 
-	return { plots, activePlotId };
+    return { plots, activePlotId };
 }

@@ -31,14 +31,14 @@ Each file can be empty. A missing value keeps the default value.
 List only the fields that change. `src/lib/brand/define.ts` lists every field.
 
 ```ts
-import { defineBrand } from '@/brand/define';
-import logo from './assets/logo.svg';
+import { defineBrand } from "@/brand/define";
+import logo from "./assets/logo.svg";
 
 export default defineBrand({
-	name: 'Ocean Explorer',
-	logo,
-	links: { docs: null, source: null },
-	endpoints: { feedback: 'https://example.org/feedback' }
+    name: "Ocean Explorer",
+    logo,
+    links: { docs: null, source: null },
+    endpoints: { feedback: "https://example.org/feedback" }
 });
 ```
 
@@ -52,18 +52,18 @@ Override the tokens of the `:root` block in `src/tailwind.css`. Put only `:root`
 
 ```scss
 @font-face {
-	font-family: 'Inter';
-	font-weight: 100 900;
-	font-display: swap;
-	src: url('./fonts/inter.woff2') format('woff2');
+    font-family: "Inter";
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("./fonts/inter.woff2") format("woff2");
 }
 
 :root {
-	--font-family-base: 'Inter', sans-serif;
-	--primary: #0f766e;
-	--link: #0f766e;
-	--button-radius: 999px;
-	--button-text-transform: uppercase;
+    --font-family-base: "Inter", sans-serif;
+    --primary: #0f766e;
+    --link: #0f766e;
+    --button-radius: 999px;
+    --button-text-transform: uppercase;
 }
 ```
 
@@ -78,11 +78,11 @@ Useful token groups: colors (`--primary`, `--highlight`, `--app-background`), fo
 Override text per language. Use inline literals, so the type check catches a wrong key.
 
 ```ts
-import type { BrandLocales } from '@/i18n';
+import type { BrandLocales } from "@/i18n";
 
 export default {
-	en: { home: { title: { beforeHighlight: 'Welcome to', highlight: 'Ocean Explorer' } } },
-	nl: { home: { title: { beforeHighlight: 'Welkom bij', highlight: 'Ocean Explorer' } } }
+    en: { home: { title: { beforeHighlight: "Welcome to", highlight: "Ocean Explorer" } } },
+    nl: { home: { title: { beforeHighlight: "Welkom bij", highlight: "Ocean Explorer" } } }
 } satisfies BrandLocales;
 ```
 

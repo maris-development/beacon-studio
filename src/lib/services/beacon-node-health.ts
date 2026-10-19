@@ -12,10 +12,10 @@
  * The app persists no health. A reload starts every node at `unknown`.
  */
 
-import { get, readonly, writable, type Readable } from 'svelte/store';
-import type { BeaconNodeHealth } from '@/beacon-api/types';
-import { track } from '@/telemetry';
-import { normalizeUrl } from './beacon-node-url';
+import { get, readonly, writable, type Readable } from "svelte/store";
+import type { BeaconNodeHealth } from "@/beacon-api/types";
+import { track } from "@/telemetry";
+import { normalizeUrl } from "./beacon-node-url";
 
 export type { BeaconNodeHealth };
 
@@ -30,9 +30,9 @@ export const PROBE_TIMEOUT_MS = 10_000;
 
 /** The health of a node that the app never checked. */
 export const UNKNOWN_HEALTH: BeaconNodeHealth = Object.freeze({
-	status: 'unknown',
-	latencyMs: null,
-	lastCheckedAt: null
+    status: "unknown",
+    latencyMs: null,
+    lastCheckedAt: null
 });
 
 const healthStore = writable<Record<string, BeaconNodeHealth>>({});
@@ -45,48 +45,48 @@ export const healthMap: Readable<Record<string, BeaconNodeHealth>> = readonly(he
 
 /** The health of one node in a map snapshot. Use it with `$healthMap`. */
 export function healthOf(map: Record<string, BeaconNodeHealth>, url: string): BeaconNodeHealth {
-	return map[normalizeUrl(url)] ?? UNKNOWN_HEALTH;
+    return map[normalizeUrl(url)] ?? UNKNOWN_HEALTH;
 }
 
 /** The health of one node. Returns {@link UNKNOWN_HEALTH} for an unchecked URL. */
 export function getHealthOf(url: string): BeaconNodeHealth {
-	return healthOf(get(healthStore), url);
+    return healthOf(get(healthStore), url);
 }
 
 /** Records the result of one check. This is the only writer of the store. */
 export function setHealth(url: string, health: BeaconNodeHealth): void {
-	const key = normalizeUrl(url);
-	const previous = getHealthOf(url).status;
+    const key = normalizeUrl(url);
+    const previous = getHealthOf(url).status;
 
-	healthStore.update((map) => ({ ...map, [key]: health }));
+    healthStore.update((map) => ({ ...map, [key]: health }));
 
-	// A steady result repeats every sweep. Only a change carries news.
-	if (previous !== health.status) {
-		track('node.health', {
-			level: health.status === 'offline' ? 'warn' : 'info',
-			nodeHost: url,
-			durationMs: health.latencyMs ?? undefined,
-			props: { from: previous, to: health.status }
-		});
-	}
+    // A steady result repeats every sweep. Only a change carries news.
+    if (previous !== health.status) {
+        track("node.health", {
+            level: health.status === "offline" ? "warn" : "info",
+            nodeHost: url,
+            durationMs: health.latencyMs ?? undefined,
+            props: { from: previous, to: health.status }
+        });
+    }
 }
 
 /** Drops the health of one node. Call it when no node keeps that URL. */
 export function dropHealth(url: string): void {
-	const key = normalizeUrl(url);
+    const key = normalizeUrl(url);
 
-	healthStore.update((map) => {
-		const rest = { ...map };
-		delete rest[key];
-		return rest;
-	});
+    healthStore.update((map) => {
+        const rest = { ...map };
+        delete rest[key];
+        return rest;
+    });
 }
 
 /** True if the last check of this node is inside the given window. */
 export function isFresh(url: string, maxAgeMs: number = FRESH_MS): boolean {
-	const { lastCheckedAt } = getHealthOf(url);
+    const { lastCheckedAt } = getHealthOf(url);
 
-	if (lastCheckedAt === null) return false;
+    if (lastCheckedAt === null) return false;
 
-	return Date.now() - lastCheckedAt.getTime() < maxAgeMs;
+    return Date.now() - lastCheckedAt.getTime() < maxAgeMs;
 }

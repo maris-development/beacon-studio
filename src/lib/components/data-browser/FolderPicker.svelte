@@ -1,123 +1,125 @@
 <!-- Picks a dataset folder. The list loads on first open. -->
 <script lang="ts">
-	import FolderIcon from '@lucide/svelte/icons/folder';
-	import Button from '@/components/buttons/Button.svelte';
-	import { Input } from '@/components/ui/input';
-	import { allFolders } from '@/data-browser/folders';
-	import { sqlError } from '@/sql/statement';
-	import { t, type Message } from '@/i18n';
+    import FolderIcon from "@lucide/svelte/icons/folder";
+    import Button from "@/components/buttons/Button.svelte";
+    import { Input } from "@/components/ui/input";
+    import { allFolders } from "@/data-browser/folders";
+    import { sqlError } from "@/sql/statement";
+    import { t, type Message } from "@/i18n";
 
-	let {
-		loadPaths,
-		onPick
-	}: { loadPaths: () => Promise<string[]>; onPick: (folder: string) => void } = $props();
+    let {
+        loadPaths,
+        onPick
+    }: { loadPaths: () => Promise<string[]>; onPick: (folder: string) => void } = $props();
 
-	let open = $state(false);
-	let folders: string[] | null = $state(null);
-	let error: Message | null = $state(null);
-	let needle = $state('');
+    let open = $state(false);
+    let folders: string[] | null = $state(null);
+    let error: Message | null = $state(null);
+    let needle = $state("");
 
-	async function toggle() {
-		open = !open;
-		if (!open || folders) return;
+    async function toggle() {
+        open = !open;
+        if (!open || folders) return;
 
-		error = null;
-		try {
-			folders = allFolders(await loadPaths());
-		} catch (caught) {
-			error = sqlError(caught);
-		}
-	}
+        error = null;
+        try {
+            folders = allFolders(await loadPaths());
+        } catch (caught) {
+            error = sqlError(caught);
+        }
+    }
 
-	let matches = $derived.by(() => {
-		if (!folders) return [];
-		const query = needle.trim().toLowerCase();
-		if (!query) return folders;
-		return folders.filter((folder) => folder.toLowerCase().includes(query));
-	});
+    let matches = $derived.by(() => {
+        if (!folders) return [];
+        const query = needle.trim().toLowerCase();
+        if (!query) return folders;
+        return folders.filter((folder) => folder.toLowerCase().includes(query));
+    });
 
-	function pick(folder: string) {
-		onPick(folder);
-		open = false;
-	}
+    function pick(folder: string) {
+        onPick(folder);
+        open = false;
+    }
 </script>
 
 <div class="folder-picker">
-	<Button type="button" variant="outline" size="sm" onclick={toggle}>
-		<FolderIcon />
-		{$t('dataBrowser.common.folder.pick')}
-	</Button>
+    <Button type="button" variant="outline" size="sm" onclick={toggle}>
+        <FolderIcon />
+        {$t("dataBrowser.common.folder.pick")}
+    </Button>
 
-	{#if open}
-		<div class="panel">
-			{#if error}
-				<p class="error">{$t(error)}</p>
-			{:else if !folders}
-				<p class="muted">{$t('dataBrowser.common.folder.loading')}</p>
-			{:else if folders.length === 0}
-				<p class="muted">{$t('dataBrowser.common.folder.none')}</p>
-			{:else}
-				<Input
-					type="search"
-					placeholder={$t('dataBrowser.common.folder.filter')}
-					bind:value={needle}
-				/>
-				<ul>
-					{#each matches as folder (folder)}
-						<li><button type="button" onclick={() => pick(folder)}>{folder}</button></li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-	{/if}
+    {#if open}
+        <div class="panel">
+            {#if error}
+                <p class="error">{$t(error)}</p>
+            {:else if !folders}
+                <p class="muted">{$t("dataBrowser.common.folder.loading")}</p>
+            {:else if folders.length === 0}
+                <p class="muted">{$t("dataBrowser.common.folder.none")}</p>
+            {:else}
+                <Input
+                    type="search"
+                    placeholder={$t("dataBrowser.common.folder.filter")}
+                    bind:value={needle}
+                />
+                <ul>
+                    {#each matches as folder (folder)}
+                        <li>
+                            <button type="button" onclick={() => pick(folder)}>{folder}</button>
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
-	.folder-picker {
-		position: relative;
-	}
+    .folder-picker {
+        position: relative;
+    }
 
-	.panel {
-		position: absolute;
-		z-index: 10;
-		top: 100%;
-		right: 0;
-		width: 22rem;
-		max-height: 16rem;
-		margin-top: 0.25rem;
-		padding: 0.5rem;
-		overflow: auto;
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
-		background: var(--background);
-		box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
-	}
+    .panel {
+        position: absolute;
+        z-index: 10;
+        top: 100%;
+        right: 0;
+        width: 22rem;
+        max-height: 16rem;
+        margin-top: 0.25rem;
+        padding: 0.5rem;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--background);
+        box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+    }
 
-	ul {
-		margin: 0.5rem 0 0;
-		padding: 0;
-		list-style: none;
-	}
+    ul {
+        margin: 0.5rem 0 0;
+        padding: 0;
+        list-style: none;
+    }
 
-	li button {
-		width: 100%;
-		padding: 0.25rem;
-		border: 0;
-		background: none;
-		text-align: left;
-		cursor: pointer;
-		word-break: break-all;
+    li button {
+        width: 100%;
+        padding: 0.25rem;
+        border: 0;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+        word-break: break-all;
 
-		&:hover {
-			background: var(--accent);
-		}
-	}
+        &:hover {
+            background: var(--accent);
+        }
+    }
 
-	.muted {
-		color: var(--muted-foreground);
-	}
+    .muted {
+        color: var(--muted-foreground);
+    }
 
-	.error {
-		color: var(--destructive);
-	}
+    .error {
+        color: var(--destructive);
+    }
 </style>

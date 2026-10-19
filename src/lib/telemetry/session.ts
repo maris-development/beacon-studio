@@ -10,17 +10,17 @@
  * A brand can set its own receiver in `brand.ts`.
  */
 
-import { BRAND } from '@/brand';
+import { BRAND } from "@/brand";
 
 const API_BASE = BRAND.endpoints.telemetry;
 // const API_BASE = 'http://beacon-datalake/api/telemetry';
 
 export function collectUrl(): string {
-	return API_BASE;
+    return API_BASE;
 }
 
 export function sessionUrl(): string {
-	return `${API_BASE}/session`;
+    return `${API_BASE}/session`;
 }
 
 /** The live token, and the moment it stops working. */
@@ -38,44 +38,44 @@ const RENEW_MARGIN_MS = 60_000;
  * A null result means the caller drops the batch. Telemetry never blocks the app.
  */
 export async function getToken(): Promise<string | null> {
-	if (token && Date.now() < expiresAt - RENEW_MARGIN_MS) {
-		return token;
-	}
+    if (token && Date.now() < expiresAt - RENEW_MARGIN_MS) {
+        return token;
+    }
 
-	if (pending) return pending;
+    if (pending) return pending;
 
-	pending = mint().finally(() => {
-		pending = null;
-	});
+    pending = mint().finally(() => {
+        pending = null;
+    });
 
-	return pending;
+    return pending;
 }
 
 /** Drops the token. The queue calls this on a 401 and then tries once more. */
 export function clearToken(): void {
-	token = null;
-	expiresAt = 0;
+    token = null;
+    expiresAt = 0;
 }
 
 async function mint(): Promise<string | null> {
-	try {
-		const response = await fetch(sessionUrl(), {
-			method: 'POST',
-			credentials: 'omit'
-		});
+    try {
+        const response = await fetch(sessionUrl(), {
+            method: "POST",
+            credentials: "omit"
+        });
 
-		if (!response.ok) return null;
+        if (!response.ok) return null;
 
-		const body = (await response.json()) as { token?: string; expires_in?: number };
+        const body = (await response.json()) as { token?: string; expires_in?: number };
 
-		if (!body.token) return null;
+        if (!body.token) return null;
 
-		token = body.token;
-		expiresAt = Date.now() + (body.expires_in ?? 0) * 1000;
+        token = body.token;
+        expiresAt = Date.now() + (body.expires_in ?? 0) * 1000;
 
-		return token;
-	} catch {
-		// The website can be unreachable. Telemetry stays silent.
-		return null;
-	}
+        return token;
+    } catch {
+        // The website can be unreachable. Telemetry stays silent.
+        return null;
+    }
 }

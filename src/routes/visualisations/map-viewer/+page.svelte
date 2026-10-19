@@ -1,472 +1,480 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { onDestroy, onMount, untrack } from 'svelte';
-	import { page } from '$app/state';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
-	import { Utils } from '@/utils';
-	import type { CompiledQuery } from '@/beacon-api/types';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import Legend from '@/components/legend/Legend.svelte';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { resolveUrlQuery } from '@/stores/query-library';
-	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
-	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
-	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
-	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
-	import MapDrawTools from '@/components/visualisation/MapDrawTools.svelte';
-	import CoordinateColumnsDialog from '@/components/visualisation/CoordinateColumnsDialog.svelte';
-	import { MapViewController } from '@/components/visualisation/MapViewController.svelte';
-	import Button from '@/components/buttons/Button.svelte';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
-	import type { CoordinatePair, SpatialSelection } from '@/geo/spatial-selection';
-	import { addToast } from '@/stores/toasts';
-	import { runBlockReason } from '@/query/query-guard';
-	import { settings } from '@/stores/settings';
-	import { t } from '@/i18n';
+    import { browser } from "$app/environment";
+    import { onDestroy, onMount, untrack } from "svelte";
+    import { page } from "$app/state";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
+    import { Utils } from "@/utils";
+    import type { CompiledQuery } from "@/beacon-api/types";
+    import * as Select from "$lib/components/ui/select/index.js";
+    import Legend from "@/components/legend/Legend.svelte";
+    import { Label } from "$lib/components/ui/label/index.js";
+    import { resolveUrlQuery } from "@/stores/query-library";
+    import QuerySelectorHeader from "@/components/query-builder/QuerySelectorHeader.svelte";
+    import { QueryWorkspace } from "@/components/query-builder/QueryWorkspace.svelte";
+    import { getDefaultQueryActions } from "@/components/query-builder/QueryActions";
+    import VisualisationTabs from "@/components/visualisation/VisualisationTabs.svelte";
+    import MapDrawTools from "@/components/visualisation/MapDrawTools.svelte";
+    import CoordinateColumnsDialog from "@/components/visualisation/CoordinateColumnsDialog.svelte";
+    import { MapViewController } from "@/components/visualisation/MapViewController.svelte";
+    import Button from "@/components/buttons/Button.svelte";
+    import SettingsIcon from "@lucide/svelte/icons/settings";
+    import type { CoordinatePair, SpatialSelection } from "@/geo/spatial-selection";
+    import { addToast } from "@/stores/toasts";
+    import { runBlockReason } from "@/query/query-guard";
+    import { settings } from "@/stores/settings";
+    import { t } from "@/i18n";
 
-	let mapContainer: HTMLDivElement | null = null;
+    let mapContainer: HTMLDivElement | null = null;
 
-	const workspace = $state(new QueryWorkspace());
+    const workspace = $state(new QueryWorkspace());
 
-	// The controller owns the map, the deck.gl overlay and the query result. The
-	// page keeps only the query effect, the area selection and the markup.
-	const map = new MapViewController(
-		// The controller names the block of its run. The active block can change
-		// while a query runs, so the callbacks must not read the selection.
-		(id) => workspace.beginBlockRun(id),
-		(id, token) => workspace.endBlockRun(id, token),
-		(id, rows) => workspace.markBlockRun(id, rows)
-	);
+    // The controller owns the map, the deck.gl overlay and the query result. The
+    // page keeps only the query effect, the area selection and the markup.
+    const map = new MapViewController(
+        // The controller names the block of its run. The active block can change
+        // while a query runs, so the callbacks must not read the selection.
+        (id) => workspace.beginBlockRun(id),
+        (id, token) => workspace.endBlockRun(id, token),
+        (id, rows) => workspace.markBlockRun(id, rows)
+    );
 
-	/** The area drawn on the map. Applied to the query by the Apply filter button. */
-	let selection: SpatialSelection | null = $state(null);
+    /** The area drawn on the map. Applied to the query by the Apply filter button. */
+    let selection: SpatialSelection | null = $state(null);
 
-	/** True while the coordinate columns dialog is open. */
-	let isColumnsOpen = $state(false);
+    /** True while the coordinate columns dialog is open. */
+    let isColumnsOpen = $state(false);
 
-	onMount(() => {
-		// A deep-link opens one more block. `?q=` comes from "open in workbench"
-		// and brings the saved builder state. `?query=` comes from a share link.
-		const resolved = resolveUrlQuery(page.url);
-		workspace.openFromUrl(resolved);
+    onMount(() => {
+        // A deep-link opens one more block. `?q=` comes from "open in workbench"
+        // and brings the saved builder state. `?query=` comes from a share link.
+        const resolved = resolveUrlQuery(page.url);
+        workspace.openFromUrl(resolved);
 
-		return () => workspace.destroy();
-	});
+        return () => workspace.destroy();
+    });
 
-	onMount(() => {
-		if (!browser || !mapContainer) return;
-		map.init(mapContainer);
-	});
+    onMount(() => {
+        if (!browser || !mapContainer) return;
+        map.init(mapContainer);
+    });
 
-	onDestroy(() => map.destroy());
+    onDestroy(() => map.destroy());
 
-	const queryActions = $derived(getDefaultQueryActions(workspace));
+    const queryActions = $derived(getDefaultQueryActions(workspace));
 
-	// `workspace.activeBlock` is a new object on every write to the block
-	// collection — including our own `markBlockRun` below. Tracking that object
-	// (or `compiledQuery` derived from it) as an effect dependency would re-fire
-	// the effect after every run, forever. Track primitives instead: the block id
-	// and a content key for the compiled query.
-	const activeBlockId = $derived(workspace.activeBlockId);
-	const compiledQuery: CompiledQuery | null = $derived(
-		QueryWorkspace.getQuery(workspace.activeBlock)
-	);
-	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+    // `workspace.activeBlock` is a new object on every write to the block
+    // collection — including our own `markBlockRun` below. Tracking that object
+    // (or `compiledQuery` derived from it) as an effect dependency would re-fire
+    // the effect after every run, forever. Track primitives instead: the block id
+    // and a content key for the compiled query.
+    const activeBlockId = $derived(workspace.activeBlockId);
+    const compiledQuery: CompiledQuery | null = $derived(
+        QueryWorkspace.getQuery(workspace.activeBlock)
+    );
+    const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
 
-	// The stored coordinate pair, as a primitive for the same reason as `queryKey`.
-	const coordinateKey = $derived(JSON.stringify(workspace.activeBlock?.coordinateColumns ?? null));
+    // The stored coordinate pair, as a primitive for the same reason as `queryKey`.
+    const coordinateKey = $derived(
+        JSON.stringify(workspace.activeBlock?.coordinateColumns ?? null)
+    );
 
-	// The node of the active block. A block owns its node, so a switch of block
-	// switches the node. The URL is a primitive, so the run effect below can track
-	// it. It is null while the block names no node, and while the node list
-	// holds no node for its ref. The effect then runs nothing.
-	//
-	// The URL also belongs in the run key. A user can add a node that a share link
-	// asked for. The query must then run, with no other change to the block.
-	const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
+    // The node of the active block. A block owns its node, so a switch of block
+    // switches the node. The URL is a primitive, so the run effect below can track
+    // it. It is null while the block names no node, and while the node list
+    // holds no node for its ref. The effect then runs nothing.
+    //
+    // The URL also belongs in the run key. A user can add a node that a share link
+    // asked for. The query must then run, with no other change to the block.
+    const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
 
-	let lastRunKey: string | null = $state(null);
-	/**
-	 * The query that the safeguard stopped last. It keeps the warning to one
-	 * toast: this effect writes `lastRunKey`, which makes it run a second time.
-	 */
-	let lastBlockedKey: string | null = $state(null);
-	/** The block of the last run. A new block may move the camera; a re-run may not. */
-	let lastRunBlockId: string | null = $state(null);
+    let lastRunKey: string | null = $state(null);
+    /**
+     * The query that the safeguard stopped last. It keeps the warning to one
+     * toast: this effect writes `lastRunKey`, which makes it run a second time.
+     */
+    let lastBlockedKey: string | null = $state(null);
+    /** The block of the last run. A new block may move the camera; a re-run may not. */
+    let lastRunBlockId: string | null = $state(null);
 
-	// The safeguard blocks a query with no filter. It belongs in the run key, so
-	// the query runs after the user turns the safeguard off.
-	const requireFilters = $derived($settings.requireQueryFilters);
+    // The safeguard blocks a query with no filter. It belongs in the run key, so
+    // the query runs after the user turns the safeguard off.
+    const requireFilters = $derived($settings.requireQueryFilters);
 
-	// Repaint when the Legend changes the palette or the range. The reads below
-	// are the dependencies; the redraw itself rebuilds the colour table.
-	$effect(() => {
-		void [map.palette, map.paletteReverse, map.colorScaleMin, map.colorScaleMax];
-		map.redrawColors();
-	});
+    // Repaint when the Legend changes the palette or the range. The reads below
+    // are the dependencies; the redraw itself rebuilds the colour table.
+    $effect(() => {
+        void [map.palette, map.paletteReverse, map.colorScaleMin, map.colorScaleMax];
+        map.redrawColors();
+    });
 
-	$effect(() => {
-		if (map.selectedDataColumnName) {
-			map.showDataColumn();
-		}
-	});
+    $effect(() => {
+        if (map.selectedDataColumnName) {
+            map.showDataColumn();
+        }
+    });
 
-	// Re-run only when the selected block, or its compiled query content, actually changes.
-	$effect(() => {
-		const blockId = activeBlockId;
-		const key = queryKey;
-		const nodeUrl = activeNodeUrl;
+    // Re-run only when the selected block, or its compiled query content, actually changes.
+    $effect(() => {
+        const blockId = activeBlockId;
+        const key = queryKey;
+        const nodeUrl = activeNodeUrl;
 
-		if (!blockId || !key || !nodeUrl) {
-			map.clearQueryResult();
-			lastRunKey = null;
-			return;
-		}
+        if (!blockId || !key || !nodeUrl) {
+            map.clearQueryResult();
+            lastRunKey = null;
+            return;
+        }
 
-		// The safeguard stops a query with no filter. Show nothing, and run nothing.
-		// The run key stays empty, so a revert of the edit runs the query again.
-		const blocked = runBlockReason(untrack(() => compiledQuery));
-		if (blocked) {
-			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
-			if (blockedKey !== lastBlockedKey) {
-				lastBlockedKey = blockedKey;
-				addToast({ type: 'warning', key: blocked.key, values: blocked.values });
-			}
+        // The safeguard stops a query with no filter. Show nothing, and run nothing.
+        // The run key stays empty, so a revert of the edit runs the query again.
+        const blocked = runBlockReason(untrack(() => compiledQuery));
+        if (blocked) {
+            const blockedKey = `${blockId}:${nodeUrl}:${key}`;
+            if (blockedKey !== lastBlockedKey) {
+                lastBlockedKey = blockedKey;
+                addToast({ type: "warning", key: blocked.key, values: blocked.values });
+            }
 
-			map.clearQueryResult();
-			lastRunKey = null;
-			return;
-		}
+            map.clearQueryResult();
+            lastRunKey = null;
+            return;
+        }
 
-		lastBlockedKey = null;
+        lastBlockedKey = null;
 
-		const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
-		if (runKey === lastRunKey) return;
+        const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
+        if (runKey === lastRunKey) return;
 
-		const isSameBlock = blockId === lastRunBlockId;
-		lastRunKey = runKey;
-		lastRunBlockId = blockId;
+        const isSameBlock = blockId === lastRunBlockId;
+        lastRunKey = runKey;
+        lastRunBlockId = blockId;
 
-		// Read the live block/query untracked: we only want blockId+key above to
-		// drive re-runs, not every downstream write this triggers.
-		const { block, query, node } = untrack(() => ({
-			block: workspace.activeBlock,
-			query: compiledQuery,
-			node: workspace.activeNode
-		}));
-		if (!block || !query || !node) return;
+        // Read the live block/query untracked: we only want blockId+key above to
+        // drive re-runs, not every downstream write this triggers.
+        const { block, query, node } = untrack(() => ({
+            block: workspace.activeBlock,
+            query: compiledQuery,
+            node: workspace.activeNode
+        }));
+        if (!block || !query || !node) return;
 
-		// The saved area and the saved map view of this block belong on the map
-		// again. A block with no saved view gets the defaults back.
-		if (!isSameBlock) {
-			selection = block.draft?.spatialFilter ?? null;
-			map.applyViewState(block.id, block.view?.map);
-		}
+        // The saved area and the saved map view of this block belong on the map
+        // again. A block with no saved view gets the defaults back.
+        if (!isSameBlock) {
+            selection = block.draft?.spatialFilter ?? null;
+            map.applyViewState(block.id, block.view?.map);
+        }
 
-		// Show a cached result at once if the block already has one.
-		map.showQueryFromCache(block.datasetKey);
+        // Show a cached result at once if the block already has one.
+        map.showQueryFromCache(block.datasetKey);
 
-		// An edit of the same block keeps the camera where the user put it.
-		map.runAndShowQuery(query, node, block.id, isSameBlock, block.coordinateColumns ?? null);
-	});
+        // An edit of the same block keeps the camera where the user put it.
+        map.runAndShowQuery(query, node, block.id, isSameBlock, block.coordinateColumns ?? null);
+    });
 
-	// A new pair with no area filter keeps the query, so the effect above does
-	// not run. This effect redraws the result on the new pair. It comes after
-	// the run effect, so a run in flight already holds the pair.
-	$effect(() => {
-		const pair = JSON.parse(coordinateKey) as CoordinatePair | null;
-		untrack(() => map.setCoordinateColumns(pair));
-	});
+    // A new pair with no area filter keeps the query, so the effect above does
+    // not run. This effect redraws the result on the new pair. It comes after
+    // the run effect, so a run in flight already holds the pair.
+    $effect(() => {
+        const pair = JSON.parse(coordinateKey) as CoordinatePair | null;
+        untrack(() => map.setCoordinateColumns(pair));
+    });
 
-	// A result with no coordinate columns asks the user for them.
-	$effect(() => {
-		if (map.needsCoordinateColumns) {
-			isColumnsOpen = true;
-		}
-	});
+    // A result with no coordinate columns asks the user for them.
+    $effect(() => {
+        if (map.needsCoordinateColumns) {
+            isColumnsOpen = true;
+        }
+    });
 
-	// Keep the display state of the map with the block: the painted column, the
-	// range of the legend and the camera. Therefore a visit to the table or the
-	// chart page, and a reload, bring the same map back.
-	//
-	// `viewStateFor` returns null while the map still holds the state of another
-	// block. The write goes untracked: it replaces the block object, and a
-	// tracked read of that object would run this effect again.
-	$effect(() => {
-		const state = map.viewStateFor(activeBlockId);
-		if (!state) return;
-		untrack(() => workspace.updateActiveMapView(state));
-	});
+    // Keep the display state of the map with the block: the painted column, the
+    // range of the legend and the camera. Therefore a visit to the table or the
+    // chart page, and a reload, bring the same map back.
+    //
+    // `viewStateFor` returns null while the map still holds the state of another
+    // block. The write goes untracked: it replaces the block object, and a
+    // tracked read of that object would run this effect again.
+    $effect(() => {
+        const state = map.viewStateFor(activeBlockId);
+        if (!state) return;
+        untrack(() => workspace.updateActiveMapView(state));
+    });
 
-	/**
-	 * Write the drawn area into the query. The effect above then re-runs it. The
-	 * filter tests the stored pair of the block, which the map also plots.
-	 */
-	function applyAreaFilter() {
-		workspace.updateActiveSpatialFilter(selection);
-	}
+    /**
+     * Write the drawn area into the query. The effect above then re-runs it. The
+     * filter tests the stored pair of the block, which the map also plots.
+     */
+    function applyAreaFilter() {
+        workspace.updateActiveSpatialFilter(selection);
+    }
 
-	/** Store the pair of the dialog on the block. The effects above redraw the map. */
-	function applyCoordinateColumns(pair: CoordinatePair | null) {
-		workspace.updateActiveCoordinateColumns(pair);
-	}
+    /** Store the pair of the dialog on the block. The effects above redraw the map. */
+    function applyCoordinateColumns(pair: CoordinatePair | null) {
+        workspace.updateActiveCoordinateColumns(pair);
+    }
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('map.headTitle') })}</title>
+    <title>{$t("app.pageTitle", { page: $t("map.headTitle") })}</title>
 </svelte:head>
 
 <Cookiecrumb
-	crumbs={[
-		{ label: $t('visualisation.title'), href: '/visualisations' },
-		{ label: $t('map.title'), href: '/visualisations/map-viewer' }
-	]}
+    crumbs={[
+        { label: $t("visualisation.title"), href: "/visualisations" },
+        { label: $t("map.title"), href: "/visualisations/map-viewer" }
+    ]}
 />
 
 <div class="page-wrapper">
-	<QuerySelectorHeader {workspace} {queryActions} mode="view" />
+    <QuerySelectorHeader {workspace} {queryActions} mode="view" />
 
-	<div class="vertical-tabs-wrapper">
-		<VisualisationTabs />
+    <div class="vertical-tabs-wrapper">
+        <VisualisationTabs />
 
-		<div class="content page-container">
-			<div class="map-wrapper">
-				<div bind:this={mapContainer} class="map"></div>
+        <div class="content page-container">
+            <div class="map-wrapper">
+                <div bind:this={mapContainer} class="map"></div>
 
-				{#if compiledQuery}
-					<div class="map-info-wrapper">
-						<div class="my-ctrl-group">
-							<p class="summary">
-								{$t('visualisation.rowsSelected', {
-									count: map.rowCount,
-									duration: Utils.formatSecondsToReadableTime(map.durationMs / 1000)
-								})}
-							</p>
+                {#if compiledQuery}
+                    <div class="map-info-wrapper">
+                        <div class="my-ctrl-group">
+                            <p class="summary">
+                                {$t("visualisation.rowsSelected", {
+                                    count: map.rowCount,
+                                    duration: Utils.formatSecondsToReadableTime(
+                                        map.durationMs / 1000
+                                    )
+                                })}
+                            </p>
 
-							{#if map.needsCoordinateColumns}
-								<p class="coordinates-missing" role="alert">
-									{$t('map.coordinatesMissing')}
-								</p>
-							{/if}
+                            {#if map.needsCoordinateColumns}
+                                <p class="coordinates-missing" role="alert">
+                                    {$t("map.coordinatesMissing")}
+                                </p>
+                            {/if}
 
-							<div class="field">
-								<div class="label-row">
-									<Label size="sm" for="dataColumn">{$t('map.dataColumn')}</Label>
+                            <div class="field">
+                                <div class="label-row">
+                                    <Label size="sm" for="dataColumn">{$t("map.dataColumn")}</Label>
 
-									<Button
-										class="coordinates-button"
-										variant="ghost"
-										size="icon"
-										title={$t('map.pickCoordinates')}
-										aria-label={$t('map.pickCoordinates')}
-										onclick={() => (isColumnsOpen = true)}
-									>
-										<SettingsIcon />
-									</Button>
-								</div>
+                                    <Button
+                                        class="coordinates-button"
+                                        variant="ghost"
+                                        size="icon"
+                                        title={$t("map.pickCoordinates")}
+                                        aria-label={$t("map.pickCoordinates")}
+                                        onclick={() => (isColumnsOpen = true)}
+                                    >
+                                        <SettingsIcon />
+                                    </Button>
+                                </div>
 
-								<Select.Root
-									type="single"
-									name="dataColumn"
-									bind:value={map.selectedDataColumnName}
-								>
-									<Select.Trigger id="dataColumn" class="full-width"
-										>{map.selectedDataColumnName ||
-											$t('visualisation.selectColumn')}</Select.Trigger
-									>
-									<Select.Content>
-										<Select.Group>
-											<Select.Label>{$t('visualisation.availableColumns')}</Select.Label>
-											{#each map.dataColumnOptions as column, index (index)}
-												<Select.Item value={column} label={column}>
-													{column}
-												</Select.Item>
-											{/each}
-										</Select.Group>
-									</Select.Content>
-								</Select.Root>
-							</div>
+                                <Select.Root
+                                    type="single"
+                                    name="dataColumn"
+                                    bind:value={map.selectedDataColumnName}
+                                >
+                                    <Select.Trigger id="dataColumn" class="full-width"
+                                        >{map.selectedDataColumnName ||
+                                            $t("visualisation.selectColumn")}</Select.Trigger
+                                    >
+                                    <Select.Content>
+                                        <Select.Group>
+                                            <Select.Label
+                                                >{$t(
+                                                    "visualisation.availableColumns"
+                                                )}</Select.Label
+                                            >
+                                            {#each map.dataColumnOptions as column, index (index)}
+                                                <Select.Item value={column} label={column}>
+                                                    {column}
+                                                </Select.Item>
+                                            {/each}
+                                        </Select.Group>
+                                    </Select.Content>
+                                </Select.Root>
+                            </div>
 
-							<Legend
-								bind:colorScaleMin={map.colorScaleMin}
-								bind:colorScaleMax={map.colorScaleMax}
-								autoColorScaleMin={map.autoColorScaleMin}
-								autoColorScaleMax={map.autoColorScaleMax}
-								bind:palette={map.palette}
-								bind:paletteReverse={map.paletteReverse}
-							/>
-						</div>
-					</div>
+                            <Legend
+                                bind:colorScaleMin={map.colorScaleMin}
+                                bind:colorScaleMax={map.colorScaleMax}
+                                autoColorScaleMin={map.autoColorScaleMin}
+                                autoColorScaleMax={map.autoColorScaleMax}
+                                bind:palette={map.palette}
+                                bind:paletteReverse={map.paletteReverse}
+                            />
+                        </div>
+                    </div>
 
-					<div class="map-draw-wrapper">
-						<MapDrawTools
-							map={map.mapInstance}
-							bind:selection
-							onApply={applyAreaFilter}
-							canApply={map.hasCoordinates}
-							disabledReason={$t('map.needsCoordinates')}
-							onDrawingChange={(drawing) => map.setPicking(!drawing)}
-							countFeatures={(ring) => map.countFeaturesInRing(ring)}
-							countKey={map.datasetKey}
-						/>
-					</div>
-				{/if}
+                    <div class="map-draw-wrapper">
+                        <MapDrawTools
+                            map={map.mapInstance}
+                            bind:selection
+                            onApply={applyAreaFilter}
+                            canApply={map.hasCoordinates}
+                            disabledReason={$t("map.needsCoordinates")}
+                            onDrawingChange={(drawing) => map.setPicking(!drawing)}
+                            countFeatures={(ring) => map.countFeaturesInRing(ring)}
+                            countKey={map.datasetKey}
+                        />
+                    </div>
+                {/if}
 
-				{#if !compiledQuery}
-					<div class="loading-overlay">
-						<p>{$t('map.selectQuery')}</p>
-					</div>
-				{:else if map.isLoading}
-					<div class="loading-overlay">
-						<LoadingSpinner></LoadingSpinner>
-						<h3>{$t('common.loading')}</h3>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</div>
+                {#if !compiledQuery}
+                    <div class="loading-overlay">
+                        <p>{$t("map.selectQuery")}</p>
+                    </div>
+                {:else if map.isLoading}
+                    <div class="loading-overlay">
+                        <LoadingSpinner></LoadingSpinner>
+                        <h3>{$t("common.loading")}</h3>
+                    </div>
+                {/if}
+            </div>
+        </div>
+    </div>
 </div>
 
 <CoordinateColumnsDialog
-	bind:open={isColumnsOpen}
-	candidates={map.coordinateCandidates}
-	pair={map.coordinateColumns}
-	onApply={applyCoordinateColumns}
+    bind:open={isColumnsOpen}
+    candidates={map.coordinateCandidates}
+    pair={map.coordinateColumns}
+    onApply={applyCoordinateColumns}
 />
 
 <style lang="scss">
-	.page-wrapper {
-		flex-grow: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+    .page-wrapper {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 
-	.vertical-tabs-wrapper {
-		flex-grow: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: row;
-		gap: 1rem;
+    .vertical-tabs-wrapper {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
 
-		.content.page-container {
-			padding: 0;
-			display: flex;
-			flex-direction: column;
-			min-height: 0;
-		}
+        .content.page-container {
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
 
-		.content {
-			flex-grow: 1;
-		}
+        .content {
+            flex-grow: 1;
+        }
 
-		.map-wrapper {
-			flex-grow: 1;
-			min-height: 0; // let the grid fill the flex parent instead of growing past it
-			display: grid;
-			// minmax(0, 1fr), not 1fr. A plain `1fr` is `minmax(auto, 1fr)`, so the
-			// height of a child can push the row, and the map is 100% of that row.
-			// A zero minimum keeps the map inside its parent.
-			grid-template-columns: minmax(0, 1fr);
-			grid-template-rows: minmax(0, 1fr);
+        .map-wrapper {
+            flex-grow: 1;
+            min-height: 0; // let the grid fill the flex parent instead of growing past it
+            display: grid;
+            // minmax(0, 1fr), not 1fr. A plain `1fr` is `minmax(auto, 1fr)`, so the
+            // height of a child can push the row, and the map is 100% of that row.
+            // A zero minimum keeps the map inside its parent.
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: minmax(0, 1fr);
 
-			> * {
-				// stack every child in the same cell instead of position: absolute
-				grid-column: 1;
-				grid-row: 1;
-			}
+            > * {
+                // stack every child in the same cell instead of position: absolute
+                grid-column: 1;
+                grid-row: 1;
+            }
 
-			.map-info-wrapper {
-				justify-self: start;
-				align-self: start;
-				max-height: 100%;
-				overflow-x: hidden;
-				overflow-y: auto;
-				z-index: 4; // Ensure it overlays the map
+            .map-info-wrapper {
+                justify-self: start;
+                align-self: start;
+                max-height: 100%;
+                overflow-x: hidden;
+                overflow-y: auto;
+                z-index: 4; // Ensure it overlays the map
 
-				.my-ctrl-group {
-					// largely copied from maplibregl's ctrl group
-					border-radius: 0.5rem;
-					border: 1px solid var(--border);
-					background-color: white;
-					padding: 0.75rem;
-					margin: 0.5rem;
+                .my-ctrl-group {
+                    // largely copied from maplibregl's ctrl group
+                    border-radius: 0.5rem;
+                    border: 1px solid var(--border);
+                    background-color: white;
+                    padding: 0.75rem;
+                    margin: 0.5rem;
 
-					// The box floats over the map, so it takes a fixed width. Without
-					// one a long column name or a raw data value stretches it across
-					// the map.
-					width: 17rem;
-					display: flex;
-					flex-direction: column;
-					gap: 0.625rem;
+                    // The box floats over the map, so it takes a fixed width. Without
+                    // one a long column name or a raw data value stretches it across
+                    // the map.
+                    width: 17rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.625rem;
 
-					.summary {
-						font-size: var(--font-size-sm);
-						color: var(--muted-foreground, #6b7280);
-						margin: 0;
-					}
+                    .summary {
+                        font-size: var(--font-size-sm);
+                        color: var(--muted-foreground, #6b7280);
+                        margin: 0;
+                    }
 
-					.field {
-						display: flex;
-						flex-direction: column;
-						gap: 0.1875rem;
-						min-width: 0;
-					}
+                    .field {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.1875rem;
+                        min-width: 0;
+                    }
 
-					.label-row {
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-						justify-content: space-between;
+                    .label-row {
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        justify-content: space-between;
 
-						:global(.coordinates-button) {
-							width: 1.5rem;
-							height: 1.5rem;
-						}
-					}
+                        :global(.coordinates-button) {
+                            width: 1.5rem;
+                            height: 1.5rem;
+                        }
+                    }
 
-					.coordinates-missing {
-						margin: 0;
-						font-size: var(--font-size-sm);
-						color: var(--destructive);
-					}
+                    .coordinates-missing {
+                        margin: 0;
+                        font-size: var(--font-size-sm);
+                        color: var(--destructive);
+                    }
 
-					// The select trigger sizes to its content by default, which leaves
-					// it ragged beside the palette picker.
-					:global(.full-width) {
-						width: 100%;
-					}
-				}
-			}
+                    // The select trigger sizes to its content by default, which leaves
+                    // it ragged beside the palette picker.
+                    :global(.full-width) {
+                        width: 100%;
+                    }
+                }
+            }
 
-			.map-draw-wrapper {
-				justify-self: start;
-				align-self: end;
-				max-height: 100%;
-				z-index: 4; // Ensure it overlays the map
-			}
+            .map-draw-wrapper {
+                justify-self: start;
+                align-self: end;
+                max-height: 100%;
+                z-index: 4; // Ensure it overlays the map
+            }
 
-			.map {
-				z-index: 3;
-				height: 100%;
-				width: 100%;
-				border-radius: 0.5rem;
-			}
+            .map {
+                z-index: 3;
+                height: 100%;
+                width: 100%;
+                border-radius: 0.5rem;
+            }
 
-			.loading-overlay {
-				width: 100%;
-				height: 100%;
-				display: flex;
-				flex-direction: column;
-				gap: 1rem;
-				align-items: center;
-				justify-content: center;
+            .loading-overlay {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center;
+                justify-content: center;
 
-				background-color: rgba(255, 255, 255, 0.5);
-				z-index: 5; // Ensure it overlays the map
-			}
-		}
-	}
+                background-color: rgba(255, 255, 255, 0.5);
+                z-index: 5; // Ensure it overlays the map
+            }
+        }
+    }
 </style>

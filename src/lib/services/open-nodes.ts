@@ -12,9 +12,9 @@
  * list without an import cycle.
  */
 
-import { get, readonly, writable, type Readable } from 'svelte/store';
-import { BRAND } from '@/brand';
-import { normalizeUrl } from './beacon-node-url';
+import { get, readonly, writable, type Readable } from "svelte/store";
+import { BRAND } from "@/brand";
+import { normalizeUrl } from "./beacon-node-url";
 
 /** The address of the public list. A brand can set its own in `brand.ts`. */
 export const OPEN_NODES_URL = BRAND.endpoints.publicNodes;
@@ -29,21 +29,21 @@ const FETCH_TIMEOUT_MS = 10_000;
  * own table set.
  */
 export const PUBLIC_NODE_TABLES: Record<string, string[]> = {
-	[normalizeUrl('https://beacon-wod.maris.nl/')]: ['easy-wod'],
-	[normalizeUrl('https://beacon-era5.maris.nl/')]: [
-		'era5_daily_total_precipitation',
-		'era5_daily_mean_2m_temperature',
-		'era5_daily_max_2m_temperature'
-	]
+    [normalizeUrl("https://beacon-wod.maris.nl/")]: ["easy-wod"],
+    [normalizeUrl("https://beacon-era5.maris.nl/")]: [
+        "era5_daily_total_precipitation",
+        "era5_daily_mean_2m_temperature",
+        "era5_daily_max_2m_temperature"
+    ]
 };
 
 /** One node of the public list. */
 export type OpenNode = {
-	name: string;
-	url: string;
-	description: string;
-	n_code: number;
-	info_url: string;
+    name: string;
+    url: string;
+    description: string;
+    n_code: number;
+    info_url: string;
 };
 
 const openNodesStore = writable<OpenNode[]>([]);
@@ -53,52 +53,52 @@ export const openNodes: Readable<OpenNode[]> = readonly(openNodesStore);
 
 /** A snapshot of the list, for plain modules. Call it at the point of use. */
 export function getOpenNodes(): OpenNode[] {
-	return get(openNodesStore);
+    return get(openNodesStore);
 }
 
 /** True if the value has a usable name and URL. */
 function isOpenNode(value: unknown): value is Partial<OpenNode> & { name: string; url: string } {
-	if (typeof value !== 'object' || value === null) return false;
+    if (typeof value !== "object" || value === null) return false;
 
-	const entry = value as Record<string, unknown>;
+    const entry = value as Record<string, unknown>;
 
-	return (
-		typeof entry.name === 'string' &&
-		entry.name.trim() !== '' &&
-		typeof entry.url === 'string' &&
-		entry.url.trim() !== ''
-	);
+    return (
+        typeof entry.name === "string" &&
+        entry.name.trim() !== "" &&
+        typeof entry.url === "string" &&
+        entry.url.trim() !== ""
+    );
 }
 
 /** Keeps the usable entries, and drops a URL that repeats inside the list. */
 function parseList(payload: unknown): OpenNode[] {
-	if (!Array.isArray(payload)) {
-		console.warn('The public node list is not an array. The app shows no public nodes.');
-		return [];
-	}
+    if (!Array.isArray(payload)) {
+        console.warn("The public node list is not an array. The app shows no public nodes.");
+        return [];
+    }
 
-	const seen = new Set<string>();
-	const result: OpenNode[] = [];
+    const seen = new Set<string>();
+    const result: OpenNode[] = [];
 
-	for (const value of payload) {
-		if (!isOpenNode(value)) continue;
+    for (const value of payload) {
+        if (!isOpenNode(value)) continue;
 
-		const url = value.url.trim();
-		const key = normalizeUrl(url);
+        const url = value.url.trim();
+        const key = normalizeUrl(url);
 
-		if (seen.has(key)) continue;
-		seen.add(key);
+        if (seen.has(key)) continue;
+        seen.add(key);
 
-		result.push({
-			name: value.name.trim(),
-			url,
-			description: typeof value.description === 'string' ? value.description.trim() : '',
-			n_code: value.n_code,
-			info_url: value.info_url
-		});
-	}
+        result.push({
+            name: value.name.trim(),
+            url,
+            description: typeof value.description === "string" ? value.description.trim() : "",
+            n_code: value.n_code,
+            info_url: value.info_url
+        });
+    }
 
-	return result;
+    return result;
 }
 
 /**
@@ -107,23 +107,23 @@ function parseList(payload: unknown): OpenNode[] {
  * empty, and the home page shows no public nodes.
  */
 export async function loadOpenNodes(): Promise<OpenNode[]> {
-	try {
-		const response = await fetch(OPEN_NODES_URL, {
-			signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
-		});
+    try {
+        const response = await fetch(OPEN_NODES_URL, {
+            signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
+        });
 
-		if (!response.ok) {
-			throw new Error(`The server answered ${response.status}.`);
-		}
+        if (!response.ok) {
+            throw new Error(`The server answered ${response.status}.`);
+        }
 
-		const list = parseList(await response.json());
+        const list = parseList(await response.json());
 
-		openNodesStore.set(list);
+        openNodesStore.set(list);
 
-		return list;
-	} catch (error) {
-		console.warn(`Could not read the public node list at ${OPEN_NODES_URL}.`, error);
+        return list;
+    } catch (error) {
+        console.warn(`Could not read the public node list at ${OPEN_NODES_URL}.`, error);
 
-		return [];
-	}
+        return [];
+    }
 }

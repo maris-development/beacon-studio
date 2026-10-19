@@ -1,90 +1,90 @@
 <script lang="ts">
-	import { cn } from '$lib/utils.js';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import { get } from 'svelte/store';
-	import { getSearchSelectContext } from './search-select-context';
+    import { cn } from "$lib/utils.js";
+    import SearchIcon from "@lucide/svelte/icons/search";
+    import { get } from "svelte/store";
+    import { getSearchSelectContext } from "./search-select-context";
 
-	let {
-		ref = $bindable(null),
-		value = $bindable(''),
-		class: className,
-		placeholder = 'Search... ',
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		onKeydown = $bindable((event: KeyboardEvent) => {}),
-		...restProps
-	}: {
-		ref?: HTMLInputElement | null;
-		value?: string;
-		class?: string;
-		placeholder?: string;
-		onKeydown?: (event: KeyboardEvent) => void;
-	} = $props();
+    let {
+        ref = $bindable(null),
+        value = $bindable(""),
+        class: className,
+        placeholder = "Search... ",
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        onKeydown = $bindable((event: KeyboardEvent) => {}),
+        ...restProps
+    }: {
+        ref?: HTMLInputElement | null;
+        value?: string;
+        class?: string;
+        placeholder?: string;
+        onKeydown?: (event: KeyboardEvent) => void;
+    } = $props();
 
-	const context = getSearchSelectContext();
-	const queryString = context.searchQuery;
+    const context = getSearchSelectContext();
+    const queryString = context.searchQuery;
 
-	$effect(() => {
-		if (value !== get(queryString)) {
-			queryString.set(value);
-		}
-	});
+    $effect(() => {
+        if (value !== get(queryString)) {
+            queryString.set(value);
+        }
+    });
 
-	$effect(() => {
-		const next = $queryString;
-		if (next !== value) {
-			value = next;
-		}
-	});
+    $effect(() => {
+        const next = $queryString;
+        if (next !== value) {
+            value = next;
+        }
+    });
 
-	function onInput(event: Event) {
-		const nextValue = (event.currentTarget as HTMLInputElement).value;
-		value = nextValue;
-		queryString.set(nextValue);
-	}
+    function onInput(event: Event) {
+        const nextValue = (event.currentTarget as HTMLInputElement).value;
+        value = nextValue;
+        queryString.set(nextValue);
+    }
 </script>
 
 <div class="search-select-input-wrapper" data-slot="search-select-input-wrapper">
-	<SearchIcon class="search-select-input-icon" />
-	<input
-		onkeydown={onKeydown}
-		bind:this={ref}
-		type="text"
-		{value}
-		oninput={onInput}
-		class={cn('search-select-input', className)}
-		data-slot="search-select-input"
-		{placeholder}
-		{...restProps}
-	/>
+    <SearchIcon class="search-select-input-icon" />
+    <input
+        onkeydown={onKeydown}
+        bind:this={ref}
+        type="text"
+        {value}
+        oninput={onInput}
+        class={cn("search-select-input", className)}
+        data-slot="search-select-input"
+        {placeholder}
+        {...restProps}
+    />
 </div>
 
 <style lang="scss">
-	.search-select-input-wrapper {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.625rem 0.75rem;
-		border-bottom: 1px solid var(--border);
-	}
+    .search-select-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
 
-	.search-select-input-icon {
-		width: 1rem;
-		height: 1rem;
-		opacity: 0.5;
-		color: var(--muted-foreground);
-		flex-shrink: 0;
-	}
+    .search-select-input-icon {
+        width: 1rem;
+        height: 1rem;
+        opacity: 0.5;
+        color: var(--muted-foreground);
+        flex-shrink: 0;
+    }
 
-	.search-select-input {
-		width: 100%;
-		border: 0;
-		background: transparent;
-		outline: none;
-		font-size: var(--font-size-sm);
-		color: inherit;
+    .search-select-input {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        outline: none;
+        font-size: var(--font-size-sm);
+        color: inherit;
 
-		&::placeholder {
-			color: var(--muted-foreground);
-		}
-	}
+        &::placeholder {
+            color: var(--muted-foreground);
+        }
+    }
 </style>
