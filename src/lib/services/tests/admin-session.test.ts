@@ -32,8 +32,42 @@ describe('admin-session', () => {
 		expect(session.hasAdminSession('a')).toBe(true);
 		expect(session.hasAdminSession('b')).toBe(false);
 		expect(JSON.parse(sessionStorage.getItem(STORAGE_KEY)!)).toEqual({
-			a: { username: 'alice', password: 'pw' }
+			a: { username: 'alice', password: 'pw', url: 'https://a.example.org' }
 		});
+	});
+
+	it('gives the credentials for the node URL after normalizeUrl', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+
+		await session.signIn(node('a', 'https://A.example.org/'), 'alice', 'pw');
+
+		expect(session.credentialsOf(node('a'))).toEqual({ username: 'alice', password: 'pw' });
+	});
+
+	it('signs out a session whose node moved to another URL', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		await session.signIn(node('a'), 'alice', 'pw');
+
+		expect(session.credentialsOf(node('a', 'https://other.example.org'))).toBeNull();
+		expect(session.hasAdminSession('a')).toBe(false);
+		expect(JSON.parse(sessionStorage.getItem(STORAGE_KEY)!)).toEqual({});
+	});
+
+	it('discards a stored session without a URL', async () => {
+		sessionStorage.setItem(
+			STORAGE_KEY,
+			JSON.stringify({
+				a: { username: 'u', password: 'p' },
+				b: { username: 'u', password: 'p', url: 'https://b.example.org' }
+			})
+		);
+		const { session } = await load();
+
+		expect(session.hasAdminSession('a')).toBe(false);
+		expect(session.credentialsOf(node('a'))).toBeNull();
+		expect(session.credentialsOf(node('b'))).toEqual({ username: 'u', password: 'p' });
 	});
 
 	it('throws AdminAuthError on a 401 and saves nothing', async () => {
@@ -84,7 +118,10 @@ describe('admin-session', () => {
 	it('signs out one node', async () => {
 		sessionStorage.setItem(
 			STORAGE_KEY,
-			JSON.stringify({ a: { username: 'u', password: 'p' }, b: { username: 'u', password: 'p' } })
+			JSON.stringify({
+				a: { username: 'u', password: 'p', url: 'https://a.example.org' },
+				b: { username: 'u', password: 'p', url: 'https://b.example.org' }
+			})
 		);
 		const { session } = await load();
 
@@ -186,7 +223,7 @@ describe('admin-session remembered sign-ins', () => {
 		expect(session.hasAdminSession('a')).toBe(false);
 
 		await session.restoreRememberedSessions(() => A_URL);
-		expect(session.credentialsOf('a')).toEqual({ username: 'alice', password: 'pw' });
+		expect(session.credentialsOf(node('a'))).toEqual({ username: 'alice', password: 'pw' });
 	});
 
 	it('saves nothing without remember', async () => {
@@ -285,7 +322,7 @@ describe('admin-session remembered sign-ins', () => {
 
 		await session.restoreRememberedSessions(() => 'https://A.example.org/');
 
-		expect(session.credentialsOf('a')).toEqual({ username: 'alice', password: 'pw' });
+		expect(session.credentialsOf(node('a'))).toEqual({ username: 'alice', password: 'pw' });
 	});
 
 	it('keeps a sign-in made during the restore', async () => {
@@ -295,7 +332,7 @@ describe('admin-session remembered sign-ins', () => {
 		await session.signIn(node('a'), 'bob', 'pw2');
 		await restore;
 
-		expect(session.credentialsOf('a')?.username).toBe('bob');
+		expect(session.credentialsOf(node('a'))?.username).toBe('bob');
 	});
 
 	it('keeps a sign-out made during the restore', async () => {
@@ -337,6 +374,29 @@ describe('admin-session remembered sign-ins', () => {
 
 		expect(session.hasAdminSession('a')).toBe(true);
 		const vault = await import('../admin-vault');
+		expect(await vault.loadRemembered()).toEqual([]);
+	});
+
+	it('forgets all after a pending vault save', async () => {
+		const { session, sdk } = await load();
+		vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
+		const vault = await import('../admin-vault');
+		const realSave = vault.saveRemembered;
+		let release = () => {};
+		const gate = new Promise<void>((resolve) => (release = resolve));
+		const save = vi.spyOn(vault, 'saveRemembered').mockImplementation(async (entry) => {
+			await gate;
+			await realSave(entry);
+		});
+
+		const signingIn = session.signIn(node('a'), 'alice', 'pw', true);
+		await vi.waitFor(() => expect(save).toHaveBeenCalled());
+		const forgetting = session.forgetAllAdminSignIns();
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		release();
+
+		await expect(signingIn).resolves.toBe(true);
+		await expect(forgetting).resolves.toBeUndefined();
 		expect(await vault.loadRemembered()).toEqual([]);
 	});
 

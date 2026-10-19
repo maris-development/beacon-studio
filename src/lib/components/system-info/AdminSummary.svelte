@@ -5,17 +5,16 @@
 	import HardDriveIcon from '@lucide/svelte/icons/hard-drive';
 	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
 	import LockIcon from '@lucide/svelte/icons/lock';
-	import type { DatasetStorage } from '@maris-development/beacon-client';
+	import {
+		ApiError,
+		type BeaconClient,
+		type DatasetStorage
+	} from '@maris-development/beacon-client';
 	import type { BeaconNode } from '@/beacon-api/types';
 	import AdminBadge from '@/components/AdminBadge.svelte';
 	import Button from '@/components/buttons/Button.svelte';
 	import Meter from '@/components/system-info/Meter.svelte';
-	import {
-		askSignIn,
-		credentialsOf,
-		makeAdminClient,
-		signedInNodeIds
-	} from '@/services/admin-session';
+	import { askSignIn, signedInNodeIds, withAdminSession } from '@/services/admin-session';
 	import { settings } from '@/stores/settings';
 	import { formatSize } from '@/data-browser/datasets';
 	import { PERCENT_FORMAT } from '@/system-info/host';
@@ -33,36 +32,54 @@
 	let enabled = $derived($settings.adminFeatures);
 	let active = $derived(enabled && $signedInNodeIds.has(nodeId));
 
+	// A 401 goes on to `withAdminSession`, which signs out. Another error gives a dash.
+	async function orNull<T>(promise: Promise<T>): Promise<T | null> {
+		try {
+			return await promise;
+		} catch (error) {
+			if (error instanceof ApiError && error.status === 401) throw error;
+			return null;
+		}
+	}
+
+	async function lengthOf(promise: Promise<unknown[]>): Promise<number | null> {
+		const list = await orNull(promise);
+		if (list === null) return null;
+		return list.length;
+	}
+
+	async function load(client: BeaconClient) {
+		const admin = client.admin;
+		const [store, crawlers, users, roles] = await Promise.all([
+			orNull(admin.datasetStorage()),
+			lengthOf(admin.listCrawlers<unknown[]>()),
+			lengthOf(admin.listAuthUsers()),
+			lengthOf(admin.listAuthRoles())
+		]);
+		return { store, counts: { crawlers, users, roles } };
+	}
+
 	// A health check gives a new node object, so the effect tracks only the id, the URL and the session.
 	$effect(() => {
 		storage = null;
 		counts = null;
 		if (!active || !nodeUrl) return;
 
-		const credentials = credentialsOf(nodeId);
-		if (!credentials) return;
-
 		let current = true;
-		const admin = makeAdminClient(
-			untrack(() => node),
-			credentials
-		).admin;
-		const length = (promise: Promise<unknown[]>) =>
-			promise.then(
-				(list) => list.length,
-				() => null
-			);
 
-		Promise.all([
-			admin.datasetStorage().catch(() => null),
-			length(admin.listCrawlers<unknown[]>()),
-			length(admin.listAuthUsers()),
-			length(admin.listAuthRoles())
-		]).then(([store, crawlers, users, roles]) => {
-			if (!current) return;
-			storage = store;
-			counts = { crawlers, users, roles };
-		});
+		withAdminSession(
+			untrack(() => node),
+			load
+		).then(
+			(result) => {
+				if (!current || result === null) return;
+				storage = result.store;
+				counts = result.counts;
+			},
+			() => {
+				// The values stay dashes.
+			}
+		);
 
 		return () => (current = false);
 	});

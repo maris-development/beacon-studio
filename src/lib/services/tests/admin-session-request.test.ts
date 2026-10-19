@@ -14,6 +14,11 @@ function node(id: string): BeaconNode {
 	};
 }
 
+// The same node after another tab changed its URL.
+function moved(id: string): BeaconNode {
+	return { ...node(id), url: 'https://other.example.org' };
+}
+
 type Session = typeof import('../admin-session');
 type Sdk = typeof import('@maris-development/beacon-client');
 
@@ -186,6 +191,31 @@ describe('withAdmin', () => {
 		}
 	});
 
+	it('asks again when the node moved to another URL', async () => {
+		const session = await load();
+		await session.signIn(node('a'), 'old', 'old');
+		const fn = vi.fn().mockResolvedValue('done');
+
+		const result = session.withAdmin(moved('a'), fn);
+		await vi.waitFor(() => expect(get(session.signInRequest)).not.toBeNull());
+
+		expect(fn).not.toHaveBeenCalled();
+		expect(session.hasAdminSession('a')).toBe(false);
+		session.answerSignIn(false);
+		await expect(result).resolves.toBeNull();
+	});
+
+	it('gives no client for a node that moved to another URL', async () => {
+		const session = await load();
+		await session.signIn(node('a'), 'alice', 'pw');
+
+		const client = session.requireAdminClient(moved('a'));
+		await vi.waitFor(() => expect(get(session.signInRequest)).not.toBeNull());
+		session.answerSignIn(false);
+
+		await expect(client).resolves.toBeNull();
+	});
+
 	it('cancels the open request when another node asks', async () => {
 		const session = await load();
 
@@ -220,6 +250,17 @@ describe('withAdminSession', () => {
 
 		await expect(session.withAdminSession(node('a'), fn)).resolves.toBeNull();
 		expect(fn).not.toHaveBeenCalled();
+		expect(get(session.signInRequest)).toBeNull();
+	});
+
+	it('signs out a session for another URL and does not run fn', async () => {
+		const session = await load();
+		await session.signIn(node('a'), 'alice', 'pw');
+		const fn = vi.fn().mockResolvedValue('done');
+
+		await expect(session.withAdminSession(moved('a'), fn)).resolves.toBeNull();
+		expect(fn).not.toHaveBeenCalled();
+		expect(session.hasAdminSession('a')).toBe(false);
 		expect(get(session.signInRequest)).toBeNull();
 	});
 

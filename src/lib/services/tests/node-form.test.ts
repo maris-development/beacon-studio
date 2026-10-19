@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const values = { name: 'ERA5', url: 'https://beacon-era5.example.org', description: '', token: '' };
 
@@ -17,6 +17,11 @@ function unauthorized(sdk: typeof import('@maris-development/beacon-client')) {
 }
 
 describe('node-form', () => {
+	// One cold import here keeps the per-test imports fast.
+	beforeAll(async () => {
+		await load();
+	}, 30000);
+
 	beforeEach(() => {
 		localStorage.clear();
 		sessionStorage.clear();
@@ -86,7 +91,7 @@ describe('node-form', () => {
 		);
 
 		expect(result?.node.url).toBe('https://other.example.org');
-		expect(session.credentialsOf(added.id)).toEqual({ username: 'admin', password: 'new' });
+		expect(session.credentialsOf(result!.node)).toEqual({ username: 'admin', password: 'new' });
 	});
 
 	it('passes remember to signIn', async () => {

@@ -127,7 +127,7 @@
 		try {
 			// The credentials are read inside, so a retry after a new sign-in uses the new ones.
 			const report = await withAdmin(current, () => {
-				const credentials = credentialsOf(current.id);
+				const credentials = credentialsOf(current);
 				if (!credentials) throw new Error(translate('dataBrowser.crawlers.noSession'));
 				return runCrawlerReport(normalizeUrl(current.url), credentials, crawler.name);
 			});

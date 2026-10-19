@@ -1020,7 +1020,6 @@
 			"help": "Use BEACON_ADMIN_USERNAME and BEACON_ADMIN_PASSWORD of the node. {app} keeps the credentials for this browser tab only.",
 			"remember": "Remember on this device",
 			"helpRemember": "Use BEACON_ADMIN_USERNAME and BEACON_ADMIN_PASSWORD of the node. Without \"Remember\", {app} keeps the credentials for this browser tab only.",
-			"rememberUnavailable": "Not available here. {app} needs a secure connection (https:// or localhost) and browser storage (IndexedDB).",
 			"rememberNote": "{app} encrypts the saved password. A script that runs in {app} can still read it. Use this only on a device that you trust.",
 			"rememberFailed": "{app} could not save the sign-in on this device. It lasts until you close this tab.",
 			"username": "Username",

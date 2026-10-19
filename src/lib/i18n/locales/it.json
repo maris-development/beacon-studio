@@ -1020,7 +1020,6 @@
 			"help": "Usa BEACON_ADMIN_USERNAME e BEACON_ADMIN_PASSWORD del nodo. {app} conserva le credenziali solo per questa scheda del browser.",
 			"remember": "Ricorda su questo dispositivo",
 			"helpRemember": "Usa BEACON_ADMIN_USERNAME e BEACON_ADMIN_PASSWORD del nodo. Senza \"Ricorda\", {app} conserva le credenziali solo per questa scheda del browser.",
-			"rememberUnavailable": "Non disponibile qui. {app} richiede una connessione sicura (https:// o localhost) e lo spazio di archiviazione del browser (IndexedDB).",
 			"rememberNote": "{app} cifra la password salvata. Uno script eseguito in {app} può comunque leggerla. Usa questa opzione solo su un dispositivo di cui ti fidi.",
 			"rememberFailed": "{app} non ha potuto salvare questo accesso sul dispositivo. Dura fino alla chiusura di questa scheda.",
 			"username": "Nome utente",

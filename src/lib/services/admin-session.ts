@@ -23,7 +23,10 @@ import {
 
 export type AdminCredentials = { username: string; password: string };
 
-type Sessions = Record<string, AdminCredentials>;
+/** A tab session. `url` is the normalized URL of the node at the sign-in. */
+type StoredSession = AdminCredentials & { url: string };
+
+type Sessions = Record<string, StoredSession>;
 
 const STORAGE_KEY = 'beacon-studio.admin-sessions';
 
@@ -35,13 +38,31 @@ export class AdminAuthError extends Error {
 	}
 }
 
+function isStoredSession(value: unknown): value is StoredSession {
+	if (!value || typeof value !== 'object') return false;
+
+	const session = value as Record<string, unknown>;
+	return (
+		typeof session.username === 'string' &&
+		typeof session.password === 'string' &&
+		typeof session.url === 'string'
+	);
+}
+
 function readStorage(): Sessions {
 	try {
 		const raw = globalThis.sessionStorage?.getItem(STORAGE_KEY);
 		if (!raw) return {};
 
 		const parsed = JSON.parse(raw);
-		if (parsed && typeof parsed === 'object') return parsed as Sessions;
+		if (!parsed || typeof parsed !== 'object') return {};
+
+		// An entry without a URL is an old shape. It is a cache, so it drops.
+		const result: Sessions = {};
+		for (const [nodeId, value] of Object.entries(parsed)) {
+			if (isStoredSession(value)) result[nodeId] = value;
+		}
+		return result;
 	} catch {
 		// Blocked storage or bad JSON: start with no sessions.
 	}
@@ -70,9 +91,27 @@ export function hasAdminSession(nodeId: string): boolean {
 	return nodeId in get(sessions);
 }
 
-/** Read by `requireAdminClient` only. */
-export function credentialsOf(nodeId: string): AdminCredentials | null {
-	return get(sessions)[nodeId] ?? null;
+type SessionNode = { id: string; url: string };
+
+// Another tab can change the URL of a node, so a session for another URL signs out.
+function sessionFor(node: SessionNode): StoredSession | null {
+	const session = get(sessions)[node.id];
+	if (!session) return null;
+
+	if (session.url !== normalizeUrl(node.url)) {
+		signOut(node.id);
+		return null;
+	}
+
+	return session;
+}
+
+/** The credentials of this node at its current URL, or null. */
+export function credentialsOf(node: SessionNode): AdminCredentials | null {
+	const session = sessionFor(node);
+	if (!session) return null;
+
+	return { username: session.username, password: session.password };
 }
 
 /** An SDK client with Basic auth. The bearer token of the node shares the header, so it stays out. */
@@ -156,8 +195,10 @@ export async function signIn(
 ): Promise<boolean> {
 	await checkAdminCredentials(node.url, { username, password });
 
+	const url = normalizeUrl(node.url);
+
 	touch(node.id);
-	sessions.update((value) => ({ ...value, [node.id]: { username, password } }));
+	sessions.update((value) => ({ ...value, [node.id]: { username, password, url } }));
 
 	if (!remember) {
 		void forgetQuietly(node.id);
@@ -167,7 +208,7 @@ export async function signIn(
 	try {
 		const entry: RememberedSecret = {
 			nodeId: node.id,
-			nodeUrl: normalizeUrl(node.url),
+			nodeUrl: url,
 			username,
 			kind: 'password',
 			secret: password
@@ -194,8 +235,10 @@ export function signOut(nodeId: string): void {
 }
 
 /** Forgets every remembered sign-in. The open tab sessions stay. */
-export function forgetAllAdminSignIns(): Promise<void> {
-	return forgetAllRemembered();
+export async function forgetAllAdminSignIns(): Promise<void> {
+	// A pending save then cannot write its entry after the delete.
+	await Promise.all(vaultQueue.values());
+	await forgetAllRemembered();
 }
 
 // The one place that maps a vault secret to credentials.
@@ -225,7 +268,7 @@ async function restore(nodeUrlOf: (nodeId: string) => string | null): Promise<vo
 			const credentials = credentialsFromSecret(entry);
 
 			if (credentials && urlMatches(entry, nodeUrlOf(entry.nodeId))) {
-				restored[entry.nodeId] = credentials;
+				restored[entry.nodeId] = { ...credentials, url: entry.nodeUrl };
 			} else if (!touchedDuringRestore.has(entry.nodeId)) {
 				await forgetQuietly(entry.nodeId);
 			}
@@ -233,8 +276,8 @@ async function restore(nodeUrlOf: (nodeId: string) => string | null): Promise<vo
 
 		sessions.update((value) => {
 			const next = { ...value };
-			for (const [nodeId, credentials] of Object.entries(restored)) {
-				if (!(nodeId in next) && !touchedDuringRestore.has(nodeId)) next[nodeId] = credentials;
+			for (const [nodeId, session] of Object.entries(restored)) {
+				if (!(nodeId in next) && !touchedDuringRestore.has(nodeId)) next[nodeId] = session;
 			}
 			return next;
 		});
@@ -317,16 +360,16 @@ export function answerSignIn(signedIn: boolean, only?: SignInRequest): void {
 export async function requireAdminClient(node: BeaconNode): Promise<BeaconClient | null> {
 	await adminSessionsReady;
 
-	let credentials = credentialsOf(node.id);
+	let session = sessionFor(node);
 
-	if (!credentials) {
+	if (!session) {
 		if (!(await askSignIn(node))) return null;
-		credentials = credentialsOf(node.id);
+		session = sessionFor(node);
 	}
 
-	if (!credentials) return null;
+	if (!session) return null;
 
-	return makeAdminClient(node, credentials);
+	return makeAdminClient(node, session);
 }
 
 /**
@@ -340,7 +383,7 @@ export async function withAdmin<T>(
 	const client = await requireAdminClient(node);
 	if (!client) return null;
 
-	const used = credentialsOf(node.id);
+	const used = get(sessions)[node.id];
 
 	try {
 		return await fn(client);
@@ -349,7 +392,7 @@ export async function withAdmin<T>(
 	}
 
 	// Another action can have signed in again while this one ran.
-	if (credentialsOf(node.id) === used) signOut(node.id);
+	if (get(sessions)[node.id] === used) signOut(node.id);
 
 	const retry = await requireAdminClient(node);
 	if (!retry) return null;
@@ -367,7 +410,7 @@ export async function withAdminSession<T>(
 ): Promise<T | null> {
 	await adminSessionsReady;
 
-	const used = credentialsOf(node.id);
+	const used = sessionFor(node);
 	if (!used) return null;
 
 	try {
@@ -377,7 +420,7 @@ export async function withAdminSession<T>(
 	}
 
 	// Another action can have signed in again while this one ran.
-	if (credentialsOf(node.id) === used) signOut(node.id);
+	if (get(sessions)[node.id] === used) signOut(node.id);
 
 	return null;
 }

@@ -143,6 +143,21 @@ describe('admin-vault', () => {
 		expect(await vault.loadRemembered()).toEqual([entry('c')]);
 	});
 
+	it('forgets all after an open connection closes', async () => {
+		const vault = await load();
+		await vault.saveRemembered(entry('a'));
+		const open = await openRaw();
+		let settled = false;
+
+		const forgetting = vault.forgetAllRemembered().finally(() => (settled = true));
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		expect(settled).toBe(false);
+		open.close();
+
+		await expect(forgetting).resolves.toBeUndefined();
+		expect(await vault.loadRemembered()).toEqual([]);
+	});
+
 	it('reports no vault without IndexedDB', async () => {
 		vi.stubGlobal('indexedDB', undefined);
 		const vault = await load();

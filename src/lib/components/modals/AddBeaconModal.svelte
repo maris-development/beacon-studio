@@ -11,7 +11,8 @@
 		hasCompleteAdminInput,
 		saveNodeForm,
 		sessionSurvives,
-		testAdminInput
+		testAdminInput,
+		type AdminInput
 	} from '@/services/node-form';
 	import { settings } from '@/stores/settings';
 	import Button from '$lib/components/buttons/Button.svelte';
@@ -61,9 +62,12 @@
 	// A new URL ends the session on save, so the form then asks for credentials again.
 	$: signedIn = node !== null && $signedInNodeIds.has(node.id) && sessionSurvives(node, url);
 	$: showAdminFields = $settings.adminFeatures && !signedIn;
-	$: adminInput = showAdminFields
-		? { username: adminUsername, password: adminPassword, remember: adminRemember }
-		: null;
+	let adminInput: AdminInput | null = null;
+	$: if (showAdminFields) {
+		adminInput = { username: adminUsername, password: adminPassword, remember: adminRemember };
+	} else {
+		adminInput = null;
+	}
 	$: adminRequired = hasAdminInput(adminInput);
 
 	onMount(() => {
@@ -278,9 +282,9 @@
 				{:else}
 					<div class="admin-fields">
 						<div class="form-row">
-							<Label for="admin-username">{$t('node.form.adminUsername')}</Label>
+							<Label for="node-admin-username">{$t('node.form.adminUsername')}</Label>
 							<Input
-								id="admin-username"
+								id="node-admin-username"
 								autocomplete="username"
 								placeholder={$t('admin.signIn.usernamePlaceholder')}
 								bind:ref={adminUsernameRef}
@@ -290,9 +294,9 @@
 							/>
 						</div>
 						<div class="form-row">
-							<Label for="admin-password">{$t('node.form.adminPassword')}</Label>
+							<Label for="node-admin-password">{$t('node.form.adminPassword')}</Label>
 							<Input
-								id="admin-password"
+								id="node-admin-password"
 								type="password"
 								autocomplete="current-password"
 								bind:ref={adminPasswordRef}
@@ -303,20 +307,15 @@
 						</div>
 					</div>
 
-					<div
-						class="remember"
-						class:unavailable={!rememberAvailable}
-						title={rememberAvailable ? undefined : $t('admin.signIn.rememberUnavailable')}
-					>
-						<Checkbox
-							id="admin-remember"
-							checked={rememberAvailable && adminRemember}
-							disabled={!rememberAvailable}
-							onCheckedChange={(value) => (adminRemember = value === true)}
-						/>
-						<Label for="admin-remember">{$t('admin.signIn.remember')}</Label>
-					</div>
 					{#if rememberAvailable}
+						<div class="remember">
+							<Checkbox
+								id="node-admin-remember"
+								checked={adminRemember}
+								onCheckedChange={(value) => (adminRemember = value === true)}
+							/>
+							<Label for="node-admin-remember">{$t('admin.signIn.remember')}</Label>
+						</div>
 						<p class="hint">{$t('admin.signIn.rememberNote')}</p>
 					{/if}
 
@@ -442,16 +441,6 @@
 			display: flex;
 			align-items: center;
 			gap: 0.5rem;
-
-			&.unavailable {
-				color: var(--muted-foreground);
-				cursor: not-allowed;
-
-				:global(label) {
-					color: var(--muted-foreground);
-					cursor: not-allowed;
-				}
-			}
 		}
 
 		.admin-session {

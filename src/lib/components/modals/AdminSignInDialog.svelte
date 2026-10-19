@@ -38,6 +38,13 @@
 		busy = false;
 	});
 
+	// A running sign-in cannot stop, so a cancel then would still sign in.
+	function cancel() {
+		if (busy) return;
+
+		answerSignIn(false);
+	}
+
 	// Escape closes this dialog only, not the modal that started the action.
 	$effect(() => {
 		if (!$signInRequest) return;
@@ -47,7 +54,7 @@
 
 			event.preventDefault();
 			event.stopImmediatePropagation();
-			answerSignIn(false);
+			cancel();
 		};
 
 		document.addEventListener('keydown', onKeydown, true);
@@ -92,7 +99,7 @@
 				name: $signInRequest.node.name,
 				url: $signInRequest.node.url
 			})}
-			onClose={() => answerSignIn(false)}
+			onClose={cancel}
 			width="440px"
 		>
 			<form id="admin-sign-in" onsubmit={submit}>
@@ -118,23 +125,21 @@
 					/>
 				</div>
 
-				<p class="help">{$t('admin.signIn.helpRemember')}</p>
-
-				<div
-					class="remember"
-					class:unavailable={!rememberAvailable}
-					title={rememberAvailable ? undefined : $t('admin.signIn.rememberUnavailable')}
-				>
-					<Checkbox
-						id="admin-remember"
-						checked={rememberAvailable && remember}
-						disabled={!rememberAvailable}
-						onCheckedChange={(value) => (remember = value === true)}
-					/>
-					<Label for="admin-remember">{$t('admin.signIn.remember')}</Label>
-				</div>
+				{#if rememberAvailable}
+					<p class="help">{$t('admin.signIn.helpRemember')}</p>
+				{:else}
+					<p class="help">{$t('admin.signIn.help')}</p>
+				{/if}
 
 				{#if rememberAvailable}
+					<div class="remember">
+						<Checkbox
+							id="admin-remember"
+							checked={remember}
+							onCheckedChange={(value) => (remember = value === true)}
+						/>
+						<Label for="admin-remember">{$t('admin.signIn.remember')}</Label>
+					</div>
 					<p class="help">{$t('admin.signIn.rememberNote')}</p>
 				{/if}
 
@@ -144,7 +149,7 @@
 			</form>
 
 			<div slot="footer" class="actions">
-				<Button variant="outline" onclick={() => answerSignIn(false)}>{$t('common.cancel')}</Button>
+				<Button variant="outline" onclick={cancel} disabled={busy}>{$t('common.cancel')}</Button>
 				<Button type="submit" form="admin-sign-in" disabled={busy}>
 					<LogInIcon />
 					{#if busy}
@@ -180,16 +185,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-
-		&.unavailable {
-			color: var(--muted-foreground);
-			cursor: not-allowed;
-
-			:global(label) {
-				color: var(--muted-foreground);
-				cursor: not-allowed;
-			}
-		}
 	}
 
 	.help {

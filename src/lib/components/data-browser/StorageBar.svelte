@@ -3,7 +3,7 @@
 	import { untrack } from 'svelte';
 	import type { DatasetStorage } from '@maris-development/beacon-client';
 	import type { BeaconNode } from '@/beacon-api/types';
-	import { credentialsOf, makeAdminClient, signedInNodeIds } from '@/services/admin-session';
+	import { signedInNodeIds, withAdminSession } from '@/services/admin-session';
 	import { settings } from '@/stores/settings';
 	import { formatSize } from '@/data-browser/datasets';
 	import { formatNumber, t } from '@/i18n';
@@ -21,23 +21,19 @@
 		storage = null;
 		if (!active || !nodeUrl) return;
 
-		const credentials = credentialsOf(nodeId);
-		if (!credentials) return;
-
 		let current = true;
-		makeAdminClient(
+		// `withAdminSession` signs out on a 401 and never asks for a sign-in.
+		withAdminSession(
 			untrack(() => node),
-			credentials
-		)
-			.admin.datasetStorage()
-			.then(
-				(value) => {
-					if (current) storage = value;
-				},
-				() => {
-					if (current) storage = null;
-				}
-			);
+			(client) => client.admin.datasetStorage()
+		).then(
+			(value) => {
+				if (current) storage = value;
+			},
+			() => {
+				if (current) storage = null;
+			}
+		);
 
 		return () => (current = false);
 	});

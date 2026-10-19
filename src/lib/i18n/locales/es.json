@@ -1020,7 +1020,6 @@
 			"help": "Usa BEACON_ADMIN_USERNAME y BEACON_ADMIN_PASSWORD del nodo. {app} guarda las credenciales solo para esta pestaña del navegador.",
 			"remember": "Recordar en este dispositivo",
 			"helpRemember": "Usa BEACON_ADMIN_USERNAME y BEACON_ADMIN_PASSWORD del nodo. Sin \"Recordar\", {app} guarda las credenciales solo para esta pestaña del navegador.",
-			"rememberUnavailable": "No disponible aquí. {app} necesita una conexión segura (https:// o localhost) y almacenamiento del navegador (IndexedDB).",
 			"rememberNote": "{app} cifra la contraseña guardada. Un script que se ejecuta en {app} aún puede leerla. Usa esto solo en un dispositivo de confianza.",
 			"rememberFailed": "{app} no pudo guardar el inicio de sesión en este dispositivo. Dura hasta que cierres esta pestaña.",
 			"username": "Usuario",

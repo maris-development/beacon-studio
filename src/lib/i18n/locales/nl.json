@@ -1020,7 +1020,6 @@
 			"help": "Gebruik BEACON_ADMIN_USERNAME en BEACON_ADMIN_PASSWORD van de node. {app} bewaart de gegevens alleen voor dit browsertabblad.",
 			"remember": "Onthouden op dit apparaat",
 			"helpRemember": "Gebruik BEACON_ADMIN_USERNAME en BEACON_ADMIN_PASSWORD van de node. Zonder \"Onthouden\" bewaart {app} de gegevens alleen voor dit browsertabblad.",
-			"rememberUnavailable": "Hier niet beschikbaar. {app} heeft een beveiligde verbinding (https:// of localhost) en browseropslag (IndexedDB) nodig.",
 			"rememberNote": "{app} versleutelt het opgeslagen wachtwoord. Een script dat in {app} draait, kan het nog steeds lezen. Gebruik dit alleen op een apparaat dat u vertrouwt.",
 			"rememberFailed": "{app} kon de login niet op dit apparaat opslaan. Hij blijft actief tot u dit tabblad sluit.",
 			"username": "Gebruikersnaam",

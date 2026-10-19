@@ -208,6 +208,6 @@ export async function forgetAllRemembered(): Promise<void> {
 		const req = indexedDB.deleteDatabase(DB_NAME);
 		req.onsuccess = () => resolve();
 		req.onerror = () => reject(req.error);
-		req.onblocked = () => reject(new Error('Vault database is blocked'));
+		// A blocked delete still completes when the open connections close.
 	});
 }
