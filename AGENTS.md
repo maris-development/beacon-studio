@@ -1,11 +1,5 @@
 # AGENTS.md
 
-## ASD-STE100 Style Rule
-Write strictly using **ASD-STE100 (Simplified Technical English)** constraints:
-* **Limits:** Max 20 words per instruction, 25 per description. One thought per sentence.
-* **Grammar:** Active voice, simple present tense, imperative for steps (e.g., "Push button"). Avoid `-ing` verbs and em-dashes.
-* **Vocabulary:** Strict consistency (one word = one meaning; no synonyms). No filler ("Furthermore", "In conclusion") or jargon. Max 3 nouns in a row.
-
 ## Purpose
 This file is a quick operational guide for coding agents working in this repository.
 
@@ -28,15 +22,15 @@ This file is a quick operational guide for coding agents working in this reposit
   or graceful fallback.
 
 ## API Client Strategy (Important)
-- **Migrate to `@maris-development/beacon-client`** (the npm package, source in the
-  `beacon` repo under `beacon-clients/beacon-ts`). It is the isomorphic
-  TypeScript SDK for querying Beacon (browser + Node), with a fluent query builder,
-  Arrow/CSV result decoding, and admin endpoints. See its README for the full API.
-- The local `src/lib/beacon-api/client.ts` is legacy. Prefer `@maris-development/beacon-client` for
-  new code, and migrate existing usage toward it instead of extending the local
-  client. Reuse the SDK's query builder and result handling rather than
-  reimplementing them locally.
-- One temporary exception: `src/lib/beacon-api/crawler-run.ts` calls `POST /api/admin/crawlers/{name}/run` itself, because the SDK `admin.runCrawler()` returns `void` and drops the crawl report. Delete the file when an SDK release returns the report. Add no other direct calls.
+- Studio uses `@maris-development/beacon-client` (source in the `beacon` repo, `beacon-clients/beacon-ts`). Build a client with `makeBeaconClient` (`src/lib/beacon-api/client.ts`). Use the SDK query builder and result decoding. Do not write local copies.
+- The legacy `BeaconClient` class in `src/lib/beacon-api/client.ts` remains for these uses only:
+  - query download (`queryToDownload`) and the output formats (`output_formats`, `outputFormatToExtension`);
+  - the cached table lists of the query builder (`getCachedTables`, `getCachedDefaultTable`);
+  - `ChooseBeaconModal.svelte`;
+  - the static cache facade (`ensureQuery`, `peekQuery*`, cache stats). It only calls `queryStore`.
+  Add no new use. Move a remaining use to the SDK when you touch it.
+- The SDK class is also called `BeaconClient`. Check the import source of `BeaconClient` in every file.
+- One temporary exception: `src/lib/beacon-api/crawler-run.ts` calls `POST /api/admin/crawlers/{name}/run` itself, because the SDK `admin.runCrawler()` returns `void` and drops the crawl report. Delete the file and `beacon-api/tests/crawler-run.test.ts` when an SDK release returns the report. Add no other direct calls.
 - SDK 2.0.0 drops a stop after the response headers and never cancels the body. `runPreview` (`src/lib/sql/run.ts`) races each batch read against the signal as a workaround. Remove the race when an SDK release holds beacon PR #591.
 
 ## Core Commands
@@ -49,7 +43,7 @@ This file is a quick operational guide for coding agents working in this reposit
 
 ## Deployment/Base Path
 - `svelte.config.js` sets `kit.paths.base` from `BASE_PATH` env var.
-- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`.
+- For subdirectory deploys, build with e.g. `BASE_PATH=//studio npm run build`. The `//` stops Git Bash path conversion; PowerShell takes `/studio` (README).
 - Keep path handling consistent by using SvelteKit helpers (`resolve`, `asset`) already used in the codebase.
 
 ## Brands (Important)
@@ -66,7 +60,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - `--map-draw` must stay a hex color. Terra Draw takes only hex.
 - `--ring` and `--deny` have no definition. Several components read them, some with a fallback. A definition changes their look, so define them in a separate change.
 - A brand can get a feature, for example a table catalog on the home page. Put the feature in shared code behind a `BrandConfig` field. ESLint limits a brand folder to config, so a feature never goes there or on a brand branch.
-- A brand turns on a feature through `features` in `brand.ts`. Add the feature id to `BrandFeature` (`brand/define.ts`), and test `BRAND.features.includes(id)`.
+- A brand turns on a feature through `features` in `brand.ts`. Add the feature id to `BrandFeature` (`brand/define.ts`), and test `BRAND.features.includes(id)`. No feature exists yet: the first one changes `BrandFeature` from `never` to a union of ids.
 - Never test the brand name in code. Test the feature id, so another brand can turn on the feature.
 - The brand merge replaces an array whole. Only a plain object merges key by key.
 - Planned home page pattern, not built yet: `home.sections` in `BrandConfig`, a list of section ids. `HomeSection` maps each id to a lazy component through `Record<HomeSectionId, …>`. Use it when one `{#if}` per section no longer fits. A brand then sets which sections show and their order.
@@ -82,7 +76,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/routes/data-browser/*`
 - API client and query model:
   - `@maris-development/beacon-client` — preferred SDK; built via `makeBeaconClient` in `src/lib/beacon-api/client.ts`
-  - `src/lib/beacon-api/client.ts` — legacy client, now metadata/download only
+  - `src/lib/beacon-api/client.ts` — also the legacy client; see "API Client Strategy" for its remaining uses
   - `src/lib/beacon-api/query.ts`
   - `src/lib/beacon-api/types.ts`
 - Domain modules (no Svelte, no DOM — plain TypeScript, safe to unit test):
@@ -101,7 +95,13 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
   - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/history`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
-  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)`. It asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. A remembered sign-in is also saved in `services/admin-vault.ts` (IndexedDB, encrypted). `restoreRememberedSessions` runs at the top of the `+layout.svelte` script. `requireAdminClient` awaits it. The layout renders the page only after the restore, or after 1 second, so a page never sees a remembered session arrive late. The sidebar and the header render at once. The vault stores a secret with a `kind`: the password now, the session token of beacon PR #590 later.)
+    - Admin and data-browser pages use `$currentNode` through the shared `NodePicker`. Add no second node store.
+    - A query block keeps its own node. The node picker does not change the node of a block.
+  - `src/lib/services/admin-session.ts` (admin sign-in for each node: Basic auth in `sessionStorage`. Run every admin call through `withAdmin(node, fn)` or `withAdminSession(node, fn)`. `withAdmin` asks the one `AdminSignInDialog` for a sign-in, and retries one time after a 401. `withAdminSession` never asks, and a 401 there signs out. A remembered sign-in is also saved in `services/admin-vault.ts` (IndexedDB, encrypted). `restoreRememberedSessions` runs at the top of the `+layout.svelte` script. `requireAdminClient` awaits it. The layout renders the page only after the restore, or after 1 second, so a page never sees a remembered session arrive late. The sidebar and the header render at once. The vault stores a secret with a `kind`: the password now, the session token of beacon PR #590 later.)
+    - A tab session holds the node id and the normalized node URL. A URL mismatch signs out. A session on node A gives no rights on node B.
+    - Every sign-out also deletes the remembered secret: "Close admin session", a 401, a removed node, a URL change. A second open tab keeps its own tab session until the tab closes.
+    - A 401 signs out, asks again and retries one time. A 403 shows a toast and keeps the session.
+    - A non-extractable AES-GCM key encrypts the remembered secret. A script in the Studio origin can still decrypt it, and a full copy of the browser profile holds the key.
   - The layout `onMount` runs before the page mounts, because the layout holds the page back
     for the session restore. The `AppSidebar` `onMount` still runs before the layout `onMount`.
     The public node list is fetched in the layout `onMount`, but the fetch is async, so a
@@ -111,6 +111,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
     blocks a route that needs a node, and waits for the same flag, so a first visit is not
     sent home before the public nodes land.
   - `src/lib/stores/settings.ts` (persisted user settings; the `/settings` page builds its form from `SETTING_DEFINITIONS`. Read a value with `getSettings()` at the point of use, or `$settings` in a component. Never read it at module load.)
+    - `setSetting` stores the whole settings object, defaults included. A new default therefore reaches only users with no stored settings. Example: `adminFeatures` is `true` since #161, but a user who changed any setting before #161 keeps `false`.
   - `src/lib/stores/toasts.ts` (global toasts)
 - Heavy data operations (off-main-thread, one shared worker via `getArrowWorker()`):
   - `src/lib/workers/ArrowProcessingWorker.ts`
@@ -131,8 +132,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - `beacon-api/data-type.ts` holds the checks on a schema `DataType` (number, string, Timestamp, Date, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
 - A `Date32` / `Date64` column takes the same ISO filter strings as a Timestamp column (`2020-01-01T00:00:00Z`), so the builder gives both the timestamp filters (`isTemporalDataType`). The server drops the time from the literal (`gt 2020-06-16T12:00:00Z` excludes the whole 16th), so a date column gets a date-only input (`DateTimeInput` `dateOnly`) and stores `YYYY-MM-DD`. Arrow JS returns a date value as epoch milliseconds.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
-- The legacy `BeaconClient` (`beacon-api/client.ts`) is metadata/download only (`queryToDownload`, tables/datasets/schema/system-info), plus the `static` execution and cache-control facade (`ensureQuery`, `peekQuery*`, `invalidateQueryCache`, cache stats/toggle). Its Parquet query path and `parquet-wasm` have been removed.
-- `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
+- The legacy `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
 
 ## Map Viewer and Spatial Filters
 - `MapViewController` imports `maplibre-gl/dist/maplibre-gl.css`. Keep that import. Without it the zoom controls have no styling, the canvas stays in the normal flow and the map grows on every resize, and the draw tools get the wrong pointer coordinates.
@@ -153,6 +153,16 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - `CoordinateColumnsDialog` is the one picker for the pair. The map viewer and `GeospatialFilterModal` both open it. `Modal` boxes are transformed, so render the dialog as a sibling of another modal, never inside it.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
 
+## Admin Server and SQL Console
+- Endpoints: `catalogs`, `table-schema`, `functions`, `list-datasets`, `dataset-schema`, `total-datasets` and `POST /api/query` need no admin. Every `/api/admin/*` endpoint needs the super-user. `GET /api/admin/check` gives 200 or 401. `/admin/api/...` is an alias of `/api/admin/...`.
+- A plain SELECT needs no admin. DDL, DML, REFRESH and ALTER need the super-user. A server with `sql.enable = false` answers 400 "SQL queries are not enabled".
+- Privileged SQL runs as a normal user first. The server refuses with status 400 and the text `requires super-user privileges`, and `withAdminFallback` then runs it again as admin. The server refuses before it runs anything, so a statement never runs twice.
+- The SQL Console stays outside the query store, the blocks and the share links. A handover of SQL results to the viewers is a separate project.
+- The SQL preview stops at 500 rows and ignores `queryCellLimit()`. Download fetches the full result.
+- The route is `/sql-editor`, not under `/queries`. The Queries menu item has `match: '/queries'` and would also show as active.
+- Handoff to the SQL Console: `?sql=` opens a new tab and does not run it. With `?node=`, the page first selects that node, after `whenOpenNodesSettled()`. The page then removes both parameters from the URL.
+- An upload does not start a crawler. A table appears only through a crawler run (Run, or `schedule_secs`) or through "Create external table".
+
 ## Persisted Data and Migrations (Important)
 Sort each persisted value into one class. The class decides whether a change needs a migration.
 
@@ -161,36 +171,42 @@ Sort each persisted value into one class. The class decides whether a change nee
 | Cache | OPFS Arrow cache, `datasetKey`, query history, remembered admin sign-ins (`admin-vault.ts`, bump `VAULT_VERSION`) | Never migrate. Bump a version and discard. |
 | Preference or UI state | settings, selected node, blocks-state, SQL editor tabs (`beacon-studio.sql-tabs`), `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
 | User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
-| External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
+| External format | share links (`SharedQuery`), `?q=` bookmarks, data-browser detail URLs (`?file=…&node=`, `?table_name=…&node=`), data-browser list URLs (`?search=`, `?folder=`; the lists also read the old `?q=`) | Cannot be migrated. Read every old shape. |
 
 - Never break a share link, also before 1.0. Keep each old field in the read, for example `instanceUrl` in `decodeSharedQuery`.
 - The `legacy` prop of `query.open` counts old links. Remove an old field only when that count stays at zero.
 - Before 1.0, a preference and a UI state can break with no migration.
 - A user-data migration stays until 1.0. At 1.0, delete the migrations of before 1.0.
-- From 1.0, keep every user-data migration.
+- From 1.0, keep a user-data migration for 3 minor releases after the release that adds it, and for 6 months at least. Then delete it.
 - A safe read with defaults is not a migration. Keep it.
 - Current user-data migrations: `migrateKey` in `services/beacon-node.ts`, and `migrateRecord` in `stores/query-collection.ts`.
 
 ## Layer Rule (Important)
-Imports point one way only:
+Imports point down this chain. Point a new import down, never up:
 
-`brand` → `i18n` → `beacon-api` → `query` / `geo` / `sql` / `data-browser` / `access` → `stores` → `components` → `routes`
+`brand` → `i18n` → `stores/settings` → `beacon-api` → domain (`query`, `geo`, `sql`, `data-browser`, `access`, `system-info`) → `services` / `telemetry` → other `stores` → `components` → `routes`
 
-- `src/lib/brand/*` is pure config at the bottom. It imports only `$brand` and `$lib/assets`. ESLint enforces this.
-- `src/lib/query/*` and `src/lib/geo/*` must never import from `src/lib/components/*`, and must never
-  import a type out of a `.svelte` file. A type that both a component and the domain need belongs in
+- A domain folder imports only `brand`, `i18n`, `stores/settings`, `beacon-api` and other domain folders. It never imports `services`, another store or `components`.
+- `stores/settings.ts` imports only `build-info` and `i18n`. Keep it there, because the domain reads it.
+- Known upward imports. Do not add more, and remove one when you touch it:
+  - `beacon-api/client.ts` imports `services/beacon-node-url`, `services/open-nodes` and `stores/toasts`.
+  - `stores` and `telemetry` import each other. Only `stores/settings.ts` must stay free of telemetry.
+- ESLint checks only part of this rule:
+  - `query`, `geo`, `access` and `stores` must not import from `components`;
+  - `brand` imports only `$brand` and `$lib/assets`;
+  - `i18n` imports only `brand`.
+  The rest is a convention. Check it by hand.
+- `src/lib/brand/*` is pure config at the bottom.
+- A domain folder must never import a type out of a `.svelte` file. A type that both a component and the domain need belongs in
   the domain layer. `query/filter-types.ts` exists for that reason: `ParameterFilter.svelte` and
   `AddFilterDropdown.svelte` declared those types, and `utils.ts` plus `query/draft.ts` had to reach
   up into a component to get them.
-- `src/lib/sql/*` must never import from `services`, `stores` or `components`. The page passes `withAdmin` into `withAdminFallback`.
-- `src/lib/stores/*` must never import from `src/lib/components/*`. The persisted shape of a query
-  (`QueryDraft`) is domain, not view.
-- `src/lib/telemetry/*` sits beside `stores/` and reads `stores/settings`. Therefore
-  `stores/settings.ts` must never import telemetry. `watchSettings` in `telemetry/index.ts` diffs the
-  store and reports a change from there.
+- `src/lib/sql/*` needs an admin runner, but must not import `services`. The page passes `withAdmin` into `withAdminFallback`.
+- The persisted shape of a query (`QueryDraft`) is domain, not view, so `stores` never needs `components`.
+- `watchSettings` in `telemetry/index.ts` diffs the settings store and reports a change. That keeps telemetry out of `stores/settings.ts`.
 - `src/lib/components/*` holds `.svelte` files, plus the `.svelte.ts` runes classes and the barrel
   `index.ts` files that belong to one component folder. Anything with no Svelte dependency and more
-  than one consumer belongs below, in `query/` or `geo/`.
+  than one consumer belongs below, in a domain folder.
 - New non-component files under `src/lib/query/*` and `src/lib/geo/*` use kebab-case, matching
   `stores/` and `beacon-api/`. Components keep PascalCase.
 
@@ -242,18 +258,18 @@ message the change never reaches production.
 - Prefer existing UI primitives from `src/lib/components/ui/*`.
 - Prefer PascalCase naming for components, types, and other applicable identifiers.
 - Keep route pages orchestration-focused; move reusable logic/components under `src/lib/components/*`.
-- Use SCSS for all styling; do not introduce plain CSS stylesheets or plain CSS blocks.
-- Structure styles with SCSS hierarchy (nested rules) where it improves readability and maintainability.
-- Do not override heading text styles (`h1`-`h6`) defined in `app.scss` (font family, font size, font weight). Only adjust layout/spacing properties (e.g., margins, padding, positioning) in component- or screen-specific styles.
+- Style with SCSS. Do not add plain CSS stylesheets or plain CSS blocks. Use nested rules where they make the styles easier to read.
+- Use Tailwind only for its CSS variables, or for a utility class that does exactly what the SCSS rule would do. Tailwind can be removed later, so add no pattern that only Tailwind can give.
+- A heading (`h1`-`h6`) that works as a heading keeps the font family, size and weight from `app.scss`. Change only its layout and spacing (margin, padding, position).
+- A large text that is not a heading, for example a stat tile value, uses no heading tag. Give it a suitable element and a font-size token.
 - Set `font-size` only with a `--font-size-*` token, and `font-family` only with a `--font-family-*` token. `:root` in `app.scss` holds them. `src/tests/typography.test.ts` fails on a literal value.
   - Body text uses three sizes: `xs`, `sm`, `md`. The larger tokens belong to headings. `--font-size-icon` sizes a close glyph only. A stat tile value (`components/system-info/StatTile.svelte`) uses `--font-size-lg`.
   - Use `--font-family-mono` (or the global `.mono` class) for code-like values only: SQL, column types, storage paths. Show a table, dataset or node name in the base font.
   - Tailwind `text-xs` to `text-2xl` and `font-mono` map to the same tokens in `tailwind.css`. Do not use arbitrary values such as `text-[13px]`.
 - Prefer native CSS custom properties (`--var` syntax) for design tokens and runtime theming.
-- Tailwind is enabled, but SCSS is the default and preferred approach.
 - Use `@/` alias for `src/lib/*` imports where already adopted.
 - Reuse toast patterns for user-facing errors; avoid silent failures.
-- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off. An admin-only page picks its view with `adminPageState`, shows `AdminSessionRequired` without a session, and loads through `withAdminSession`. It never opens the sign-in dialog by itself. The sidebar shows a lock on an admin item while the current node has no session (`isLocked`). The lock is a hint only.
+- Admin features: an admin-only page gets `adminOnly: true` in the sidebar menu (`components/sidebar/menu.ts`). An admin control in a page for everyone goes inside `AdminAction`, which greys it out while "Show admin features" is off. An admin-only page picks its view with `adminPageState`, shows `AdminSessionRequired` without a session, and loads through `withAdminSession`. It never opens the sign-in dialog by itself. An admin-only page ignores "Show admin features": the setting hides the menu item only, and a direct link still opens the page. The sidebar shows a lock on an admin item while the current node has no session (`isLocked`). The lock is a hint only.
 - A sidebar parent with children and no `match` is active only on its own URL and on its children (`isItemActive`). A top-level item below its URL, for example Crawlers at `/data-browser/crawlers`, does not activate the parent.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
@@ -265,7 +281,7 @@ message the change never reaches production.
 - Avoid blocking the main thread with large Arrow transforms.
 - Preserve guards like `isLoading` / `firstLoad` around query execution.
 - A canvas path holds about 150,000 arcs. Above that the browser drops the fill and reports no error, so the plot draws blank. `fillPointChunks` in `plots/uplot-render.ts` flushes the path every 10,000 arcs, and it also draws faster than one large path. Draw every point set through it. A palette bucket needs the same flush: the buckets divide the Z range, not the row count, so one bucket can hold every row.
-- `QueryWorkspace.blocks` gets a new array, with new block objects, on every write to the block collection — including the run result that `queryStore.ensure()` writes and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
+- `QueryWorkspace.blocks` gets a new array, and a new object for each changed block, on every write to the block collection — including the run result that `queryStore.ensure()` writes and any draft update. Do not read `workspace.activeBlock` (or a query object derived from it) directly inside an `$effect`. That makes the effect re-fire after its own write, in a loop that never stops. Track primitive values instead (block id, a stringified compiled query) and read the live block/query with `untrack`. See `src/routes/visualisations/table-explorer/+page.svelte` for the pattern.
 
 ## Editing Guidance for Agents
 - Make minimal, localized changes; avoid broad refactors unless requested.
@@ -276,10 +292,11 @@ message the change never reaches production.
   - visualizers (`visualisations/*`)
   - API client (`@maris-development/beacon-client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
-- Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
+- Build UI from the primitives in `src/lib/components/ui` (bits-ui). Add no new component library.
 
 ## Tests
-- Vitest with jsdom. Run `npm test`.
+- Unit tests: Vitest with jsdom. Run `npm test`.
+- Browser tests: the Playwright MCP against `npm run dev`. See "Validation Checklist Before Finishing".
 - Put a test in a `tests/` folder next to the code it tests: `src/lib/sql/tests/tabs.test.ts` tests `src/lib/sql/tabs.ts`. Import the code with `../`.
 
 ## Validation Checklist Before Finishing
@@ -303,11 +320,6 @@ message the change never reaches production.
 - `build/` holds generated artifacts. Git ignores it. Avoid editing generated files directly unless explicitly asked.
 
 ## Comment Rules
-- Write short comments.
-- Comment complex logic only. Skip comments on clear code.
-- Use one line per comment. Avoid comment blocks.
-- Describe what the code does now.
-- Do not describe old code or old bugs.
-- Do not use phrases like "used to," "previously," or "before this fix."
+The org instructions hold the comment rules. Two more:
 - Do not write user stories or issue lists in comments.
 - Do not repeat the code in words. State only new information.
