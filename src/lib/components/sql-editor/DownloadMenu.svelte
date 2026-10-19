@@ -15,14 +15,16 @@
 
 <DropdownMenu.Root>
 	<DropdownMenu.Trigger disabled={disabled || busy}>
-		<Button variant="outline" disabled={disabled || busy}>
-			{#if busy}
-				<LoadingIcon class="animate-spin" />
-			{:else}
-				<DownloadIcon />
-			{/if}
-			{$t('sqlEditor.toolbar.download')}
-		</Button>
+		{#snippet child({ props })}
+			<Button {...props} variant="outline" disabled={disabled || busy}>
+				{#if busy}
+					<LoadingIcon class="animate-spin" />
+				{:else}
+					<DownloadIcon />
+				{/if}
+				{$t('sqlEditor.toolbar.download')}
+			</Button>
+		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content class="w-40">
 		{#each DOWNLOAD_FORMATS as format (format.label)}

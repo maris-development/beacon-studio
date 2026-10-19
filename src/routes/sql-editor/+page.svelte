@@ -19,7 +19,9 @@
 	import DownloadMenu from '@/components/sql-editor/DownloadMenu.svelte';
 	import { saveBlob } from '@/components/sql-editor/save-blob';
 	import { makeBeaconClient } from '@/beacon-api/client';
-	import { currentNode } from '@/services/beacon-node';
+	import { currentNode, findByUrl, selectNode } from '@/services/beacon-node';
+	import { whenOpenNodesSettled } from '@/services/open-nodes-import';
+	import { addToast } from '@/stores/toasts';
 	import { adminPageState, signedInNodeIds, withAdmin } from '@/services/admin-session';
 	import AdminSessionRequired from '@/components/AdminSessionRequired.svelte';
 	import { CatalogCache, type CatalogTree as Tree, type SchemaColumn } from '@/sql/catalog';
@@ -49,24 +51,39 @@
 		| { kind: 'busy'; action: Action }
 		| { kind: 'rows'; result: PreviewResult }
 		| { kind: 'plan'; plan: unknown; analyzed: boolean }
-		| { kind: 'error'; message: Message; adminHint?: boolean }
+		| { kind: 'error'; message: Message }
 		| { kind: 'notice'; message: MessageKey };
 
 	const titleOf = (number: number) => translate('sqlEditor.tabs.defaultTitle', { number });
 
 	let tabs: TabsState = $state(loadTabs(titleOf));
 
-	// Another page hands SQL over in `?sql=`. It opens in a new tab and leaves the URL.
+	// Another page hands SQL over in `?sql=` and its node in `?node=`. Both leave the URL.
 	onMount(async () => {
 		const handed = page.url.searchParams.get('sql');
-		if (handed === null || handed.trim() === '') return;
+		const handedNode = page.url.searchParams.get('node');
+		const hasSql = handed !== null && handed.trim() !== '';
+		if (!hasSql && handedNode === null) return;
 
-		tabs = openInNewTab(tabs, handed, titleOf);
+		if (handedNode) {
+			// On a first visit the public nodes arrive after this page mounts.
+			await whenOpenNodesSettled();
+			const target = findByUrl(handedNode);
+			if (target) {
+				selectNode(target.id, 'host');
+			} else {
+				addToast({ type: 'error', key: 'sqlEditor.nodeNotFound' });
+			}
+		}
+
+		// The tab opens after the node switch, so Run uses the handed node.
+		if (hasSql) tabs = openInNewTab(tabs, handed, titleOf);
 
 		// In dev, replaceState throws until the router has started.
 		await tick();
 		const url = new URL(page.url);
 		url.searchParams.delete('sql');
+		url.searchParams.delete('node');
 		replaceState(url, {});
 	});
 	let outcomes: Record<string, Outcome> = $state({});
@@ -214,11 +231,7 @@
 			} else if (result.kind === 'cancelled') {
 				finish(own, tabId, { kind: 'notice', message: 'sqlEditor.result.cancelled' });
 			} else {
-				finish(own, tabId, {
-					kind: 'error',
-					message: sqlError(result.error),
-					adminHint: true
-				});
+				finish(own, tabId, { kind: 'error', message: sqlError(result.error) });
 			}
 		} catch (error) {
 			if (own.signal.aborted) {
@@ -278,12 +291,8 @@
 
 			if (result.kind === 'done') {
 				saveBlob(result.value, downloadFileName(format, new Date()));
-			} else if (result.kind === 'needs-admin-features') {
-				outcomes[tabId] = {
-					kind: 'error',
-					message: sqlError(result.error),
-					adminHint: true
-				};
+			} else if (result.kind !== 'cancelled') {
+				outcomes[tabId] = { kind: 'error', message: sqlError(result.error) };
 			}
 		} catch (error) {
 			if (isSqlDisabled(error)) {
@@ -393,6 +402,8 @@
 									<p class="notice">{$t('sqlEditor.result.stoppedPartial')}</p>
 								{:else if result.cancelled}
 									<p class="notice">{$t('sqlEditor.result.stopped')}</p>
+								{:else if result.rows.length === 0}
+									<p class="notice">{$t('sqlEditor.result.noRows')}</p>
 								{:else if result.truncated}
 									<p class="notice">
 										{$t('sqlEditor.result.truncated', { count: PREVIEW_ROW_LIMIT })}
@@ -401,9 +412,6 @@
 							{:else if outcome?.kind === 'error'}
 								<div class="error-block" role="alert">
 									<pre>{$t(outcome.message)}</pre>
-									{#if outcome.adminHint}
-										<p>{$t('admin.offHint')}</p>
-									{/if}
 								</div>
 							{:else if outcome?.kind === 'notice'}
 								<p class="notice">{$t(outcome.message)}</p>
@@ -540,10 +548,6 @@
 			margin: 0;
 			white-space: pre-wrap;
 			word-break: break-word;
-		}
-
-		p {
-			margin: 0.5rem 0 0;
 		}
 	}
 

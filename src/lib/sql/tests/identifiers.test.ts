@@ -14,6 +14,13 @@ describe('quoteIdent', () => {
 		expect(quoteIdent('2d')).toBe('"2d"');
 	});
 
+	it('quotes a reserved word', () => {
+		expect(quoteIdent('null')).toBe('"null"');
+		expect(quoteIdent('order')).toBe('"order"');
+		expect(quoteIdent('user')).toBe('"user"');
+		expect(quoteIdent('temp')).toBe('temp');
+	});
+
 	it('doubles a quote inside the name', () => {
 		expect(quoteIdent('a"b')).toBe('"a""b"');
 	});

@@ -74,10 +74,15 @@
 		open[`t:${key}`] = !open[`t:${key}`];
 		if (!open[`t:${key}`] || columns[key]) return;
 
+		const requested = tree;
 		columns[key] = 'loading';
 		try {
-			columns[key] = { columns: await loadColumns(ref), shown: COLUMN_PAGE_SIZE };
+			const loaded = await loadColumns(ref);
+			// A new tree has cleared the column state. Drop the old answer.
+			if (tree !== requested) return;
+			columns[key] = { columns: loaded, shown: COLUMN_PAGE_SIZE };
 		} catch (caught) {
+			if (tree !== requested) return;
 			columns[key] = { error: sqlError(caught) };
 		}
 	}

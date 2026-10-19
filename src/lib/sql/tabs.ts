@@ -105,14 +105,21 @@ export function renameTab(state: TabsState, id: string, title: string): TabsStat
 	const trimmed = title.trim();
 	if (trimmed === '') return state;
 
-	return {
-		...state,
-		tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, title: trimmed } : tab))
-	};
+	const tabs = state.tabs.map((tab) => {
+		if (tab.id === id) return { ...tab, title: trimmed };
+		return tab;
+	});
+
+	return { ...state, tabs };
 }
 
 export function setTabSql(state: TabsState, id: string, sql: string): TabsState {
-	return { ...state, tabs: state.tabs.map((tab) => (tab.id === id ? { ...tab, sql } : tab)) };
+	const tabs = state.tabs.map((tab) => {
+		if (tab.id === id) return { ...tab, sql };
+		return tab;
+	});
+
+	return { ...state, tabs };
 }
 
 /** A new selected tab that holds `sql`. Another page opens SQL in the editor this way. */

@@ -121,10 +121,12 @@ describe('storage', () => {
 	beforeEach(() => localStorage.clear());
 
 	it('saves and loads', () => {
-		const state = setTabSql(emptyTabs(), emptyTabs().tabs[0].id, 'x');
+		const empty = emptyTabs();
+		const state = setTabSql(empty, empty.tabs[0].id, 'x');
 		saveTabs(state);
 		expect(JSON.parse(localStorage.getItem(TABS_STORAGE_KEY)!)).toEqual(state);
 		expect(loadTabs()).toEqual(state);
+		expect(loadTabs().tabs[0].sql).toBe('x');
 	});
 });
 

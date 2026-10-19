@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { tableFromArrays } from 'apache-arrow';
 import type { ArrowRecordBatch } from '@maris-development/beacon-client';
 import { runPreview, type BatchSource } from '../run';
@@ -26,7 +26,87 @@ function waitForAbort(signal: AbortSignal): Promise<never> {
 	});
 }
 
+// Like the SDK stream: it ignores the signal, and after the given batches it never ends.
+function hangingSource(batches: ArrowRecordBatch[]) {
+	const queue = [...batches];
+	const returned = vi.fn(() => new Promise<IteratorResult<ArrowRecordBatch>>(() => {}));
+	const iterator: AsyncIterator<ArrowRecordBatch> = {
+		next: () => {
+			const next = queue.shift();
+			if (next) return Promise.resolve({ done: false, value: next });
+			return new Promise(() => {});
+		},
+		return: returned
+	};
+	const queryBatches = vi.fn(async () => ({
+		queryId: null,
+		batches: { [Symbol.asyncIterator]: () => iterator }
+	}));
+	const source: BatchSource = { queryBatches };
+	return { source, queryBatches, returned };
+}
+
 describe('runPreview', () => {
+	it('returns the rows so far on a stop while the stream hangs', async () => {
+		const controller = new AbortController();
+		const { source, returned } = hangingSource([batch(0, 10)]);
+
+		const running = runPreview(source, 'SELECT n', { signal: controller.signal });
+		await new Promise((resolve) => setTimeout(resolve, 10));
+		controller.abort();
+		const result = await running;
+
+		expect(result.rows).toHaveLength(10);
+		expect(result.columns).toEqual(['n']);
+		expect(result.cancelled).toBe(true);
+		expect(returned).toHaveBeenCalled();
+	});
+
+	it('ends the iterator at the row limit', async () => {
+		const { source, returned } = hangingSource([batch(0, 300), batch(300, 300)]);
+
+		const result = await runPreview(source, 'SELECT n', {
+			signal: new AbortController().signal,
+			limit: 500
+		});
+
+		expect(result.rows).toHaveLength(500);
+		expect(result.truncated).toBe(true);
+		expect(returned).toHaveBeenCalled();
+	});
+
+	it('ends the iterator of a stream that opens after a stop', async () => {
+		const controller = new AbortController();
+		const { source: inner, returned } = hangingSource([batch(0, 10)]);
+		let open = () => {};
+		const source: BatchSource = {
+			queryBatches: (query, signal) =>
+				new Promise((resolve) => {
+					open = () => resolve(inner.queryBatches(query, signal));
+				})
+		};
+
+		const running = runPreview(source, 'SELECT n', { signal: controller.signal });
+		controller.abort();
+		const result = await running;
+		open();
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		expect(result.cancelled).toBe(true);
+		expect(returned).toHaveBeenCalled();
+	});
+
+	it('does not run the statement when the signal is already aborted', async () => {
+		const controller = new AbortController();
+		controller.abort();
+		const { source, queryBatches } = hangingSource([batch(0, 10)]);
+
+		const result = await runPreview(source, 'SELECT n', { signal: controller.signal });
+
+		expect(result).toEqual({ columns: [], types: [], rows: [], truncated: false, cancelled: true });
+		expect(queryBatches).not.toHaveBeenCalled();
+	});
+
 	it('stops at the limit and marks the result as truncated', async () => {
 		let aborted = false;
 		const source = sourceOf(async function* (signal) {
