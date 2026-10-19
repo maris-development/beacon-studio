@@ -94,8 +94,9 @@
 								<td class="node-description" title={htmlToText(node.description)}>
 									<div class="description-cell">
 										<!-- The public list writes the description as HTML. -->
-										<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitizeHtml removes the unsafe tags and attributes -->
+										<!-- eslint-disable svelte/no-at-html-tags -- sanitizeHtml removes the unsafe tags and attributes -->
 										<span class="clamp">{@html sanitizeHtml(node.description)}</span>
+										<!-- eslint-enable svelte/no-at-html-tags -->
 										{#if typeof publicNode?.n_code === 'number'}
 											<Button
 												variant="ghost"

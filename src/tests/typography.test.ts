@@ -6,10 +6,15 @@ const SRC = join(process.cwd(), 'src');
 const STYLE_FILE = /\.(svelte|scss|css)$/;
 
 // The rem base in app.scss, and the @font-face names in font.scss.
-const ALLOWED = new Set(['app.scss: font-size: 14px', "font.scss: font-family: 'Manrope'"]);
+const ALLOWED = new Set([
+	'app.scss: font-size: 14px',
+	"font.scss: font-family: 'Manrope'",
+	'font.scss: font-family: "Manrope"'
+]);
 
+// A value stops at `"`, the end of a Svelte style attribute, unless the value is a quoted name.
 const FONT_SIZE = /(?<![-\w])font-size\s*:\s*([^;"}]+)/g;
-const FONT_FAMILY = /(?<![-\w])font-family\s*:\s*([^;"}]+)/g;
+const FONT_FAMILY = /(?<![-\w])font-family\s*:\s*("[^"]*"|[^;"}]+)/g;
 const TAILWIND_ARBITRARY = /\b(text-\[[^\]]+\]|font-\[[^\]]+\])/g;
 
 function styleFiles(dir: string): string[] {
