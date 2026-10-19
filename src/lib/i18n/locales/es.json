@@ -1147,6 +1147,7 @@
 			"search": "Buscar tablas",
 			"loading": "Cargando las tablas…",
 			"noMatch": "Ninguna tabla coincide.",
+			"empty": "No hay tablas en el esquema predeterminado.",
 			"kindView": "Vista",
 			"kindTable": "Tabla",
 			"default": "Predeterminado",

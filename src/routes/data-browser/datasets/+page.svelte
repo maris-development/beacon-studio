@@ -30,8 +30,9 @@
 		type DatasetEntry,
 		type FileSort
 	} from '@/data-browser/datasets';
+	import { parseDate } from '@/data-browser/editor-link';
 	import { sqlError } from '@/sql/statement';
-	import { formatNumber, t, type Message } from '@/i18n';
+	import { formatDate, formatNumber, t, type Message } from '@/i18n';
 
 	const PAGE_SIZE = 100;
 
@@ -291,6 +292,7 @@
 							</tr>
 						{/each}
 						{#each pageFiles as entry (entry.path)}
+							{@const modified = parseDate(entry.lastModified)}
 							<tr>
 								<td>
 									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- detailHref resolves the path -->
@@ -301,7 +303,9 @@
 								</td>
 								<td>{entry.format}</td>
 								<td>{formatSize(entry.size, $formatNumber)}</td>
-								<td>{entry.lastModified?.slice(0, 10) ?? ''}</td>
+								<td
+									>{#if modified}{$formatDate(modified)}{/if}</td
+								>
 							</tr>
 						{/each}
 					</tbody>

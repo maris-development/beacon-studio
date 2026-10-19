@@ -1147,6 +1147,7 @@
 			"search": "Tabellen zoeken",
 			"loading": "Tabellen laden…",
 			"noMatch": "Geen tabellen gevonden.",
+			"empty": "Geen tabellen in het standaardschema.",
 			"kindView": "View",
 			"kindTable": "Tabel",
 			"default": "Standaard",

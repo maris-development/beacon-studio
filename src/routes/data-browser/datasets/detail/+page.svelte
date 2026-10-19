@@ -23,6 +23,7 @@
 	import { addToast } from '@/stores/toasts';
 	import { track } from '@/telemetry';
 	import { backTarget } from '@/data-browser/back';
+	import { editorLink, parseDate } from '@/data-browser/editor-link';
 	import {
 		datasetEditorSql,
 		fileName,
@@ -34,7 +35,8 @@
 		type DatasetEntry
 	} from '@/data-browser/datasets';
 	import { parseSchema } from '@/sql/catalog';
-	import { formatNumber, t, translate } from '@/i18n';
+	import { sqlError } from '@/sql/statement';
+	import { formatDate, formatNumber, t, translate, type Message } from '@/i18n';
 
 	const LIST = resolve('/data-browser/datasets');
 
@@ -67,8 +69,10 @@
 	});
 	let tab = $state('schema');
 	let columns: string[] | null = $state(null);
+	let columnsError: Message | null = $state(null);
 	let busy = $state(false);
 
+	let modified = $derived(parseDate(entry.lastModified));
 	let folderList = $derived(backTarget(page.url.searchParams.get('back'), PREFIX, FOLDER_LIST));
 
 	// A node outside the list gets a client with no token.
@@ -127,10 +131,12 @@
 	async function loadColumns() {
 		if (tab !== 'preview' || columns !== null || !client || !entry.canInspect) return;
 
+		columnsError = null;
+
 		try {
 			await loadSchema();
-		} catch {
-			columns = [];
+		} catch (caught) {
+			columnsError = sqlError(caught);
 		}
 	}
 
@@ -199,7 +205,7 @@
 	}
 
 	function openInEditor() {
-		goto(`${resolve('/sql-editor')}?sql=${encodeURIComponent(datasetEditorSql(entry))}`);
+		goto(editorLink(resolve('/sql-editor'), datasetEditorSql(entry), nodeUrl));
 	}
 </script>
 
@@ -230,7 +236,7 @@
 					<span class="mono">{file}</span>
 					{#if entry.format}· {entry.format}{/if}
 					{#if entry.size !== null}· {formatSize(entry.size, $formatNumber)}{/if}
-					{#if entry.lastModified}· {entry.lastModified}{/if}
+					{#if modified}· {$formatDate(modified)}{/if}
 					· {savedNode?.name ?? nodeUrl}
 				</p>
 			</div>
@@ -280,6 +286,8 @@
 			<p class="muted">{$t('dataBrowser.datasets.detail.cannotRead')}</p>
 		{:else if tab === 'schema'}
 			<SchemaTable load={loadSchema} />
+		{:else if columnsError}
+			<p class="error">{$t(columnsError)}</p>
 		{:else if columns === null}
 			<p class="muted">{$t('dataBrowser.datasets.detail.loadingColumns')}</p>
 		{:else if columns.length === 0}
@@ -318,5 +326,9 @@
 
 	.muted {
 		color: var(--muted-foreground);
+	}
+
+	.error {
+		color: var(--destructive);
 	}
 </style>

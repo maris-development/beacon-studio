@@ -23,6 +23,8 @@
 	import { addToast } from '@/stores/toasts';
 	import { settings } from '@/stores/settings';
 	import { track } from '@/telemetry';
+	import { backTarget } from '@/data-browser/back';
+	import { editorLink } from '@/data-browser/editor-link';
 	import {
 		canManage,
 		dropSql,
@@ -36,6 +38,8 @@
 	import { message, t, translate, type Message } from '@/i18n';
 
 	const LIST = resolve('/data-browser/data-tables');
+	// The base path without its trailing slash.
+	const PREFIX = resolve('/').replace(/\/$/, '');
 
 	const tableName = page.url.searchParams.get('table_name') ?? '';
 	if (!tableName) {
@@ -69,6 +73,7 @@
 		};
 	});
 
+	let listTarget = $derived(backTarget(page.url.searchParams.get('back'), PREFIX, LIST));
 	let isView = $derived(tableKind(tableType) === 'view');
 	let manageable = $derived(
 		found && savedNode !== null && ref !== null && defaults !== null && canManage(ref, defaults)
@@ -226,7 +231,7 @@
 					key: 'dataBrowser.tables.detail.dropped',
 					values: { name: tableName }
 				});
-				goto(LIST);
+				goto(listTarget);
 			}
 		} catch (caught) {
 			addToast({
@@ -242,7 +247,7 @@
 
 	function openInEditor() {
 		if (!ref || !defaults) return;
-		goto(`${resolve('/sql-editor')}?sql=${encodeURIComponent(editorSql(ref, defaults))}`);
+		goto(editorLink(resolve('/sql-editor'), editorSql(ref, defaults), nodeUrl));
 	}
 
 	async function copyDefinition() {

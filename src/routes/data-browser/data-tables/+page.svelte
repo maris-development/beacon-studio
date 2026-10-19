@@ -16,6 +16,7 @@
 	import { currentNode } from '@/services/beacon-node';
 	import { track } from '@/telemetry';
 	import { withBack } from '@/data-browser/back';
+	import { DATASET_LIST_LIMIT, parseEntries } from '@/data-browser/datasets';
 	import { splitTree, tableDetailQuery, tableKind } from '@/data-browser/tables';
 	import { buildTree, filterTree, type CatalogTree } from '@/sql/catalog';
 	import type { TableRef } from '@/sql/identifiers';
@@ -41,6 +42,14 @@
 	});
 
 	let searching = $derived(needle.trim() !== '');
+
+	let wasSearching = false;
+
+	// A search opens the other schemas once. The user can fold them again.
+	$effect(() => {
+		if (searching && !wasSearching) othersOpen = true;
+		wasSearching = searching;
+	});
 
 	$effect(() => {
 		if (!nodeUrl) return;
@@ -112,10 +121,8 @@
 	async function loadPaths(): Promise<string[]> {
 		if (!node) return [];
 
-		const list = await makeBeaconClient(node).datasets<{ file_path: string }[]>({
-			limit: 100000
-		});
-		return list.map((entry) => entry.file_path);
+		const list = await makeBeaconClient(node).datasets({ limit: DATASET_LIST_LIMIT });
+		return parseEntries(list).map((entry) => entry.path);
 	}
 
 	function onCreated(name: string) {
@@ -187,7 +194,11 @@
 				<p class="error">{$t(error)}</p>
 			{:else if shown}
 				{#if shown.defaultTables.length === 0}
-					<p class="muted">{$t('dataBrowser.tables.noMatch')}</p>
+					{#if searching}
+						<p class="muted">{$t('dataBrowser.tables.noMatch')}</p>
+					{:else}
+						<p class="muted">{$t('dataBrowser.tables.empty')}</p>
+					{/if}
 				{:else}
 					<ul class="tables">
 						{#each shown.defaultTables as table (table.name)}
@@ -214,7 +225,7 @@
 				{/if}
 
 				{#if shown.others.catalogs.length > 0}
-					<details class="others" open={othersOpen || searching}>
+					<details class="others" open={othersOpen}>
 						<summary
 							onclick={(event) => {
 								event.preventDefault();
