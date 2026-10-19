@@ -133,7 +133,9 @@
 				<Select.Content>
 					<Select.Group>
 						{#each definition.options as option (option.value)}
-							<Select.Item value={option.value} label={optionLabel(option)}>{optionLabel(option)}</Select.Item>
+							<Select.Item value={option.value} label={optionLabel(option)}
+								>{optionLabel(option)}</Select.Item
+							>
 						{/each}
 					</Select.Group>
 				</Select.Content>

@@ -95,7 +95,11 @@
 			if (failures.length > 0) {
 				addToast(stepFailureToast(failures, adminErrorMessage));
 			} else {
-				addToast({ type: 'success', key: 'usersRoles.newUserDialog.created', values: { user: name } });
+				addToast({
+					type: 'success',
+					key: 'usersRoles.newUserDialog.created',
+					values: { user: name }
+				});
 			}
 			onSaved();
 		} catch (caught) {

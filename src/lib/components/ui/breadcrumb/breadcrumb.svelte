@@ -11,28 +11,32 @@
 		flexChildren = null,
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLElement>> & {
-		flexChildren: Snippet|null
+		flexChildren: Snippet | null;
 	} = $props();
 </script>
 
 <div class="breadcrumb-container">
-	<nav bind:this={ref} data-slot="breadcrumb" class={className} aria-label={$t('common.breadcrumb')} {...restProps}>
+	<nav
+		bind:this={ref}
+		data-slot="breadcrumb"
+		class={className}
+		aria-label={$t('common.breadcrumb')}
+		{...restProps}
+	>
 		{@render children?.()}
 	</nav>
 	{@render flexChildren?.()}
 </div>
 
 <style lang="scss">
-
-.breadcrumb-container {
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	border-bottom-width: 1px;
-	border-color: var(--crumb-border);
-	background-color: var(--crumb-background);
-	padding: 0.5rem 1rem; /* py-2 px-4 */
-}
-
+	.breadcrumb-container {
+		display: flex;
+		flex-direction: row;
+		justify-content: space-between;
+		align-items: center;
+		border-bottom-width: 1px;
+		border-color: var(--crumb-border);
+		background-color: var(--crumb-background);
+		padding: 0.5rem 1rem; /* py-2 px-4 */
+	}
 </style>

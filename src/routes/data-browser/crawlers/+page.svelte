@@ -86,9 +86,7 @@
 		}
 
 		try {
-			const raw = await withAdminSession(current, (client) =>
-				client.admin.listCrawlers<unknown>()
-			);
+			const raw = await withAdminSession(current, (client) => client.admin.listCrawlers<unknown>());
 			// A node switch or a sign-out during the call makes the result stale.
 			if (current.url !== nodeUrl || !get(signedInNodeIds).has(current.id)) return;
 			if (raw === null) return;

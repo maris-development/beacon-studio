@@ -40,7 +40,8 @@
 		if (value === '') return message('usersRoles.error.nameRequired');
 		if (!isValidName(value)) return message('usersRoles.error.nameInvalid');
 		// The server answers a duplicate with a plain 400, so the loaded list decides first.
-		if (exists || roles.some((role) => role.name === value)) return message('usersRoles.error.exists');
+		if (exists || roles.some((role) => role.name === value))
+			return message('usersRoles.error.exists');
 		return null;
 	});
 

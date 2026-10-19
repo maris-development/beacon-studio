@@ -2,209 +2,237 @@
 
 @layer theme, base, components, utilities;
 
-@import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/preflight.css" layer(base);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/preflight.css' layer(base);
+@import 'tailwindcss/utilities.css' layer(utilities);
 
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
-
 :root {
-  --radius: 0.625rem;
-  --background: white;
-  --app-background: #f6f6f8;
-  --foreground: rgb(51, 51, 51);
-  --card: var(--background);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --card-border: rgb(231, 231, 236);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  
-  --highlight: #087cdf;
+	--radius: 0.625rem;
+	--background: white;
+	--app-background: #f6f6f8;
+	--foreground: rgb(51, 51, 51);
+	--card: var(--background);
+	--card-foreground: oklch(0.141 0.005 285.823);
+	--card-border: rgb(231, 231, 236);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.141 0.005 285.823);
 
-  /* The beacon-datalake.org header gradient. */
-  --admin-badge-background: linear-gradient(120deg,#08306b 0 3.3333333333%,#0c3976 3.3333333333% 6.6666666667%,#114381 6.6666666667% 10%,#154c8d 10% 13.3333333333%,#195598 13.3333333333% 16.6666666667%,#1e5fa3 16.6666666667% 20%,#2569ae 20% 23.3333333333%,#387ab6 23.3333333333% 26.6666666667%,#4c8abf 26.6666666667% 30%,#5f9ac8 30% 33.3333333333%,#73abd0 33.3333333333% 36.6666666667%,#86bbd9 36.6666666667% 40%,#99c3d8 40% 43.3333333333%,#aabdc8 43.3333333333% 46.6666666667%,#bbb8b8 46.6666666667% 50%,#cbb2a8 50% 53.3333333333%,#dcad98 53.3333333333% 56.6666666667%,#eda788 56.6666666667% 60%,#f19e7d 60% 63.3333333333%,#ec9273 63.3333333333% 66.6666666667%,#e7866a 66.6666666667% 70%,#e17a61 70% 73.3333333333%,#dc6e58 73.3333333333% 76.6666666667%,#d7624f 76.6666666667% 80%,#c75347 80% 83.3333333333%,#b4423f 83.3333333333% 86.6666666667%,#a03237 86.6666666667% 90%,#8d212f 90% 93.3333333333%,#7a1127 93.3333333333% 96.6666666667%,#67001f 96.6666666667% 100%);
+	--highlight: #087cdf;
 
-  --primary: #3451b2; /*  oklch(35.9% 0.144 278.697); */
-  --primary-foreground: oklch(0.985 0 0);
-  
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+	/* The beacon-datalake.org header gradient. */
+	--admin-badge-background: linear-gradient(
+		120deg,
+		#08306b 0 3.3333333333%,
+		#0c3976 3.3333333333% 6.6666666667%,
+		#114381 6.6666666667% 10%,
+		#154c8d 10% 13.3333333333%,
+		#195598 13.3333333333% 16.6666666667%,
+		#1e5fa3 16.6666666667% 20%,
+		#2569ae 20% 23.3333333333%,
+		#387ab6 23.3333333333% 26.6666666667%,
+		#4c8abf 26.6666666667% 30%,
+		#5f9ac8 30% 33.3333333333%,
+		#73abd0 33.3333333333% 36.6666666667%,
+		#86bbd9 36.6666666667% 40%,
+		#99c3d8 40% 43.3333333333%,
+		#aabdc8 43.3333333333% 46.6666666667%,
+		#bbb8b8 46.6666666667% 50%,
+		#cbb2a8 50% 53.3333333333%,
+		#dcad98 53.3333333333% 56.6666666667%,
+		#eda788 56.6666666667% 60%,
+		#f19e7d 60% 63.3333333333%,
+		#ec9273 63.3333333333% 66.6666666667%,
+		#e7866a 66.6666666667% 70%,
+		#e17a61 70% 73.3333333333%,
+		#dc6e58 73.3333333333% 76.6666666667%,
+		#d7624f 76.6666666667% 80%,
+		#c75347 80% 83.3333333333%,
+		#b4423f 83.3333333333% 86.6666666667%,
+		#a03237 86.6666666667% 90%,
+		#8d212f 90% 93.3333333333%,
+		#7a1127 93.3333333333% 96.6666666667%,
+		#67001f 96.6666666667% 100%
+	);
 
-  --muted: hsl(255, 0%, 96%);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --access-all: #16a34a;
-  --access-limited: #d97706;
-  --border: color-mix(in srgb, var(--primary) 25%, transparent);
-  --input: oklch(0.92 0.004 286.32);
-  --focus-ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+	--primary: #3451b2; /*  oklch(35.9% 0.144 278.697); */
+	--primary-foreground: oklch(0.985 0 0);
 
-  --sidebar: rgba(255, 255, 255, 1);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: rgb(231, 231, 236);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
-  
-  --confirm-background: hsl(119, 25%, 63%);
-  --confirm-foreground: white;
-  --confirm-border: hsl(119, 25%, 63%);
+	--secondary: oklch(0.967 0.001 286.375);
+	--secondary-foreground: oklch(0.21 0.006 285.885);
 
-  --deny-background: hsl(0, 79%, 96%);
-  --deny-foreground: hsl(6, 63%, 46%);
-  --deny-border: hsl(6, 63%, 46%);
+	--muted: hsl(255, 0%, 96%);
+	--muted-foreground: oklch(0.552 0.016 285.938);
+	--accent: oklch(0.967 0.001 286.375);
+	--accent-foreground: oklch(0.21 0.006 285.885);
+	--destructive: oklch(0.577 0.245 27.325);
+	--access-all: #16a34a;
+	--access-limited: #d97706;
+	--border: color-mix(in srgb, var(--primary) 25%, transparent);
+	--input: oklch(0.92 0.004 286.32);
+	--focus-ring: oklch(0.705 0.015 286.067);
+	--chart-1: oklch(0.646 0.222 41.116);
+	--chart-2: oklch(0.6 0.118 184.704);
+	--chart-3: oklch(0.398 0.07 227.392);
+	--chart-4: oklch(0.828 0.189 84.429);
+	--chart-5: oklch(0.769 0.188 70.08);
 
-  --selected-background: hsl(222, 100%, 98%);
+	--sidebar: rgba(255, 255, 255, 1);
+	--sidebar-foreground: oklch(0.141 0.005 285.823);
+	--sidebar-primary: oklch(0.21 0.006 285.885);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.967 0.001 286.375);
+	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+	--sidebar-border: rgb(231, 231, 236);
+	--sidebar-ring: oklch(0.705 0.015 286.067);
 
-  /* Checked boxes, selected cards and the active parameter card. */
-  --control-active: #2563eb;
-  --control-active-foreground: white;
-  --input-border: #ccc;
-  --overlay: rgb(0 0 0 / 0.5);
+	--confirm-background: hsl(119, 25%, 63%);
+	--confirm-foreground: white;
+	--confirm-border: hsl(119, 25%, 63%);
 
-  --font-family-base: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-heading: var(--font-family-base);
-  --heading-foreground: var(--foreground);
-  --link: #007bff;
+	--deny-background: hsl(0, 79%, 96%);
+	--deny-foreground: hsl(6, 63%, 46%);
+	--deny-border: hsl(6, 63%, 46%);
 
-  --button-radius: calc(var(--radius) - 2px);
-  --button-font-weight: 500;
-  --button-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --button-text-transform: none;
-  --button-letter-spacing: normal;
+	--selected-background: hsl(222, 100%, 98%);
 
-  --table-border: #ddd;
-  --table-header-background: #f9f9f9;
-  --table-header-foreground: #666;
-  --table-foreground: #555;
-  --table-row-alternate: #fcfcfc;
-  --table-row-hover: #f1f1f1;
+	/* Checked boxes, selected cards and the active parameter card. */
+	--control-active: #2563eb;
+	--control-active-foreground: white;
+	--input-border: #ccc;
+	--overlay: rgb(0 0 0 / 0.5);
 
-  --crumb-background: #f9fafb;
-  --crumb-border: #e5e7eb;
+	--font-family-base: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+	--font-family-heading: var(--font-family-base);
+	--heading-foreground: var(--foreground);
+	--link: #007bff;
 
-  --toast-foreground: white;
-  --toast-info: SkyBlue;
-  --toast-success: MediumSeaGreen;
-  --toast-warning: #FF8F5C;
-  --toast-error: IndianRed;
+	--button-radius: calc(var(--radius) - 2px);
+	--button-font-weight: 500;
+	--button-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+	--button-text-transform: none;
+	--button-letter-spacing: normal;
 
-  --network-line: rgba(51, 65, 85, 0.1);
-  --network-dot: rgba(45, 212, 191, 0.55);
-  --network-glow-a: rgba(45, 212, 191, 0.16);
-  --network-glow-b: rgba(139, 92, 246, 0.14);
+	--table-border: #ddd;
+	--table-header-background: #f9f9f9;
+	--table-header-foreground: #666;
+	--table-foreground: #555;
+	--table-row-alternate: #fcfcfc;
+	--table-row-hover: #f1f1f1;
 
-  /* Terra Draw reads this value in code and takes only a hex color. */
-  --map-draw: #2563eb;
+	--crumb-background: #f9fafb;
+	--crumb-border: #e5e7eb;
+
+	--toast-foreground: white;
+	--toast-info: SkyBlue;
+	--toast-success: MediumSeaGreen;
+	--toast-warning: #ff8f5c;
+	--toast-error: IndianRed;
+
+	--network-line: rgba(51, 65, 85, 0.1);
+	--network-dot: rgba(45, 212, 191, 0.55);
+	--network-glow-a: rgba(45, 212, 191, 0.16);
+	--network-glow-b: rgba(139, 92, 246, 0.14);
+
+	/* Terra Draw reads this value in code and takes only a hex color. */
+	--map-draw: #2563eb;
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --card-border: oklch(1 0 0 / 10%);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --focus-ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
-  --network-line: rgba(226, 232, 240, 0.1);
-  --network-dot: rgba(45, 212, 191, 0.45);
-  --network-glow-a: rgba(45, 212, 191, 0.12);
-  --network-glow-b: rgba(139, 92, 246, 0.12);
+	--background: oklch(0.141 0.005 285.823);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.21 0.006 285.885);
+	--card-foreground: oklch(0.985 0 0);
+	--card-border: oklch(1 0 0 / 10%);
+	--popover: oklch(0.21 0.006 285.885);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.92 0.004 286.32);
+	--primary-foreground: oklch(0.21 0.006 285.885);
+	--secondary: oklch(0.274 0.006 286.033);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.274 0.006 286.033);
+	--muted-foreground: oklch(0.705 0.015 286.067);
+	--accent: oklch(0.274 0.006 286.033);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--focus-ring: oklch(0.552 0.016 285.938);
+	--chart-1: oklch(0.488 0.243 264.376);
+	--chart-2: oklch(0.696 0.17 162.48);
+	--chart-3: oklch(0.769 0.188 70.08);
+	--chart-4: oklch(0.627 0.265 303.9);
+	--chart-5: oklch(0.645 0.246 16.439);
+	--sidebar: oklch(0.21 0.006 285.885);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.488 0.243 264.376);
+	--sidebar-primary-foreground: oklch(0.985 0 0);
+	--sidebar-accent: oklch(0.274 0.006 286.033);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.552 0.016 285.938);
+	--network-line: rgba(226, 232, 240, 0.1);
+	--network-dot: rgba(45, 212, 191, 0.45);
+	--network-glow-a: rgba(45, 212, 191, 0.12);
+	--network-glow-b: rgba(139, 92, 246, 0.12);
 }
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  /* Type tokens live in app.scss. */
-  --font-sans: var(--font-family-base);
-  --font-mono: var(--font-family-mono);
-  --text-xs: var(--font-size-xs);
-  --text-sm: var(--font-size-sm);
-  --text-base: var(--font-size-md);
-  --text-lg: var(--font-size-lg);
-  --text-xl: var(--font-size-xl);
-  --text-2xl: var(--font-size-2xl);
-  /* `bg-background` needs this map. The dialog panel is transparent without it. */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-card-border: var(--card-border);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--focus-ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-control-active: var(--control-active);
-  --color-control-active-foreground: var(--control-active-foreground);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+	/* Type tokens live in app.scss. */
+	--font-sans: var(--font-family-base);
+	--font-mono: var(--font-family-mono);
+	--text-xs: var(--font-size-xs);
+	--text-sm: var(--font-size-sm);
+	--text-base: var(--font-size-md);
+	--text-lg: var(--font-size-lg);
+	--text-xl: var(--font-size-xl);
+	--text-2xl: var(--font-size-2xl);
+	/* `bg-background` needs this map. The dialog panel is transparent without it. */
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-card-border: var(--card-border);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--focus-ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-control-active: var(--control-active);
+	--color-control-active-foreground: var(--control-active-foreground);
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
+	* {
+		@apply border-border outline-ring/50;
+	}
 }
-
-
-

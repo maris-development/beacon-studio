@@ -181,7 +181,8 @@ export function crawlerErrors(form: CrawlerForm): Message[] {
 	const errors: Message[] = [];
 
 	if (form.name.trim() === '') errors.push(message('dataBrowser.crawlers.error.name'));
-	if (normalizeFolder(form.folder) === '') errors.push(message('dataBrowser.crawlers.error.folder'));
+	if (normalizeFolder(form.folder) === '')
+		errors.push(message('dataBrowser.crawlers.error.folder'));
 	if (form.timer !== null && (!Number.isInteger(form.timer) || form.timer < MIN_SCHEDULE_SECS)) {
 		// Each run scans the whole folder, so a shorter period loads the node for nothing.
 		errors.push(message('dataBrowser.crawlers.error.scheduleSeconds', { min: MIN_SCHEDULE_SECS }));
@@ -193,8 +194,10 @@ export function crawlerErrors(form: CrawlerForm): Message[] {
 
 export function describeSchedule(secs: number | null): Message {
 	if (secs === null || secs <= 0) return message('dataBrowser.crawlers.schedule.never');
-	if (secs % 3600 === 0) return message('dataBrowser.crawlers.schedule.hours', { count: secs / 3600 });
-	if (secs % 60 === 0) return message('dataBrowser.crawlers.schedule.minutes', { count: secs / 60 });
+	if (secs % 3600 === 0)
+		return message('dataBrowser.crawlers.schedule.hours', { count: secs / 3600 });
+	if (secs % 60 === 0)
+		return message('dataBrowser.crawlers.schedule.minutes', { count: secs / 60 });
 	return message('dataBrowser.crawlers.schedule.seconds', { count: secs });
 }
 

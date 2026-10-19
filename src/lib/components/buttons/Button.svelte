@@ -1,9 +1,17 @@
 <script lang="ts" module>
-	import { cn, type WithElementRef } from "$lib/utils.js";
-	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from "svelte/elements";
+	import { cn, type WithElementRef } from '$lib/utils.js';
+	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';
 
-	export type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "confirm" | "deny";
-	export type ButtonSize = "default" | "xs" | "sm" | "lg" | "icon";
+	export type ButtonVariant =
+		| 'default'
+		| 'destructive'
+		| 'outline'
+		| 'secondary'
+		| 'ghost'
+		| 'link'
+		| 'confirm'
+		| 'deny';
+	export type ButtonSize = 'default' | 'xs' | 'sm' | 'lg' | 'icon';
 
 	type ButtonVariantsOptions = {
 		variant?: ButtonVariant;
@@ -11,25 +19,28 @@
 	};
 
 	const variantClass: Record<ButtonVariant, string> = {
-		default: "variant-default",
-		destructive: "variant-destructive",
-		outline: "variant-outline",
-		secondary: "variant-secondary",
-		ghost: "variant-ghost",
-		link: "variant-link",
-		confirm: "variant-confirm",
-		deny: "variant-deny"
+		default: 'variant-default',
+		destructive: 'variant-destructive',
+		outline: 'variant-outline',
+		secondary: 'variant-secondary',
+		ghost: 'variant-ghost',
+		link: 'variant-link',
+		confirm: 'variant-confirm',
+		deny: 'variant-deny'
 	};
 
 	const sizeClass: Record<ButtonSize, string> = {
-		default: "size-default",
-		xs: "size-xs",
-		sm: "size-sm",
-		lg: "size-lg",
-		icon: "size-icon"
+		default: 'size-default',
+		xs: 'size-xs',
+		sm: 'size-sm',
+		lg: 'size-lg',
+		icon: 'size-icon'
 	};
 
-	export function buttonVariants({ variant = "default", size = "default" }: ButtonVariantsOptions = {}) {
+	export function buttonVariants({
+		variant = 'default',
+		size = 'default'
+	}: ButtonVariantsOptions = {}) {
 		return `btn ${variantClass[variant]} ${sizeClass[size]}`;
 	}
 
@@ -43,11 +54,11 @@
 <script lang="ts">
 	let {
 		class: className,
-		variant = "default",
-		size = "default",
+		variant = 'default',
+		size = 'default',
 		ref = $bindable(null),
 		href = undefined,
-		type = "button",
+		type = 'button',
 		disabled,
 		children,
 		...restProps
@@ -61,7 +72,7 @@
 		class={cn(buttonVariants({ variant, size }), className)}
 		href={disabled ? undefined : href}
 		aria-disabled={disabled}
-		role={disabled ? "link" : undefined}
+		role={disabled ? 'link' : undefined}
 		tabindex={disabled ? -1 : undefined}
 		{...restProps}
 	>

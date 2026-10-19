@@ -29,7 +29,10 @@
 				if (value === null || value === undefined) {
 					text[key] = null;
 				} else {
-					text[key] = ApacheArrowUtils.typedValueToString(value, types[index] as ApacheArrow.DataType);
+					text[key] = ApacheArrowUtils.typedValueToString(
+						value,
+						types[index] as ApacheArrow.DataType
+					);
 				}
 			});
 			return text;

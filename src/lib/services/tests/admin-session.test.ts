@@ -60,7 +60,10 @@ describe('admin-session', () => {
 		const { session, sdk } = await load();
 		const check = vi.spyOn(sdk.AdminClient.prototype, 'check').mockResolvedValue();
 
-		await session.checkAdminCredentials('https://a.example.org', { username: 'alice', password: 'pw' });
+		await session.checkAdminCredentials('https://a.example.org', {
+			username: 'alice',
+			password: 'pw'
+		});
 
 		expect(check).toHaveBeenCalledOnce();
 		expect(session.hasAdminSession('a')).toBe(false);

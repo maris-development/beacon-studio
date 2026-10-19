@@ -53,7 +53,9 @@
 				<p class="subtitle">{subtitle}</p>
 			{/if}
 			{#if canCloseModal}
-				<button class="close-button" on:click={onClose} aria-label={$t('modal.close')}> &times; </button>
+				<button class="close-button" on:click={onClose} aria-label={$t('modal.close')}>
+					&times;
+				</button>
 			{/if}
 		</header>
 		<div id="modal-content-{shortRandomString}" class="modal-content">

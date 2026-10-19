@@ -390,7 +390,9 @@
 							{#if BRAND.links.docs}
 								<a href={BRAND.links.docs} target="_blank" rel="noreferrer"
 									>{$t('systemInfo.functions.noteLink')}</a
-								>{:else}{$t('systemInfo.functions.noteLink')}{/if}{$t('systemInfo.functions.noteAfter')}
+								>{:else}{$t('systemInfo.functions.noteLink')}{/if}{$t(
+								'systemInfo.functions.noteAfter'
+							)}
 						</p>
 					{/if}
 				</div>

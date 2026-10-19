@@ -510,7 +510,9 @@
 				<SearchSelect.List>
 					<SearchSelect.Empty>
 						{$t('query.parameters.emptyBeforeTable')}
-						<span class="search-columns-empty-table">{table_name}</span>{$t('query.parameters.emptyAfterTable')}
+						<span class="search-columns-empty-table">{table_name}</span>{$t(
+							'query.parameters.emptyAfterTable'
+						)}
 					</SearchSelect.Empty>
 
 					<SearchSelect.Group heading={$t('query.parameters.available', { count: fields.length })}>
@@ -574,7 +576,11 @@
 			>
 				<PencilLineIcon size={16} />
 			</Button>
-			<Button variant="ghost" title={$t('query.area.removeTitle')} onclick={() => (spatialFilter = null)}>
+			<Button
+				variant="ghost"
+				title={$t('query.area.removeTitle')}
+				onclick={() => (spatialFilter = null)}
+			>
 				<XIcon size={16} />
 			</Button>
 		</div>

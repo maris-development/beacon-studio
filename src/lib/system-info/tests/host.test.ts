@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-	clampPercent,
-	formatBytesOrDash,
-	formatUptime,
-	meterTone,
-	readInfo,
-	usage
-} from '../host';
+import { clampPercent, formatBytesOrDash, formatUptime, meterTone, readInfo, usage } from '../host';
 
 const host = {
 	host_name: 'beacon-1',

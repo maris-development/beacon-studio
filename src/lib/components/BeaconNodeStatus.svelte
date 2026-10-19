@@ -45,12 +45,15 @@
 	let latencyText = $derived(health.latencyMs === null ? '-' : `${health.latencyMs}ms`);
 
 	let title = $derived(
-		health.status === 'online' ? $t('node.status.onlineLatency', { latency: latencyText }) : statusText
+		health.status === 'online'
+			? $t('node.status.onlineLatency', { latency: latencyText })
+			: statusText
 	);
 </script>
 
 {#if variant === 'dot'}
-	<span class="dot {health.status}" {title} aria-label={$t('node.status.aria', { status: title })}></span>
+	<span class="dot {health.status}" {title} aria-label={$t('node.status.aria', { status: title })}
+	></span>
 {:else}
 	<div class="node-status" class:compact={variant === 'compact'}>
 		<span class="badge {health.status}">

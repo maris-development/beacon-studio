@@ -1,10 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { cn } from '$lib/utils.js';
-	import {
-		getSearchSelectContext,
-		setSearchSelectGroupContext
-	} from './search-select-context';
+	import { getSearchSelectContext, setSearchSelectGroupContext } from './search-select-context';
 
 	let {
 		heading,

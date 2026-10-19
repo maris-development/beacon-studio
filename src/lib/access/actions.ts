@@ -1,7 +1,10 @@
 import type { AdminClient, AuthRole, AuthRule } from '@maris-development/beacon-client';
 import { targetOf } from './summary';
 
-export type AuthAdmin = Pick<AdminClient, 'createUser' | 'grantRoleToUser' | 'createRole' | 'grantPrivilege'>;
+export type AuthAdmin = Pick<
+	AdminClient,
+	'createUser' | 'grantRoleToUser' | 'createRole' | 'grantPrivilege'
+>;
 
 export type StepFailure = { step: string; error: unknown };
 
@@ -35,7 +38,11 @@ export async function createUserWithRoles(
 }
 
 /** Create a role, then copy the grants and denies of the source. A failed copy is recorded. */
-export async function createRoleFrom(admin: AuthAdmin, name: string, source: AuthRole | null): Promise<StepFailure[]> {
+export async function createRoleFrom(
+	admin: AuthAdmin,
+	name: string,
+	source: AuthRole | null
+): Promise<StepFailure[]> {
 	await admin.createRole(name);
 	const failures: StepFailure[] = [];
 	if (!source) return failures;
@@ -47,7 +54,8 @@ export async function createRoleFrom(admin: AuthAdmin, name: string, source: Aut
 		try {
 			await admin.grantPrivilege(name, targetOf(rule), deny);
 		} catch (error) {
-			const step = `${deny ? 'deny' : 'grant'} ${rule.target_type} ${rule.target_value ?? ''}`.trim();
+			const step =
+				`${deny ? 'deny' : 'grant'} ${rule.target_type} ${rule.target_value ?? ''}`.trim();
 			failures.push({ step, error });
 		}
 	}

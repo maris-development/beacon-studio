@@ -110,11 +110,16 @@
 											>
 												<ShieldIcon />
 												<span class="role-name">{role.name}</span>
-												<span class="sub">{$t('usersRoles.ruleCount', { count: ruleCount(role) })}</span>
+												<span class="sub"
+													>{$t('usersRoles.ruleCount', { count: ruleCount(role) })}</span
+												>
 											</DropdownMenu.Item>
 										{/each}
 										<DropdownMenu.Separator />
-										<DropdownMenu.Item class="add-role-item" onSelect={() => onNewRoleFor(user.username)}>
+										<DropdownMenu.Item
+											class="add-role-item"
+											onSelect={() => onNewRoleFor(user.username)}
+										>
 											<ShieldPlusIcon />
 											{$t('usersRoles.users.newRoleItem')}
 										</DropdownMenu.Item>

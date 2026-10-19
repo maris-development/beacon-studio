@@ -4,7 +4,12 @@
 	import { replaceState } from '$app/navigation';
 	import { untrack } from 'svelte';
 	import { get } from 'svelte/store';
-	import type { AuthRole, AuthUser, BeaconClient, PrivilegeTarget } from '@maris-development/beacon-client';
+	import type {
+		AuthRole,
+		AuthUser,
+		BeaconClient,
+		PrivilegeTarget
+	} from '@maris-development/beacon-client';
 	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import ShieldPlusIcon from '@lucide/svelte/icons/shield-plus';
@@ -172,7 +177,11 @@
 
 		const done = await change((a) => a.dropUser(user.username), 'usersRoles.users.deleteFailed');
 		if (done) {
-			addToast({ type: 'success', key: 'usersRoles.users.deleted', values: { user: user.username } });
+			addToast({
+				type: 'success',
+				key: 'usersRoles.users.deleted',
+				values: { user: user.username }
+			});
 		}
 	}
 

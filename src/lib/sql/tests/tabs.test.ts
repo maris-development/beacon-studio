@@ -60,7 +60,10 @@ describe('tab changes', () => {
 	});
 
 	it('names a new tab with the given title function', () => {
-		const state = addWith(emptyWith((n) => `Vraag ${n}`), (n) => `Vraag ${n}`);
+		const state = addWith(
+			emptyWith((n) => `Vraag ${n}`),
+			(n) => `Vraag ${n}`
+		);
 		expect(state.tabs.map((tab) => tab.title)).toEqual(['Vraag 1', 'Vraag 2']);
 	});
 

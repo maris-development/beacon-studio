@@ -51,9 +51,8 @@
 		if (column.isSorted == true) {
 			// If the same column is clicked, toggle the direction
 			column.sortDirection = column.sortDirection === 'asc' ? 'desc' : 'asc';
-
 		} else {
-			columns.forEach(col => {
+			columns.forEach((col) => {
 				col.isSorted = false;
 				col.sortDirection = undefined;
 			});
@@ -69,8 +68,6 @@
 	function cell(row: Row, column: Column): unknown {
 		return (row as Record<string, unknown>)[column.key];
 	}
-
-	
 </script>
 
 <div class="data-table-wrapper">
@@ -78,18 +75,24 @@
 		<table class="dataset-table {size}">
 			<thead>
 				<tr>
-					{#each columns as column (column.key) }
+					{#each columns as column (column.key)}
 						{#if column.sortable}
-							<th class:sortable={column.sortable} data-key={column.key} onclick={() => _changeSort(column)} bind:this={column.ref} data-sort="">
+							<th
+								class:sortable={column.sortable}
+								data-key={column.key}
+								onclick={() => _changeSort(column)}
+								bind:this={column.ref}
+								data-sort=""
+							>
 								{column.header}
 								{#if column.sortable == true}
-									 {#if (column.isSorted == true)}
-										{#if (column.sortDirection === 'asc')}
+									{#if column.isSorted == true}
+										{#if column.sortDirection === 'asc'}
 											<span class="sort-indicator asc">
 												<ChrevonUpIcon size="1.25em" />
 											</span>
 										{/if}
-										{#if (column.sortDirection === 'desc')}
+										{#if column.sortDirection === 'desc'}
 											<span class="sort-indicator desc">
 												<ChrevonDownIcon size="1.25em" />
 											</span>
@@ -100,7 +103,6 @@
 										</span>
 									{/if}
 								{/if}
-								
 							</th>
 						{:else}
 							<th data-key={column.key}>{column.header}</th>
@@ -125,12 +127,18 @@
 						<tr class={rowClass}>
 							{#each columns as column (column.key)}
 								{#if showNull && cell(row, column) == null}
-									<td onclick={() => onCellClick(row, column)}><span class="null-value">{$t('table.nullValue')}</span></td>
+									<td onclick={() => onCellClick(row, column)}
+										><span class="null-value">{$t('table.nullValue')}</span></td
+									>
 								{:else if column.rawHtml === true}
 									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>
+									<td onclick={() => onCellClick(row, column)}
+										>{@html Utils.toString(cell(row, column))}</td
+									>
 								{:else}
-									<td onclick={() => onCellClick(row, column)}>{Utils.toString(cell(row, column))}</td>
+									<td onclick={() => onCellClick(row, column)}
+										>{Utils.toString(cell(row, column))}</td
+									>
 								{/if}
 							{/each}
 						</tr>
@@ -146,7 +154,13 @@
 			</button>
 			<div class="page-info">
 				{$t('table.pageBeforeInput')}
-				<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
+				<input
+					type="number"
+					min="1"
+					max={pageCount}
+					bind:value={pageIndex}
+					oninput={() => onPageChange(pageIndex)}
+				/>
 				{$t('table.pageAfterInput', { count: pageCount })}
 			</div>
 			<button
@@ -190,7 +204,7 @@
 				}
 
 				&.small {
-					thead th, 
+					thead th,
 					tbody td {
 						padding: 0.25rem 0.5rem;
 						font-size: var(--font-size-xs);
@@ -198,14 +212,13 @@
 				}
 
 				&.large {
-					thead th, 
+					thead th,
 					tbody td {
 						padding: 1rem 1.5rem;
 						font-size: var(--font-size-md);
 					}
 				}
-				
-				
+
 				thead {
 					background-color: var(--table-header-background);
 
@@ -235,7 +248,6 @@
 							&.none {
 								opacity: 0.5;
 							}
-
 						}
 					}
 				}

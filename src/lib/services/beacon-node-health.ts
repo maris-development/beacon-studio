@@ -44,10 +44,7 @@ const healthStore = writable<Record<string, BeaconNodeHealth>>({});
 export const healthMap: Readable<Record<string, BeaconNodeHealth>> = readonly(healthStore);
 
 /** The health of one node in a map snapshot. Use it with `$healthMap`. */
-export function healthOf(
-	map: Record<string, BeaconNodeHealth>,
-	url: string
-): BeaconNodeHealth {
+export function healthOf(map: Record<string, BeaconNodeHealth>, url: string): BeaconNodeHealth {
 	return map[normalizeUrl(url)] ?? UNKNOWN_HEALTH;
 }
 

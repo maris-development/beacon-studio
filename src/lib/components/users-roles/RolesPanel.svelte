@@ -1,5 +1,10 @@
 <script lang="ts">
-	import type { AuthRole, AuthRule, AuthUser, PrivilegeTarget } from '@maris-development/beacon-client';
+	import type {
+		AuthRole,
+		AuthRule,
+		AuthUser,
+		PrivilegeTarget
+	} from '@maris-development/beacon-client';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import ShieldIcon from '@lucide/svelte/icons/shield';
 	import ShieldOffIcon from '@lucide/svelte/icons/shield-off';
@@ -9,7 +14,14 @@
 	import Button from '@/components/buttons/Button.svelte';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { t } from '@/i18n';
-	import { describeTarget, filterRoles, membersOf, ruleCount, targetOf, usersToAdd } from '@/access/summary';
+	import {
+		describeTarget,
+		filterRoles,
+		membersOf,
+		ruleCount,
+		targetOf,
+		usersToAdd
+	} from '@/access/summary';
 	import UserAvatar from './UserAvatar.svelte';
 
 	let {

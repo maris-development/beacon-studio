@@ -47,25 +47,26 @@
 		<Separator />
 		<div class="parameter-filters">
 			{#each column.selected_filters as filter, index (index)}
-
 				<div class="filter-wrapper">
-			
 					<ParameterFilter
 						class="advanced-filter"
 						dateOnly={Utils.isDateDataType(column.type)}
 						bind:filter={filter.filter_value}
 					/>
-					
 
-					<Button variant="ghost" size="xs"
-						 class="remove-filter" 
-						 title={$t('filter.remove')} aria-label={$t('filter.remove')}
-						 onclick={() => { column.selected_filters = column.selected_filters.filter((f) => f !== filter); }}>
+					<Button
+						variant="ghost"
+						size="xs"
+						class="remove-filter"
+						title={$t('filter.remove')}
+						aria-label={$t('filter.remove')}
+						onclick={() => {
+							column.selected_filters = column.selected_filters.filter((f) => f !== filter);
+						}}
+					>
 						<CircleXIcon class="circle-x" />
 					</Button>
-
 				</div>
-			
 			{/each}
 		</div>
 	{/if}
@@ -80,38 +81,38 @@
 		border: 1px solid var(--control-active);
 		background-color: var(--selected-background);
 		padding: 0.6rem;
-		
+
 		.parameter-card-header {
 			display: flex;
 			flex-direction: row;
 			align-items: flex-start;
 			gap: 0.5rem;
 			min-width: 0;
-		
+
 			.parameter-title {
 				display: flex;
 				flex: 1 1 auto;
 				min-width: 0;
 				flex-direction: column;
 				gap: 0.25rem;
-			
+
 				h4 {
 					margin: 0;
 					overflow-wrap: anywhere;
 					word-break: break-word;
 				}
-			
+
 				span {
 					color: var(--muted-foreground);
 					font-size: var(--font-size-xs);
 					line-height: 1rem;
-				
+
 					overflow: hidden;
 					text-overflow: ellipsis;
 					white-space: nowrap;
 				}
 			}
-		
+
 			.parameter-buttons {
 				display: flex;
 				flex-direction: row;

@@ -57,15 +57,17 @@ function isHomeExample(value: unknown): value is HomeExample {
 
 	const entry = value as Record<string, unknown>;
 
-	return typeof entry.title === 'string'
-		&& typeof entry.description === 'string'
-		&& typeof entry.sourceName === 'string'
-		&& typeof entry.tableName === 'string'
-		&& typeof entry.image === 'string'
-		&& typeof entry.rows === 'number'
-		&& typeof entry.seconds === 'number'
-		&& typeof entry.format === 'string'
-		&& typeof entry.shareQuery === 'string';
+	return (
+		typeof entry.title === 'string' &&
+		typeof entry.description === 'string' &&
+		typeof entry.sourceName === 'string' &&
+		typeof entry.tableName === 'string' &&
+		typeof entry.image === 'string' &&
+		typeof entry.rows === 'number' &&
+		typeof entry.seconds === 'number' &&
+		typeof entry.format === 'string' &&
+		typeof entry.shareQuery === 'string'
+	);
 }
 
 /** Keeps the usable entries, in file order, and drops a malformed one. A payload that is not an array throws. */

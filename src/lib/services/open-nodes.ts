@@ -56,16 +56,18 @@ export function getOpenNodes(): OpenNode[] {
 	return get(openNodesStore);
 }
 
-
-
 /** True if the value has a usable name and URL. */
 function isOpenNode(value: unknown): value is Partial<OpenNode> & { name: string; url: string } {
 	if (typeof value !== 'object' || value === null) return false;
 
 	const entry = value as Record<string, unknown>;
 
-	return typeof entry.name === 'string' && entry.name.trim() !== ''
-		&& typeof entry.url === 'string' && entry.url.trim() !== '';
+	return (
+		typeof entry.name === 'string' &&
+		entry.name.trim() !== '' &&
+		typeof entry.url === 'string' &&
+		entry.url.trim() !== ''
+	);
 }
 
 /** Keeps the usable entries, and drops a URL that repeats inside the list. */

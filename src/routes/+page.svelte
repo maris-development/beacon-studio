@@ -32,9 +32,7 @@
 	let cycleIndex = $state(0);
 
 	/** The node the Connected Nodes card shows now, or `null` if none is configured. */
-	let displayedNode = $derived(
-		$nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null
-	);
+	let displayedNode = $derived($nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null);
 
 	onMount(() => {
 		// The app can run on the same host as a Beacon node. Add that node once.
@@ -64,7 +62,9 @@
 
 <div class="page-wrapper">
 	<div class="header">
-		<h1 class="title">{$t('home.title.beforeHighlight')} <span class="highlight">{$t('home.title.highlight')}</span></h1>
+		<h1 class="title">
+			{$t('home.title.beforeHighlight')} <span class="highlight">{$t('home.title.highlight')}</span>
+		</h1>
 		<p class="subtitle">{$t('home.subtitle')}</p>
 	</div>
 
@@ -113,7 +113,11 @@
 
 		<div class="launchpad-cards">
 			<Card class="query-workbench">
-				<img class="shot" src={asset('/images/small-query-workbench.png')} alt={$t('home.launchpad.workbench.title')} />
+				<img
+					class="shot"
+					src={asset('/images/small-query-workbench.png')}
+					alt={$t('home.launchpad.workbench.title')}
+				/>
 				<div class="body">
 					<h3>{$t('home.launchpad.workbench.title')}</h3>
 					<p class="description">{$t('home.launchpad.workbench.description')}</p>
@@ -292,4 +296,3 @@
 		}
 	}
 </style>
-

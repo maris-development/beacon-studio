@@ -123,7 +123,6 @@
 		height: 100%;
 	}
 
-
 	div.app-body {
 		flex-grow: 1;
 		min-width: 0;
@@ -148,6 +147,4 @@
 
 		overflow-x: hidden;
 	}
-
-	
 </style>

@@ -2,802 +2,805 @@ import * as ApacheArrow from 'apache-arrow';
 import type { SortDirection } from './util-types';
 import { alignLongitude, LongitudeRange, wrapLongitude } from './geo/longitude';
 
-
 export class ApacheArrowUtils {
-    /**
-         * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
-         * 
-         * The cloning process follows these steps:
-         * 1. Attempts to use `structuredClone` for a deep and accurate clone.
-         * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
-         * 3. As a last resort, performs a shallow clone using object spread.
-         * 
-         * @typeParam T - The type of the value to clone.
-         * @param value - The value or Svelte `Readable` store to clone.
-         * @returns A cloned copy of the input value.
-         * @remarks
-         * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
-         * - Non-serializable properties may be lost if the fallback methods are used.
-         */
-    static cloneObject<T>(value: T | ApacheArrow.Readable<T>): T {
-        // 1) Best: structuredClone (fast, preserves Dates/Maps/Sets, etc.)
-        try {
-            const maybeObject = value as T;
-            return structuredClone(maybeObject);
-        } catch {
-            // ignored
-        }
-
-        // 2) If it’s JSON-like, this blows away proxies reliably
-        try {
-            return JSON.parse(JSON.stringify(value));
-        } catch {
-            // ignored
-        }
-
-        // 3) Last resort, shallow clone
-        const clone = { ...value } as T;
-
-        console.warn('cloneObject: shallow clone', clone)
-
-        return clone
-    }
-
-    
-    /**
-     * Finds and returns rows from an Apache Arrow table whose latitude and longitude values
-     * match the provided coordinates, rounded to a specified number of decimal places.
-     *
-     * @template T - The Apache Arrow TypeMap for the table.
-     * @param table - The Apache Arrow table to search.
-     * @param latLon - A tuple containing the latitude and longitude to match.
-     * @param groupByDecimals - The number of decimal places to use when comparing coordinates (default: 3).
-     * @param latitudeColumnName - The name of the latitude column in the table (default: 'Latitude').
-     * @param longitudeColumnName - The name of the longitude column in the table (default: 'Longitude').
-     * @param maxRows - The maximum number of matching rows to return (default: 100).
-     * @returns An array of records representing the rows that match the specified coordinates.
-     * @throws If the table does not contain the specified latitude or longitude columns.
-     */
-    static findSimilarRowsByLatLon<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        latLon: [number, number],
-        groupByDecimals: number = 3,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
-        maxRows: number = 100
-    ): unknown[] {
-
-        const toKey = (lat: number, lon: number): string => {
-            return `${lat.toFixed(groupByDecimals)},${lon.toFixed(groupByDecimals)}`;
-        };
-
-        const latCol = table.getChild(latitudeColumnName);
-        const lonCol = table.getChild(longitudeColumnName);
-        const rows = table.numRows;
-
-        if (!latCol || !lonCol) {
-            throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
-        }
-
-        const results: unknown[] = [];
-        const searchKey = toKey(latLon[0], latLon[1]);
-        const amounfOfFields = table.schema.fields.filter(f => f.name !== 'geometry').length;
-
-        for (let i = 0; i < rows; i++) {
-            const rowLat = latCol.get(i);
-            const rowLon = lonCol.get(i);
-            const rowKey = toKey(rowLat, rowLon);
-
-            if (rowKey === searchKey) {
-
-                const rowData = table.get(i).toArray().copyWithin(amounfOfFields, 0);
-
-                results.push(rowData);
-
-                if (results.length >= maxRows) {
-                    break;
-                }
-            }
-        }
-
-        return results;
-    }
-
-    /**
-     * Calculates the bounding box for latitude and longitude values in an Apache Arrow table.
-     *
-     * @template T - The type map for the Apache Arrow table.
-     * @param table - The Apache Arrow table containing geographic data, or `null` to return world bounds.
-     * @param latitudeColumnName - The name of the latitude column (default: 'Latitude').
-     * @param longitudeColumnName - The name of the longitude column (default: 'Longitude').
-     * @returns A tuple containing the minimum and maximum longitude and latitude values:
-     *          `[[minLongitude, minLatitude], [maxLongitude, maxLatitude]]`.
-     *          If `table` is `null`, returns world bounds: `[[-180, -90], [180, 90]]`.
-     *          A row without both coordinates does not count.
-     * @throws If the table does not contain the specified latitude and longitude columns.
-     */
-    static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T> | null,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude'
-    ): [[number, number], [number, number]] {
-        // console.log('getTableGeometryBounds', table);
-
-
-        if (!table) {
-            //return world bounds:
-            return [
-                [-180, -90],
-                [180, 90]
-            ];
-        }
-
-        const latCol = table.getChild(latitudeColumnName);
-        const lonCol = table.getChild(longitudeColumnName);
-
-        if (!latCol || !lonCol) {
-            throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
-        }
-
-        let minLat = Infinity;
-        let maxLat = -Infinity;
-        const longitudes = new LongitudeRange();
-
-        for (let i = 0; i < table.numRows; i++) {
-            // Null coerces to 0 in a comparison, so it must not reach one.
-            const latValue = latCol.get(i);
-            const lonValue = lonCol.get(i);
-            if (latValue === null || latValue === undefined) continue;
-            if (lonValue === null || lonValue === undefined) continue;
-
-            const lat = Number(latValue);
-            const lon = Number(lonValue);
-
-            // A corner of the box must hold a point, so a row counts with both of
-            // its coordinates or with neither.
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
-
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-            longitudes.add(lon);
-        }
-
-        // A table of 0..360 longitudes reports its wrapped extent, so the map
-        // fits the world that the points draw in.
-        const extent = longitudes.extent() ?? { west: -180, east: 180 };
-
-        // No row carries a latitude. Report the full range.
-        if (minLat === Infinity) {
-            minLat = -90;
-            maxLat = 90;
-        }
-
-        return [
-            [extent.west, minLat],
-            [extent.east, maxLat]
-        ];
-    }
-
-    private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
-        return ApacheArrowUtils.valueType(type).typeId;
-    }
-
-    /**
-     * Converts a typed value to its string representation based on the provided Apache Arrow type.
-     * 
-     * @param value - The value to convert. Can be of any type.
-     * @param type - The Apache Arrow type describing the value's type.
-     * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
-     *
-     * @remarks
-     * - For `Utf8`, `LargeUtf8`, and `Int` types, the value is converted to a string using `String(value)`.
-     * - For a 32-bit `Float`, returns the shortest text that reads back to the same 32-bit value.
-     * - For `Bool` type, returns `'true'` or `'false'`.
-     * - For `Timestamp` type, converts the value to an ISO string using `Date`.
-     * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
-     * - For other types, returns the stringified value. An object becomes JSON.
-     *
-     */
-    static typedValueToString(value: unknown, type: ApacheArrow.DataType): string {
-        if (value === null || value === undefined) {
-            return '';
-        }
-
-        const valueType = ApacheArrowUtils.valueType(type);
-
-        switch (valueType.typeId) {
-            case ApacheArrow.Type.Utf8:
-            case ApacheArrow.Type.LargeUtf8:
-            case ApacheArrow.Type.Int:
-                return String(value);
-
-            case ApacheArrow.Type.Float:
-                if ((valueType as ApacheArrow.Float).precision === ApacheArrow.Precision.SINGLE) {
-                    return ApacheArrowUtils.float32ToString(value);
-                }
-                return String(value);
-
-            case ApacheArrow.Type.Bool:
-                return value ? 'true' : 'false';
-
-            // Arrow returns a timestamp and a date as epoch milliseconds.
-            case ApacheArrow.Type.Timestamp:
-                return ApacheArrowUtils.isoString(value) ?? String(value);
-
-            case ApacheArrow.Type.Date:
-                return ApacheArrowUtils.isoString(value)?.slice(0, 10) ?? String(value);
-
-            case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
-                return ApacheArrowUtils.toJson(value) ?? String(value);
-
-            default:
-                return ApacheArrowUtils.anyToString(value);
-        }
-    }
-
-    // A Dictionary vector decodes to its value type, so switch on that type.
-    private static valueType(type: ApacheArrow.DataType): ApacheArrow.DataType {
-        if (ApacheArrow.DataType.isDictionary(type)) {
-            return type.dictionary;
-        }
-
-        return type;
-    }
-
-    private static isoString(value: unknown): string | null {
-        const date = new Date(value as number);
-        if (Number.isNaN(date.getTime())) return null;
-
-        return date.toISOString();
-    }
-
-    // Float32 values arrive as 64-bit numbers, so `String` would show noise like 0.6000000238418579.
-    private static float32ToString(value: unknown): string {
-        if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
-
-        for (let digits = 1; digits <= 9; digits++) {
-            const rounded = Number(value.toPrecision(digits));
-            if (Math.fround(rounded) === value) return String(rounded);
-        }
-
-        return String(value);
-    }
-
-    private static anyToString(value: unknown): string {
-        if (typeof value !== 'object' || value === null) return String(value);
-
-        const text = String(value);
-        if (text !== '[object Object]') return text;
-
-        return ApacheArrowUtils.toJson(value) ?? text;
-    }
-
-    // `JSON.stringify` throws on a bigint, and Int64 values arrive as bigints.
-    private static toJson(value: unknown): string | null {
-        try {
-            return JSON.stringify(value, (_key, item) => {
-                if (typeof item === 'bigint') return item.toString();
-                return item;
-            });
-        } catch {
-            return null;
-        }
-    }
-
-    static arrayToRecord(array: unknown[], schema: ApacheArrow.Schema): Record<string, unknown> {
-        const record: Record<string, unknown> = {};
-
-        schema.fields.forEach((field, index) => {
-            if (field.name === 'geometry') return; // Skip geometry field
-            const value = array[index];
-            // A null cell stays null, so a table can show it apart from an empty string.
-            if (value === null || value === undefined) {
-                record[field.name] = null;
-            } else {
-                record[field.name] = ApacheArrowUtils.typedValueToString(value, field.type);
-            }
-        });
-
-        return record;
-    }
-
-    /**
-     * Whether `toArray()` gives the same values as `get()` for a column of this type.
-     *
-     * A Float16 column stores half-float bits, and a timestamp stores values in its
-     * own unit. Only `get()` decodes those to numbers and milliseconds.
-     */
-    static rawValuesAreDecoded(type: ApacheArrow.DataType): boolean {
-        if (ApacheArrow.DataType.isFloat(type)) {
-            return type.precision !== ApacheArrow.Precision.HALF;
-        }
-
-        if (ApacheArrow.DataType.isTimestamp(type)) {
-            return type.unit === ApacheArrow.TimeUnit.MILLISECOND;
-        }
-
-        return true;
-    }
-
-    /**
-     * The decoded values of a column, one per row.
-     *
-     * When the raw values are decoded, this returns the typed array, and a null slot reads as 0.
-     * Otherwise it reads each row with `get()`, and a null slot reads as null.
-     */
-    static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector['toArray']> {
-        if (ApacheArrowUtils.rawValuesAreDecoded(vector.type)) {
-            return vector.toArray();
-        }
-
-        return Array.from({ length: vector.length }, (_, i) => vector.get(i));
-    }
-
-    /**
-     * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
-     *
-     * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
-     * Skips null and undefined values during calculation.
-     *
-     * 
-     * @template T - The Apache Arrow TypeMap for the table.
-     * @param table - The Apache Arrow table containing the data.
-     * @param column - The name of the column to compute min and max for.
-     * @returns An object containing the minimum and maximum values found in the column.
-     * @throws If the specified column is not found in the table schema.
-     */
-    static getColumnMinMax<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        column: string
-    ): { min: number, max: number } {
-        const colIndex = table.schema.fields.map(field => field.name).indexOf(column);
-
-        if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
-
-        const colVec: ApacheArrow.Vector = table.getChild(column);
-        const colArray = ApacheArrowUtils.decodedValues(colVec);
-
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        switch ((colVec.type as any).typeId) {
-            case ApacheArrow.Type.Timestamp:
-            case ApacheArrow.Type.Date:
-            case ApacheArrow.Type.Int:
-            case ApacheArrow.Type.Float:
-                break;
-            default:
-                console.warn(`Unsupported column type for min/max calculation: ${colVec.type.typeId} (${column})`);
-                return { min: NaN, max: NaN }; // Return NaN for unsupported
-        }
-
-
-        let min = Number.POSITIVE_INFINITY;
-        let max = Number.NEGATIVE_INFINITY;
-
-        for (const value of colArray) {
-            if (value === null || value === undefined) continue; // Skip null/undefined values
-            if (value < min) min = value;
-            if (value > max) max = value;
-        }
-
-        // An Int64 or Timestamp column holds bigints; callers expect numbers.
-        return { min: Number(min), max: Number(max) };
-    }
-
-
-    /**
-     * Sorts an Apache Arrow Table by a specified column and direction.
-     *
-     * @template T - The Apache Arrow TypeMap for the table.
-     * @param table - The Apache Arrow Table to be sorted.
-     * @param column - The name of the column to sort by.
-     * @param direction - The sort direction, either 'asc' for ascending or 'desc' for descending.
-     * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
-     *
-     * @remarks
-     * - Supports sorting for columns of type Timestamp, Date, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
-     * - Null values are sorted to the end of the table.
-     * - If the column does not exist or its type is unsupported, the original table is returned.
-     * - The schema of the original table is preserved in the sorted table.
-     *
-     * @example
-     * ```typescript
-     * const sortedTable = orderTableByColumn(table, 'age', 'asc');
-     * ```
-     */
-    static orderTableByColumn<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        column: string,
-        direction: SortDirection
-    ): ApacheArrow.Table<T> {
-        const colIndex = table.schema.fields.map(field => field.name).indexOf(column);
-
-        if (colIndex === -1) return table;
-
-        const sortColumn: ApacheArrow.Vector = table.getChild(column);
-        const sortedColumnArray = ApacheArrowUtils.decodedValues(sortColumn);
-        const indexedArray = [];
-
-        for (let i = 0; i < sortedColumnArray.length; i++) {
-            indexedArray.push({ index: i, value: sortedColumnArray[i] });
-        }
-
-        // console.log('Sorting table', column, direction, table)
-
-        let sortedIndices: number[];
-
-        switch (ApacheArrowUtils.valueTypeId(sortColumn.type)) {
-            case ApacheArrow.Type.Int:
-            case ApacheArrow.Type.Time:
-            case ApacheArrow.Type.Timestamp:
-
-                // BigInt sorting
-                sortedIndices = indexedArray
-                    .sort((a, b) => {
-                        const valA = a.value as bigint | null;
-                        const valB = b.value as bigint | null;
-
-                        if (valA === null && valB === null) return 0;
-                        if (valA === null) return 1;  // nulls last
-                        if (valB === null) return -1;
-
-                        if (valA === valB) return 0;
-
-                        if (direction === 'asc') {
-                            return valA < valB ? -1 : 1;
-                        } else {
-                            return valA > valB ? -1 : 1;
-                        }
-                    })
-                    .map(item => item.index);
-                break;
-
-            case ApacheArrow.Type.Float:
-            case ApacheArrow.Type.Date:
-                // Numeric sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as number;
-                    const valB = b.value as number;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? valA - valB : valB - valA;
-                }).map(item => item.index);
-                break;
-
-            case ApacheArrow.Type.Utf8:
-            case ApacheArrow.Type.LargeUtf8:
-                // String sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as string;
-                    const valB = b.value as string;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                }).map(item => item.index);
-                break;
-
-            case ApacheArrow.Type.Bool:
-                // Boolean sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as boolean;
-                    const valB = b.value as boolean;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? (valA === valB ? 0 : valA ? 1 : -1) : (valA === valB ? 0 : valA ? -1 : 1);
-                }).map(item => item.index);
-                break;
-
-            default:
-                console.warn(`Unsupported column type for sorting: ${sortColumn.type.typeId}`);
-                return table; // Return original table if type is unsupported
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sortedColumns: Record<string, any> = {};
-
-
-        for (const field of table.schema.fields) {
-            const name = field.name;
-            const col = table.getChild(name)!;
-            const values = sortedIndices.map((idx) => col.get(idx));
-            // For every row‐index in sortedIndices, pull out col.get(idx)
-            sortedColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
-        }
-
-        const sortedTable = ApacheArrow.tableFromArrays(sortedColumns);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (sortedTable as any).schema = table.schema;
-
-        return sortedTable as unknown as ApacheArrow.Table<T>; //ignore ts errors
-
-    }
-
-    /**
-     * Deduplicates rows in an Apache Arrow Table based on latitude and longitude columns.
-     *
-     * 
-     * This method scans the specified number of rows (or all rows if not specified) and removes duplicates
-     * where the latitude and longitude values (rounded to two decimal places) are the same.
-     * The resulting table preserves the original schema and contains only the first occurrence of each unique coordinate pair.
-     *
-     * @typeParam T - The Apache Arrow TypeMap for the table.
-     * @param table - The Apache Arrow Table to deduplicate.
-     * @param latitudeColumnName - The name of the latitude column. Defaults to 'Latitude'.
-     * @param longitudeColumnName - The name of the longitude column. Defaults to 'Longitude'.
-     * @param amountOfRows - The number of rows to consider for deduplication. If undefined, all rows are considered.
-     * @returns A new Apache Arrow Table with duplicate rows (based on latitude and longitude) removed.
-     */
-    static deduplicateTable<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
-        amountOfRows: number = undefined,
-        decimals: number = 3
-
-    ): ApacheArrow.Table<T> {
-
-        if (!amountOfRows) {
-            amountOfRows = table.numRows;
-        }
-
-        const latCol = table.getChild(latitudeColumnName);
-        const lonCol = table.getChild(longitudeColumnName);
-
-        const seen = new Set<string>();
-        const keepIndexes: number[] = [];
-
-        // Efficiently iterate column-wise
-        for (let i = 0; i < amountOfRows; i++) {
-            const lat: number = latCol?.get(i);
-            const lon: number = lonCol?.get(i);
-
-            // Optional: round coordinates to avoid floating-point noise
-            const key = `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
-
-            if (!seen.has(key)) {
-                seen.add(key);
-                keepIndexes.push(i);
-            }
-        }
-
-        // console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
-
-        // 3. Rebuild each column as a JS array of the kept values
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dedupColumns: Record<string, any> = {};
-
-        for (const field of table.schema.fields) {
-            const name = field.name;
-            const col = table.getChild(name)!;
-            const values = keepIndexes.map((idx) => col.get(idx));
-            // For every row‐index in keepIdx, pull out col.get(idx)
-            dedupColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
-        }
-
-        const deduped = ApacheArrow.tableFromArrays(dedupColumns);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (deduped as any).schema = table.schema; // Preserve original schema
-
-        return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
-    }
-
-    /**
-     * Returns a copy of the table with an added GeoArrow "point" geometry column
-     * derived from its latitude/longitude columns.
-     *
-     * The geometry is an interleaved GeoArrow point — a `FixedSizeList<Float64>[2]`
-     * of `[longitude, latitude]` (x, y) — tagged with the
-     * `ARROW:extension:name = geoarrow.point` field metadata that
-     * `@geoarrow/deck.gl-layers` uses to locate the geometry column. This replaces
-     * the server-side GeoParquet geometry: all views can now share one arrow-native
-     * result and the map builds its geometry client-side.
-     *
-     * @throws If the latitude or longitude column is not present.
-     */
-    static addPointGeometryColumn<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
-        geometryColumnName: string = 'geometry'
-    ): ApacheArrow.Table {
-        const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
-        const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
-
-        if (latIndex === -1 || lonIndex === -1) {
-            throw new Error(
-                `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`
-            );
-        }
-
-        // GeoArrow interleaved point type + the extension metadata deck.gl detects.
-        const coordField = new ApacheArrow.Field('xy', new ApacheArrow.Float64(), false);
-        const pointType = new ApacheArrow.FixedSizeList(2, coordField);
-        const geometryField = new ApacheArrow.Field(
-            geometryColumnName,
-            pointType,
-            true,
-            new Map([['ARROW:extension:name', 'geoarrow.point']])
-        );
-
-        const newFields: ApacheArrow.Field[] = [...table.schema.fields, geometryField];
-        const newSchema = new ApacheArrow.Schema(newFields, table.schema.metadata);
-        const structType = new ApacheArrow.Struct(newFields);
-
-        if (table.batches.length === 0) {
-            return new ApacheArrow.Table(newSchema);
-        }
-
-        const newBatches = table.batches.map((batch) => {
-            const rows = batch.numRows;
-            const latCol = batch.getChildAt(latIndex)!;
-            const lonCol = batch.getChildAt(lonIndex)!;
-
-            // Interleaved [x=lon, y=lat] coordinate buffer. The longitude wraps
-            // to -180..180: deck.gl draws one world, and a point outside it
-            // disappears as soon as the viewport leaves the second copy.
-            const coords = new Float64Array(rows * 2);
-            const validity = new Uint8Array((rows + 7) >> 3);
-            let nullCount = 0;
-
-            for (let i = 0; i < rows; i++) {
-                const lon = Number(lonCol.get(i) ?? NaN);
-                const lat = Number(latCol.get(i) ?? NaN);
-
-                if (Number.isFinite(lon) && Number.isFinite(lat)) {
-                    coords[i * 2] = wrapLongitude(lon);
-                    coords[i * 2 + 1] = lat;
-                    validity[i >> 3] |= 1 << (i & 7);
-                } else {
-                    // deck.gl reads this buffer and ignores the bitmap. NaN keeps
-                    // the point off the map; 0 would draw it at null island.
-                    coords[i * 2] = NaN;
-                    coords[i * 2 + 1] = NaN;
-                    nullCount++;
-                }
-            }
-
-            const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
-            const geometryData = ApacheArrow.makeData({
-                type: pointType,
-                length: rows,
-                nullCount,
-                nullBitmap: nullCount > 0 ? validity : undefined,
-                child: childData
-            });
-            const structData = ApacheArrow.makeData({
-                type: structType,
-                length: rows,
-                nullCount: 0,
-                children: [...batch.data.children, geometryData]
-            });
-
-            return new ApacheArrow.RecordBatch(newSchema, structData);
-        });
-
-        return new ApacheArrow.Table(newBatches);
-    }
-
-    /**
-     * Counts the rows whose longitude/latitude fall inside a closed ring.
-     *
-     * The ring is a `[longitude, latitude]` list, as produced by the map draw
-     * tools. The test is the same one the server does: a ray cast over the ring
-     * (see `beacon-core/src/query/filter/geo_json.rs`). A bounding box check runs
-     * first, because it rejects most rows with two comparisons.
-     *
-     * Rows without a numeric coordinate do not count.
-     *
-     * @throws If the table has no latitude or longitude column.
-     */
-    static countPointsInRing<T extends ApacheArrow.TypeMap>(
-        table: ApacheArrow.Table<T>,
-        ring: [number, number][],
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude'
-    ): number {
-        if (ring.length < 4) return 0;
-
-        const latCol = table.getChild(latitudeColumnName);
-        const lonCol = table.getChild(longitudeColumnName);
-
-        if (!latCol || !lonCol) {
-            throw new Error(
-                `Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to count an area.`
-            );
-        }
-
-        let minLon = Number.POSITIVE_INFINITY;
-        let maxLon = Number.NEGATIVE_INFINITY;
-        let minLat = Number.POSITIVE_INFINITY;
-        let maxLat = Number.NEGATIVE_INFINITY;
-
-        for (const [lon, lat] of ring) {
-            if (lon < minLon) minLon = lon;
-            if (lon > maxLon) maxLon = lon;
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-        }
-
-        const lons = ApacheArrowUtils.decodedValues(lonCol);
-        const lats = ApacheArrowUtils.decodedValues(latCol);
-        const rows = Math.min(lons.length, lats.length);
-
-        // toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
-        // a column with nulls needs the slower reader that reports them.
-        const hasNulls = latCol.nullCount > 0 || lonCol.nullCount > 0;
-
-        // The ring holds the longitudes of the map, the column holds those of the
-        // producer. A point at 185 must therefore also meet a ring at -175.
-        const ringLon = (minLon + maxLon) / 2;
-
-        // alignLongitude gives back the copy within 180 degrees of the centre, and
-        // a narrower ring holds no other copy. Only a wider one tests the neighbours.
-        const wideRing = maxLon - minLon > 360;
-
-        let count = 0;
-
-        for (let i = 0; i < rows; i++) {
-            if (hasNulls && (latCol.get(i) == null || lonCol.get(i) == null)) continue;
-
-            const lat = Number(lats[i]);
-            if (!Number.isFinite(lat) || lat < minLat || lat > maxLat) continue;
-
-            const lon = alignLongitude(Number(lons[i]), ringLon);
-            if (!Number.isFinite(lon)) continue;
-
-            if (ApacheArrowUtils.pointInRingBox(lon, lat, ring, minLon, maxLon)) {
-                count++;
-                continue;
-            }
-
-            // A row counts once at most.
-            if (!wideRing) continue;
-            if (
-                ApacheArrowUtils.pointInRingBox(lon + 360, lat, ring, minLon, maxLon) ||
-                ApacheArrowUtils.pointInRingBox(lon - 360, lat, ring, minLon, maxLon)
-            ) {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    /** The bounding box test of the ring, then the ray cast. */
-    private static pointInRingBox(
-        lon: number,
-        lat: number,
-        ring: [number, number][],
-        minLon: number,
-        maxLon: number
-    ): boolean {
-        if (lon < minLon || lon > maxLon) return false;
-        return ApacheArrowUtils.pointInRing(lon, lat, ring);
-    }
-
-    /** Ray cast point-in-polygon test over a closed ring of `[longitude, latitude]`. */
-    private static pointInRing(lon: number, lat: number, ring: [number, number][]): boolean {
-        let inside = false;
-
-        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-            const [xi, yi] = ring[i];
-            const [xj, yj] = ring[j];
-
-            // Does the edge cross the ray that goes east from the point?
-            const crosses = yi > lat !== yj > lat;
-            if (!crosses) continue;
-
-            const crossingLon = ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
-            if (lon < crossingLon) inside = !inside;
-        }
-
-        return inside;
-    }
-
+	/**
+	 * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
+	 *
+	 * The cloning process follows these steps:
+	 * 1. Attempts to use `structuredClone` for a deep and accurate clone.
+	 * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
+	 * 3. As a last resort, performs a shallow clone using object spread.
+	 *
+	 * @typeParam T - The type of the value to clone.
+	 * @param value - The value or Svelte `Readable` store to clone.
+	 * @returns A cloned copy of the input value.
+	 * @remarks
+	 * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
+	 * - Non-serializable properties may be lost if the fallback methods are used.
+	 */
+	static cloneObject<T>(value: T | ApacheArrow.Readable<T>): T {
+		// 1) Best: structuredClone (fast, preserves Dates/Maps/Sets, etc.)
+		try {
+			const maybeObject = value as T;
+			return structuredClone(maybeObject);
+		} catch {
+			// ignored
+		}
+
+		// 2) If it’s JSON-like, this blows away proxies reliably
+		try {
+			return JSON.parse(JSON.stringify(value));
+		} catch {
+			// ignored
+		}
+
+		// 3) Last resort, shallow clone
+		const clone = { ...value } as T;
+
+		console.warn('cloneObject: shallow clone', clone);
+
+		return clone;
+	}
+
+	/**
+	 * Finds and returns rows from an Apache Arrow table whose latitude and longitude values
+	 * match the provided coordinates, rounded to a specified number of decimal places.
+	 *
+	 * @template T - The Apache Arrow TypeMap for the table.
+	 * @param table - The Apache Arrow table to search.
+	 * @param latLon - A tuple containing the latitude and longitude to match.
+	 * @param groupByDecimals - The number of decimal places to use when comparing coordinates (default: 3).
+	 * @param latitudeColumnName - The name of the latitude column in the table (default: 'Latitude').
+	 * @param longitudeColumnName - The name of the longitude column in the table (default: 'Longitude').
+	 * @param maxRows - The maximum number of matching rows to return (default: 100).
+	 * @returns An array of records representing the rows that match the specified coordinates.
+	 * @throws If the table does not contain the specified latitude or longitude columns.
+	 */
+	static findSimilarRowsByLatLon<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		latLon: [number, number],
+		groupByDecimals: number = 3,
+		latitudeColumnName: string = 'Latitude',
+		longitudeColumnName: string = 'Longitude',
+		maxRows: number = 100
+	): unknown[] {
+		const toKey = (lat: number, lon: number): string => {
+			return `${lat.toFixed(groupByDecimals)},${lon.toFixed(groupByDecimals)}`;
+		};
+
+		const latCol = table.getChild(latitudeColumnName);
+		const lonCol = table.getChild(longitudeColumnName);
+		const rows = table.numRows;
+
+		if (!latCol || !lonCol) {
+			throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
+		}
+
+		const results: unknown[] = [];
+		const searchKey = toKey(latLon[0], latLon[1]);
+		const amounfOfFields = table.schema.fields.filter((f) => f.name !== 'geometry').length;
+
+		for (let i = 0; i < rows; i++) {
+			const rowLat = latCol.get(i);
+			const rowLon = lonCol.get(i);
+			const rowKey = toKey(rowLat, rowLon);
+
+			if (rowKey === searchKey) {
+				const rowData = table.get(i).toArray().copyWithin(amounfOfFields, 0);
+
+				results.push(rowData);
+
+				if (results.length >= maxRows) {
+					break;
+				}
+			}
+		}
+
+		return results;
+	}
+
+	/**
+	 * Calculates the bounding box for latitude and longitude values in an Apache Arrow table.
+	 *
+	 * @template T - The type map for the Apache Arrow table.
+	 * @param table - The Apache Arrow table containing geographic data, or `null` to return world bounds.
+	 * @param latitudeColumnName - The name of the latitude column (default: 'Latitude').
+	 * @param longitudeColumnName - The name of the longitude column (default: 'Longitude').
+	 * @returns A tuple containing the minimum and maximum longitude and latitude values:
+	 *          `[[minLongitude, minLatitude], [maxLongitude, maxLatitude]]`.
+	 *          If `table` is `null`, returns world bounds: `[[-180, -90], [180, 90]]`.
+	 *          A row without both coordinates does not count.
+	 * @throws If the table does not contain the specified latitude and longitude columns.
+	 */
+	static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T> | null,
+		latitudeColumnName: string = 'Latitude',
+		longitudeColumnName: string = 'Longitude'
+	): [[number, number], [number, number]] {
+		// console.log('getTableGeometryBounds', table);
+
+		if (!table) {
+			//return world bounds:
+			return [
+				[-180, -90],
+				[180, 90]
+			];
+		}
+
+		const latCol = table.getChild(latitudeColumnName);
+		const lonCol = table.getChild(longitudeColumnName);
+
+		if (!latCol || !lonCol) {
+			throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
+		}
+
+		let minLat = Infinity;
+		let maxLat = -Infinity;
+		const longitudes = new LongitudeRange();
+
+		for (let i = 0; i < table.numRows; i++) {
+			// Null coerces to 0 in a comparison, so it must not reach one.
+			const latValue = latCol.get(i);
+			const lonValue = lonCol.get(i);
+			if (latValue === null || latValue === undefined) continue;
+			if (lonValue === null || lonValue === undefined) continue;
+
+			const lat = Number(latValue);
+			const lon = Number(lonValue);
+
+			// A corner of the box must hold a point, so a row counts with both of
+			// its coordinates or with neither.
+			if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+			if (lat < minLat) minLat = lat;
+			if (lat > maxLat) maxLat = lat;
+			longitudes.add(lon);
+		}
+
+		// A table of 0..360 longitudes reports its wrapped extent, so the map
+		// fits the world that the points draw in.
+		const extent = longitudes.extent() ?? { west: -180, east: 180 };
+
+		// No row carries a latitude. Report the full range.
+		if (minLat === Infinity) {
+			minLat = -90;
+			maxLat = 90;
+		}
+
+		return [
+			[extent.west, minLat],
+			[extent.east, maxLat]
+		];
+	}
+
+	private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
+		return ApacheArrowUtils.valueType(type).typeId;
+	}
+
+	/**
+	 * Converts a typed value to its string representation based on the provided Apache Arrow type.
+	 *
+	 * @param value - The value to convert. Can be of any type.
+	 * @param type - The Apache Arrow type describing the value's type.
+	 * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
+	 *
+	 * @remarks
+	 * - For `Utf8`, `LargeUtf8`, and `Int` types, the value is converted to a string using `String(value)`.
+	 * - For a 32-bit `Float`, returns the shortest text that reads back to the same 32-bit value.
+	 * - For `Bool` type, returns `'true'` or `'false'`.
+	 * - For `Timestamp` type, converts the value to an ISO string using `Date`.
+	 * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
+	 * - For other types, returns the stringified value. An object becomes JSON.
+	 *
+	 */
+	static typedValueToString(value: unknown, type: ApacheArrow.DataType): string {
+		if (value === null || value === undefined) {
+			return '';
+		}
+
+		const valueType = ApacheArrowUtils.valueType(type);
+
+		switch (valueType.typeId) {
+			case ApacheArrow.Type.Utf8:
+			case ApacheArrow.Type.LargeUtf8:
+			case ApacheArrow.Type.Int:
+				return String(value);
+
+			case ApacheArrow.Type.Float:
+				if ((valueType as ApacheArrow.Float).precision === ApacheArrow.Precision.SINGLE) {
+					return ApacheArrowUtils.float32ToString(value);
+				}
+				return String(value);
+
+			case ApacheArrow.Type.Bool:
+				return value ? 'true' : 'false';
+
+			// Arrow returns a timestamp and a date as epoch milliseconds.
+			case ApacheArrow.Type.Timestamp:
+				return ApacheArrowUtils.isoString(value) ?? String(value);
+
+			case ApacheArrow.Type.Date:
+				return ApacheArrowUtils.isoString(value)?.slice(0, 10) ?? String(value);
+
+			case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
+				return ApacheArrowUtils.toJson(value) ?? String(value);
+
+			default:
+				return ApacheArrowUtils.anyToString(value);
+		}
+	}
+
+	// A Dictionary vector decodes to its value type, so switch on that type.
+	private static valueType(type: ApacheArrow.DataType): ApacheArrow.DataType {
+		if (ApacheArrow.DataType.isDictionary(type)) {
+			return type.dictionary;
+		}
+
+		return type;
+	}
+
+	private static isoString(value: unknown): string | null {
+		const date = new Date(value as number);
+		if (Number.isNaN(date.getTime())) return null;
+
+		return date.toISOString();
+	}
+
+	// Float32 values arrive as 64-bit numbers, so `String` would show noise like 0.6000000238418579.
+	private static float32ToString(value: unknown): string {
+		if (typeof value !== 'number' || !Number.isFinite(value)) return String(value);
+
+		for (let digits = 1; digits <= 9; digits++) {
+			const rounded = Number(value.toPrecision(digits));
+			if (Math.fround(rounded) === value) return String(rounded);
+		}
+
+		return String(value);
+	}
+
+	private static anyToString(value: unknown): string {
+		if (typeof value !== 'object' || value === null) return String(value);
+
+		const text = String(value);
+		if (text !== '[object Object]') return text;
+
+		return ApacheArrowUtils.toJson(value) ?? text;
+	}
+
+	// `JSON.stringify` throws on a bigint, and Int64 values arrive as bigints.
+	private static toJson(value: unknown): string | null {
+		try {
+			return JSON.stringify(value, (_key, item) => {
+				if (typeof item === 'bigint') return item.toString();
+				return item;
+			});
+		} catch {
+			return null;
+		}
+	}
+
+	static arrayToRecord(array: unknown[], schema: ApacheArrow.Schema): Record<string, unknown> {
+		const record: Record<string, unknown> = {};
+
+		schema.fields.forEach((field, index) => {
+			if (field.name === 'geometry') return; // Skip geometry field
+			const value = array[index];
+			// A null cell stays null, so a table can show it apart from an empty string.
+			if (value === null || value === undefined) {
+				record[field.name] = null;
+			} else {
+				record[field.name] = ApacheArrowUtils.typedValueToString(value, field.type);
+			}
+		});
+
+		return record;
+	}
+
+	/**
+	 * Whether `toArray()` gives the same values as `get()` for a column of this type.
+	 *
+	 * A Float16 column stores half-float bits, and a timestamp stores values in its
+	 * own unit. Only `get()` decodes those to numbers and milliseconds.
+	 */
+	static rawValuesAreDecoded(type: ApacheArrow.DataType): boolean {
+		if (ApacheArrow.DataType.isFloat(type)) {
+			return type.precision !== ApacheArrow.Precision.HALF;
+		}
+
+		if (ApacheArrow.DataType.isTimestamp(type)) {
+			return type.unit === ApacheArrow.TimeUnit.MILLISECOND;
+		}
+
+		return true;
+	}
+
+	/**
+	 * The decoded values of a column, one per row.
+	 *
+	 * When the raw values are decoded, this returns the typed array, and a null slot reads as 0.
+	 * Otherwise it reads each row with `get()`, and a null slot reads as null.
+	 */
+	static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector['toArray']> {
+		if (ApacheArrowUtils.rawValuesAreDecoded(vector.type)) {
+			return vector.toArray();
+		}
+
+		return Array.from({ length: vector.length }, (_, i) => vector.get(i));
+	}
+
+	/**
+	 * Calculates the minimum and maximum numeric values in a specified column of an Apache Arrow table.
+	 *
+	 * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
+	 * Skips null and undefined values during calculation.
+	 *
+	 *
+	 * @template T - The Apache Arrow TypeMap for the table.
+	 * @param table - The Apache Arrow table containing the data.
+	 * @param column - The name of the column to compute min and max for.
+	 * @returns An object containing the minimum and maximum values found in the column.
+	 * @throws If the specified column is not found in the table schema.
+	 */
+	static getColumnMinMax<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		column: string
+	): { min: number; max: number } {
+		const colIndex = table.schema.fields.map((field) => field.name).indexOf(column);
+
+		if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
+
+		const colVec: ApacheArrow.Vector = table.getChild(column);
+		const colArray = ApacheArrowUtils.decodedValues(colVec);
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		switch ((colVec.type as any).typeId) {
+			case ApacheArrow.Type.Timestamp:
+			case ApacheArrow.Type.Date:
+			case ApacheArrow.Type.Int:
+			case ApacheArrow.Type.Float:
+				break;
+			default:
+				console.warn(
+					`Unsupported column type for min/max calculation: ${colVec.type.typeId} (${column})`
+				);
+				return { min: NaN, max: NaN }; // Return NaN for unsupported
+		}
+
+		let min = Number.POSITIVE_INFINITY;
+		let max = Number.NEGATIVE_INFINITY;
+
+		for (const value of colArray) {
+			if (value === null || value === undefined) continue; // Skip null/undefined values
+			if (value < min) min = value;
+			if (value > max) max = value;
+		}
+
+		// An Int64 or Timestamp column holds bigints; callers expect numbers.
+		return { min: Number(min), max: Number(max) };
+	}
+
+	/**
+	 * Sorts an Apache Arrow Table by a specified column and direction.
+	 *
+	 * @template T - The Apache Arrow TypeMap for the table.
+	 * @param table - The Apache Arrow Table to be sorted.
+	 * @param column - The name of the column to sort by.
+	 * @param direction - The sort direction, either 'asc' for ascending or 'desc' for descending.
+	 * @returns A new Apache Arrow Table sorted by the specified column and direction. If the column is not found or the type is unsupported, returns the original table.
+	 *
+	 * @remarks
+	 * - Supports sorting for columns of type Timestamp, Date, Int, Float, Utf8 and LargeUtf8 (string), and Bool.
+	 * - Null values are sorted to the end of the table.
+	 * - If the column does not exist or its type is unsupported, the original table is returned.
+	 * - The schema of the original table is preserved in the sorted table.
+	 *
+	 * @example
+	 * ```typescript
+	 * const sortedTable = orderTableByColumn(table, 'age', 'asc');
+	 * ```
+	 */
+	static orderTableByColumn<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		column: string,
+		direction: SortDirection
+	): ApacheArrow.Table<T> {
+		const colIndex = table.schema.fields.map((field) => field.name).indexOf(column);
+
+		if (colIndex === -1) return table;
+
+		const sortColumn: ApacheArrow.Vector = table.getChild(column);
+		const sortedColumnArray = ApacheArrowUtils.decodedValues(sortColumn);
+		const indexedArray = [];
+
+		for (let i = 0; i < sortedColumnArray.length; i++) {
+			indexedArray.push({ index: i, value: sortedColumnArray[i] });
+		}
+
+		// console.log('Sorting table', column, direction, table)
+
+		let sortedIndices: number[];
+
+		switch (ApacheArrowUtils.valueTypeId(sortColumn.type)) {
+			case ApacheArrow.Type.Int:
+			case ApacheArrow.Type.Time:
+			case ApacheArrow.Type.Timestamp:
+				// BigInt sorting
+				sortedIndices = indexedArray
+					.sort((a, b) => {
+						const valA = a.value as bigint | null;
+						const valB = b.value as bigint | null;
+
+						if (valA === null && valB === null) return 0;
+						if (valA === null) return 1; // nulls last
+						if (valB === null) return -1;
+
+						if (valA === valB) return 0;
+
+						if (direction === 'asc') {
+							return valA < valB ? -1 : 1;
+						} else {
+							return valA > valB ? -1 : 1;
+						}
+					})
+					.map((item) => item.index);
+				break;
+
+			case ApacheArrow.Type.Float:
+			case ApacheArrow.Type.Date:
+				// Numeric sorting
+				sortedIndices = indexedArray
+					.sort((a, b) => {
+						const valA = a.value as number;
+						const valB = b.value as number;
+						if (valA === null && valB === null) return 0;
+						if (valA === null) return 1;
+						if (valB === null) return -1;
+						return direction === 'asc' ? valA - valB : valB - valA;
+					})
+					.map((item) => item.index);
+				break;
+
+			case ApacheArrow.Type.Utf8:
+			case ApacheArrow.Type.LargeUtf8:
+				// String sorting
+				sortedIndices = indexedArray
+					.sort((a, b) => {
+						const valA = a.value as string;
+						const valB = b.value as string;
+						if (valA === null && valB === null) return 0;
+						if (valA === null) return 1;
+						if (valB === null) return -1;
+						return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+					})
+					.map((item) => item.index);
+				break;
+
+			case ApacheArrow.Type.Bool:
+				// Boolean sorting
+				sortedIndices = indexedArray
+					.sort((a, b) => {
+						const valA = a.value as boolean;
+						const valB = b.value as boolean;
+						if (valA === null && valB === null) return 0;
+						if (valA === null) return 1;
+						if (valB === null) return -1;
+						return direction === 'asc'
+							? valA === valB
+								? 0
+								: valA
+									? 1
+									: -1
+							: valA === valB
+								? 0
+								: valA
+									? -1
+									: 1;
+					})
+					.map((item) => item.index);
+				break;
+
+			default:
+				console.warn(`Unsupported column type for sorting: ${sortColumn.type.typeId}`);
+				return table; // Return original table if type is unsupported
+		}
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const sortedColumns: Record<string, any> = {};
+
+		for (const field of table.schema.fields) {
+			const name = field.name;
+			const col = table.getChild(name)!;
+			const values = sortedIndices.map((idx) => col.get(idx));
+			// For every row‐index in sortedIndices, pull out col.get(idx)
+			sortedColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
+		}
+
+		const sortedTable = ApacheArrow.tableFromArrays(sortedColumns);
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(sortedTable as any).schema = table.schema;
+
+		return sortedTable as unknown as ApacheArrow.Table<T>; //ignore ts errors
+	}
+
+	/**
+	 * Deduplicates rows in an Apache Arrow Table based on latitude and longitude columns.
+	 *
+	 *
+	 * This method scans the specified number of rows (or all rows if not specified) and removes duplicates
+	 * where the latitude and longitude values (rounded to two decimal places) are the same.
+	 * The resulting table preserves the original schema and contains only the first occurrence of each unique coordinate pair.
+	 *
+	 * @typeParam T - The Apache Arrow TypeMap for the table.
+	 * @param table - The Apache Arrow Table to deduplicate.
+	 * @param latitudeColumnName - The name of the latitude column. Defaults to 'Latitude'.
+	 * @param longitudeColumnName - The name of the longitude column. Defaults to 'Longitude'.
+	 * @param amountOfRows - The number of rows to consider for deduplication. If undefined, all rows are considered.
+	 * @returns A new Apache Arrow Table with duplicate rows (based on latitude and longitude) removed.
+	 */
+	static deduplicateTable<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		latitudeColumnName: string = 'Latitude',
+		longitudeColumnName: string = 'Longitude',
+		amountOfRows: number = undefined,
+		decimals: number = 3
+	): ApacheArrow.Table<T> {
+		if (!amountOfRows) {
+			amountOfRows = table.numRows;
+		}
+
+		const latCol = table.getChild(latitudeColumnName);
+		const lonCol = table.getChild(longitudeColumnName);
+
+		const seen = new Set<string>();
+		const keepIndexes: number[] = [];
+
+		// Efficiently iterate column-wise
+		for (let i = 0; i < amountOfRows; i++) {
+			const lat: number = latCol?.get(i);
+			const lon: number = lonCol?.get(i);
+
+			// Optional: round coordinates to avoid floating-point noise
+			const key = `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
+
+			if (!seen.has(key)) {
+				seen.add(key);
+				keepIndexes.push(i);
+			}
+		}
+
+		// console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
+
+		// 3. Rebuild each column as a JS array of the kept values
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const dedupColumns: Record<string, any> = {};
+
+		for (const field of table.schema.fields) {
+			const name = field.name;
+			const col = table.getChild(name)!;
+			const values = keepIndexes.map((idx) => col.get(idx));
+			// For every row‐index in keepIdx, pull out col.get(idx)
+			dedupColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
+		}
+
+		const deduped = ApacheArrow.tableFromArrays(dedupColumns);
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(deduped as any).schema = table.schema; // Preserve original schema
+
+		return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
+	}
+
+	/**
+	 * Returns a copy of the table with an added GeoArrow "point" geometry column
+	 * derived from its latitude/longitude columns.
+	 *
+	 * The geometry is an interleaved GeoArrow point — a `FixedSizeList<Float64>[2]`
+	 * of `[longitude, latitude]` (x, y) — tagged with the
+	 * `ARROW:extension:name = geoarrow.point` field metadata that
+	 * `@geoarrow/deck.gl-layers` uses to locate the geometry column. This replaces
+	 * the server-side GeoParquet geometry: all views can now share one arrow-native
+	 * result and the map builds its geometry client-side.
+	 *
+	 * @throws If the latitude or longitude column is not present.
+	 */
+	static addPointGeometryColumn<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		latitudeColumnName: string = 'Latitude',
+		longitudeColumnName: string = 'Longitude',
+		geometryColumnName: string = 'geometry'
+	): ApacheArrow.Table {
+		const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
+		const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
+
+		if (latIndex === -1 || lonIndex === -1) {
+			throw new Error(
+				`Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to derive geometry.`
+			);
+		}
+
+		// GeoArrow interleaved point type + the extension metadata deck.gl detects.
+		const coordField = new ApacheArrow.Field('xy', new ApacheArrow.Float64(), false);
+		const pointType = new ApacheArrow.FixedSizeList(2, coordField);
+		const geometryField = new ApacheArrow.Field(
+			geometryColumnName,
+			pointType,
+			true,
+			new Map([['ARROW:extension:name', 'geoarrow.point']])
+		);
+
+		const newFields: ApacheArrow.Field[] = [...table.schema.fields, geometryField];
+		const newSchema = new ApacheArrow.Schema(newFields, table.schema.metadata);
+		const structType = new ApacheArrow.Struct(newFields);
+
+		if (table.batches.length === 0) {
+			return new ApacheArrow.Table(newSchema);
+		}
+
+		const newBatches = table.batches.map((batch) => {
+			const rows = batch.numRows;
+			const latCol = batch.getChildAt(latIndex)!;
+			const lonCol = batch.getChildAt(lonIndex)!;
+
+			// Interleaved [x=lon, y=lat] coordinate buffer. The longitude wraps
+			// to -180..180: deck.gl draws one world, and a point outside it
+			// disappears as soon as the viewport leaves the second copy.
+			const coords = new Float64Array(rows * 2);
+			const validity = new Uint8Array((rows + 7) >> 3);
+			let nullCount = 0;
+
+			for (let i = 0; i < rows; i++) {
+				const lon = Number(lonCol.get(i) ?? NaN);
+				const lat = Number(latCol.get(i) ?? NaN);
+
+				if (Number.isFinite(lon) && Number.isFinite(lat)) {
+					coords[i * 2] = wrapLongitude(lon);
+					coords[i * 2 + 1] = lat;
+					validity[i >> 3] |= 1 << (i & 7);
+				} else {
+					// deck.gl reads this buffer and ignores the bitmap. NaN keeps
+					// the point off the map; 0 would draw it at null island.
+					coords[i * 2] = NaN;
+					coords[i * 2 + 1] = NaN;
+					nullCount++;
+				}
+			}
+
+			const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
+			const geometryData = ApacheArrow.makeData({
+				type: pointType,
+				length: rows,
+				nullCount,
+				nullBitmap: nullCount > 0 ? validity : undefined,
+				child: childData
+			});
+			const structData = ApacheArrow.makeData({
+				type: structType,
+				length: rows,
+				nullCount: 0,
+				children: [...batch.data.children, geometryData]
+			});
+
+			return new ApacheArrow.RecordBatch(newSchema, structData);
+		});
+
+		return new ApacheArrow.Table(newBatches);
+	}
+
+	/**
+	 * Counts the rows whose longitude/latitude fall inside a closed ring.
+	 *
+	 * The ring is a `[longitude, latitude]` list, as produced by the map draw
+	 * tools. The test is the same one the server does: a ray cast over the ring
+	 * (see `beacon-core/src/query/filter/geo_json.rs`). A bounding box check runs
+	 * first, because it rejects most rows with two comparisons.
+	 *
+	 * Rows without a numeric coordinate do not count.
+	 *
+	 * @throws If the table has no latitude or longitude column.
+	 */
+	static countPointsInRing<T extends ApacheArrow.TypeMap>(
+		table: ApacheArrow.Table<T>,
+		ring: [number, number][],
+		latitudeColumnName: string = 'Latitude',
+		longitudeColumnName: string = 'Longitude'
+	): number {
+		if (ring.length < 4) return 0;
+
+		const latCol = table.getChild(latitudeColumnName);
+		const lonCol = table.getChild(longitudeColumnName);
+
+		if (!latCol || !lonCol) {
+			throw new Error(
+				`Table must contain "${latitudeColumnName}" and "${longitudeColumnName}" columns to count an area.`
+			);
+		}
+
+		let minLon = Number.POSITIVE_INFINITY;
+		let maxLon = Number.NEGATIVE_INFINITY;
+		let minLat = Number.POSITIVE_INFINITY;
+		let maxLat = Number.NEGATIVE_INFINITY;
+
+		for (const [lon, lat] of ring) {
+			if (lon < minLon) minLon = lon;
+			if (lon > maxLon) maxLon = lon;
+			if (lat < minLat) minLat = lat;
+			if (lat > maxLat) maxLat = lat;
+		}
+
+		const lons = ApacheArrowUtils.decodedValues(lonCol);
+		const lats = ApacheArrowUtils.decodedValues(latCol);
+		const rows = Math.min(lons.length, lats.length);
+
+		// toArray() leaves out the validity bitmap, so a null slot reads as 0. Only
+		// a column with nulls needs the slower reader that reports them.
+		const hasNulls = latCol.nullCount > 0 || lonCol.nullCount > 0;
+
+		// The ring holds the longitudes of the map, the column holds those of the
+		// producer. A point at 185 must therefore also meet a ring at -175.
+		const ringLon = (minLon + maxLon) / 2;
+
+		// alignLongitude gives back the copy within 180 degrees of the centre, and
+		// a narrower ring holds no other copy. Only a wider one tests the neighbours.
+		const wideRing = maxLon - minLon > 360;
+
+		let count = 0;
+
+		for (let i = 0; i < rows; i++) {
+			if (hasNulls && (latCol.get(i) == null || lonCol.get(i) == null)) continue;
+
+			const lat = Number(lats[i]);
+			if (!Number.isFinite(lat) || lat < minLat || lat > maxLat) continue;
+
+			const lon = alignLongitude(Number(lons[i]), ringLon);
+			if (!Number.isFinite(lon)) continue;
+
+			if (ApacheArrowUtils.pointInRingBox(lon, lat, ring, minLon, maxLon)) {
+				count++;
+				continue;
+			}
+
+			// A row counts once at most.
+			if (!wideRing) continue;
+			if (
+				ApacheArrowUtils.pointInRingBox(lon + 360, lat, ring, minLon, maxLon) ||
+				ApacheArrowUtils.pointInRingBox(lon - 360, lat, ring, minLon, maxLon)
+			) {
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	/** The bounding box test of the ring, then the ray cast. */
+	private static pointInRingBox(
+		lon: number,
+		lat: number,
+		ring: [number, number][],
+		minLon: number,
+		maxLon: number
+	): boolean {
+		if (lon < minLon || lon > maxLon) return false;
+		return ApacheArrowUtils.pointInRing(lon, lat, ring);
+	}
+
+	/** Ray cast point-in-polygon test over a closed ring of `[longitude, latitude]`. */
+	private static pointInRing(lon: number, lat: number, ring: [number, number][]): boolean {
+		let inside = false;
+
+		for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+			const [xi, yi] = ring[i];
+			const [xj, yj] = ring[j];
+
+			// Does the edge cross the ray that goes east from the point?
+			const crosses = yi > lat !== yj > lat;
+			if (!crosses) continue;
+
+			const crossingLon = ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+			if (lon < crossingLon) inside = !inside;
+		}
+
+		return inside;
+	}
 }
-

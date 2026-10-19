@@ -134,11 +134,7 @@
 		</div>
 
 		<div slot="footer" class="footer">
-			<Button
-				variant="ghost"
-				title={$t('map.columns.detectTitle')}
-				onclick={detect}
-			>
+			<Button variant="ghost" title={$t('map.columns.detectTitle')} onclick={detect}>
 				{$t('map.columns.detect')}
 			</Button>
 

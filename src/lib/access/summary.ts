@@ -1,4 +1,9 @@
-import type { AuthRole, AuthRule, AuthUser, PrivilegeTarget } from '@maris-development/beacon-client';
+import type {
+	AuthRole,
+	AuthRule,
+	AuthUser,
+	PrivilegeTarget
+} from '@maris-development/beacon-client';
 import { message, type Message } from '@/i18n';
 
 /** Dot colour of an access level: red, grey, green, amber. */
@@ -53,7 +58,9 @@ export function accessSummary(user: AuthUser, roles: AuthRole[]): AccessSummary 
 	};
 }
 
-function noAccess(line: 'usersRoles.access.none.noRoles' | 'usersRoles.access.none.noGrants'): AccessSummary {
+function noAccess(
+	line: 'usersRoles.access.none.noRoles' | 'usersRoles.access.none.noGrants'
+): AccessSummary {
 	return {
 		tone: 'none',
 		label: message('usersRoles.access.none.label'),
@@ -89,7 +96,9 @@ export function membersOf(role: string, users: AuthUser[]): AuthUser[] {
 }
 
 export function rolesToAdd(user: AuthUser, roles: AuthRole[]): AuthRole[] {
-	return roles.filter((role) => !user.roles.includes(role.name)).sort((a, b) => a.name.localeCompare(b.name));
+	return roles
+		.filter((role) => !user.roles.includes(role.name))
+		.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export function usersToAdd(role: string, users: AuthUser[]): AuthUser[] {
@@ -103,7 +112,9 @@ function userRank(user: AuthUser): number {
 }
 
 export function sortUsers(users: AuthUser[]): AuthUser[] {
-	return [...users].sort((a, b) => userRank(a) - userRank(b) || a.username.localeCompare(b.username));
+	return [...users].sort(
+		(a, b) => userRank(a) - userRank(b) || a.username.localeCompare(b.username)
+	);
 }
 
 export function filterUsers(users: AuthUser[], needle: string): AuthUser[] {
@@ -111,7 +122,8 @@ export function filterUsers(users: AuthUser[], needle: string): AuthUser[] {
 	if (text === '') return users;
 	return users.filter(
 		(user) =>
-			user.username.toLowerCase().includes(text) || user.roles.some((role) => role.toLowerCase().includes(text))
+			user.username.toLowerCase().includes(text) ||
+			user.roles.some((role) => role.toLowerCase().includes(text))
 	);
 }
 

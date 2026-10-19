@@ -57,7 +57,9 @@
 <div class="section-head">
 	<h2>{$t('home.guide.title')}</h2>
 	<p class="lead">{$t('home.guide.lead')}</p>
-	<Button variant="link" onclick={toggle}>{open ? $t('home.guide.hide') : $t('home.guide.show')}</Button>
+	<Button variant="link" onclick={toggle}
+		>{open ? $t('home.guide.hide') : $t('home.guide.show')}</Button
+	>
 </div>
 
 {#if open}

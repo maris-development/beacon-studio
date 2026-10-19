@@ -87,12 +87,18 @@
 	<div class="view-controls">
 		<p class="node-count">{$t('query.node.count', { count: $nodes.length })}</p>
 
-		<Button variant={viewMode === 'cards' ? 'default' : 'outline'} onclick={() => (viewMode = 'cards')}>
+		<Button
+			variant={viewMode === 'cards' ? 'default' : 'outline'}
+			onclick={() => (viewMode = 'cards')}
+		>
 			{$t('query.view.cards')}
 			<GridIcon />
 		</Button>
 
-		<Button variant={viewMode === 'list' ? 'default' : 'outline'} onclick={() => (viewMode = 'list')}>
+		<Button
+			variant={viewMode === 'list' ? 'default' : 'outline'}
+			onclick={() => (viewMode = 'list')}
+		>
 			{$t('query.view.list')}
 			<ListIcon />
 		</Button>
@@ -121,10 +127,7 @@
 	{#if viewMode === 'cards'}
 		<div class="cards-view">
 			{#each $nodes as node (node.id)}
-				<Card
-					class={selected?.id === node.id ? 'selected' : ''}
-					onclick={() => onPick(node)}
-				>
+				<Card class={selected?.id === node.id ? 'selected' : ''} onclick={() => onPick(node)}>
 					<div class="node-header">
 						<h4>{node.name}</h4>
 						{#if selected?.id === node.id}

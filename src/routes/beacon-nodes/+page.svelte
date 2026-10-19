@@ -112,8 +112,7 @@
 									</div>
 								</td>
 								<td class="node-url">
-									<a href={node.url} rel="noopener noreferrer" target="_blank">{node.url}</a
-									>
+									<a href={node.url} rel="noopener noreferrer" target="_blank">{node.url}</a>
 								</td>
 								<td class="node-status">
 									<BeaconNodeStatus health={node} variant="compact" />

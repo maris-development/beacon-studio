@@ -29,7 +29,9 @@ function role(name: string, grants: AuthRule[], denies: AuthRule[]): AuthRole {
 
 describe('accessSummary', () => {
 	it('gives full access to the super-user', () => {
-		expect(translate(accessSummary(user('admin', [], { is_super_user: true }), []).label)).toBe('Full access');
+		expect(translate(accessSummary(user('admin', [], { is_super_user: true }), []).label)).toBe(
+			'Full access'
+		);
 	});
 	it('gives no access without roles', () => {
 		const s = accessSummary(user('jane', []), []);
@@ -61,8 +63,12 @@ describe('accessSummary', () => {
 describe('publicAccess', () => {
 	it('reads the public access from the anonymous user', () => {
 		const roles = [role('pub', [all], [])];
-		expect(translate(publicAccess([user('anonymous', ['pub'], { is_anonymous: true })], roles))).toBe('All data');
-		expect(translate(publicAccess([user('admin', [], { is_super_user: true })], roles))).toBe('Off');
+		expect(
+			translate(publicAccess([user('anonymous', ['pub'], { is_anonymous: true })], roles))
+		).toBe('All data');
+		expect(translate(publicAccess([user('admin', [], { is_super_user: true })], roles))).toBe(
+			'Off'
+		);
 	});
 });
 

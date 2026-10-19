@@ -70,7 +70,6 @@
 		onclick?.(event);
 		onSelect?.();
 	}
-
 </script>
 
 <button
@@ -79,8 +78,8 @@
 	role="option"
 	class={cn('search-select-item', className)}
 	data-slot="search-select-item"
-	hidden={hidden}
-	disabled={disabled}
+	{hidden}
+	{disabled}
 	onclick={handleClick}
 	{...restProps}
 >

@@ -181,7 +181,12 @@
 	</div>
 
 	{#if onResetView}
-		<button type="button" class="action" title={$t('plot.tabs.resetViewTitle')} onclick={onResetView}>
+		<button
+			type="button"
+			class="action"
+			title={$t('plot.tabs.resetViewTitle')}
+			onclick={onResetView}
+		>
 			<ResetIcon size={14} />
 			<span>{$t('plot.tabs.resetView')}</span>
 		</button>

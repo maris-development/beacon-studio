@@ -9,15 +9,10 @@
 
 	loader.init().then(/* ... */);
 
-    let editorContainer: HTMLDivElement;
+	let editorContainer: HTMLDivElement;
 	let editorInstance: monaco.editor.IStandaloneCodeEditor;
 
-    let {
-        sourceCode = $bindable(),
-        width = '100%',
-        height = '40vh',
-        readOnly = false
-    } = $props();
+	let { sourceCode = $bindable(), width = '100%', height = '40vh', readOnly = false } = $props();
 
 	onMount(() => {
 		editorInstance = monaco.editor.create(editorContainer, {
@@ -32,7 +27,7 @@
 		});
 
 		editorInstance.onDidChangeModelContent(() => {
-            // console.log('Content changed', editorInstance.getValue());
+			// console.log('Content changed', editorInstance.getValue());
 			sourceCode = editorInstance.getValue();
 		});
 
@@ -46,20 +41,17 @@
 	});
 </script>
 
-<div id="editor" bind:this={editorContainer}
-    style="--width: {width}; --height: {height};"
-></div>
-
+<div id="editor" bind:this={editorContainer} style="--width: {width}; --height: {height};"></div>
 
 <style lang="scss">
-    #editor {
-        flex: 1;
+	#editor {
+		flex: 1;
 		width: var(--width);
-        height: var(--height);
+		height: var(--height);
 		min-height: 10ch;
 		border-width: 1px;
 		border-style: solid;
-			border-radius: 0.5rem;
+		border-radius: 0.5rem;
 		overflow: hidden;
-    }
+	}
 </style>

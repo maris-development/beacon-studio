@@ -3,98 +3,97 @@
 	import type { BeaconNode } from '@/beacon-api/types';
 	import { BeaconClient } from '@/beacon-api/client';
 	import { track } from '@/telemetry';
-    import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
-    import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
-    import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
-    import type { QuerySelectionStatus } from '@/query/selection-status';
-    import type { QueryActions } from './QueryActions';
-    import type { CompiledQuery } from '@/beacon-api/types';
-    import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
-    import type { CoordinatePair } from '@/geo/spatial-selection';
-    import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
+	import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
+	import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
+	import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
+	import type { QuerySelectionStatus } from '@/query/selection-status';
+	import type { QueryActions } from './QueryActions';
+	import type { CompiledQuery } from '@/beacon-api/types';
+	import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
+	import type { CoordinatePair } from '@/geo/spatial-selection';
+	import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
 	import Button from '../buttons/Button.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
 	import { t, translate } from '@/i18n';
-		
 
-    let {
-        node,
-        missingNodeUrl = null,
-        nodesReady = true,
-        onNodeChange,
-        onSeedMismatch,
-        initialDraft = null,
-        pendingSeed = null,
-        coordinateColumns = null,
-        onDraftChange,
-        onTableChange,
-        status = $bindable<QuerySelectionStatus>({
-            dataTable: '',
-            columns: 0,
-            filters: 0,
-            selection: 0,
-        }),
-        actions: queryActions = $bindable<QueryActions>({}),
-        workbenchActions,
-    }: {
-        /**
-         * The Beacon node of this query, or null while it has none. The parent
-         * re-mounts the builder when this changes, so the client below is built
-         * once and never goes stale.
-         */
-        node: BeaconNode | null;
-        /** The URL of a node that the node list does not hold, or null. */
-        missingNodeUrl?: string | null;
-        /** False while the app still reads the public node list. */
-        nodesReady?: boolean;
-        /** Called with the node the user picked in the first step. */
-        onNodeChange: (node: BeaconNode) => void;
-        /**
-         * Called when the node does not hold the query of a deep-link seed. The
-         * builder finds this, because only the builder reads the tables and the
-         * schema of the node. The parent writes the message.
-         */
-        onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
-        initialDraft?: QueryDraft | null;
-        pendingSeed?: CompiledQuery | null;
-        /** The stored coordinate pair of the block, or null to detect it. */
-        coordinateColumns?: CoordinatePair | null;
-        /** Called on every draft edit. The pair comes with an edit that changes it. */
-        onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
-        onTableChange?: (tableName: string) => void;
-        status?: QuerySelectionStatus;
-        /** Bound to the parent. The builder puts `compileQuery` here. */
-        actions?: QueryActions;
-        /**
-         * The download and visualise handlers of the workbench. Navigation needs
-         * the id of the StoredQuery block. Only the workbench holds that id.
-         * Therefore these handlers come from the parent.
-         */
-        workbenchActions: QueryActions;
-    } = $props();
+	let {
+		node,
+		missingNodeUrl = null,
+		nodesReady = true,
+		onNodeChange,
+		onSeedMismatch,
+		initialDraft = null,
+		pendingSeed = null,
+		coordinateColumns = null,
+		onDraftChange,
+		onTableChange,
+		status = $bindable<QuerySelectionStatus>({
+			dataTable: '',
+			columns: 0,
+			filters: 0,
+			selection: 0
+		}),
+		actions: queryActions = $bindable<QueryActions>({}),
+		workbenchActions
+	}: {
+		/**
+		 * The Beacon node of this query, or null while it has none. The parent
+		 * re-mounts the builder when this changes, so the client below is built
+		 * once and never goes stale.
+		 */
+		node: BeaconNode | null;
+		/** The URL of a node that the node list does not hold, or null. */
+		missingNodeUrl?: string | null;
+		/** False while the app still reads the public node list. */
+		nodesReady?: boolean;
+		/** Called with the node the user picked in the first step. */
+		onNodeChange: (node: BeaconNode) => void;
+		/**
+		 * Called when the node does not hold the query of a deep-link seed. The
+		 * builder finds this, because only the builder reads the tables and the
+		 * schema of the node. The parent writes the message.
+		 */
+		onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
+		initialDraft?: QueryDraft | null;
+		pendingSeed?: CompiledQuery | null;
+		/** The stored coordinate pair of the block, or null to detect it. */
+		coordinateColumns?: CoordinatePair | null;
+		/** Called on every draft edit. The pair comes with an edit that changes it. */
+		onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
+		onTableChange?: (tableName: string) => void;
+		status?: QuerySelectionStatus;
+		/** Bound to the parent. The builder puts `compileQuery` here. */
+		actions?: QueryActions;
+		/**
+		 * The download and visualise handlers of the workbench. Navigation needs
+		 * the id of the StoredQuery block. Only the workbench holds that id.
+		 * Therefore these handlers come from the parent.
+		 */
+		workbenchActions: QueryActions;
+	} = $props();
 
-    let client: BeaconClient | null = $state(null);
+	let client: BeaconClient | null = $state(null);
 
-    let loaded = $state(false);
-    let selected_table_name = $state(initialDraft?.tableName ?? '');
-    let selected_output_format = $state(initialDraft?.outputFormat ?? defaultOutputFormat());
+	let loaded = $state(false);
+	let selected_table_name = $state(initialDraft?.tableName ?? '');
+	let selected_output_format = $state(initialDraft?.outputFormat ?? defaultOutputFormat());
 	let table_names = $state<string[]>([]);
 
-    /**
-     * The reason why the node gave no tables, or null. A node can be down, and a
-     * token can be wrong. The builder then names the reason, and offers a retry.
-     * Without this the user sees an empty builder and no cause.
-     */
-    let loadError: string | null = $state(null);
+	/**
+	 * The reason why the node gave no tables, or null. A node can be down, and a
+	 * token can be wrong. The builder then names the reason, and offers a retry.
+	 * Without this the user sees an empty builder and no cause.
+	 */
+	let loadError: string | null = $state(null);
 
-    /**
-     * True when this node does not hold the table of the seed. The seed of one
-     * node does not fit the schema of another, so the builder must not hydrate
-     * it. The block keeps its compiled query. The user then picks another node,
-     * or edits the query. See {@link handleDraftChange}.
-     */
-    let seedBlocked = $state(false);
+	/**
+	 * True when this node does not hold the table of the seed. The seed of one
+	 * node does not fit the schema of another, so the builder must not hydrate
+	 * it. The block keeps its compiled query. The user then picks another node,
+	 * or edits the query. See {@link handleDraftChange}.
+	 */
+	let seedBlocked = $state(false);
 
 	onMount(() => {
 		void loadTables();
@@ -162,24 +161,24 @@
 		// By default, select the first table, or restore the table from the draft/seed.
 		const seedTable = typeof pendingSeed?.from === 'string' ? pendingSeed.from : null;
 		const draftTable = initialDraft?.tableName || null;
-        let wanted = draftTable ?? seedTable ?? default_table;
+		let wanted = draftTable ?? seedTable ?? default_table;
 
-        // This node does not have the table that the query reads. Show the default
-        // table, so the builder stays usable. Without the fallback the schema
-        // request answers 404, and the builder shows no columns at all.
-        if (wanted && !tables.includes(wanted)) {
-            // Hold the seed back. Its columns belong to another schema, so the
-            // hydration finds none, and the empty draft destroys the query of the
-            // block. Keep the query, and let the user decide.
-            seedBlocked = !!pendingSeed;
+		// This node does not have the table that the query reads. Show the default
+		// table, so the builder stays usable. Without the fallback the schema
+		// request answers 404, and the builder shows no columns at all.
+		if (wanted && !tables.includes(wanted)) {
+			// Hold the seed back. Its columns belong to another schema, so the
+			// hydration finds none, and the empty draft destroys the query of the
+			// block. Keep the query, and let the user decide.
+			seedBlocked = !!pendingSeed;
 
-            onSeedMismatch?.(wanted, 'table');
-            wanted = default_table;
-        }
+			onSeedMismatch?.(wanted, 'table');
+			wanted = default_table;
+		}
 
-        selected_table_name = wanted;
+		selected_table_name = wanted;
 		table_names = tables;
-        loaded = true;
+		loaded = true;
 	}
 
 	/**
@@ -211,7 +210,7 @@
 
 	$effect(() => {
 		status.dataTable = selected_table_name;
-        onTableChange?.(selected_table_name);
+		onTableChange?.(selected_table_name);
 	});
 
 	/**
@@ -225,7 +224,6 @@
 			props: { table: table_name, tables: table_names.length }
 		});
 	}
-
 </script>
 
 <QueryBuilderNodeSelector
@@ -235,7 +233,7 @@
 	onPick={onNodeChange}
 />
 
-<hr>
+<hr />
 
 {#if node && loadError}
 	<!--
@@ -248,58 +246,74 @@
 		<Button variant="secondary" onclick={() => loadTables()}>{$t('query.node.retry')}</Button>
 	</div>
 
-	<hr>
+	<hr />
 {:else if node && client}
-	<QueryBuilderTableSelector {table_names} {loaded} {status} onPick={handleTablePick} bind:selected_table_name />
+	<QueryBuilderTableSelector
+		{table_names}
+		{loaded}
+		{status}
+		onPick={handleTablePick}
+		bind:selected_table_name
+	/>
 
-    <hr>
+	<hr />
 
 	<!--
 		`pendingSeed` is null while the seed is blocked. This node does not hold the
 		table of that seed, so a hydration finds no column. See `loadTables`.
 	-->
-	<QueryBuilderParameterBlock table_name={selected_table_name} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
+	<QueryBuilderParameterBlock
+		table_name={selected_table_name}
+		{client}
+		{initialDraft}
+		pendingSeed={activeSeed}
+		{coordinateColumns}
+		onDraftChange={handleDraftChange}
+		{onSeedMismatch}
+		bind:status
+		bind:actions={queryActions}
+		bind:selected_output_format
+	/>
 
-	<hr>
+	<hr />
 
 	<QueryBuilderOutputFormatSelector bind:selected_output_format />
 
-	<hr>
+	<hr />
 {/if}
 
 <DownloadDataButton downloadData={workbenchActions.downloadData} />
 
-
 <VisualiseDataButton
-    visualiseTable={workbenchActions.visualiseTable}
-    visualiseChart={workbenchActions.visualiseChart}
-    visualiseMap={workbenchActions.visualiseMap}
+	visualiseTable={workbenchActions.visualiseTable}
+	visualiseChart={workbenchActions.visualiseChart}
+	visualiseMap={workbenchActions.visualiseMap}
 />
 
 <style lang="scss">
-    hr {
-        margin: 1rem 0;
-    }
+	hr {
+		margin: 1rem 0;
+	}
 
-    .load-error {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
+	.load-error {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
 
-        padding: 1rem;
-        border: 1px solid var(--destructive);
-        border-radius: 0.375rem;
+		padding: 1rem;
+		border: 1px solid var(--destructive);
+		border-radius: 0.375rem;
 
-        .load-error-title {
-            margin: 0;
-            font-weight: 600;
-        }
+		.load-error-title {
+			margin: 0;
+			font-weight: 600;
+		}
 
-        .load-error-reason {
-            margin: 0;
-            font-size: var(--font-size-sm);
-            color: var(--muted-foreground);
-        }
-    }
+		.load-error-reason {
+			margin: 0;
+			font-size: var(--font-size-sm);
+			color: var(--muted-foreground);
+		}
+	}
 </style>

@@ -233,14 +233,16 @@
 				<ul>
 					{#if $settings.adminFeatures}
 						<li>
-							<a href={resolve('/data-browser/crawlers')}>{$t('dataBrowser.upload.next.crawler')}</a>
+							<a href={resolve('/data-browser/crawlers')}>{$t('dataBrowser.upload.next.crawler')}</a
+							>
 						</li>
 					{/if}
 					<li>
 						{$t('dataBrowser.upload.next.tableBefore')}
 						<!-- The text after the link holds its own leading space, so a language can end on "." -->
-						<a href={resolve('/data-browser/data-tables')}>{$t('nav.item.dataTables')}</a
-						>{$t('dataBrowser.upload.next.tableAfter')}
+						<a href={resolve('/data-browser/data-tables')}>{$t('nav.item.dataTables')}</a>{$t(
+							'dataBrowser.upload.next.tableAfter'
+						)}
 					</li>
 				</ul>
 			</div>

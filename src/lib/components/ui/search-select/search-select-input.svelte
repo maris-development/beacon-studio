@@ -49,7 +49,7 @@
 		onkeydown={onKeydown}
 		bind:this={ref}
 		type="text"
-		value={value}
+		{value}
 		oninput={onInput}
 		class={cn('search-select-input', className)}
 		data-slot="search-select-input"

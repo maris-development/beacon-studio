@@ -101,7 +101,10 @@
 						<span class="stat-label">{$t('cache.stat.items')}</span>
 						<span class="stat-value">{memory?.entryCount} / {memory?.maxEntries}</span>
 						<div class="meter">
-							<div class="fill" style="width: {pct(memory?.entryCount ?? 0, memory?.maxEntries ?? 1)}%"></div>
+							<div
+								class="fill"
+								style="width: {pct(memory?.entryCount ?? 0, memory?.maxEntries ?? 1)}%"
+							></div>
 						</div>
 					</div>
 					<div class="stat">
@@ -112,7 +115,10 @@
 						<span class="stat-label">{$t('cache.stat.cells')}</span>
 						<span class="stat-value">{$formatNumber(memory?.totalCells ?? 0)}</span>
 						<div class="meter">
-							<div class="fill" style="width: {pct(memory?.totalCells ?? 0, memory?.maxTotalCells ?? 1)}%"></div>
+							<div
+								class="fill"
+								style="width: {pct(memory?.totalCells ?? 0, memory?.maxTotalCells ?? 1)}%"
+							></div>
 						</div>
 					</div>
 					<div class="stat">
@@ -157,7 +163,9 @@
 				<div class="section-head">
 					<h3>{$t('cache.disk.title')}</h3>
 					<span class="subtle">
-						{$t('cache.disk.subtitle', { duration: disk ? formatDuration(disk.maxAgeMs) : $t('cache.notAvailable') })}
+						{$t('cache.disk.subtitle', {
+							duration: disk ? formatDuration(disk.maxAgeMs) : $t('cache.notAvailable')
+						})}
 					</span>
 				</div>
 
@@ -169,14 +177,24 @@
 							<span class="stat-label">{$t('cache.stat.items')}</span>
 							<span class="stat-value">{disk?.entryCount} / {disk?.maxEntries}</span>
 							<div class="meter">
-								<div class="fill" style="width: {pct(disk?.entryCount ?? 0, disk?.maxEntries ?? 1)}%"></div>
+								<div
+									class="fill"
+									style="width: {pct(disk?.entryCount ?? 0, disk?.maxEntries ?? 1)}%"
+								></div>
 							</div>
 						</div>
 						<div class="stat">
 							<span class="stat-label">{$t('cache.stat.diskUsed')}</span>
-							<span class="stat-value">{formatBytes(disk?.totalBytes ?? 0)} / {formatBytes(disk?.maxTotalBytes ?? 0)}</span>
+							<span class="stat-value"
+								>{formatBytes(disk?.totalBytes ?? 0)} / {formatBytes(
+									disk?.maxTotalBytes ?? 0
+								)}</span
+							>
 							<div class="meter">
-								<div class="fill" style="width: {pct(disk?.totalBytes ?? 0, disk?.maxTotalBytes ?? 1)}%"></div>
+								<div
+									class="fill"
+									style="width: {pct(disk?.totalBytes ?? 0, disk?.maxTotalBytes ?? 1)}%"
+								></div>
 							</div>
 						</div>
 					</div>
@@ -196,11 +214,17 @@
 								<tbody>
 									{#each disk.entries as entry (entry.key)}
 										<tr>
-											<td class="id" class:na={!entry.queryId} title={entry.queryId ?? undefined}>{displayId(entry)}</td>
+											<td class="id" class:na={!entry.queryId} title={entry.queryId ?? undefined}
+												>{displayId(entry)}</td
+											>
 											<td class="num">{$formatNumber(entry.rowCount)}</td>
 											<td class="num">{formatBytes(entry.byteLength)}</td>
-											<td title={formatStamp(entry.createdAt)}>{$formatRelative(entry.createdAt)}</td>
-											<td title={formatStamp(entry.lastAccessedAt)}>{$formatRelative(entry.lastAccessedAt)}</td>
+											<td title={formatStamp(entry.createdAt)}
+												>{$formatRelative(entry.createdAt)}</td
+											>
+											<td title={formatStamp(entry.lastAccessedAt)}
+												>{$formatRelative(entry.lastAccessedAt)}</td
+											>
 										</tr>
 									{/each}
 								</tbody>
@@ -257,7 +281,6 @@
 		gap: 0.6rem;
 		border-bottom: 1px solid #e5e5e5;
 		padding-bottom: 0.35rem;
-
 	}
 
 	.subtle {

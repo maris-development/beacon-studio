@@ -24,13 +24,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	import { t, type Message } from '@/i18n';
 
 	// All state lives in the workspace; this component only reads/acts on it.
-	let { 
+	let {
 		workspace,
 		handleDoubleClick = null
-		
 	}: {
-		workspace: QueryWorkspace 
-		handleDoubleClick?: ((block: StoredQuery) => void) | null
+		workspace: QueryWorkspace;
+		handleDoubleClick?: ((block: StoredQuery) => void) | null;
 	} = $props();
 
 	const COLUMN_PREVIEW_LIMIT = 3;
@@ -114,7 +113,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 	}
 
 	// I think we could also just remove {editingName = '';} from the cancelRenameBlock()
-	function handleRenameBlur(id: string) : void{
+	function handleRenameBlur(id: string): void {
 		if (isCommittingFromKeyboard) {
 			isCommittingFromKeyboard = false;
 			return;
@@ -130,14 +129,14 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 		commitRenameBlock(id);
 	}
 
-	function handleClick(block: StoredQuery){
+	function handleClick(block: StoredQuery) {
 		workspace.selectBlock(block.id);
 	}
 
-	function _handleDoubleClick(block: StoredQuery){
-		if(handleDoubleClick){
+	function _handleDoubleClick(block: StoredQuery) {
+		if (handleDoubleClick) {
 			handleDoubleClick(block);
-		}	
+		}
 	}
 
 	function handleQueryBlocksWheel(event: WheelEvent): void {
@@ -179,7 +178,6 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 		return () => observer.disconnect();
 	});
-
 </script>
 
 <div class="query-blocks">
@@ -235,8 +233,12 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 								variant="ghost"
 								size="icon"
 								class="query-block-icon-button"
-								title={editingBlockId === block.id ? $t('workbench.block.finishRename') : $t('workbench.block.rename')}
-								aria-label={editingBlockId === block.id ? $t('workbench.block.finishRename') : $t('workbench.block.rename')}
+								title={editingBlockId === block.id
+									? $t('workbench.block.finishRename')
+									: $t('workbench.block.rename')}
+								aria-label={editingBlockId === block.id
+									? $t('workbench.block.finishRename')
+									: $t('workbench.block.rename')}
 								onmousedown={(event: MouseEvent) => {
 									// Keep focus on the input so this click can't trigger a blur-commit
 									// followed by the click handler re-opening the editor (two-click bug).
@@ -300,12 +302,18 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 						<div class="query-stats">
 							{#if node}
-								<span class="query-stat node-stat" title={$t('workbench.block.nodeTitle', { url: node.url })}>
+								<span
+									class="query-stat node-stat"
+									title={$t('workbench.block.nodeTitle', { url: node.url })}
+								>
 									<BeaconNodeStatus health={node} variant="dot" />
 									{node.name || node.url}
 								</span>
 							{:else if missingUrl}
-								<span class="query-stat node-stat missing" title={$t('workbench.block.nodeMissing')}>
+								<span
+									class="query-stat node-stat missing"
+									title={$t('workbench.block.nodeMissing')}
+								>
 									<TriangleAlertIcon size="0.75rem" />
 									{missingUrl}
 								</span>
@@ -348,7 +356,9 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
 						<div
 							class="query-block-columns"
-							title={$t('workbench.block.selectedColumns', { columns: '\n\t' + columns.join(', \n\t') })}
+							title={$t('workbench.block.selectedColumns', {
+								columns: '\n\t' + columns.join(', \n\t')
+							})}
 						>
 							{#if columns.length > 0}
 								{#each columns.slice(0, COLUMN_PREVIEW_LIMIT) as column (column)}

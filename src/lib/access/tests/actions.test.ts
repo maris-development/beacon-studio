@@ -3,7 +3,11 @@ import type { AuthRule } from '@maris-development/beacon-client';
 import { createRoleFrom, createUserWithRoles, stepFailureToast, type AuthAdmin } from '../actions';
 
 const all: AuthRule = { privilege: 'SELECT', target_type: 'all', target_value: null };
-const tablePriv = (value: string): AuthRule => ({ privilege: 'SELECT', target_type: 'table', target_value: value });
+const tablePriv = (value: string): AuthRule => ({
+	privilege: 'SELECT',
+	target_type: 'table',
+	target_value: value
+});
 
 type Options = { failGrantRole?: string; failCreate?: boolean; failPrivilegeType?: string };
 
@@ -53,7 +57,11 @@ describe('createUserWithRoles', () => {
 describe('createRoleFrom', () => {
 	it('copies the grants and the denies of the source role', async () => {
 		const admin = fake({});
-		const failures = await createRoleFrom(admin, 'copy', { name: 'src', grants: [all], denies: [tablePriv('secret')] });
+		const failures = await createRoleFrom(admin, 'copy', {
+			name: 'src',
+			grants: [all],
+			denies: [tablePriv('secret')]
+		});
 		expect(failures).toEqual([]);
 		expect(admin.calls).toEqual([
 			['createRole', 'copy'],
@@ -70,14 +78,22 @@ describe('createRoleFrom', () => {
 
 	it('records a failed copy and goes on', async () => {
 		const admin = fake({ failPrivilegeType: 'all' });
-		const failures = await createRoleFrom(admin, 'copy', { name: 'src', grants: [all], denies: [tablePriv('secret')] });
+		const failures = await createRoleFrom(admin, 'copy', {
+			name: 'src',
+			grants: [all],
+			denies: [tablePriv('secret')]
+		});
 		expect(failures.map((f) => f.step)).toEqual(['grant all']);
 		expect(admin.calls).toHaveLength(3);
 	});
 
 	it('names a deny step with its type and value', async () => {
 		const admin = fake({ failPrivilegeType: 'table' });
-		const failures = await createRoleFrom(admin, 'copy', { name: 'src', grants: [], denies: [tablePriv('secret')] });
+		const failures = await createRoleFrom(admin, 'copy', {
+			name: 'src',
+			grants: [],
+			denies: [tablePriv('secret')]
+		});
 		expect(failures.map((f) => f.step)).toEqual(['deny table secret']);
 	});
 

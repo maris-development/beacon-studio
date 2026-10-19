@@ -66,13 +66,16 @@
 						href={exampleHref(example)}
 						onclick={() =>
 							track('example.start', {
-								props: { title: example.title, table: example.tableName, source: example.sourceName }
+								props: {
+									title: example.title,
+									table: example.tableName,
+									source: example.sourceName
+								}
 							})}
 					>
 						<BracesIcon />
 						{$t('home.examples.check')}
 					</Button>
-
 				</div>
 			</div>
 		</Card>
@@ -97,7 +100,6 @@
 			color: var(--muted-foreground);
 		}
 	}
-
 
 	.examples {
 		display: grid;
@@ -193,7 +195,6 @@
 			> :global(.btn) {
 				flex: 1;
 			}
-
 		}
 	}
 

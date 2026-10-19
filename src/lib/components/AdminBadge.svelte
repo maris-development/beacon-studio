@@ -6,7 +6,7 @@
 
 <span class="admin-badge">
 	<!-- The classes opt out of the muted icon colour and size of a dropdown item. -->
-	<ShieldCheckIcon class="text-current size-3.5" />
+	<ShieldCheckIcon class="size-3.5 text-current" />
 	{$t('admin.badge')}
 </span>
 

@@ -41,7 +41,7 @@
 		padding: 0.5rem;
 		border-radius: 0.5rem;
 		display: flex;
-		  align-items: flex-start;
+		align-items: flex-start;
 		margin: 0 auto;
 		margin-bottom: 1rem;
 		width: 40vw;
@@ -53,7 +53,7 @@
 	.warning {
 		background: var(--toast-warning);
 	}
-	
+
 	.error {
 		background: var(--toast-error);
 	}

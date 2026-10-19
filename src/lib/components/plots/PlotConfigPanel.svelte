@@ -604,7 +604,8 @@
 							value={draft.z?.column ?? NO_COLUMN}
 							onValueChange={(value) => setAxisColumn('z', value)}
 						>
-							<Select.Trigger id="plotZColumn">{draft.z?.column || $t('common.none')}</Select.Trigger
+							<Select.Trigger id="plotZColumn"
+								>{draft.z?.column || $t('common.none')}</Select.Trigger
 							>
 							<Select.Content>
 								<Select.Group>
@@ -665,11 +666,15 @@
 								value={String(draft.style.titleFontSize)}
 								onValueChange={(value) => patchStyle({ titleFontSize: Number(value) })}
 							>
-								<Select.Trigger id="plotTitleSize">{$t('plot.panel.pixels', { size: draft.style.titleFontSize })}</Select.Trigger>
+								<Select.Trigger id="plotTitleSize"
+									>{$t('plot.panel.pixels', { size: draft.style.titleFontSize })}</Select.Trigger
+								>
 								<Select.Content>
 									<Select.Group>
 										{#each sizeOptions(8, 40) as size (size)}
-											<Select.Item value={String(size)} label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item>
+											<Select.Item value={String(size)} label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
+											>
 										{/each}
 									</Select.Group>
 								</Select.Content>
@@ -686,7 +691,6 @@
 							</label>
 						</div>
 					</div>
-
 
 					<div class="property-row">
 						<label class="field"
@@ -706,12 +710,15 @@
 								value={String(draft.style.xAxisTitleFontSize)}
 								onValueChange={(value) => patchStyle({ xAxisTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotXAxisTitleSize"
-									>{$t('plot.panel.pixels', { size: draft.style.xAxisTitleFontSize })}</Select.Trigger
+									>{$t('plot.panel.pixels', {
+										size: draft.style.xAxisTitleFontSize
+									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+												label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -736,12 +743,15 @@
 								value={String(draft.style.yAxisTitleFontSize)}
 								onValueChange={(value) => patchStyle({ yAxisTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotYAxisTitleSize"
-									>{$t('plot.panel.pixels', { size: draft.style.yAxisTitleFontSize })}</Select.Trigger
+									>{$t('plot.panel.pixels', {
+										size: draft.style.yAxisTitleFontSize
+									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+												label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -763,12 +773,15 @@
 								value={String(draft.style.legendTitleFontSize)}
 								onValueChange={(value) => patchStyle({ legendTitleFontSize: Number(value) })}
 								><Select.Trigger id="plotLegendTitleSize"
-									>{$t('plot.panel.pixels', { size: draft.style.legendTitleFontSize })}</Select.Trigger
+									>{$t('plot.panel.pixels', {
+										size: draft.style.legendTitleFontSize
+									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(6, 32) as size}<Select.Item
 												value={String(size)}
-												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+												label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -780,12 +793,14 @@
 							type="single"
 							value={String(draft.style.tickFontSize)}
 							onValueChange={(value) => patchStyle({ tickFontSize: Number(value) })}
-							><Select.Trigger id="plotTickSize">{$t('plot.panel.pixels', { size: draft.style.tickFontSize })}</Select.Trigger
+							><Select.Trigger id="plotTickSize"
+								>{$t('plot.panel.pixels', { size: draft.style.tickFontSize })}</Select.Trigger
 							><Select.Content
 								><Select.Group
 									>{#each sizeOptions(6, 32) as size}<Select.Item
 											value={String(size)}
-											label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+											label={$t('plot.panel.pixels', { size })}
+											>{$t('plot.panel.pixels', { size })}</Select.Item
 										>{/each}</Select.Group
 								></Select.Content
 							></Select.Root
@@ -832,7 +847,9 @@
 							/><span>{$t('palette.reverse')}</span></label
 						>
 						<div class="field">
-							<span id="zRangeLabel">{$t('plot.panel.colourRange', { axis: axisTitle(draft.z) })}</span>
+							<span id="zRangeLabel"
+								>{$t('plot.panel.colourRange', { axis: axisTitle(draft.z) })}</span
+							>
 							<div class="pair" role="group" aria-labelledby="zRangeLabel">
 								<Input
 									type="number"
@@ -862,9 +879,8 @@
 									><Select.Group
 										><Select.Item value="linear" label={$t('plot.panel.scaleLinear')}
 											>{$t('plot.panel.scaleLinear')}</Select.Item
-										><Select.Item
-											value="logarithmic"
-											label={$t('plot.panel.scaleLogarithmic')}>{$t('plot.panel.scaleLogarithmic')}</Select.Item
+										><Select.Item value="logarithmic" label={$t('plot.panel.scaleLogarithmic')}
+											>{$t('plot.panel.scaleLogarithmic')}</Select.Item
 										></Select.Group
 									></Select.Content
 								></Select.Root
@@ -917,12 +933,14 @@
 								type="single"
 								value={String(draft.style.pointRadius)}
 								onValueChange={(value) => patchStyle({ pointRadius: Number(value) })}
-								><Select.Trigger id="plotPointRadius">{$t('plot.panel.pixels', { size: draft.style.pointRadius })}</Select.Trigger
+								><Select.Trigger id="plotPointRadius"
+									>{$t('plot.panel.pixels', { size: draft.style.pointRadius })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(0.5, 12, 0.5) as size}<Select.Item
 												value={String(size)}
-												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+												label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -1047,7 +1065,10 @@
 										<Select.Item value="gaussian" label={$t('plot.panel.methodGaussian')}>
 											{$t('plot.panel.methodGaussian')}
 										</Select.Item>
-										<Select.Item value="delaunay-barycentric" label={$t('plot.panel.methodDelaunay')}>
+										<Select.Item
+											value="delaunay-barycentric"
+											label={$t('plot.panel.methodDelaunay')}
+										>
 											{$t('plot.panel.methodDelaunay')}
 										</Select.Item>
 									</Select.Group>
@@ -1216,12 +1237,14 @@
 								type="single"
 								value={String(draft.contour.lineWidth)}
 								onValueChange={(value) => patchContour({ lineWidth: Number(value) })}
-								><Select.Trigger id="contourLineWidth">{$t('plot.panel.pixels', { size: draft.contour.lineWidth })}</Select.Trigger
+								><Select.Trigger id="contourLineWidth"
+									>{$t('plot.panel.pixels', { size: draft.contour.lineWidth })}</Select.Trigger
 								><Select.Content
 									><Select.Group
 										>{#each sizeOptions(0.25, 5, 0.25) as size}<Select.Item
 												value={String(size)}
-												label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+												label={$t('plot.panel.pixels', { size })}
+												>{$t('plot.panel.pixels', { size })}</Select.Item
 											>{/each}</Select.Group
 									></Select.Content
 								></Select.Root
@@ -1243,12 +1266,15 @@
 									value={String(draft.contour.labelFontSize)}
 									onValueChange={(value) => patchContour({ labelFontSize: Number(value) })}
 									><Select.Trigger id="contourLabelSize"
-										>{$t('plot.panel.pixels', { size: draft.contour.labelFontSize })}</Select.Trigger
+										>{$t('plot.panel.pixels', {
+											size: draft.contour.labelFontSize
+										})}</Select.Trigger
 									><Select.Content
 										><Select.Group
 											>{#each sizeOptions(6, 24) as size}<Select.Item
 													value={String(size)}
-													label={$t('plot.panel.pixels', { size })}>{$t('plot.panel.pixels', { size })}</Select.Item
+													label={$t('plot.panel.pixels', { size })}
+													>{$t('plot.panel.pixels', { size })}</Select.Item
 												>{/each}</Select.Group
 										></Select.Content
 									></Select.Root
@@ -1341,8 +1367,8 @@
 
 			// The Apply button only stands out while there is something to apply.
 			&.dirty .apply {
-				border-color: var(--primary);// #2563eb;
-				background-color: var(--primary);// #2563eb;
+				border-color: var(--primary); // #2563eb;
+				background-color: var(--primary); // #2563eb;
 				color: var(--primary-foreground);
 			}
 

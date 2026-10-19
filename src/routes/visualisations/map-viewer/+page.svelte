@@ -272,7 +272,8 @@
 									bind:value={map.selectedDataColumnName}
 								>
 									<Select.Trigger id="dataColumn" class="full-width"
-										>{map.selectedDataColumnName || $t('visualisation.selectColumn')}</Select.Trigger
+										>{map.selectedDataColumnName ||
+											$t('visualisation.selectColumn')}</Select.Trigger
 									>
 									<Select.Content>
 										<Select.Group>

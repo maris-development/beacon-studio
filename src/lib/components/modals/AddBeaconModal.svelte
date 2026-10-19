@@ -118,7 +118,11 @@
 		try {
 			if (!(await testConnection())) return;
 
-			const result = await saveNodeForm({ name, url, description, token }, adminInput, node?.id ?? null);
+			const result = await saveNodeForm(
+				{ name, url, description, token },
+				adminInput,
+				node?.id ?? null
+			);
 			if (!result) return;
 
 			// The table shows this node right away. Without this, its status stays

@@ -56,7 +56,9 @@
 	});
 
 	// The SDK quotes a table as one identifier and throws on any other name.
-	let tableInvalid = $derived(kind === 'table' && table.trim() !== '' && !isValidName(table.trim()));
+	let tableInvalid = $derived(
+		kind === 'table' && table.trim() !== '' && !isValidName(table.trim())
+	);
 
 	let ready = $derived(target.type === 'all' || (target.value !== '' && !tableInvalid));
 
@@ -103,7 +105,12 @@
 	}
 </script>
 
-<Modal title={$t('usersRoles.addRuleDialog.title', { role })} {onClose} canCloseModal={!busy} width="560px">
+<Modal
+	title={$t('usersRoles.addRuleDialog.title', { role })}
+	{onClose}
+	canCloseModal={!busy}
+	width="560px"
+>
 	<div class="form">
 		<fieldset class="field">
 			<legend>{$t('usersRoles.addRuleDialog.effect')}</legend>
@@ -170,7 +177,10 @@
 		{/if}
 
 		<p class="preview mono">
-			{$t('usersRoles.addRuleDialog.preview', { effect: effectLabel, target: $t(describeTarget(target)) })}
+			{$t('usersRoles.addRuleDialog.preview', {
+				effect: effectLabel,
+				target: $t(describeTarget(target))
+			})}
 		</p>
 
 		{#if failure}

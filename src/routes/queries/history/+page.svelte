@@ -139,8 +139,17 @@
 										<span class="badge">{entry.node.name || entry.node.url}</span>
 										<span>{$t('common.rows', { count: entry.rowCount ?? 0 })}</span>
 										<span>{$t('query.filterCount', { count: filterCount(entry) })}</span>
-										<span>{$t('history.entry.duration', { ms: Math.round(entry.duration ?? 0) })}</span>
-										<span title={entry.lastExecutedAt ? $formatDate(new Date(entry.lastExecutedAt), { dateStyle: 'short', timeStyle: 'medium' }) : ''}>
+										<span
+											>{$t('history.entry.duration', { ms: Math.round(entry.duration ?? 0) })}</span
+										>
+										<span
+											title={entry.lastExecutedAt
+												? $formatDate(new Date(entry.lastExecutedAt), {
+														dateStyle: 'short',
+														timeStyle: 'medium'
+													})
+												: ''}
+										>
 											{lastExecuted(entry)}
 										</span>
 										{#if entry.executionCount > 1}

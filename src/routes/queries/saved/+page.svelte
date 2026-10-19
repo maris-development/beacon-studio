@@ -3,7 +3,12 @@
 	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
 	import Card from '@/components/card/Card.svelte';
 	import Button from '$lib/components/buttons/Button.svelte';
-	import { savedQueries, removeSavedQuery, clearSavedQueries, renameSavedQuery } from '@/stores/saved-queries';
+	import {
+		savedQueries,
+		removeSavedQuery,
+		clearSavedQueries,
+		renameSavedQuery
+	} from '@/stores/saved-queries';
 	import { buildShareLink, type StoredQuery } from '@/stores/stored-query';
 	import { addToast } from '@/stores/toasts';
 	import { Utils } from '@/utils';
@@ -145,7 +150,9 @@
 											<Button size="sm" variant="outline" onclick={() => commitRename(entry.id)}>
 												{$t('common.save')}
 											</Button>
-											<Button size="sm" variant="ghost" onclick={cancelRename}>{$t('common.cancel')}</Button>
+											<Button size="sm" variant="ghost" onclick={cancelRename}
+												>{$t('common.cancel')}</Button
+											>
 										</div>
 									{:else}
 										<div class="entry-name" title={entry.name}>{entry.name}</div>
@@ -156,7 +163,12 @@
 										{/if}
 										<span class="columns" title={columnSummary(entry)}>{columnSummary(entry)}</span>
 										<span>{$t('query.filterCount', { count: filterCount(entry) })}</span>
-										<span title={$formatDate(new Date(entry.createdAt), { dateStyle: 'short', timeStyle: 'medium' })}>
+										<span
+											title={$formatDate(new Date(entry.createdAt), {
+												dateStyle: 'short',
+												timeStyle: 'medium'
+											})}
+										>
 											{$t('saved.entry.savedAgo', { time: savedAgo(entry) })}
 										</span>
 									</div>

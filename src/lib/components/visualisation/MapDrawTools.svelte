@@ -364,7 +364,6 @@
 </script>
 
 <div class="map-draw-tools">
-
 	{#if activeTool === 'cross-section' || selection?.mode === 'cross-section'}
 		<label class="width-row">
 			<span>{$t('map.draw.width')}</span>

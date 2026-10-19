@@ -15,14 +15,14 @@ Without `STUDIO_BRAND`, the build uses `default`.
 
 ## Files
 
-| File | Required | Content |
-|---|---|---|
-| `brand.ts` | yes | Name, logo, links and endpoints |
-| `theme.scss` | yes | Tokens and fonts |
-| `locales.ts` | yes | Text overrides per language |
-| `static/` | no | Files that replace the default files in `static/` |
-| `assets/`, `fonts/` | no | Files that `brand.ts` and `theme.scss` import |
-| `README.md` | no | Notes for the project |
+| File                | Required | Content                                           |
+| ------------------- | -------- | ------------------------------------------------- |
+| `brand.ts`          | yes      | Name, logo, links and endpoints                   |
+| `theme.scss`        | yes      | Tokens and fonts                                  |
+| `locales.ts`        | yes      | Text overrides per language                       |
+| `static/`           | no       | Files that replace the default files in `static/` |
+| `assets/`, `fonts/` | no       | Files that `brand.ts` and `theme.scss` import     |
+| `README.md`         | no       | Notes for the project                             |
 
 Each file can be empty. A missing value keeps the default value.
 
