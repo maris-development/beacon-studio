@@ -131,10 +131,11 @@
 										><span class="null-value">{$t('table.nullValue')}</span></td
 									>
 								{:else if column.rawHtml === true}
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+									<!-- eslint-disable svelte/no-at-html-tags -->
 									<td onclick={() => onCellClick(row, column)}
 										>{@html Utils.toString(cell(row, column))}</td
 									>
+									<!-- eslint-enable svelte/no-at-html-tags -->
 								{:else}
 									<td onclick={() => onCellClick(row, column)}
 										>{Utils.toString(cell(row, column))}</td

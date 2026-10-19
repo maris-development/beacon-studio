@@ -31,7 +31,6 @@ describe('readInfo', () => {
 			kernel: '6.5.0',
 			uptimeSecs: 273120,
 			cpuBrand: 'AMD EPYC',
-			physicalCores: 4,
 			cpuPercent: 12.5,
 			cores: [
 				{ name: 'cpu0', percent: 20 },
@@ -75,7 +74,7 @@ describe('readInfo', () => {
 
 	it('names a core with no name by its position', () => {
 		const view = readInfo({ system_info: { cpus: [{ cpu_usage: 3 }] } });
-		expect(view.host?.cores).toEqual([{ name: '#1', percent: 3 }]);
+		expect(view.host?.cores).toEqual([{ name: '1', percent: 3 }]);
 	});
 
 	it('gives an empty view for a value of the wrong shape', () => {

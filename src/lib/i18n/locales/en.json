@@ -170,7 +170,7 @@
 			},
 			"telemetryEnabled": {
 				"label": "Send usage statistics",
-				"description": "The main switch. It sends usage events to beacon-datalake.org: page visits, query runs, downloads, searches, warnings and errors. A random id groups the events of this browser. It sends no account, no password and no result data. Switch this off to send nothing at all."
+				"description": "The main switch. It sends usage events to the telemetry server: page visits, query runs, downloads, searches, warnings and errors. A random id groups the events of this browser. It sends no account, no password and no result data. Switch this off to send nothing at all."
 			},
 			"telemetryQueryDetails": {
 				"label": "Send query telemetry",

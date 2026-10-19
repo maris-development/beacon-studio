@@ -715,7 +715,7 @@
 									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										>{#each sizeOptions(6, 32) as size}<Select.Item
+										>{#each sizeOptions(6, 32) as size (size)}<Select.Item
 												value={String(size)}
 												label={$t('plot.panel.pixels', { size })}
 												>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -748,7 +748,7 @@
 									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										>{#each sizeOptions(6, 32) as size}<Select.Item
+										>{#each sizeOptions(6, 32) as size (size)}<Select.Item
 												value={String(size)}
 												label={$t('plot.panel.pixels', { size })}
 												>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -778,7 +778,7 @@
 									})}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										>{#each sizeOptions(6, 32) as size}<Select.Item
+										>{#each sizeOptions(6, 32) as size (size)}<Select.Item
 												value={String(size)}
 												label={$t('plot.panel.pixels', { size })}
 												>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -797,7 +797,7 @@
 								>{$t('plot.panel.pixels', { size: draft.style.tickFontSize })}</Select.Trigger
 							><Select.Content
 								><Select.Group
-									>{#each sizeOptions(6, 32) as size}<Select.Item
+									>{#each sizeOptions(6, 32) as size (size)}<Select.Item
 											value={String(size)}
 											label={$t('plot.panel.pixels', { size })}
 											>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -937,7 +937,7 @@
 									>{$t('plot.panel.pixels', { size: draft.style.pointRadius })}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										>{#each sizeOptions(0.5, 12, 0.5) as size}<Select.Item
+										>{#each sizeOptions(0.5, 12, 0.5) as size (size)}<Select.Item
 												value={String(size)}
 												label={$t('plot.panel.pixels', { size })}
 												>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -1241,7 +1241,7 @@
 									>{$t('plot.panel.pixels', { size: draft.contour.lineWidth })}</Select.Trigger
 								><Select.Content
 									><Select.Group
-										>{#each sizeOptions(0.25, 5, 0.25) as size}<Select.Item
+										>{#each sizeOptions(0.25, 5, 0.25) as size (size)}<Select.Item
 												value={String(size)}
 												label={$t('plot.panel.pixels', { size })}
 												>{$t('plot.panel.pixels', { size })}</Select.Item
@@ -1271,7 +1271,7 @@
 										})}</Select.Trigger
 									><Select.Content
 										><Select.Group
-											>{#each sizeOptions(6, 24) as size}<Select.Item
+											>{#each sizeOptions(6, 24) as size (size)}<Select.Item
 													value={String(size)}
 													label={$t('plot.panel.pixels', { size })}
 													>{$t('plot.panel.pixels', { size })}</Select.Item

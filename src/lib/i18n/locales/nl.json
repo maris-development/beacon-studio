@@ -170,7 +170,7 @@
 			},
 			"telemetryEnabled": {
 				"label": "Gebruiksstatistieken versturen",
-				"description": "De hoofdschakelaar. Deze verstuurt gebruiksgebeurtenissen naar beacon-datalake.org: paginabezoeken, queryruns, downloads, zoekopdrachten, waarschuwingen en fouten. Een willekeurige id groepeert de gebeurtenissen van deze browser. Er gaat geen account, geen wachtwoord en geen resultaatdata mee. Zet dit uit om helemaal niets te versturen."
+				"description": "De hoofdschakelaar. Deze verstuurt gebruiksgebeurtenissen naar de telemetrieserver: paginabezoeken, queryruns, downloads, zoekopdrachten, waarschuwingen en fouten. Een willekeurige id groepeert de gebeurtenissen van deze browser. Er gaat geen account, geen wachtwoord en geen resultaatdata mee. Zet dit uit om helemaal niets te versturen."
 			},
 			"telemetryQueryDetails": {
 				"label": "Querytelemetrie versturen",

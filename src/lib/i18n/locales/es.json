@@ -170,7 +170,7 @@
 			},
 			"telemetryEnabled": {
 				"label": "Enviar estadísticas de uso",
-				"description": "El interruptor principal. Envía eventos de uso a beacon-datalake.org: visitas a páginas, ejecuciones de consultas, descargas, búsquedas, advertencias y errores. Un identificador aleatorio agrupa los eventos de este navegador. No envía ninguna cuenta, ninguna contraseña ni datos de resultados. Desactívalo para no enviar nada."
+				"description": "El interruptor principal. Envía eventos de uso al servidor de telemetría: visitas a páginas, ejecuciones de consultas, descargas, búsquedas, advertencias y errores. Un identificador aleatorio agrupa los eventos de este navegador. No envía ninguna cuenta, ninguna contraseña ni datos de resultados. Desactívalo para no enviar nada."
 			},
 			"telemetryQueryDetails": {
 				"label": "Enviar telemetría de consultas",

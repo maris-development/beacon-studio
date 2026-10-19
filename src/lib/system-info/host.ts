@@ -13,7 +13,6 @@ export interface HostView {
 	kernel: string | null;
 	uptimeSecs: number | null;
 	cpuBrand: string | null;
-	physicalCores: number | null;
 	/** Already a percentage in the server answer. */
 	cpuPercent: number | null;
 	cores: { name: string; percent: number }[];
@@ -75,7 +74,7 @@ function readHost(value: Record<string, unknown>): HostView {
 	const cores = cpus
 		.filter((cpu): cpu is Record<string, unknown> => cpu !== null && typeof cpu === 'object')
 		.map((cpu, index) => ({
-			name: text(cpu.name) ?? `#${index + 1}`,
+			name: text(cpu.name) ?? String(index + 1),
 			percent: clampPercent(count(cpu.cpu_usage) ?? 0)
 		}));
 
@@ -93,7 +92,6 @@ function readHost(value: Record<string, unknown>): HostView {
 		kernel: text(value.kernel_version),
 		uptimeSecs: count(value.uptime),
 		cpuBrand,
-		physicalCores: count(value.physical_core_count),
 		cpuPercent,
 		cores,
 		memory: usage(value.used_memory, value.total_memory),

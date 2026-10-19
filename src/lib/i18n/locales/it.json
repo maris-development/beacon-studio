@@ -170,7 +170,7 @@
 			},
 			"telemetryEnabled": {
 				"label": "Invia statistiche di utilizzo",
-				"description": "L'interruttore principale. Invia eventi di utilizzo a beacon-datalake.org: visite alle pagine, esecuzioni di query, download, ricerche, avvisi ed errori. Un id casuale raggruppa gli eventi di questo browser. Non invia alcun account, alcuna password e alcun dato dei risultati. Disattivalo per non inviare nulla."
+				"description": "L'interruttore principale. Invia eventi di utilizzo al server di telemetria: visite alle pagine, esecuzioni di query, download, ricerche, avvisi ed errori. Un id casuale raggruppa gli eventi di questo browser. Non invia alcun account, alcuna password e alcun dato dei risultati. Disattivalo per non inviare nulla."
 			},
 			"telemetryQueryDetails": {
 				"label": "Invia telemetria delle query",

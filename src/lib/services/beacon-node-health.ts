@@ -76,7 +76,8 @@ export function dropHealth(url: string): void {
 	const key = normalizeUrl(url);
 
 	healthStore.update((map) => {
-		const { [key]: _removed, ...rest } = map;
+		const rest = { ...map };
+		delete rest[key];
 		return rest;
 	});
 }

@@ -37,6 +37,7 @@ This file is a quick operational guide for coding agents working in this reposit
   client. Reuse the SDK's query builder and result handling rather than
   reimplementing them locally.
 - One temporary exception: `src/lib/beacon-api/crawler-run.ts` calls `POST /api/admin/crawlers/{name}/run` itself, because the SDK `admin.runCrawler()` returns `void` and drops the crawl report. Delete the file when an SDK release returns the report. Add no other direct calls.
+- SDK 2.0.0 drops a stop after the response headers and never cancels the body. `runPreview` (`src/lib/sql/run.ts`) races each batch read against the signal as a workaround. Remove the race when an SDK release holds beacon PR #591.
 
 ## Core Commands
 - Install deps: `npm install`
@@ -158,7 +159,7 @@ Sort each persisted value into one class. The class decides whether a change nee
 | Class | Examples | Rule |
 |---|---|---|
 | Cache | OPFS Arrow cache, `datasetKey`, query history, remembered admin sign-ins (`admin-vault.ts`, bump `VAULT_VERSION`) | Never migrate. Bump a version and discard. |
-| Preference or UI state | settings, selected node, data-browser node, blocks-state, `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
+| Preference or UI state | settings, selected node, blocks-state, SQL editor tabs (`beacon-studio.sql-tabs`), `view.map`, `view.chart` | Never migrate. Read with defaults (`normalize`, `normaliseChartView`). A rename resets the value. |
 | User data | node list (tokens), saved queries, workbench blocks | Migrate only when the user loses real work. |
 | External format | share links (`SharedQuery`), `?q=` bookmarks | Cannot be migrated. Read every old shape. |
 
@@ -245,7 +246,7 @@ message the change never reaches production.
 - Structure styles with SCSS hierarchy (nested rules) where it improves readability and maintainability.
 - Do not override heading text styles (`h1`-`h6`) defined in `app.scss` (font family, font size, font weight). Only adjust layout/spacing properties (e.g., margins, padding, positioning) in component- or screen-specific styles.
 - Set `font-size` only with a `--font-size-*` token, and `font-family` only with a `--font-family-*` token. `:root` in `app.scss` holds them. `src/tests/typography.test.ts` fails on a literal value.
-  - Body text uses three sizes: `xs`, `sm`, `md`. The larger tokens belong to headings. `--font-size-icon` sizes a close glyph only.
+  - Body text uses three sizes: `xs`, `sm`, `md`. The larger tokens belong to headings. `--font-size-icon` sizes a close glyph only. A stat tile value (`components/system-info/StatTile.svelte`) uses `--font-size-lg`.
   - Use `--font-family-mono` (or the global `.mono` class) for code-like values only: SQL, column types, storage paths. Show a table, dataset or node name in the base font.
   - Tailwind `text-xs` to `text-2xl` and `font-mono` map to the same tokens in `tailwind.css`. Do not use arbitrary values such as `text-[13px]`.
 - Prefer native CSS custom properties (`--var` syntax) for design tokens and runtime theming.
