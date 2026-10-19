@@ -86,9 +86,13 @@
 		});
 	});
 
+	// Only the answer of the latest load counts.
+	let loadSeq = 0;
+
 	async function load() {
 		const current = node;
 		if (!current) return;
+		const seq = ++loadSeq;
 
 		// A reload of the same node keeps the lists on screen.
 		const background = phase === 'ready' && loadedUrl === current.url;
@@ -103,6 +107,7 @@
 				Promise.all([client.admin.listAuthUsers(), client.admin.listAuthRoles()])
 			);
 			// A node switch or a sign-out during the call makes the result stale.
+			if (seq !== loadSeq) return;
 			if (current.url !== nodeUrl || !get(signedInNodeIds).has(current.id)) return;
 			if (result === null) return;
 
@@ -111,7 +116,7 @@
 			phase = 'ready';
 			loadedUrl = current.url;
 		} catch (caught) {
-			if (current.url === nodeUrl) {
+			if (seq === loadSeq && current.url === nodeUrl) {
 				if (background) {
 					addToast({
 						type: 'error',
@@ -124,7 +129,7 @@
 				}
 			}
 		} finally {
-			refreshing = false;
+			if (seq === loadSeq) refreshing = false;
 		}
 	}
 

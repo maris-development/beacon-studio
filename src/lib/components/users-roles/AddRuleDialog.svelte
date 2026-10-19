@@ -7,10 +7,9 @@
 	import { Input } from '@/components/ui/input';
 	import { Label } from '@/components/ui/label';
 	import type { BeaconNode } from '@/beacon-api/types';
-	import { makeBeaconClient } from '@/beacon-api/client';
 	import { buildTree } from '@/sql/catalog';
 	import { splitTree } from '@/data-browser/tables';
-	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
+	import { adminErrorMessage, withAdmin, withAdminSession } from '@/services/admin-session';
 	import { describeTarget } from '@/access/summary';
 	import { isValidName } from '@/access/names';
 	import { t, type MessageKey } from '@/i18n';
@@ -68,18 +67,21 @@
 	});
 
 	onMount(() => {
-		makeBeaconClient(node)
-			.catalogs()
-			.then(
-				(view) => {
-					const names = splitTree(buildTree(view))
-						.defaultTables.map((item) => item.name)
-						.filter(isValidName);
-					tables = names;
-					if (table === '' && names.length > 0) table = names[0];
-				},
-				() => (tablesFailed = true)
-			);
+		withAdminSession(node, (client) => client.catalogs()).then(
+			(view) => {
+				// No session gives null, and the free-text input takes over.
+				if (view === null) {
+					tablesFailed = true;
+					return;
+				}
+				const names = splitTree(buildTree(view))
+					.defaultTables.map((item) => item.name)
+					.filter(isValidName);
+				tables = names;
+				if (table === '' && names.length > 0) table = names[0];
+			},
+			() => (tablesFailed = true)
+		);
 	});
 
 	async function save() {

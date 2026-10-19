@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ApiError, type AuthRole } from '@maris-development/beacon-client';
+	import type { AuthRole } from '@maris-development/beacon-client';
 	import ShieldPlusIcon from '@lucide/svelte/icons/shield-plus';
 	import Modal from '@/components/modals/Modal.svelte';
 	import Button from '@/components/buttons/Button.svelte';
@@ -29,7 +29,6 @@
 	let source = $state('');
 	// Field errors show only after the first Save click.
 	let attempted = $state(false);
-	let exists = $state(false);
 	// The raw server text of a failed save.
 	let failure = $state('');
 	let busy = $state(false);
@@ -40,14 +39,12 @@
 		if (value === '') return message('usersRoles.error.nameRequired');
 		if (!isValidName(value)) return message('usersRoles.error.nameInvalid');
 		// The server answers a duplicate with a plain 400, so the loaded list decides first.
-		if (exists || roles.some((role) => role.name === value))
-			return message('usersRoles.error.exists');
+		if (roles.some((role) => role.name === value)) return message('usersRoles.error.exists');
 		return null;
 	});
 
 	async function save() {
 		attempted = true;
-		exists = false;
 		failure = '';
 		if (nameError) return;
 
@@ -78,11 +75,7 @@
 			}
 			onSaved(role);
 		} catch (caught) {
-			if (caught instanceof ApiError && caught.status === 409) {
-				exists = true;
-			} else {
-				failure = adminErrorMessage(caught);
-			}
+			failure = adminErrorMessage(caught);
 		} finally {
 			busy = false;
 		}
@@ -104,7 +97,6 @@
 			<Input
 				id="new-role-name"
 				bind:value={name}
-				oninput={() => (exists = false)}
 				required
 				autocomplete="off"
 				spellcheck="false"

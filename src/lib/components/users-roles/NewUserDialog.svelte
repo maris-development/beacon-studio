@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onDestroy } from 'svelte';
-	import { ApiError, type AuthRole } from '@maris-development/beacon-client';
+	import type { AuthRole } from '@maris-development/beacon-client';
 	import EyeIcon from '@lucide/svelte/icons/eye';
 	import EyeOffIcon from '@lucide/svelte/icons/eye-off';
 	import KeyRoundIcon from '@lucide/svelte/icons/key-round';
@@ -14,7 +14,7 @@
 	import { adminErrorMessage, withAdmin } from '@/services/admin-session';
 	import { createUserWithRoles, stepFailureToast } from '@/access/actions';
 	import { isValidName } from '@/access/names';
-	import { generatePassword } from '@/access/password';
+	import { generatePassword, maskSecret } from '@/access/password';
 	import { ruleCount } from '@/access/summary';
 	import { addToast } from '@/stores/toasts';
 	import { message, t, type Message } from '@/i18n';
@@ -36,7 +36,6 @@
 	let picked: string[] = $state([]);
 	// Field errors show only after the first Save click.
 	let attempted = $state(false);
-	let exists = $state(false);
 	// The raw server text of a failed save.
 	let failure = $state('');
 	let busy = $state(false);
@@ -47,7 +46,7 @@
 		if (name === '') return message('usersRoles.error.nameRequired');
 		if (!isValidName(name)) return message('usersRoles.error.nameInvalid');
 		// The server answers a duplicate with a plain 400, so the loaded list decides first.
-		if (exists || usernames.includes(name)) return message('usersRoles.error.exists');
+		if (usernames.includes(name)) return message('usersRoles.error.exists');
 		return null;
 	});
 
@@ -75,7 +74,6 @@
 
 	async function save() {
 		attempted = true;
-		exists = false;
 		failure = '';
 		if (nameError || passwordError) return;
 
@@ -103,14 +101,8 @@
 			}
 			onSaved();
 		} catch (caught) {
-			if (caught instanceof ApiError && caught.status === 409) {
-				exists = true;
-			} else {
-				// The SDK sends the password as a SQL literal, so a server error can echo it.
-				let text = adminErrorMessage(caught);
-				if (secret !== '') text = text.split(secret).join('***');
-				failure = text;
-			}
+			// The SDK sends the password as a SQL literal, so a server error can echo it.
+			failure = maskSecret(adminErrorMessage(caught), secret);
 		} finally {
 			busy = false;
 		}
@@ -132,7 +124,6 @@
 			<Input
 				id="new-user-name"
 				bind:value={username}
-				oninput={() => (exists = false)}
 				required
 				autocomplete="off"
 				spellcheck="false"

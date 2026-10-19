@@ -54,7 +54,7 @@
 	const privilege = 'SELECT';
 
 	let list = $derived(filterRoles(roles, needle));
-	let current = $derived(roles.find((role) => role.name === selected) ?? roles[0] ?? null);
+	let current = $derived(list.find((role) => role.name === selected) ?? list[0] ?? null);
 	let members = $derived(current ? membersOf(current.name, users) : []);
 	let addable = $derived(current ? usersToAdd(current.name, users) : []);
 	let rules = $derived.by(() => {

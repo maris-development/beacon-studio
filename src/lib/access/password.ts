@@ -8,6 +8,13 @@ function cryptoBytes(bytes: Uint8Array): Uint8Array {
 	return crypto.getRandomValues(bytes);
 }
 
+/** Hide a secret in a text. The SDK doubles each quote in the SQL, so both forms are masked. */
+export function maskSecret(text: string, secret: string): string {
+	if (secret === '') return text;
+	const quoted = secret.replace(/'/g, "''");
+	return text.split(quoted).join('***').split(secret).join('***');
+}
+
 /** Make a random password. Rejection sampling avoids modulo bias. */
 export function generatePassword(random: RandomBytes = cryptoBytes, length = 20): string {
 	let result = '';
