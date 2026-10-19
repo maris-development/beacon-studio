@@ -3,9 +3,6 @@
 ## Purpose
 This file is a quick operational guide for coding agents working in this repository.
 
-## Work in Progress
-- Admin mode: read `docs/superpowers/admin-mode-roadmap.md` first. It holds the status, the decisions and the next step.
-
 ## Project Snapshot
 - Name: beacon-studio-sv
 - Stack: SvelteKit 2, Svelte 5, TypeScript, Vite 6, Tailwind CSS 4, SCSS
