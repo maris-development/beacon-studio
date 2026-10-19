@@ -10,225 +10,225 @@
 	chart explorer. Therefore a palette looks the same on both pages.
 -->
 <script lang="ts">
-	import { Input } from '../ui/input';
-	import { Label } from '../ui/label';
-	import PalettePicker from '@/components/palette/PalettePicker.svelte';
-	import { loadColormaps, samplePalette } from '@/colors/palettes';
-	import { COLOR_SCALE_BLIPS } from './legend-defaults';
-	import { onMount } from 'svelte';
-	import { t } from '@/i18n';
+    import { Input } from "../ui/input";
+    import { Label } from "../ui/label";
+    import PalettePicker from "@/components/palette/PalettePicker.svelte";
+    import { loadColormaps, samplePalette } from "@/colors/palettes";
+    import { COLOR_SCALE_BLIPS } from "./legend-defaults";
+    import { onMount } from "svelte";
+    import { t } from "@/i18n";
 
-	let {
-		colorScaleMin = $bindable(null),
-		colorScaleMax = $bindable(null),
-		autoColorScaleMin,
-		autoColorScaleMax,
-		palette = $bindable(''),
-		paletteReverse = $bindable(false)
-	}: {
-		/** Null shows the field empty ("auto") and paints with the matching auto bound. */
-		colorScaleMin?: number | null;
-		colorScaleMax?: number | null;
-		/** The selected column's actual min/max, for the strip and for "auto". */
-		autoColorScaleMin: number;
-		autoColorScaleMax: number;
-		palette?: string;
-		paletteReverse?: boolean;
-	} = $props();
+    let {
+        colorScaleMin = $bindable(null),
+        colorScaleMax = $bindable(null),
+        autoColorScaleMin,
+        autoColorScaleMax,
+        palette = $bindable(""),
+        paletteReverse = $bindable(false)
+    }: {
+        /** Null shows the field empty ("auto") and paints with the matching auto bound. */
+        colorScaleMin?: number | null;
+        colorScaleMax?: number | null;
+        /** The selected column's actual min/max, for the strip and for "auto". */
+        autoColorScaleMin: number;
+        autoColorScaleMax: number;
+        palette?: string;
+        paletteReverse?: boolean;
+    } = $props();
 
-	/** An empty field means "auto", which falls back to the column's actual range. */
-	function numberOrNull(value: string): number | null {
-		if (value.trim() === '') return null;
+    /** An empty field means "auto", which falls back to the column's actual range. */
+    function numberOrNull(value: string): number | null {
+        if (value.trim() === "") return null;
 
-		const parsed = Number(value);
-		if (!Number.isFinite(parsed)) return null;
-		return parsed;
-	}
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return null;
+        return parsed;
+    }
 
-	/**
-	 * Flips once the colormap file has loaded. The strip below reads the palette
-	 * synchronously, so it must be built again after the load.
-	 */
-	let palettesLoaded = $state(false);
+    /**
+     * Flips once the colormap file has loaded. The strip below reads the palette
+     * synchronously, so it must be built again after the load.
+     */
+    let palettesLoaded = $state(false);
 
-	onMount(() => {
-		loadColormaps().then(() => {
-			palettesLoaded = true;
-		});
-	});
+    onMount(() => {
+        loadColormaps().then(() => {
+            palettesLoaded = true;
+        });
+    });
 
-	/**
-	 * The blocks of the strip, with the value each one stands for.
-	 *
-	 * A reversed palette is drawn reversed, so the strip matches the map. The
-	 * values still run from the minimum to the maximum, left to right.
-	 */
-	const strip = $derived.by(() => {
-		void palettesLoaded;
+    /**
+     * The blocks of the strip, with the value each one stands for.
+     *
+     * A reversed palette is drawn reversed, so the strip matches the map. The
+     * values still run from the minimum to the maximum, left to right.
+     */
+    const strip = $derived.by(() => {
+        void palettesLoaded;
 
-		const min = colorScaleMin ?? autoColorScaleMin;
-		const max = colorScaleMax ?? autoColorScaleMax;
+        const min = colorScaleMin ?? autoColorScaleMin;
+        const max = colorScaleMax ?? autoColorScaleMax;
 
-		const colors = samplePalette(palette, COLOR_SCALE_BLIPS, paletteReverse);
-		const span = max - min;
-		const step = span / (COLOR_SCALE_BLIPS - 1);
+        const colors = samplePalette(palette, COLOR_SCALE_BLIPS, paletteReverse);
+        const span = max - min;
+        const step = span / (COLOR_SCALE_BLIPS - 1);
 
-		return colors.map((color, index) => ({
-			color,
-			value: Math.round((min + index * step) * 100) / 100
-		}));
-	});
+        return colors.map((color, index) => ({
+            color,
+            value: Math.round((min + index * step) * 100) / 100
+        }));
+    });
 </script>
 
 <div class="legend">
-	<div class="field">
-		<Label size="sm" for="legendPalette">{$t('palette.label')}</Label>
-		<PalettePicker
-			id="legendPalette"
-			value={palette}
-			reverse={paletteReverse}
-			onSelect={(id) => (palette = id)}
-		/>
-	</div>
+    <div class="field">
+        <Label size="sm" for="legendPalette">{$t("palette.label")}</Label>
+        <PalettePicker
+            id="legendPalette"
+            value={palette}
+            reverse={paletteReverse}
+            onSelect={(id) => (palette = id)}
+        />
+    </div>
 
-	<div class="reverse">
-		<input id="legendReverse" type="checkbox" bind:checked={paletteReverse} />
-		<Label for="legendReverse">{$t('palette.reverse')}</Label>
-	</div>
+    <div class="reverse">
+        <input id="legendReverse" type="checkbox" bind:checked={paletteReverse} />
+        <Label for="legendReverse">{$t("palette.reverse")}</Label>
+    </div>
 
-	<div class="range">
-		<div class="field">
-			<Label size="sm" for="colorScaleMin">{$t('legend.minimum')}</Label>
-			<Input
-				type="number"
-				step="any"
-				name="colorScaleMin"
-				id="colorScaleMin"
-				value={colorScaleMin ?? ''}
-				placeholder={$t('visualisation.auto')}
-				oninput={(event) => (colorScaleMin = numberOrNull(event.currentTarget.value))}
-				title={$t('legend.minimumTitle')}
-			/>
-		</div>
+    <div class="range">
+        <div class="field">
+            <Label size="sm" for="colorScaleMin">{$t("legend.minimum")}</Label>
+            <Input
+                type="number"
+                step="any"
+                name="colorScaleMin"
+                id="colorScaleMin"
+                value={colorScaleMin ?? ""}
+                placeholder={$t("visualisation.auto")}
+                oninput={(event) => (colorScaleMin = numberOrNull(event.currentTarget.value))}
+                title={$t("legend.minimumTitle")}
+            />
+        </div>
 
-		<div class="field">
-			<Label size="sm" for="colorScaleMax">{$t('legend.maximum')}</Label>
-			<Input
-				type="number"
-				step="any"
-				name="colorScaleMax"
-				id="colorScaleMax"
-				value={colorScaleMax ?? ''}
-				placeholder={$t('visualisation.auto')}
-				oninput={(event) => (colorScaleMax = numberOrNull(event.currentTarget.value))}
-				title={$t('legend.maximumTitle')}
-			/>
-		</div>
-	</div>
+        <div class="field">
+            <Label size="sm" for="colorScaleMax">{$t("legend.maximum")}</Label>
+            <Input
+                type="number"
+                step="any"
+                name="colorScaleMax"
+                id="colorScaleMax"
+                value={colorScaleMax ?? ""}
+                placeholder={$t("visualisation.auto")}
+                oninput={(event) => (colorScaleMax = numberOrNull(event.currentTarget.value))}
+                title={$t("legend.maximumTitle")}
+            />
+        </div>
+    </div>
 
-	<div class="colors" style="--blips: {COLOR_SCALE_BLIPS};">
-		<div class="colors-fill" aria-hidden="true">
-			{#each strip as block, index (index)}
-				<span class="color-fill" style="background-color: {block.color};"></span>
-			{/each}
-		</div>
+    <div class="colors" style="--blips: {COLOR_SCALE_BLIPS};">
+        <div class="colors-fill" aria-hidden="true">
+            {#each strip as block, index (index)}
+                <span class="color-fill" style="background-color: {block.color};"></span>
+            {/each}
+        </div>
 
-		<div class="colors-hover">
-			{#each strip as block, index (index)}
-				<span class="color-hit" data-value={block.value}></span>
-			{/each}
-		</div>
-	</div>
+        <div class="colors-hover">
+            {#each strip as block, index (index)}
+                <span class="color-hit" data-value={block.value}></span>
+            {/each}
+        </div>
+    </div>
 </div>
 
 <style lang="scss">
-	.legend {
-		display: flex;
-		flex-direction: column;
-		gap: 0.625rem;
+    .legend {
+        display: flex;
+        flex-direction: column;
+        gap: 0.625rem;
 
-		.field {
-			display: flex;
-			flex-direction: column;
-			gap: 0.1875rem;
-			min-width: 0;
-		}
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.1875rem;
+            min-width: 0;
+        }
 
-		.reverse {
-			display: flex;
-			align-items: center;
-			gap: 0.375rem;
-			font-size: 0.8125rem;
-		}
+        .reverse {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+            font-size: var(--font-size-sm);
+        }
 
-		// Two equal columns that may shrink. A long value must not widen the box.
-		.range {
-			display: grid;
-			grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-			gap: 0.5rem;
-		}
+        // Two equal columns that may shrink. A long value must not widen the box.
+        .range {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 0.5rem;
+        }
 
-		.colors {
-			position: relative;
-			overflow: visible;
-			height: 0.75rem;
+        .colors {
+            position: relative;
+            overflow: visible;
+            height: 0.75rem;
 
-			.colors-fill {
-				display: grid;
-				grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
-				gap: 0;
-				overflow: hidden;
-				border-radius: 0.375rem;
-				height: 100%;
-			}
+            .colors-fill {
+                display: grid;
+                grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
+                gap: 0;
+                overflow: hidden;
+                border-radius: 0.375rem;
+                height: 100%;
+            }
 
-			.color-fill {
-				height: 100%;
-			}
+            .color-fill {
+                height: 100%;
+            }
 
-			.colors-hover {
-				position: absolute;
-				inset: 0;
-				display: grid;
-				grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
-				gap: 0;
-			}
+            .colors-hover {
+                position: absolute;
+                inset: 0;
+                display: grid;
+                grid-template-columns: repeat(var(--blips, 100), minmax(0, 1fr));
+                gap: 0;
+            }
 
-			.color-hit {
-				position: relative;
-				height: 100%;
+            .color-hit {
+                position: relative;
+                height: 100%;
 
-				&:hover {
-					&:after {
-						content: attr(data-value);
-						position: absolute;
-						bottom: 125%;
-						left: 50%;
-						transform: translateX(-50%);
-						background-color: #333;
-						color: #fff;
-						padding: 0.3rem 0.5rem;
-						border-radius: 4px;
-						white-space: nowrap;
-						font-size: 0.75rem;
-						pointer-events: none;
-						opacity: 1;
-						z-index: 3;
-					}
+                &:hover {
+                    &:after {
+                        content: attr(data-value);
+                        position: absolute;
+                        bottom: 125%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background-color: #333;
+                        color: #fff;
+                        padding: 0.3rem 0.5rem;
+                        border-radius: 4px;
+                        white-space: nowrap;
+                        font-size: var(--font-size-xs);
+                        pointer-events: none;
+                        opacity: 1;
+                        z-index: 3;
+                    }
 
-					&::before {
-						content: '';
-						position: absolute;
-						bottom: calc(100% + 0.5em);
-						left: 50%;
-						transform: translateX(-50%);
-						border-width: 5px;
-						border-style: solid;
-						border-color: #333 transparent transparent transparent;
-						z-index: 3;
-					}
-				}
-			}
-		}
-	}
+                    &::before {
+                        content: "";
+                        position: absolute;
+                        bottom: calc(100% + 0.5em);
+                        left: 50%;
+                        transform: translateX(-50%);
+                        border-width: 5px;
+                        border-style: solid;
+                        border-color: #333 transparent transparent transparent;
+                        z-index: 3;
+                    }
+                }
+            }
+        }
+    }
 </style>

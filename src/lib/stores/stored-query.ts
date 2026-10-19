@@ -19,30 +19,30 @@
  * key. The OPFS tier uses the same key. It is null before the first run.
  */
 
-import type { BeaconNode, CompiledQuery, NodeRef } from '@/beacon-api/types';
-import type { ChartViewState } from '@/plots/plot-config';
-import type { QueryDraft } from '@/query/draft';
-import { compileDraft } from '@/query/draft';
-import { coordinateColumnsOf, type CoordinatePair } from '@/geo/spatial-selection';
-import { describeQuery, track } from '@/telemetry';
-import { Utils } from '@/utils';
-import { resolve } from '$app/paths';
-import { translate } from '@/i18n';
+import type { BeaconNode, CompiledQuery, NodeRef } from "@/beacon-api/types";
+import type { ChartViewState } from "@/plots/plot-config";
+import type { QueryDraft } from "@/query/draft";
+import { compileDraft } from "@/query/draft";
+import { coordinateColumnsOf, type CoordinatePair } from "@/geo/spatial-selection";
+import { describeQuery, track } from "@/telemetry";
+import { Utils } from "@/utils";
+import { resolve } from "$app/paths";
+import { translate } from "@/i18n";
 
 export type { NodeRef };
 
 /** Which collection a record belongs to. */
-export type StoredQueryRole = 'block' | 'saved' | 'history';
+export type StoredQueryRole = "block" | "saved" | "history";
 
 /**
  * The camera of the map viewer. The values match the MapLibre camera options.
  * `center` is [longitude, latitude].
  */
 export interface MapCameraState {
-	center: [number, number];
-	zoom: number;
-	bearing: number;
-	pitch: number;
+    center: [number, number];
+    zoom: number;
+    bearing: number;
+    pitch: number;
 }
 
 /**
@@ -55,80 +55,80 @@ export interface MapCameraState {
  * the last run.
  */
 export interface MapViewState {
-	/** The column that the map paints. Null while the user picked none. */
-	dataColumn: string | null;
-	/** Null means "auto": the column's actual min/max. See `MapViewController`. */
-	colorScaleMin: number | null;
-	colorScaleMax: number | null;
-	/**
-	 * The id of the colormap that paints the points. See `colors/palettes.ts`.
-	 * An unknown id falls back to the default, so an old record still draws.
-	 */
-	palette: string;
-	/** Turn the palette around. A depth column often needs this. */
-	paletteReverse: boolean;
-	camera: MapCameraState | null;
+    /** The column that the map paints. Null while the user picked none. */
+    dataColumn: string | null;
+    /** Null means "auto": the column's actual min/max. See `MapViewController`. */
+    colorScaleMin: number | null;
+    colorScaleMax: number | null;
+    /**
+     * The id of the colormap that paints the points. See `colors/palettes.ts`.
+     * An unknown id falls back to the default, so an old record still draws.
+     */
+    palette: string;
+    /** Turn the palette around. A depth column often needs this. */
+    paletteReverse: boolean;
+    camera: MapCameraState | null;
 }
 
 /** The display state of each visualisation page for one query. */
 export interface QueryViewState {
-	map?: MapViewState;
-	/** The plots of the chart explorer. See {@link ChartViewState}. */
-	chart?: ChartViewState;
+    map?: MapViewState;
+    /** The plots of the chart explorer. See {@link ChartViewState}. */
+    chart?: ChartViewState;
 }
 
 export interface StoredQuery {
-	/** Stable identity. Internal deep-links put this id on the URL as `?q=`. */
-	id: string;
-	role: StoredQueryRole;
-	/** The name the user sees ("Query 1", …). */
-	name: string;
-	/** Builder state. Null for a record from a share link or from the JSON editor. */
-	draft: QueryDraft | null;
-	/** The runnable query. Null while the draft is incomplete. */
-	compiled: CompiledQuery | null;
-	/**
-	 * The Beacon node that runs this query. It is the connection of the record,
-	 * not a label. Every run, download and cache key uses it. Resolve it with
-	 * `matchRef` or `resolveRef` in `@/services/beacon-node`.
-	 */
-	node: NodeRef;
-	/**
-	 * The columns that hold the position, or null to detect them. The map plots
-	 * this pair, and the area filter tests it. It is the only stored pair: the
-	 * area filter in `compiled` is derived from it.
-	 */
-	coordinateColumns: CoordinatePair | null;
-	/**
-	 * How the visualisation pages show this query. Null for a record that the
-	 * user never opened on the map. See {@link QueryViewState}.
-	 */
-	view: QueryViewState | null;
-	/** The {@link QueryStore} cache key of the last result. Null before the first run. */
-	datasetKey: string | null;
-	createdAt: number;
-	updatedAt: number;
-	/** Epoch ms of the most recent execution, or null if never run. */
-	lastExecutedAt: number | null;
-	executionCount: number;
-	/** Row count of the most recent result. */
-	rowCount: number | null;
-	/** Duration (ms) of the most recent execution. */
-	duration: number | null;
+    /** Stable identity. Internal deep-links put this id on the URL as `?q=`. */
+    id: string;
+    role: StoredQueryRole;
+    /** The name the user sees ("Query 1", …). */
+    name: string;
+    /** Builder state. Null for a record from a share link or from the JSON editor. */
+    draft: QueryDraft | null;
+    /** The runnable query. Null while the draft is incomplete. */
+    compiled: CompiledQuery | null;
+    /**
+     * The Beacon node that runs this query. It is the connection of the record,
+     * not a label. Every run, download and cache key uses it. Resolve it with
+     * `matchRef` or `resolveRef` in `@/services/beacon-node`.
+     */
+    node: NodeRef;
+    /**
+     * The columns that hold the position, or null to detect them. The map plots
+     * this pair, and the area filter tests it. It is the only stored pair: the
+     * area filter in `compiled` is derived from it.
+     */
+    coordinateColumns: CoordinatePair | null;
+    /**
+     * How the visualisation pages show this query. Null for a record that the
+     * user never opened on the map. See {@link QueryViewState}.
+     */
+    view: QueryViewState | null;
+    /** The {@link QueryStore} cache key of the last result. Null before the first run. */
+    datasetKey: string | null;
+    createdAt: number;
+    updatedAt: number;
+    /** Epoch ms of the most recent execution, or null if never run. */
+    lastExecutedAt: number | null;
+    executionCount: number;
+    /** Row count of the most recent result. */
+    rowCount: number | null;
+    /** Duration (ms) of the most recent execution. */
+    duration: number | null;
 }
 
 /** The fields a caller supplies; everything else is defaulted. */
-export type StoredQueryInput = Partial<Omit<StoredQuery, 'id' | 'role'>> & {
-	role: StoredQueryRole;
+export type StoredQueryInput = Partial<Omit<StoredQuery, "id" | "role">> & {
+    role: StoredQueryRole;
 };
 
 /** Copies a config node down to the fields a record needs. Never the token. */
 export function snapshotNode(node: BeaconNode | null | undefined): NodeRef {
-	return {
-		id: node?.id ?? '',
-		name: node?.name ?? '',
-		url: node?.url ?? ''
-	};
+    return {
+        id: node?.id ?? "",
+        name: node?.name ?? "",
+        url: node?.url ?? ""
+    };
 }
 
 /**
@@ -137,16 +137,12 @@ export function snapshotNode(node: BeaconNode | null | undefined): NodeRef {
  * UI reads `url` and asks the user to add the node.
  */
 export function nodeRefFromUrl(url: string): NodeRef {
-	return { id: '', name: '', url: url.trim() };
+    return { id: "", name: "", url: url.trim() };
 }
 
 /** True when a ref names a node at all. An empty ref names none. */
 export function hasNodeRef(ref: NodeRef | null | undefined): boolean {
-	return !!ref && (!!ref.id || !!ref.url);
-}
-
-export function createId(): string {
-	return `sq-${Utils.randomUUID()}` ;
+    return !!ref && (!!ref.id || !!ref.url);
 }
 
 /**
@@ -158,43 +154,43 @@ export function createId(): string {
  * later compile then tests the same columns.
  */
 export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
-	const now = Date.now();
-	let draft: QueryDraft | null = null;
-	if (input.draft) {
-		draft = Utils.cloneObject(input.draft);
-	}
+    const now = Date.now();
+    let draft: QueryDraft | null = null;
+    if (input.draft) {
+        draft = Utils.cloneObject(input.draft);
+    }
 
-	let coordinateColumns: CoordinatePair | null = null;
-	if (input.coordinateColumns) {
-		coordinateColumns = { ...input.coordinateColumns };
-	}
+    let coordinateColumns: CoordinatePair | null = null;
+    if (input.coordinateColumns) {
+        coordinateColumns = { ...input.coordinateColumns };
+    }
 
-	let compiled: CompiledQuery | null;
-	if (input.compiled) {
-		compiled = Utils.cloneObject(input.compiled);
-	} else {
-		compiled = compileDraft(draft, coordinateColumns);
-	}
+    let compiled: CompiledQuery | null;
+    if (input.compiled) {
+        compiled = Utils.cloneObject(input.compiled);
+    } else {
+        compiled = compileDraft(draft, coordinateColumns);
+    }
 
-	coordinateColumns ??= coordinateColumnsOf(compiled?.filters);
+    coordinateColumns ??= coordinateColumnsOf(compiled?.filters);
 
-	return {
-		id: createId(),
-		role: input.role,
-		name: input.name ?? translate('query.untitled'),
-		draft,
-		compiled,
-		node: input.node ?? snapshotNode(null),
-		coordinateColumns,
-		view: input.view ?? null,
-		datasetKey: input.datasetKey ?? null,
-		createdAt: input.createdAt ?? now,
-		updatedAt: input.updatedAt ?? now,
-		lastExecutedAt: input.lastExecutedAt ?? null,
-		executionCount: input.executionCount ?? 0,
-		rowCount: input.rowCount ?? null,
-		duration: input.duration ?? null
-	};
+    return {
+        id: Utils.createId("sq"),
+        role: input.role,
+        name: input.name ?? translate("query.untitled"),
+        draft,
+        compiled,
+        node: input.node ?? snapshotNode(null),
+        coordinateColumns,
+        view: input.view ?? null,
+        datasetKey: input.datasetKey ?? null,
+        createdAt: input.createdAt ?? now,
+        updatedAt: input.updatedAt ?? now,
+        lastExecutedAt: input.lastExecutedAt ?? null,
+        executionCount: input.executionCount ?? 0,
+        rowCount: input.rowCount ?? null,
+        duration: input.duration ?? null
+    };
 }
 
 /**
@@ -205,51 +201,51 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
  * the app did run the query inside it.
  */
 export function cloneStoredQuery(
-	source: StoredQuery,
-	overrides: Partial<StoredQuery> = {}
+    source: StoredQuery,
+    overrides: Partial<StoredQuery> = {}
 ): StoredQuery {
-	const now = Date.now();
+    const now = Date.now();
 
-	let draft: QueryDraft | null = null;
-	if (source.draft) {
-		draft = Utils.cloneObject(source.draft);
-	}
+    let draft: QueryDraft | null = null;
+    if (source.draft) {
+        draft = Utils.cloneObject(source.draft);
+    }
 
-	let compiled: CompiledQuery | null = null;
-	if (source.compiled) {
-		compiled = Utils.cloneObject(source.compiled);
-	}
+    let compiled: CompiledQuery | null = null;
+    if (source.compiled) {
+        compiled = Utils.cloneObject(source.compiled);
+    }
 
-	// The copy keeps the view state of the source — the map and the plots — as
-	// its own object. The user expects the same map and the same charts after
-	// "duplicate" or "save this query".
-	let view: QueryViewState | null = null;
-	if (source.view) {
-		view = Utils.cloneObject(source.view);
-	}
+    // The copy keeps the view state of the source — the map and the plots — as
+    // its own object. The user expects the same map and the same charts after
+    // "duplicate" or "save this query".
+    let view: QueryViewState | null = null;
+    if (source.view) {
+        view = Utils.cloneObject(source.view);
+    }
 
-	let coordinateColumns: CoordinatePair | null = null;
-	if (source.coordinateColumns) {
-		coordinateColumns = { ...source.coordinateColumns };
-	}
+    let coordinateColumns: CoordinatePair | null = null;
+    if (source.coordinateColumns) {
+        coordinateColumns = { ...source.coordinateColumns };
+    }
 
-	return {
-		...source,
-		id: createId(),
-		draft,
-		compiled,
-		coordinateColumns,
-		view,
-		node: { ...source.node },
-		datasetKey: null,
-		createdAt: now,
-		updatedAt: now,
-		lastExecutedAt: null,
-		executionCount: 0,
-		rowCount: null,
-		duration: null,
-		...overrides
-	};
+    return {
+        ...source,
+        id: Utils.createId("sq"),
+        draft,
+        compiled,
+        coordinateColumns,
+        view,
+        node: { ...source.node },
+        datasetKey: null,
+        createdAt: now,
+        updatedAt: now,
+        lastExecutedAt: null,
+        executionCount: 0,
+        rowCount: null,
+        duration: null,
+        ...overrides
+    };
 }
 
 // -- share links -------------------------------------------------------------
@@ -262,7 +258,7 @@ export function cloneStoredQuery(
  * Every share link opens the workbench. The workbench is the only page that
  * accepts a query without a record. From there the user can open any other page.
  */
-export const SHARE_LINK_PATH = '/queries/workbench';
+export const SHARE_LINK_PATH = "/queries/workbench";
 
 /**
  * The payload of `?query=`. It carries everything that the receiver needs, so
@@ -272,17 +268,17 @@ export const SHARE_LINK_PATH = '/queries/workbench';
  * credentials for a node that needs one.
  */
 export type SharedQuery = {
-	/** The runnable query. */
-	query: CompiledQuery;
-	/** The name that the sender gave the query. */
-	name: string;
-	/** The node that runs the query. Empty when the sender named none. */
-	nodeUrl: string;
-	/**
-	 * The columns that hold the position. Optional: a link without it takes the
-	 * pair of the area filter in `query`, or detects one.
-	 */
-	coordinateColumns?: CoordinatePair | null;
+    /** The runnable query. */
+    query: CompiledQuery;
+    /** The name that the sender gave the query. */
+    name: string;
+    /** The node that runs the query. Empty when the sender named none. */
+    nodeUrl: string;
+    /**
+     * The columns that hold the position. Optional: a link without it takes the
+     * pair of the area filter in `query`, or detects one.
+     */
+    coordinateColumns?: CoordinatePair | null;
 };
 
 /**
@@ -296,14 +292,14 @@ type IncomingSharedQuery = Partial<SharedQuery> & { instanceUrl?: string };
 
 /** Gzip a payload for `?query=`. */
 export function encodeSharedQuery(shared: SharedQuery): string {
-	return Utils.objectToGzipString(shared);
+    return Utils.objectToGzipString(shared);
 }
 
 /**
  * The search parameter that carries the node of a link that holds a bare
  * `CompiledQuery`. It is a wire format, not a term. Never rename it.
  */
-export const LEGACY_NODE_PARAM = 'instance';
+export const LEGACY_NODE_PARAM = "instance";
 
 /**
  * Read a `?query=` payload. The function throws for an input that holds no
@@ -314,55 +310,55 @@ export const LEGACY_NODE_PARAM = 'instance';
  * `legacyNodeUrl`.
  */
 export function decodeSharedQuery(value: string, legacyNodeUrl?: string | null): SharedQuery {
-	let raw = Utils.gzipStringToObject<unknown>(value);
-	if (typeof raw === 'string') raw = JSON.parse(raw);
+    let raw = Utils.gzipStringToObject<unknown>(value);
+    if (typeof raw === "string") raw = JSON.parse(raw);
 
-	if (!raw || typeof raw !== 'object') {
-		throw new Error('This link does not hold a shared query.');
-	}
+    if (!raw || typeof raw !== "object") {
+        throw new Error("This link does not hold a shared query.");
+    }
 
-	let payload = raw as IncomingSharedQuery;
-	const isBareQuery = 'query_parameters' in raw;
-	if (isBareQuery) {
-		payload = { query: raw as CompiledQuery, nodeUrl: legacyNodeUrl ?? '' };
-	}
+    let payload = raw as IncomingSharedQuery;
+    const isBareQuery = "query_parameters" in raw;
+    if (isBareQuery) {
+        payload = { query: raw as CompiledQuery, nodeUrl: legacyNodeUrl ?? "" };
+    }
 
-	if (!payload.query || typeof payload.query !== 'object') {
-		throw new Error('This link does not hold a shared query.');
-	}
+    if (!payload.query || typeof payload.query !== "object") {
+        throw new Error("This link does not hold a shared query.");
+    }
 
-	const shared: SharedQuery = {
-		query: payload.query as CompiledQuery,
-		name: payload.name ?? '',
-		nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? '',
-		coordinateColumns: readCoordinatePair(payload.coordinateColumns)
-	};
+    const shared: SharedQuery = {
+        query: payload.query as CompiledQuery,
+        name: payload.name ?? "",
+        nodeUrl: payload.nodeUrl ?? payload.instanceUrl ?? "",
+        coordinateColumns: readCoordinatePair(payload.coordinateColumns)
+    };
 
-	// The receiver of a link, not the sender. It counts the reach of a share.
-	track('query.open', {
-		nodeHost: shared.nodeUrl || undefined,
-		props: {
-			...describeQuery(shared.query),
-			legacy: isBareQuery || payload.instanceUrl !== undefined
-		}
-	});
+    // The receiver of a link, not the sender. It counts the reach of a share.
+    track("query.open", {
+        nodeHost: shared.nodeUrl || undefined,
+        props: {
+            ...describeQuery(shared.query),
+            legacy: isBareQuery || payload.instanceUrl !== undefined
+        }
+    });
 
-	return shared;
+    return shared;
 }
 
 /** A pair from a link payload, or null when the value is no valid pair. */
 function readCoordinatePair(value: unknown): CoordinatePair | null {
-	const pair = value as Partial<CoordinatePair> | null | undefined;
+    const pair = value as Partial<CoordinatePair> | null | undefined;
 
-	if (typeof pair?.latitude !== 'string' || typeof pair?.longitude !== 'string') {
-		return null;
-	}
+    if (typeof pair?.latitude !== "string" || typeof pair?.longitude !== "string") {
+        return null;
+    }
 
-	return { latitude: pair.latitude, longitude: pair.longitude };
+    return { latitude: pair.latitude, longitude: pair.longitude };
 }
 
 /** The fields of a record that a share link carries. */
-export type ShareableQuery = Pick<StoredQuery, 'compiled' | 'name' | 'node' | 'coordinateColumns'>;
+export type ShareableQuery = Pick<StoredQuery, "compiled" | "name" | "node" | "coordinateColumns">;
 
 /**
  * Build an absolute share URL for a record. Returns null if the record has no
@@ -373,30 +369,30 @@ export type ShareableQuery = Pick<StoredQuery, 'compiled' | 'name' | 'node' | 'c
  * coordinate pair, when the record stores one. It never carries a token.
  */
 export function buildShareLink(record: ShareableQuery): string | null {
-	const query = record.compiled;
-	if (!query) return null;
+    const query = record.compiled;
+    if (!query) return null;
 
-	const shared: SharedQuery = { query, name: record.name, nodeUrl: record.node?.url ?? '' };
-	if (record.coordinateColumns) {
-		shared.coordinateColumns = { ...record.coordinateColumns };
-	}
+    const shared: SharedQuery = { query, name: record.name, nodeUrl: record.node?.url ?? "" };
+    if (record.coordinateColumns) {
+        shared.coordinateColumns = { ...record.coordinateColumns };
+    }
 
-	const gzipped = encodeSharedQuery(shared);
+    const gzipped = encodeSharedQuery(shared);
 
-	if (!gzipped) return null;
+    if (!gzipped) return null;
 
-	track('query.share', {
-		nodeHost: record.node?.url,
-		props: { ...describeQuery(query), linkChars: gzipped.length }
-	});
+    track("query.share", {
+        nodeHost: record.node?.url,
+        props: { ...describeQuery(query), linkChars: gzipped.length }
+    });
 
-	let origin = 'http://localhost';
-	if (typeof window !== 'undefined') {
-		origin = window.location.origin;
-	}
+    let origin = "http://localhost";
+    if (typeof window !== "undefined") {
+        origin = window.location.origin;
+    }
 
-	const url = new URL(resolve(SHARE_LINK_PATH), origin);
-	url.searchParams.set('query', gzipped);
+    const url = new URL(resolve(SHARE_LINK_PATH), origin);
+    url.searchParams.set("query", gzipped);
 
-	return url.toString();
+    return url.toString();
 }

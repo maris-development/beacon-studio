@@ -1,18 +1,18 @@
 // A system font stack needs no font files.
 :root {
-	--font-family-base: Georgia, 'Times New Roman', serif;
-	--font-family-heading: 'Trebuchet MS', Arial, sans-serif;
+    --font-family-base: Georgia, "Times New Roman", serif;
+    --font-family-heading: "Trebuchet MS", Arial, sans-serif;
 
-	--primary: #0f766e;
-	--highlight: #0d9488;
-	--link: #0f766e;
-	--heading-foreground: #134e4a;
-	--control-active: #0d9488;
-	--map-draw: #0d9488;
-	--app-background: #f0fdfa;
+    --primary: #0f766e;
+    --highlight: #0d9488;
+    --link: #0f766e;
+    --heading-foreground: #134e4a;
+    --control-active: #0d9488;
+    --map-draw: #0d9488;
+    --app-background: #f0fdfa;
 
-	--button-radius: 999px;
-	--button-text-transform: uppercase;
-	--button-letter-spacing: 0.04em;
-	--button-shadow: none;
+    --button-radius: 999px;
+    --button-text-transform: uppercase;
+    --button-letter-spacing: 0.04em;
+    --button-shadow: none;
 }

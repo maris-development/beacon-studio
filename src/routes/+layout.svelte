@@ -1,117 +1,150 @@
 <script lang="ts">
-	import AppSidebar from '@/components/sidebar/AppSidebar.svelte';
-	import PageHeader from '@/components/sidebar/PageHeader.svelte';
-	import Confirm from '@/components/modals/Confirm.svelte';
-	import Toasts from '@/components/toasts/Toasts.svelte';
-	import { checkAllNodes, startHealthMonitor } from '@/services/beacon-node-connect';
-	import { loadHomeExamples } from '@/data/home-examples';
-	import { FRESH_MS } from '@/services/beacon-node-health';
-	import { syncOpenNodes } from '@/services/open-nodes-import';
-	import { initTelemetry, setRoute, track } from '@/telemetry';
-	import { setLanguage } from '@/i18n';
-	import { getSettings, settings } from '@/stores/settings';
-	import { afterNavigate } from '$app/navigation';
-	import { onMount, type Snippet } from 'svelte';
-	import { BRAND } from '@/brand';
-	import '../app.scss';
-	import '../tailwind.css';
-	// Import the brand theme here only and last, so its tokens win in the CSS order.
-	import '$brand/theme.scss';
+    import AppSidebar from "@/components/sidebar/AppSidebar.svelte";
+    import PageHeader from "@/components/sidebar/PageHeader.svelte";
+    import Confirm from "@/components/modals/Confirm.svelte";
+    import AdminSignInDialog from "@/components/modals/AdminSignInDialog.svelte";
+    import Toasts from "@/components/toasts/Toasts.svelte";
+    import { checkAllNodes, startHealthMonitor } from "@/services/beacon-node-connect";
+    import { loadHomeExamples } from "@/data/home-examples";
+    import { FRESH_MS } from "@/services/beacon-node-health";
+    import { findById } from "@/services/beacon-node";
+    import { restoreRememberedSessions } from "@/services/admin-session";
+    import { syncOpenNodes } from "@/services/open-nodes-import";
+    import { initTelemetry, setRoute, track } from "@/telemetry";
+    import { setLanguage, t } from "@/i18n";
+    import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
+    import { getSettings, settings } from "@/stores/settings";
+    import { afterNavigate } from "$app/navigation";
+    import { onMount, type Snippet } from "svelte";
+    import { BRAND } from "@/brand";
+    import "../app.scss";
+    import "../tailwind.css";
+    // Import the brand theme here only and last, so its tokens win in the CSS order.
+    import "$brand/theme.scss";
 
-	// The width at which the sidebar becomes an overlay.
-	const MOBILE_QUERY = '(max-width: 767px)';
+    // The width at which the sidebar becomes an overlay.
+    const MOBILE_QUERY = "(max-width: 767px)";
+    const RESTORE_WAIT_MS = 1000;
+    // A restore shorter than this shows no loader, so a normal start does not flash.
+    const LOADER_DELAY_MS = 200;
 
-	let { children }: { children?: Snippet } = $props();
+    let { children }: { children?: Snippet } = $props();
 
-	// The sidebar and the page header both read these, so the layout owns them.
-	let isMobile = $state(false);
-	let collapsed = $state(false);
+    // The sidebar and the page header both read these, so the layout owns them.
+    let isMobile = $state(false);
+    let collapsed = $state(false);
 
-	// The script runs before any page script, so the first paint has the right language.
-	setLanguage(getSettings().language);
-	$effect(() => setLanguage($settings.language));
+    // The script runs before any page script, so the first paint has the right language.
+    setLanguage(getSettings().language);
 
-	// One monitor for the whole app. It checks every node each hour.
-	onMount(() => {
-		// A failure leaves the list empty, so the import then adds nothing. The
-		// monitor sweeps before the fetch answers, so the new nodes need a check.
-		void syncOpenNodes().then(() => checkAllNodes(FRESH_MS));
+    // A page renders only after the restore, so it never sees a session arrive late.
+    // The timeout keeps a blocked IndexedDB from blocking the app.
+    let sessionsReady = $state(false);
+    let showLoader = $state(false);
+    const loaderTimer = setTimeout(() => (showLoader = true), LOADER_DELAY_MS);
 
-		void loadHomeExamples();
+    void Promise.race([
+        restoreRememberedSessions((id) => findById(id)?.url ?? null),
+        new Promise((resolve) => setTimeout(resolve, RESTORE_WAIT_MS))
+    ]).then(() => {
+        clearTimeout(loaderTimer);
+        sessionsReady = true;
+    });
 
-		const stopTelemetry = initTelemetry();
-		const stopHealthMonitor = startHealthMonitor();
+    $effect(() => setLanguage($settings.language));
 
-		// Follow the viewport width. The sidebar starts closed on a phone.
-		const mobileQuery = window.matchMedia(MOBILE_QUERY);
-		const applyMobile = (matches: boolean) => {
-			isMobile = matches;
-			collapsed = matches;
-		};
-		applyMobile(mobileQuery.matches);
-		const onMobileChange = (event: MediaQueryListEvent) => applyMobile(event.matches);
-		mobileQuery.addEventListener('change', onMobileChange);
+    // One monitor for the whole app. It checks every node each hour.
+    onMount(() => {
+        // A failure leaves the list empty, so the import then adds nothing. The
+        // monitor sweeps before the fetch answers, so the new nodes need a check.
+        void syncOpenNodes().then(() => checkAllNodes(FRESH_MS));
 
-		return () => {
-			stopTelemetry();
-			stopHealthMonitor();
-			mobileQuery.removeEventListener('change', onMobileChange);
-		};
-	});
+        void loadHomeExamples();
 
-	// Runs on the first page as well, so it reports the entry page too.
-	afterNavigate((navigation) => {
-		setRoute(navigation.to?.route.id ?? null);
-		track('page.view', { props: { from: navigation.from?.route.id ?? null } });
-	});
+        const stopTelemetry = initTelemetry();
+        const stopHealthMonitor = startHealthMonitor();
+
+        // Follow the viewport width. The sidebar starts closed on a phone.
+        const mobileQuery = window.matchMedia(MOBILE_QUERY);
+        const applyMobile = (matches: boolean) => {
+            isMobile = matches;
+            collapsed = matches;
+        };
+        applyMobile(mobileQuery.matches);
+        const onMobileChange = (event: MediaQueryListEvent) => applyMobile(event.matches);
+        mobileQuery.addEventListener("change", onMobileChange);
+
+        return () => {
+            stopTelemetry();
+            stopHealthMonitor();
+            mobileQuery.removeEventListener("change", onMobileChange);
+        };
+    });
+
+    // Runs on the first page as well, so it reports the entry page too.
+    afterNavigate((navigation) => {
+        setRoute(navigation.to?.route.id ?? null);
+        track("page.view", { props: { from: navigation.from?.route.id ?? null } });
+    });
 </script>
 
 <svelte:head>
-	<meta name="apple-mobile-web-app-title" content={BRAND.name} />
+    <meta name="apple-mobile-web-app-title" content={BRAND.name} />
 </svelte:head>
 
 <Toasts />
 
 <div class="app-wrapper">
-	<AppSidebar bind:collapsed {isMobile} />
-	<div class="app-body">
-		<PageHeader open={!collapsed} onToggle={() => (collapsed = !collapsed)} />
-		<main class="main-content">
-			{@render children?.()}
-		</main>
-	</div>
+    <AppSidebar bind:collapsed {isMobile} />
+    <div class="app-body">
+        <PageHeader open={!collapsed} onToggle={() => (collapsed = !collapsed)} />
+        <main class="main-content">
+            {#if sessionsReady}
+                {@render children?.()}
+            {:else if showLoader}
+                <div class="startup-loader" role="status" aria-label={$t("common.loading")}>
+                    <LoadingSpinner ringColor="var(--muted-foreground)" size="48px" />
+                </div>
+            {/if}
+        </main>
+    </div>
 </div>
+
+<AdminSignInDialog />
 
 <!-- Last in the tree, so the question paints above a modal that asked it. -->
 <Confirm />
 
 <style global lang="scss">
-	div.app-wrapper {
-		display: flex;
-		flex-direction: row;
-		width: 100%;
-		height: 100%;
-	}
+    div.app-wrapper {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+    }
 
+    div.app-body {
+        flex-grow: 1;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
 
-	div.app-body {
-		flex-grow: 1;
-		min-width: 0;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
-	}
+    main.main-content {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
 
-	main.main-content {
-		flex-grow: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: column;
+        .startup-loader {
+            display: grid;
+            flex-grow: 1;
+            place-items: center;
+        }
 
-		margin: 0;
+        margin: 0;
 
-		overflow-x: hidden;
-	}
-
-	
+        overflow-x: hidden;
+    }
 </style>

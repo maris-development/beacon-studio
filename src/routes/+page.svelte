@@ -1,61 +1,59 @@
 <script lang="ts">
-	import { nodes } from '@/services/beacon-node';
-	import { ensureFresh, ensureHostNode } from '@/services/beacon-node-connect';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import Card from '@/components/card/Card.svelte';
-	import HeroNetwork from '@/components/HeroNetwork.svelte';
-	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
-	import HowItWorks from '@/components/home/HowItWorks.svelte';
-	import QuickStartExamples from '@/components/home/QuickStartExamples.svelte';
-	import BracesIcon from '@lucide/svelte/icons/braces';
-	import { onMount } from 'svelte';
-	import { fade } from 'svelte/transition';
-	import Button from '@/components/buttons/Button.svelte';
-	import { addToast } from '@/stores/toasts';
-	import { t } from '@/i18n';
-	import { BRAND } from '@/brand';
+    import { nodes } from "@/services/beacon-node";
+    import { ensureFresh, ensureHostNode } from "@/services/beacon-node-connect";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import Card from "@/components/card/Card.svelte";
+    import HeroNetwork from "@/components/HeroNetwork.svelte";
+    import BeaconNodeStatus from "@/components/BeaconNodeStatus.svelte";
+    import HowItWorks from "@/components/home/HowItWorks.svelte";
+    import QuickStartExamples from "@/components/home/QuickStartExamples.svelte";
+    import BracesIcon from "@lucide/svelte/icons/braces";
+    import { onMount } from "svelte";
+    import { fade } from "svelte/transition";
+    import Button from "@/components/buttons/Button.svelte";
+    import { addToast } from "@/stores/toasts";
+    import { t } from "@/i18n";
+    import { BRAND } from "@/brand";
 
-	import { asset, resolve } from '$app/paths';
+    import { asset, resolve } from "$app/paths";
 
-	const BETA_TOAST_STORAGE_KEY = 'beacon-studio.home.beta-toast-shown';
+    const BETA_TOAST_STORAGE_KEY = "beacon-studio.home.beta-toast-shown";
 
-	// The Connected Nodes card cycles through every configured node, so
-	// each one needs a true status dot. `ensureFresh` skips a check that is not due.
-	$effect(() => {
-		for (const node of $nodes) void ensureFresh(node);
-	});
+    // The Connected Nodes card cycles through every configured node, so
+    // each one needs a true status dot. `ensureFresh` skips a check that is not due.
+    $effect(() => {
+        for (const node of $nodes) void ensureFresh(node);
+    });
 
-	const CYCLE_INTERVAL_MS = 5_000;
+    const CYCLE_INTERVAL_MS = 5_000;
 
-	/** Advances every `CYCLE_INTERVAL_MS`. The Connected Nodes card uses it to
-	 * step through `$nodes`. */
-	let cycleIndex = $state(0);
+    /** Advances every `CYCLE_INTERVAL_MS`. The Connected Nodes card uses it to
+     * step through `$nodes`. */
+    let cycleIndex = $state(0);
 
-	/** The node the Connected Nodes card shows now, or `null` if none is configured. */
-	let displayedNode = $derived(
-		$nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null
-	);
+    /** The node the Connected Nodes card shows now, or `null` if none is configured. */
+    let displayedNode = $derived($nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null);
 
-	onMount(() => {
-		// The app can run on the same host as a Beacon node. Add that node once.
-		void ensureHostNode(window.location.origin);
+    onMount(() => {
+        // The app can run on the same host as a Beacon node. Add that node once.
+        void ensureHostNode(window.location.origin);
 
-		if (!localStorage.getItem(BETA_TOAST_STORAGE_KEY)) {
-			addToast({
-				type: 'info',
-				timeout: 20000,
-				key: 'home.betaToast'
-			});
-			localStorage.setItem(BETA_TOAST_STORAGE_KEY, 'true');
-		}
+        if (!localStorage.getItem(BETA_TOAST_STORAGE_KEY)) {
+            addToast({
+                type: "info",
+                timeout: 20000,
+                key: "home.betaToast"
+            });
+            localStorage.setItem(BETA_TOAST_STORAGE_KEY, "true");
+        }
 
-		const timer = setInterval(() => (cycleIndex += 1), CYCLE_INTERVAL_MS);
-		return () => clearInterval(timer);
-	});
+        const timer = setInterval(() => (cycleIndex += 1), CYCLE_INTERVAL_MS);
+        return () => clearInterval(timer);
+    });
 </script>
 
 <svelte:head>
-	<title>{BRAND.name}</title>
+    <title>{BRAND.name}</title>
 </svelte:head>
 
 <Cookiecrumb />
@@ -63,72 +61,79 @@
 <HeroNetwork />
 
 <div class="page-wrapper">
-	<div class="header">
-		<h1 class="title">{$t('home.title.beforeHighlight')} <span class="highlight">{$t('home.title.highlight')}</span></h1>
-		<p class="subtitle">{$t('home.subtitle')}</p>
-	</div>
+    <div class="header">
+        <h1 class="title">
+            {$t("home.title.beforeHighlight")}
+            <span class="highlight">{$t("home.title.highlight")}</span>
+        </h1>
+        <p class="subtitle">{$t("home.subtitle")}</p>
+    </div>
 
-	<section class="home-section">
-		<h2>{$t('home.nodes.title', { count: $nodes.length })}</h2>
+    <section class="home-section">
+        <h2>{$t("home.nodes.title", { count: $nodes.length })}</h2>
 
-		<div class="connected-nodes">
-			<Card>
-				<div class="current-node">
-					{#key displayedNode?.id ?? 'none'}
-						<div class="cycle-content" transition:fade={{ duration: 500 }}>
-							{#if displayedNode}
-								<div class="current-node-info">
-									<div class="name-url">
-										<p class="name">{displayedNode.name}</p>
-										<a
-											class="url"
-											href={displayedNode.url}
-											rel="noopener noreferrer"
-											target="_blank">{displayedNode.url}</a
-										>
-									</div>
-									<BeaconNodeStatus health={displayedNode} />
-								</div>
-							{:else}
-								<p class="no-node">{$t('home.nodes.empty')}</p>
-							{/if}
-						</div>
-					{/key}
-				</div>
-				<Button href={resolve('/beacon-nodes')}>{$t('home.nodes.manage')}</Button>
-			</Card>
-		</div>
-	</section>
+        <div class="connected-nodes">
+            <Card>
+                <div class="current-node">
+                    {#key displayedNode?.id ?? "none"}
+                        <div class="cycle-content" transition:fade={{ duration: 500 }}>
+                            {#if displayedNode}
+                                <div class="current-node-info">
+                                    <div class="name-url">
+                                        <p class="name">{displayedNode.name}</p>
+                                        <a
+                                            class="url"
+                                            href={displayedNode.url}
+                                            rel="noopener noreferrer"
+                                            target="_blank">{displayedNode.url}</a
+                                        >
+                                    </div>
+                                    <BeaconNodeStatus health={displayedNode} />
+                                </div>
+                            {:else}
+                                <p class="no-node">{$t("home.nodes.empty")}</p>
+                            {/if}
+                        </div>
+                    {/key}
+                </div>
+                <Button href={resolve("/beacon-nodes")}>{$t("home.nodes.manage")}</Button>
+            </Card>
+        </div>
+    </section>
 
-	<section class="home-section">
-		<HowItWorks />
-	</section>
+    <section class="home-section">
+        <HowItWorks />
+    </section>
 
-	<section class="home-section">
-		<QuickStartExamples />
-	</section>
+    <section class="home-section">
+        <QuickStartExamples />
+    </section>
 
-	<section class="home-section">
-		<h2>{$t('home.launchpad.title')}</h2>
+    <section class="home-section">
+        <h2>{$t("home.launchpad.title")}</h2>
 
-		<div class="launchpad-cards">
-			<Card class="query-workbench">
-				<img class="shot" src={asset('/images/small-query-workbench.png')} alt={$t('home.launchpad.workbench.title')} />
-				<div class="body">
-					<h3>{$t('home.launchpad.workbench.title')}</h3>
-					<p class="description">{$t('home.launchpad.workbench.description')}</p>
-					<div class="actions">
-						<Button variant="outline" href={resolve('/queries/workbench')}>
-							<BracesIcon />
-							{$t('home.launchpad.workbench.action')}
-						</Button>
-					</div>
-				</div>
-			</Card>
+        <div class="launchpad-cards">
+            <Card class="query-workbench">
+                <img
+                    class="shot"
+                    src={asset("/images/small-query-workbench.png")}
+                    alt={$t("home.launchpad.workbench.title")}
+                />
+                <div class="body">
+                    <h3>{$t("home.launchpad.workbench.title")}</h3>
+                    <p class="description">{$t("home.launchpad.workbench.description")}</p>
+                    <div class="actions">
+                        <Button variant="outline" href={resolve("/queries/workbench")}>
+                            <BracesIcon />
+                            {$t("home.launchpad.workbench.action")}
+                        </Button>
+                    </div>
+                </div>
+            </Card>
 
-			<!-- for later updates -->
+            <!-- for later updates -->
 
-			<!-- <Card class="map-explorer">
+            <!-- <Card class="map-explorer">
 				<img class="shot" src={asset('/images/small-map-viewer.png')} alt="Map Viewer" />
 				<div class="body">
 					<h3>Map Explorer</h3>
@@ -153,143 +158,142 @@
 					</div>
 				</div>
 			</Card> -->
-		</div>
-	</section>
+        </div>
+    </section>
 </div>
 
 <style lang="scss">
-	.page-wrapper {
-		padding: 2rem;
+    .page-wrapper {
+        padding: 2rem;
 
-		:global(.card) {
-			background-color: var(--background);
-		}
+        :global(.card) {
+            background-color: var(--background);
+        }
 
-		.header {
-			padding-bottom: 3rem;
-			.title {
-				.highlight {
-					color: var(--highlight);
-				}
-			}
-		}
+        .header {
+            padding-bottom: 3rem;
+            .title {
+                .highlight {
+                    color: var(--highlight);
+                }
+            }
+        }
 
-		.home-section + .home-section {
-			margin-top: 3rem;
-		}
+        .home-section + .home-section {
+            margin-top: 3rem;
+        }
 
-		.connected-nodes {
-			:global(.card-content) {
-				display: flex;
-				flex-direction: row;
-				align-items: center;
-				justify-content: space-between;
-				gap: 1rem;
-			}
-		}
+        .connected-nodes {
+            :global(.card-content) {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+            }
+        }
 
-		.current-node {
-			// Grid stacks the outgoing and incoming .cycle-content in one cell, so
-			// the crossfade overlaps in place instead of shifting the layout.
-			display: grid;
-			flex: 1;
+        .current-node {
+            // Grid stacks the outgoing and incoming .cycle-content in one cell, so
+            // the crossfade overlaps in place instead of shifting the layout.
+            display: grid;
+            flex: 1;
 
-			.cycle-content {
-				grid-column: 1;
-				grid-row: 1;
-			}
+            .cycle-content {
+                grid-column: 1;
+                grid-row: 1;
+            }
 
-			.no-node {
-				color: var(--muted-foreground);
-			}
+            .no-node {
+                color: var(--muted-foreground);
+            }
 
-			.current-node-info {
-				display: flex;
-				flex-direction: row;
-				align-items: center;
-				gap: 1rem;
+            .current-node-info {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 1rem;
 
-				.name-url {
-					display: flex;
-					flex-direction: column;
+                .name-url {
+                    display: flex;
+                    flex-direction: column;
 
-					p {
-						margin: 0;
-						font-weight: bold;
-					}
-					.url {
-						color: var(--primary);
-					}
-				}
-			}
-		}
+                    p {
+                        margin: 0;
+                        font-weight: bold;
+                    }
+                    .url {
+                        color: var(--primary);
+                    }
+                }
+            }
+        }
 
-		.launchpad-cards {
-			display: grid;
-			gap: 1rem;
-			grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        .launchpad-cards {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 
-			// The screenshot reaches the card edge, so the card holds no padding of
-			// its own. The body below it supplies the padding instead.
-			:global(.card) {
-				padding: 0;
-				overflow: hidden;
-				height: 100%;
-				max-width: 32.7%;
-			}
+            // The screenshot reaches the card edge, so the card holds no padding of
+            // its own. The body below it supplies the padding instead.
+            :global(.card) {
+                padding: 0;
+                overflow: hidden;
+                height: 100%;
+                max-width: 32.7%;
+            }
 
-			// `Card` puts every child inside this wrapper. The wrapper must fill the
-			// card, else `flex` on the body below it has nothing to divide.
-			:global(.card-content) {
-				display: flex;
-				flex-direction: column;
-				flex: 1;
-			}
+            // `Card` puts every child inside this wrapper. The wrapper must fill the
+            // card, else `flex` on the body below it has nothing to divide.
+            :global(.card-content) {
+                display: flex;
+                flex-direction: column;
+                flex: 1;
+            }
 
-			:global(.shot) {
-				display: block;
-				width: 100%;
-				height: auto;
-				aspect-ratio: 16 / 9;
-				object-fit: cover;
-				object-position: center;
-				border-bottom: 1px solid var(--card-border);
-				background-color: var(--muted);
-			}
+            :global(.shot) {
+                display: block;
+                width: 100%;
+                height: auto;
+                aspect-ratio: 16 / 9;
+                object-fit: cover;
+                object-position: center;
+                border-bottom: 1px solid var(--card-border);
+                background-color: var(--muted);
+            }
 
-			:global(.body) {
-				display: flex;
-				flex-direction: column;
-				gap: 0.5rem;
-				padding: 1rem;
-				// The card stretches to the tallest of the row. This pushes the
-				// actions of every card to the same edge.
-				flex: 1;
+            :global(.body) {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                padding: 1rem;
+                // The card stretches to the tallest of the row. This pushes the
+                // actions of every card to the same edge.
+                flex: 1;
 
-				:global(h3) {
-					margin: 0;
-				}
+                :global(h3) {
+                    margin: 0;
+                }
 
-				:global(.description) {
-					margin: 0;
-					// The descriptions differ in length. This keeps the action rows of
-					// the cards on one line.
-					flex: 1;
-				}
-			}
+                :global(.description) {
+                    margin: 0;
+                    // The descriptions differ in length. This keeps the action rows of
+                    // the cards on one line.
+                    flex: 1;
+                }
+            }
 
-			:global(.actions) {
-				display: flex;
-				flex-direction: row;
-				gap: 0.5rem;
-				width: 100%;
-				margin-top: 0.25rem;
+            :global(.actions) {
+                display: flex;
+                flex-direction: row;
+                gap: 0.5rem;
+                width: 100%;
+                margin-top: 0.25rem;
 
-				> :global(.btn) {
-					flex: 1;
-				}
-			}
-		}
-	}
+                > :global(.btn) {
+                    flex: 1;
+                }
+            }
+        }
+    }
 </style>
-

@@ -1,18 +1,18 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select/index.js';
-    import Button from '../buttons/Button.svelte';
-    import ListIcon from '@lucide/svelte/icons/list';
-    import GridIcon from '@lucide/svelte/icons/grid';
-    import CircleCheck from '@lucide/svelte/icons/circle-check';
-	import Card from '../card/Card.svelte';
-	import type { QuerySelectionStatus } from '@/query/selection-status';
-    import { askConfirm } from '@/stores/confirm';
-    import { t, translate } from '@/i18n';
+    import * as Select from "$lib/components/ui/select/index.js";
+    import Button from "../buttons/Button.svelte";
+    import ListIcon from "@lucide/svelte/icons/list";
+    import GridIcon from "@lucide/svelte/icons/grid";
+    import CircleCheck from "@lucide/svelte/icons/circle-check";
+    import Card from "../card/Card.svelte";
+    import type { QuerySelectionStatus } from "@/query/selection-status";
+    import { askConfirm } from "@/stores/confirm";
+    import { t, translate } from "@/i18n";
 
     let {
         table_names = [],
         loaded = false,
-        selected_table_name = $bindable(''),
+        selected_table_name = $bindable(""),
         status,
         onPick
     }: {
@@ -23,13 +23,13 @@
         onPick?: (table_name: string) => void;
     } = $props();
 
-    type ViewMode = 'cards' | 'list';
-    let viewMode = $state<ViewMode>('cards');
+    type ViewMode = "cards" | "list";
+    let viewMode = $state<ViewMode>("cards");
     let viewModeInitialized = $state(false);
 
     $effect(() => {
         if (loaded && !viewModeInitialized) {
-            viewMode = table_names.length < 10 ? 'cards' : 'list';
+            viewMode = table_names.length < 10 ? "cards" : "list";
             viewModeInitialized = true;
         }
     });
@@ -39,9 +39,9 @@
 
         if (status && status.columns > 0) {
             const goAhead = await askConfirm({
-                title: translate('query.table.change.title'),
-                message: translate('query.table.change.message'),
-                confirmLabel: translate('query.table.change.confirm')
+                title: translate("query.table.change.title"),
+                message: translate("query.table.change.message"),
+                confirmLabel: translate("query.table.change.confirm")
             });
 
             if (!goAhead) return;
@@ -52,56 +52,55 @@
 </script>
 
 <div class="table-selector-header">
-    <h3>{$t('query.table.title')}</h3>
+    <h3>{$t("query.table.title")}</h3>
 
     <div class="view-controls">
         <p class="table-count">
             {#if loaded}
-                {$t('query.table.count', { count: table_names.length })}
+                {$t("query.table.count", { count: table_names.length })}
             {:else}
-                {$t('query.table.countLoading')}
+                {$t("query.table.countLoading")}
             {/if}
         </p>
         <Button
-            variant={viewMode === 'cards' ? 'default' : 'outline'}
-            onclick={() => (viewMode = 'cards')}
+            variant={viewMode === "cards" ? "default" : "outline"}
+            onclick={() => (viewMode = "cards")}
         >
-            {$t('query.view.cards')}
+            {$t("query.view.cards")}
             <GridIcon />
         </Button>
 
         <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            onclick={() => (viewMode = 'list')}
+            variant={viewMode === "list" ? "default" : "outline"}
+            onclick={() => (viewMode = "list")}
         >
-            {$t('query.view.list')}
+            {$t("query.view.list")}
             <ListIcon />
         </Button>
     </div>
 </div>
 
 <div class="table-views">
-    {#if viewMode === 'cards'}
+    {#if viewMode === "cards"}
         <div class="cards-view">
             {#each table_names as table_name (table_name)}
-                <Card class={selected_table_name === table_name ? 'selected' : ''}
-                    onclick={() => pickTable(table_name)}>
+                <Card
+                    class={selected_table_name === table_name ? "selected" : ""}
+                    onclick={() => pickTable(table_name)}
+                >
                     <div class="table-header">
                         <h4 title={table_name}>{table_name}</h4>
                         {#if selected_table_name === table_name}
-                            <CircleCheck class="check" size="1rem"/>
+                            <CircleCheck class="check" size="1rem" />
                         {/if}
                     </div>
                     <p class="table-description">
-                         {$t('query.table.noDescription')}
+                        {$t("query.table.noDescription")}
                     </p>
-                    
-
                 </Card>
             {/each}
         </div>
-        
-    {:else if viewMode === 'list'}
+    {:else if viewMode === "list"}
         <!--
             The value is a prop and not a binding. Therefore `onValueChange` runs
             for a choice of the user only, and not for a table that the loader
@@ -113,11 +112,11 @@
             bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
         >
             <Select.Trigger class="table-select-trigger">
-                {selected_table_name ?? $t('query.table.placeholder')}
+                {selected_table_name ?? $t("query.table.placeholder")}
             </Select.Trigger>
             <Select.Content>
                 <Select.Group>
-                    <Select.Label>{$t('query.table.listLabel')}</Select.Label>
+                    <Select.Label>{$t("query.table.listLabel")}</Select.Label>
                     {#each table_names as table_name (table_name)}
                         <Select.Item value={table_name} label={table_name}>
                             {table_name}
@@ -126,7 +125,6 @@
                 </Select.Group>
             </Select.Content>
         </Select.Root>
-
     {/if}
 </div>
 
@@ -193,7 +191,7 @@
 
             p.table-description {
                 margin: 0;
-                font-size: 0.875rem;
+                font-size: var(--font-size-sm);
                 color: hsl(0, 0%, 50%);
                 // Show one line only and ellipsize the rest of the text.
                 overflow: hidden;
