@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { translate } from '@/i18n';
 import {
+	CRAWLER_FORMATS,
 	crawlerErrors,
 	crawlerRequest,
 	describeFormats,
@@ -12,8 +13,11 @@ import {
 	parseCrawlers,
 	parseTableOptions,
 	tableNameExample,
+	unknownFormats,
 	type Crawler
 } from '../crawlers';
+
+const placeholders = { folder: '<folder>', crawler: '<crawler>' };
 
 const server = {
 	name: 'argo',
@@ -184,9 +188,51 @@ describe('display', () => {
 
 	it('gives a table name example for both naming modes', () => {
 		const form = { ...emptyCrawlerForm(), name: 'argo', folder: 'data/floats/' };
-		expect(tableNameExample(form)).toBe('floats');
-		expect(tableNameExample({ ...form, naming: 'crawler_prefixed' })).toBe('argo_floats');
-		expect(tableNameExample({ ...form, folder: '' })).toBe('<folder>');
+		expect(tableNameExample(form, placeholders)).toBe('floats');
+		expect(tableNameExample({ ...form, naming: 'crawler_prefixed' }, placeholders)).toBe(
+			'argo_floats'
+		);
+		expect(tableNameExample({ ...form, folder: '' }, placeholders)).toBe('<folder>');
+		expect(
+			tableNameExample({ ...form, name: ' ', folder: '', naming: 'crawler_prefixed' }, placeholders)
+		).toBe('<crawler>_<folder>');
+	});
+
+	it('slugifies the example like the server', () => {
+		const form = { ...emptyCrawlerForm(), name: 'Argo Floats', folder: 'My Data/' };
+		expect(tableNameExample(form, placeholders)).toBe('my_data');
+		expect(tableNameExample({ ...form, naming: 'crawler_prefixed' }, placeholders)).toBe(
+			'argo_floats_my_data'
+		);
+		expect(tableNameExample({ ...form, folder: 'a--b/Été 2024!/' }, placeholders)).toBe('t__2024');
+	});
+
+	it('falls back to the crawler name when the folder has no usable character', () => {
+		const form = { ...emptyCrawlerForm(), name: 'Argo Floats', folder: '---/' };
+		expect(tableNameExample(form, placeholders)).toBe('argo_floats');
+		expect(tableNameExample({ ...form, naming: 'crawler_prefixed' }, placeholders)).toBe(
+			'argo_floats'
+		);
+	});
+
+	it('lists the formats that a crawler can find, with the server names', () => {
+		expect(CRAWLER_FORMATS.map((format) => format.value)).toEqual([
+			'parquet',
+			'geoparquet',
+			'nc',
+			'hdf5',
+			'csv',
+			'arrow',
+			'tiff',
+			'bbf',
+			'atlas'
+		]);
+	});
+
+	it('finds stored formats that the list no longer holds', () => {
+		expect(unknownFormats(['parquet', 'zarr', 'odv'])).toEqual(['zarr', 'odv']);
+		expect(unknownFormats(['nc'])).toEqual([]);
+		expect(unknownFormats([])).toEqual([]);
 	});
 
 	it('checks that a folder holds files', () => {

@@ -1,17 +1,23 @@
 import { message, type Message } from '@/i18n';
 import { normalizeFolder } from './folders';
 
+// The server compares these names with its format filter. Zarr and ODV are not crawlable.
 export const CRAWLER_FORMATS = [
 	{ value: 'parquet', label: 'Parquet' },
+	{ value: 'geoparquet', label: 'GeoParquet' },
 	{ value: 'nc', label: 'NetCDF' },
+	{ value: 'hdf5', label: 'HDF5' },
 	{ value: 'csv', label: 'CSV' },
-	{ value: 'zarr', label: 'Zarr' },
-	{ value: 'atlas', label: 'Atlas' },
 	{ value: 'arrow', label: 'Arrow' },
-	{ value: 'odv', label: 'ODV' },
 	{ value: 'tiff', label: 'GeoTIFF' },
-	{ value: 'bbf', label: 'BBF' }
+	{ value: 'bbf', label: 'BBF' },
+	{ value: 'atlas', label: 'Atlas' }
 ];
+
+/** The stored formats that `CRAWLER_FORMATS` no longer lists. */
+export function unknownFormats(formats: string[]): string[] {
+	return formats.filter((value) => !CRAWLER_FORMATS.some((format) => format.value === value));
+}
 
 export type TableNaming = 'leaf_prefix' | 'crawler_prefixed';
 
@@ -215,14 +221,37 @@ export function describeNaming(naming: TableNaming): Message {
 	return message('dataBrowser.crawlers.naming.leaf');
 }
 
-/** The name of a table from the chosen folder. The crawler uses each sub-folder the same way. */
-export function tableNameExample(form: CrawlerForm): string {
+/** The server rule: ASCII letters and digits in lower case, any other character becomes `_`, no edge `_`. */
+function slugify(text: string): string {
+	return text
+		.replace(/[^A-Za-z0-9]/gu, '_')
+		.toLowerCase()
+		.replace(/^_+|_+$/g, '');
+}
+
+/** The name of a table from the chosen folder. The placeholders are translated words for an empty field. */
+export function tableNameExample(
+	form: CrawlerForm,
+	placeholders: { folder: string; crawler: string }
+): string {
 	const parts = normalizeFolder(form.folder)
 		.split('/')
 		.filter((part) => part !== '');
-	const leaf = parts[parts.length - 1] ?? '<folder>';
+	const crawlerName = form.name.trim();
 
-	if (form.naming === 'crawler_prefixed') return `${form.name.trim() || '<crawler>'}_${leaf}`;
+	let crawler = placeholders.crawler;
+	if (crawlerName !== '') crawler = slugify(crawlerName);
+
+	const last = parts[parts.length - 1];
+	if (last === undefined) {
+		if (form.naming === 'crawler_prefixed') return `${crawler}_${placeholders.folder}`;
+		return placeholders.folder;
+	}
+
+	const leaf = slugify(last);
+	// A folder with no usable character gives the crawler name.
+	if (leaf === '') return crawler;
+	if (form.naming === 'crawler_prefixed') return `${crawler}_${leaf}`;
 	return leaf;
 }
 

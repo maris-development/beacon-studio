@@ -20,6 +20,7 @@
 		folderHasFiles,
 		formFromCrawler,
 		tableNameExample,
+		unknownFormats,
 		type Crawler,
 		type CrawlerForm,
 		type TableNaming
@@ -46,6 +47,8 @@
 	let editing = $derived(crawler !== null);
 
 	let form: CrawlerForm = $state(initialForm());
+	// Fixed at open, so an unticked box stays on screen and the user can tick it again.
+	const storedUnknown = unknownFormats(form.formats);
 	let errors: Message[] = $state([]);
 	// The raw server text of a failed save.
 	let failure = $state('');
@@ -57,6 +60,10 @@
 			form.folder.trim() !== '' &&
 			!folderHasFiles(form.folder, paths, paths.length >= DATASET_LIST_LIMIT)
 	);
+	let examplePlaceholders = $derived({
+		folder: $t('dataBrowser.crawlers.dialog.exampleFolder'),
+		crawler: $t('dataBrowser.crawlers.dialog.exampleCrawler')
+	});
 	let endpoint = $derived(`POST ${splitNodeUrl(node.url).pathPrefix}/api/admin/crawlers`);
 	let payload = $derived(JSON.stringify(crawlerRequest(form, editing), null, 2));
 
@@ -156,6 +163,16 @@
 						{format.label}
 					</label>
 				{/each}
+				{#each storedUnknown as value (value)}
+					<label class="check">
+						<input
+							type="checkbox"
+							checked={form.formats.includes(value)}
+							onchange={() => toggleFormat(value)}
+						/>
+						{value}
+					</label>
+				{/each}
 			</div>
 			<span class="hint">{$t('dataBrowser.crawlers.dialog.formatsHint')}</span>
 		</fieldset>
@@ -168,7 +185,7 @@
 						<option value={naming}>
 							{$t('dataBrowser.crawlers.dialog.namingOption', {
 								naming: $t(describeNaming(naming)),
-								example: tableNameExample({ ...form, naming })
+								example: tableNameExample({ ...form, naming }, examplePlaceholders)
 							})}
 						</option>
 					{/each}
