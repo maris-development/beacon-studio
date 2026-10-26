@@ -250,6 +250,8 @@
 		},
 		"parameters": {
 			"title": "Query Parameters",
+			"description": "Add the columns that you need. Then add filters to them.",
+			"needsTable": "Select a data table first.",
 			"add": "Add Parameter",
 			"remove": "Remove column",
 			"dialogTitle": "Add Query Parameter",
@@ -268,6 +270,7 @@
 		},
 		"node": {
 			"title": "Select Beacon Node",
+			"description": "Select the node that has your data.",
 			"count": "{count, plural, one {# node} other {# nodes}}",
 			"loading": "Load Beacon nodes...",
 			"missingBeforeUrl": "This query runs on",
@@ -282,6 +285,8 @@
 		},
 		"table": {
 			"title": "Select Data Table",
+			"description": "Select the table to query.",
+			"needsNode": "Select a Beacon node first.",
 			"count": "{count, plural, one {# table} other {# tables}}",
 			"countLoading": "Loading tables",
 			"noDescription": "Description not available",
@@ -295,7 +300,11 @@
 		},
 		"outputFormat": {
 			"title": "Output Format",
+			"description": "Select the file format of the downloaded data.",
 			"listLabel": "Tables"
+		},
+		"steps": {
+			"incomplete": "Complete all steps first."
 		},
 		"geoFilter": {
 			"title": "Geospatial filter",

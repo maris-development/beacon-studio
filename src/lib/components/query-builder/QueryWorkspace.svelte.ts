@@ -228,9 +228,9 @@ export class QueryWorkspace {
 	}
 
 	/**
-	 * The node for a new block: the node of the active block, else the node that
-	 * the sidebar selected. A new tab therefore stays on the node that the user
-	 * works on.
+	 * The node for a query that names no node, for example a share link: the node
+	 * of the active block, else the node that the sidebar selected. An empty block
+	 * gets no node. See {@link addBlock}.
 	 */
 	private defaultNodeRef(): NodeRef {
 		const active = this.activeBlock;
@@ -411,12 +411,12 @@ export class QueryWorkspace {
 		this.guessedNode = next;
 	}
 
-	/** Add an empty block and select it. It inherits the node of the active block. */
+	/** Add an empty block and select it. It has no node, so the user picks one first. */
 	addBlock(name?: string): StoredQuery {
 		const block = queryBlocks.append({
 			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
 			draft: makeEmptyDraft(),
-			node: this.defaultNodeRef()
+			node: snapshotNode(null)
 		});
 		this.select(block.id);
 		track('workbench.block.add', { props: { origin: 'empty', blocks: this.blocks.length } });

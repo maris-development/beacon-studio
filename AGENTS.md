@@ -259,6 +259,7 @@ message the change never reaches production.
   - visualizers (`visualisations/*`)
   - API client (`@maris-development/beacon-client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
+- `QueryBuilder` gates steps 2 to 4 and keeps every step mounted. The parameter block gets an empty `table_name` until the node answers. An empty table stops its schema load, its draft emit and its column reset. Gate the block only through `table_name`, so a stored draft or a blocked seed stays intact.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 
 ## Validation Checklist Before Finishing

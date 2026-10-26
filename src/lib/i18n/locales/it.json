@@ -250,6 +250,8 @@
 		},
 		"parameters": {
 			"title": "Parametri della query",
+			"description": "Aggiungi le colonne che ti servono. Poi aggiungi i filtri.",
+			"needsTable": "Seleziona prima una tabella dati.",
 			"add": "Aggiungi parametro",
 			"remove": "Rimuovi colonna",
 			"dialogTitle": "Aggiungi parametro della query",
@@ -268,6 +270,7 @@
 		},
 		"node": {
 			"title": "Seleziona nodo Beacon",
+			"description": "Seleziona il nodo che contiene i tuoi dati.",
 			"count": "{count, plural, one {# nodo} other {# nodi}}",
 			"loading": "Caricamento nodi Beacon...",
 			"missingBeforeUrl": "Questa query viene eseguita su",
@@ -282,6 +285,8 @@
 		},
 		"table": {
 			"title": "Seleziona tabella dati",
+			"description": "Seleziona la tabella da interrogare.",
+			"needsNode": "Seleziona prima un nodo Beacon.",
 			"count": "{count, plural, one {# tabella} other {# tabelle}}",
 			"countLoading": "Caricamento tabelle",
 			"noDescription": "Descrizione non disponibile",
@@ -295,7 +300,11 @@
 		},
 		"outputFormat": {
 			"title": "Formato di output",
+			"description": "Seleziona il formato del file dei dati scaricati.",
 			"listLabel": "Tabelle"
+		},
+		"steps": {
+			"incomplete": "Completa prima tutti i passaggi."
 		},
 		"geoFilter": {
 			"title": "Filtro geospaziale",

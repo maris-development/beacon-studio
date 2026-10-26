@@ -250,6 +250,8 @@
 		},
 		"parameters": {
 			"title": "Queryparameters",
+			"description": "Voeg de kolommen toe die je nodig hebt. Voeg daarna filters toe.",
+			"needsTable": "Kies eerst een datatabel.",
 			"add": "Parameter toevoegen",
 			"remove": "Kolom verwijderen",
 			"dialogTitle": "Queryparameter toevoegen",
@@ -268,6 +270,7 @@
 		},
 		"node": {
 			"title": "Beacon-node kiezen",
+			"description": "Kies de node met je data.",
 			"count": "{count, plural, one {# node} other {# nodes}}",
 			"loading": "Beacon-nodes laden...",
 			"missingBeforeUrl": "Deze query draait op",
@@ -282,6 +285,8 @@
 		},
 		"table": {
 			"title": "Datatabel kiezen",
+			"description": "Kies de tabel voor je query.",
+			"needsNode": "Kies eerst een Beacon-node.",
 			"count": "{count, plural, one {# tabel} other {# tabellen}}",
 			"countLoading": "Tabellen laden",
 			"noDescription": "Geen beschrijving beschikbaar",
@@ -295,7 +300,11 @@
 		},
 		"outputFormat": {
 			"title": "Uitvoerformaat",
+			"description": "Kies het bestandsformaat van de gedownloade data.",
 			"listLabel": "Tabellen"
+		},
+		"steps": {
+			"incomplete": "Voltooi eerst alle stappen."
 		},
 		"geoFilter": {
 			"title": "Geografisch filter",
