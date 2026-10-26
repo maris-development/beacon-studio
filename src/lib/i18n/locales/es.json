@@ -399,10 +399,20 @@
 			"builder": "Banco de trabajo de consultas",
 			"collapseBuilder": "Contraer el constructor",
 			"expandBuilder": "Expandir el constructor",
-			"json": "JSON de la consulta",
-			"copyJson": "Copiar el JSON al portapapeles",
-			"collapseJson": "Contraer el JSON",
-			"expandJson": "Expandir el JSON"
+			"code": "Código",
+			"collapseCode": "Contraer el código",
+			"expandCode": "Expandir el código"
+		},
+		"code": {
+			"tabs": "Lenguaje del código",
+			"json": "JSON",
+			"sql": "SQL",
+			"python": "Python",
+			"copy": "Copiar",
+			"copyTitle": "Copiar el código al portapapeles",
+			"downloadTitle": "Descargar el código como archivo",
+			"emptyTitle": "Todavía no hay consulta",
+			"emptyText": "Elija una tabla y al menos una columna a la izquierda."
 		},
 		"block": {
 			"add": "Nueva consulta",

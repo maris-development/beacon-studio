@@ -399,10 +399,20 @@
 			"builder": "Query-werkbank",
 			"collapseBuilder": "Bouwer inklappen",
 			"expandBuilder": "Bouwer uitklappen",
-			"json": "Query-JSON",
-			"copyJson": "JSON naar klembord kopiëren",
-			"collapseJson": "JSON inklappen",
-			"expandJson": "JSON uitklappen"
+			"code": "Code",
+			"collapseCode": "Code inklappen",
+			"expandCode": "Code uitklappen"
+		},
+		"code": {
+			"tabs": "Codetaal",
+			"json": "JSON",
+			"sql": "SQL",
+			"python": "Python",
+			"copy": "Kopiëren",
+			"copyTitle": "Code naar klembord kopiëren",
+			"downloadTitle": "Code als bestand downloaden",
+			"emptyTitle": "Nog geen query",
+			"emptyText": "Kies links een tabel en ten minste één kolom."
 		},
 		"block": {
 			"add": "Nieuwe query",

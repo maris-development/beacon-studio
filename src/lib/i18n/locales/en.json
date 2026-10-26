@@ -399,10 +399,20 @@
 			"builder": "Query workbench",
 			"collapseBuilder": "Collapse builder",
 			"expandBuilder": "Expand builder",
-			"json": "Query JSON",
-			"copyJson": "Copy JSON to clipboard",
-			"collapseJson": "Collapse JSON",
-			"expandJson": "Expand JSON"
+			"code": "Code",
+			"collapseCode": "Collapse code",
+			"expandCode": "Expand code"
+		},
+		"code": {
+			"tabs": "Code language",
+			"json": "JSON",
+			"sql": "SQL",
+			"python": "Python",
+			"copy": "Copy",
+			"copyTitle": "Copy the code to the clipboard",
+			"downloadTitle": "Download the code as a file",
+			"emptyTitle": "No query yet",
+			"emptyText": "Pick a table and at least one column on the left."
 		},
 		"block": {
 			"add": "New query",

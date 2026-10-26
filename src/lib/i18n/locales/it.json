@@ -399,10 +399,20 @@
 			"builder": "Banco di lavoro query",
 			"collapseBuilder": "Comprimi generatore",
 			"expandBuilder": "Espandi generatore",
-			"json": "JSON della query",
-			"copyJson": "Copia JSON negli appunti",
-			"collapseJson": "Comprimi JSON",
-			"expandJson": "Espandi JSON"
+			"code": "Codice",
+			"collapseCode": "Comprimi codice",
+			"expandCode": "Espandi codice"
+		},
+		"code": {
+			"tabs": "Linguaggio del codice",
+			"json": "JSON",
+			"sql": "SQL",
+			"python": "Python",
+			"copy": "Copia",
+			"copyTitle": "Copia il codice negli appunti",
+			"downloadTitle": "Scarica il codice come file",
+			"emptyTitle": "Ancora nessuna query",
+			"emptyText": "Scegli una tabella e almeno una colonna a sinistra."
 		},
 		"block": {
 			"add": "Nuova query",
