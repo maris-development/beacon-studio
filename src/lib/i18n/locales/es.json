@@ -375,9 +375,12 @@
 		},
 		"closeBlock": {
 			"title": "Cerrar esta consulta",
-			"message": "Esta consulta contiene columnas que elegiste.",
+			"savedMessage": "Esta consulta está guardada. Puedes abrirla de nuevo desde Consultas guardadas.",
+			"unsavedMessage": "Esta consulta no está guardada.",
 			"note": "No puedes deshacer esta acción.",
-			"confirm": "Cerrar consulta"
+			"confirm": "Cerrar consulta",
+			"discard": "Cerrar sin guardar",
+			"saveAndClose": "Guardar y cerrar"
 		},
 		"header": {
 			"editing": "Editando {name}",

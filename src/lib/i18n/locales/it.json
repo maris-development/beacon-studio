@@ -375,9 +375,12 @@
 		},
 		"closeBlock": {
 			"title": "Chiudi questa query",
-			"message": "Questa query contiene colonne che hai scelto.",
+			"savedMessage": "Questa query è salvata. Puoi aprirla di nuovo da Query salvate.",
+			"unsavedMessage": "Questa query non è salvata.",
 			"note": "Non puoi annullare questa azione.",
-			"confirm": "Chiudi query"
+			"confirm": "Chiudi query",
+			"discard": "Chiudi senza salvare",
+			"saveAndClose": "Salva e chiudi"
 		},
 		"header": {
 			"editing": "Modifica di {name}",

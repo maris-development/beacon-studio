@@ -375,9 +375,12 @@
 		},
 		"closeBlock": {
 			"title": "Deze query sluiten",
-			"message": "Deze query bevat kolommen die je hebt gekozen.",
+			"savedMessage": "Deze query is opgeslagen. Je kunt hem opnieuw openen via Opgeslagen queries.",
+			"unsavedMessage": "Deze query is niet opgeslagen.",
 			"note": "Je kunt dit niet ongedaan maken.",
-			"confirm": "Query sluiten"
+			"confirm": "Query sluiten",
+			"discard": "Sluiten zonder opslaan",
+			"saveAndClose": "Opslaan en sluiten"
 		},
 		"header": {
 			"editing": "{name} bewerken",

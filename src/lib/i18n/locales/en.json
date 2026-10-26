@@ -375,9 +375,12 @@
 		},
 		"closeBlock": {
 			"title": "Close this query",
-			"message": "This query holds columns that you picked.",
+			"savedMessage": "This query is saved. You can open it again from Saved Queries.",
+			"unsavedMessage": "This query is not saved.",
 			"note": "You cannot undo this.",
-			"confirm": "Close query"
+			"confirm": "Close query",
+			"discard": "Close without saving",
+			"saveAndClose": "Save and close"
 		},
 		"header": {
 			"editing": "Editing {name}",

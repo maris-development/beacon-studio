@@ -29,12 +29,19 @@ export interface ConfirmOptions {
 	cancelLabel?: string | null;
 	/** Colours the button red. Use it when the step destroys something. */
 	destructive?: boolean;
+	/** The label of a third button, between cancel and confirm. Only `askChoice` reads the answer. */
+	alternateLabel?: string;
+	/** Colours the third button red. */
+	alternateDestructive?: boolean;
 }
+
+/** The button that the user pressed. Escape and the backdrop answer `cancel`. */
+export type ConfirmAnswer = 'confirm' | 'alternate' | 'cancel';
 
 interface ConfirmRequest extends ConfirmOptions {
 	/** Rises per question. The dialog keys on it, so a second question resets it. */
 	id: number;
-	settle: (answer: boolean) => void;
+	settle: (answer: ConfirmAnswer) => void;
 }
 
 const request = writable<ConfirmRequest | null>(null);
@@ -51,11 +58,21 @@ let counter = 0;
  * caller must therefore treat a false as "do nothing", and never as an error.
  */
 export function askConfirm(options: ConfirmOptions): Promise<boolean> {
+	return askChoice(options).then((answer) => answer === 'confirm');
+}
+
+/**
+ * Asks the user a question with up to three buttons. Returns the button that
+ * the user pressed.
+ *
+ * A second question replaces the first, and the first then answers `cancel`.
+ */
+export function askChoice(options: ConfirmOptions): Promise<ConfirmAnswer> {
 	return new Promise((resolve) => {
 		counter += 1;
 
 		request.update((pending) => {
-			pending?.settle(false);
+			pending?.settle('cancel');
 
 			return { ...options, id: counter, settle: resolve };
 		});
@@ -70,7 +87,7 @@ export function askAlert(options: Omit<ConfirmOptions, 'cancelLabel' | 'destruct
 }
 
 /** Answers the open question and closes the dialog. `<Confirm />` calls this. */
-export function answerConfirm(answer: boolean): void {
+export function answerConfirm(answer: ConfirmAnswer): void {
 	request.update((pending) => {
 		pending?.settle(answer);
 

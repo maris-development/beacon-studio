@@ -20,7 +20,7 @@ import {
 	type StoredQuery
 } from '@/stores/stored-query';
 import type { CompiledQuery } from '@/beacon-api/types';
-import type { QueryDraft } from '@/query/draft';
+import { compileDraft, type QueryDraft } from '@/query/draft';
 import { getCurrentNode } from '@/services/beacon-node';
 import { describeQuery, track } from '@/telemetry';
 
@@ -74,6 +74,28 @@ export function saveQueryFrom(source: StoredQuery, name?: string): StoredQuery {
 	});
 
 	return copy;
+}
+
+/**
+ * True when a saved query holds the same query on the same node as this record.
+ * A save keeps no link to its source, so the check compares the content. The
+ * name does not count, because a rename loses no work.
+ */
+export function isSaved(record: StoredQuery): boolean {
+	const query = queryOf(record);
+	if (!query) return false;
+
+	return savedQueries
+		.all()
+		.some((saved) => saved.node?.url === record.node?.url && queryOf(saved) === query);
+}
+
+/** The compiled query of a record as JSON, or null when the draft is incomplete. */
+function queryOf(record: StoredQuery): string | null {
+	const query = record.compiled ?? compileDraft(record.draft, record.coordinateColumns ?? null);
+	if (!query) return null;
+
+	return JSON.stringify(query);
 }
 
 /** Give a saved query a new name. The function does nothing for an unknown id. */

@@ -1,6 +1,6 @@
 <script lang="ts">
 	/**
-	 * The one dialog that answers `askConfirm` and `askAlert`.
+	 * The one dialog that answers `askConfirm`, `askChoice` and `askAlert`.
 	 *
 	 * The layout holds a single instance. No other component renders it.
 	 */
@@ -25,7 +25,7 @@
 
 			event.preventDefault();
 			event.stopImmediatePropagation();
-			answerConfirm(false);
+			answerConfirm('cancel');
 		};
 
 		document.addEventListener('keydown', onKeydown, true);
@@ -52,7 +52,7 @@
 
 {#if $confirmRequest}
 	<div class="confirm-layer">
-		<Modal title={$confirmRequest.title} onClose={() => answerConfirm(false)} width="440px">
+		<Modal title={$confirmRequest.title} onClose={() => answerConfirm('cancel')} width="440px">
 			<p>{$confirmRequest.message}</p>
 
 			{#if $confirmRequest.note}
@@ -61,15 +61,24 @@
 
 			<div slot="footer" class="confirm-actions">
 				{#if $confirmRequest.cancelLabel !== null}
-					<Button bind:ref={cancelButton} variant="outline" onclick={() => answerConfirm(false)}>
+					<Button bind:ref={cancelButton} variant="outline" onclick={() => answerConfirm('cancel')}>
 						{$confirmRequest.cancelLabel ?? $t('common.cancel')}
+					</Button>
+				{/if}
+
+				{#if $confirmRequest.alternateLabel}
+					<Button
+						variant={$confirmRequest.alternateDestructive ? 'destructive' : 'outline'}
+						onclick={() => answerConfirm('alternate')}
+					>
+						{$confirmRequest.alternateLabel}
 					</Button>
 				{/if}
 
 				<Button
 					bind:ref={confirmButton}
 					variant={$confirmRequest.destructive ? 'destructive' : 'default'}
-					onclick={() => answerConfirm(true)}
+					onclick={() => answerConfirm('confirm')}
 				>
 					{$confirmRequest.confirmLabel ?? $t('common.continue')}
 				</Button>
@@ -102,6 +111,7 @@
 
 	.confirm-actions {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: flex-end;
 		gap: 0.5rem;
 	}

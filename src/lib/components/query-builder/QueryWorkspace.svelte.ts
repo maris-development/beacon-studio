@@ -67,7 +67,8 @@ import {
 import { getCurrentNode, nodes, matchRef, resolveRef } from '@/services/beacon-node';
 import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-import';
 import type { BeaconNode } from '@/beacon-api/types';
-import { askConfirm } from '@/stores/confirm';
+import { askChoice, askConfirm } from '@/stores/confirm';
+import { isSaved, saveQueryFrom } from '@/stores/saved-queries';
 import { addToast } from '@/stores/toasts';
 import { track } from '@/telemetry';
 import { translate, type MessageKey } from '@/i18n';
@@ -493,19 +494,70 @@ export class QueryWorkspace {
 		return true;
 	}
 
-	/** Remove a block. Keep one block, and correct the active selection. */
+	/**
+	 * Save a copy of a block in the saved queries, and report the result with a
+	 * toast. Returns false when the block holds no query, or the save fails.
+	 */
+	saveBlock(id: string): boolean {
+		const block = this.blocks.find((candidate) => candidate.id === id);
+
+		if (!block || !QueryWorkspace.getQuery(block)) {
+			addToast({ key: 'saved.toast.noQuery', type: 'warning' });
+			return false;
+		}
+
+		try {
+			saveQueryFrom(block);
+			addToast({ key: 'saved.toast.saved', values: { name: block.name }, type: 'success' });
+			return true;
+		} catch (e) {
+			addToast({ key: 'saved.toast.saveFailed', message: String((e as Error)?.message ?? e), type: 'error' });
+			return false;
+		}
+	}
+
+	/**
+	 * Remove a block. Keep one block, and correct the active selection.
+	 *
+	 * A block with columns or a query asks first. The dialog tells if a saved
+	 * query holds the same query. An unsaved block offers to save before it closes.
+	 */
 	async closeBlock(id: string): Promise<void> {
 		if (this.blocks.length === 1) return;
 
 		const block = this.blocks.find((b) => b.id === id);
 		if (!block) return;
 
-		if ((block.draft?.selectedFields.length ?? 0) > 0) {
+		const hasQuery = !!QueryWorkspace.getQuery(block);
+		const hasColumns = (block.draft?.selectedFields.length ?? 0) > 0;
+
+		if (hasQuery && isSaved(block)) {
 			const goAhead = await askConfirm({
 				title: translate('workbench.closeBlock.title'),
-				message: translate('workbench.closeBlock.message'),
+				message: translate('workbench.closeBlock.savedMessage'),
+				confirmLabel: translate('workbench.closeBlock.confirm')
+			});
+
+			if (!goAhead) return;
+		} else if (hasQuery) {
+			const answer = await askChoice({
+				title: translate('workbench.closeBlock.title'),
+				message: translate('workbench.closeBlock.unsavedMessage'),
 				note: translate('workbench.closeBlock.note'),
-				confirmLabel: translate('workbench.closeBlock.confirm'),
+				alternateLabel: translate('workbench.closeBlock.discard'),
+				alternateDestructive: true,
+				confirmLabel: translate('workbench.closeBlock.saveAndClose')
+			});
+
+			if (answer === 'cancel') return;
+			if (answer === 'confirm' && !this.saveBlock(id)) return;
+		} else if (hasColumns) {
+			// An incomplete draft has no query to save.
+			const goAhead = await askConfirm({
+				title: translate('workbench.closeBlock.title'),
+				message: translate('workbench.closeBlock.unsavedMessage'),
+				note: translate('workbench.closeBlock.note'),
+				confirmLabel: translate('workbench.closeBlock.discard'),
 				destructive: true
 			});
 

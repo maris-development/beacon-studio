@@ -2,7 +2,6 @@ import type { BeaconNode, CompiledQuery } from '@/beacon-api/types';
 import { QueryWorkspace } from './QueryWorkspace.svelte';
 import { BeaconClient } from '@/beacon-api/client';
 import { addToast } from '@/stores/toasts';
-import { saveQueryFrom } from '@/stores/saved-queries';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { runBlockReason } from '@/query/query-guard';
@@ -226,17 +225,12 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
     function saveQuery(): void {
         const block = workspace.activeBlock;
 
-        if (!block || !QueryWorkspace.getQuery(block)) {
+        if (!block) {
             addToast({ key: 'saved.toast.noQuery', type: 'warning' });
             return;
         }
 
-        try {
-            saveQueryFrom(block);
-            addToast({ key: 'saved.toast.saved', values: { name: block.name }, type: 'success' });
-        } catch (e) {
-            addToast({ key: 'saved.toast.saveFailed', message: String(e?.message ?? e), type: 'error' });
-        }
+        workspace.saveBlock(block.id);
     }
 
     return {
