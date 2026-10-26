@@ -1,703 +1,715 @@
 <script lang="ts">
-	/**
-	 * QueryBuilderParametrBlock.svelte
-	 * Author: Jasper van der Barg
-	 * Description: Query Builder Parameter Block Component
-	 */
+    /**
+     * QueryBuilderParametrBlock.svelte
+     * Author: Jasper van der Barg
+     * Description: Query Builder Parameter Block Component
+     */
 
-	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import * as SearchSelect from '$lib/components/ui/search-select/index.js';
-	import Button from '$lib/components/buttons/Button.svelte';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import { BeaconClient } from '@/beacon-api/client';
-	import type { CompiledQuery, DataType } from '@/beacon-api/types';
-	import { Utils } from '@/utils';
-	import Parameter from './Parameter.svelte';
-	import type { SelectedFilterType } from '@/query/filter-types';
-	import { addToast } from '@/stores/toasts';
-	import { track } from '@/telemetry';
-	import type { QuerySelectionStatus } from '@/query/selection-status';
-	import type { QueryActions } from './QueryActions';
-	import { compileDraft, defaultOutputFormat, type QueryDraft } from '@/query/draft';
-	import MapPinnedIcon from '@lucide/svelte/icons/map-pinned';
-	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
-	import XIcon from '@lucide/svelte/icons/x';
-	import { runBlockReason } from '@/query/query-guard';
-	import { settings } from '@/stores/settings';
-	import {
-		describeSelection,
-		missingCoordinateColumn,
-		resolveCoordinateColumns,
-		type CoordinatePair,
-		type SpatialSelection
-	} from '@/geo/spatial-selection';
-	import { hydrateDraftFromQuery } from '@/query/seed-hydration';
-	import GeospatialFilterModal from './GeospatialFilterModal.svelte';
-	import PencilLineIcon from '@lucide/svelte/icons/pencil-line';
-	import { t, translate } from '@/i18n';
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import * as SearchSelect from "$lib/components/ui/search-select/index.js";
+    import Button from "$lib/components/buttons/Button.svelte";
+    import CheckIcon from "@lucide/svelte/icons/check";
+    import PlusIcon from "@lucide/svelte/icons/plus";
+    import { BeaconClient } from "@/beacon-api/client";
+    import type { CompiledQuery, DataType } from "@/beacon-api/types";
+    import { Utils } from "@/utils";
+    import Parameter from "./Parameter.svelte";
+    import type { SelectedFilterType } from "@/query/filter-types";
+    import { addToast } from "@/stores/toasts";
+    import { track } from "@/telemetry";
+    import type { QuerySelectionStatus } from "@/query/selection-status";
+    import type { QueryActions } from "./QueryActions";
+    import { compileDraft, defaultOutputFormat, type QueryDraft } from "@/query/draft";
+    import MapPinnedIcon from "@lucide/svelte/icons/map-pinned";
+    import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+    import XIcon from "@lucide/svelte/icons/x";
+    import { runBlockReason } from "@/query/query-guard";
+    import { settings } from "@/stores/settings";
+    import {
+        describeSelection,
+        missingCoordinateColumn,
+        resolveCoordinateColumns,
+        type CoordinatePair,
+        type SpatialSelection
+    } from "@/geo/spatial-selection";
+    import { hydrateDraftFromQuery } from "@/query/seed-hydration";
+    import GeospatialFilterModal from "./GeospatialFilterModal.svelte";
+    import PencilLineIcon from "@lucide/svelte/icons/pencil-line";
+    import { t, translate } from "@/i18n";
 
-	let {
-		table_name,
-		client,
-		initialDraft = null,
-		pendingSeed = null,
-		coordinateColumns = null,
-		onDraftChange,
-		onSeedMismatch,
-		// The output format control lives in the parent, next to the other
-		// query wide settings. This block still reads and writes the value.
-		selected_output_format = $bindable<string>(defaultOutputFormat()),
-		status = $bindable<QuerySelectionStatus>({
-			dataTable: '',
-			columns: 0,
-			filters: 0,
-			selection: 0
-		}),
-		// Only the query actions live here. The workbench owns navigation, because
-		// it holds the StoredQuery block id for visualisation links.
-		actions = $bindable<QueryActions>({
-			compileQuery: compileQuery,
-			downloadData: handleSubmit,
-			resetQuery: undefined
-		})
-	}: {
-		table_name: string;
-		client: BeaconClient;
-		initialDraft?: QueryDraft | null;
-		pendingSeed?: CompiledQuery | null;
-		/** The stored coordinate pair of the block, or null to detect it. */
-		coordinateColumns?: CoordinatePair | null;
-		/**
-		 * Emitted on every builder edit with the current draft. The geospatial
-		 * filter modal also passes the pair, so the area and the pair reach the
-		 * block in one write.
-		 */
-		onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
-		/**
-		 * Called when the schema of the node holds no column of a deep-link seed.
-		 * The parent writes the message: it knows whether the app guessed the node.
-		 */
-		onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
-		/** Bound to the parent, which shows the output format control. */
-		selected_output_format?: string;
-		status?: QuerySelectionStatus;
-		actions?: QueryActions; // todo
-	} = $props();
+    let {
+        table_name,
+        client,
+        initialDraft = null,
+        pendingSeed = null,
+        coordinateColumns = null,
+        onDraftChange,
+        onSeedMismatch,
+        // The output format control lives in the parent, next to the other
+        // query wide settings. This block still reads and writes the value.
+        selected_output_format = $bindable<string>(defaultOutputFormat()),
+        status = $bindable<QuerySelectionStatus>({
+            dataTable: "",
+            columns: 0,
+            filters: 0,
+            selection: 0
+        }),
+        // Only the query actions live here. The workbench owns navigation, because
+        // it holds the StoredQuery block id for visualisation links.
+        actions = $bindable<QueryActions>({
+            compileQuery: compileQuery,
+            downloadData: handleSubmit,
+            resetQuery: undefined
+        })
+    }: {
+        table_name: string;
+        client: BeaconClient;
+        initialDraft?: QueryDraft | null;
+        pendingSeed?: CompiledQuery | null;
+        /** The stored coordinate pair of the block, or null to detect it. */
+        coordinateColumns?: CoordinatePair | null;
+        /**
+         * Emitted on every builder edit with the current draft. The geospatial
+         * filter modal also passes the pair, so the area and the pair reach the
+         * block in one write.
+         */
+        onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
+        /**
+         * Called when the schema of the node holds no column of a deep-link seed.
+         * The parent writes the message: it knows whether the app guessed the node.
+         */
+        onSeedMismatch?: (table: string, part: "table" | "columns") => void;
+        /** Bound to the parent, which shows the output format control. */
+        selected_output_format?: string;
+        status?: QuerySelectionStatus;
+        actions?: QueryActions; // todo
+    } = $props();
 
-	let searchInput;
-	let searchQuery = $state('');
-	let fields: {
-		name: string;
-		type: DataType;
-		ref?: ReturnType<typeof SearchSelect.Item>; //ReturnType<typeof SearchSelect.Item>;
-	}[] = $state([]);
+    let searchInput;
+    let searchQuery = $state("");
+    let fields: {
+        name: string;
+        type: DataType;
+        ref?: ReturnType<typeof SearchSelect.Item>; //ReturnType<typeof SearchSelect.Item>;
+    }[] = $state([]);
 
-	let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
-		$state(initialDraft ? Utils.cloneObject(initialDraft.selectedFields) : []);
-	/**
-	 * The area of this query. The user draws it in {@link GeospatialFilterModal},
-	 * or on the map viewer. It applies to the latitude and the longitude column
-	 * together, so it has no card of its own.
-	 */
-	let spatialFilter: SpatialSelection | null = $state(initialDraft?.spatialFilter ?? null);
-	/** True while the geospatial filter modal is open. */
-	let isGeoFilterOpen = $state(false);
-	/** Table the current selection belongs to; used to reset on a real table change. */
-	let selectionTable = initialDraft?.tableName ?? null;
-	let hasInitialisedTable = $state(false);
+    let selectedFields: { name: string; type: DataType; selected_filters: SelectedFilterType[] }[] =
+        $state(initialDraft ? Utils.cloneObject(initialDraft.selectedFields) : []);
+    /**
+     * The area of this query. The user draws it in {@link GeospatialFilterModal},
+     * or on the map viewer. It applies to the latitude and the longitude column
+     * together, so it has no card of its own.
+     */
+    let spatialFilter: SpatialSelection | null = $state(initialDraft?.spatialFilter ?? null);
+    /** True while the geospatial filter modal is open. */
+    let isGeoFilterOpen = $state(false);
+    /** Table the current selection belongs to; used to reset on a real table change. */
+    let selectionTable = initialDraft?.tableName ?? null;
+    let hasInitialisedTable = $state(false);
 
-	let hasHydratedSeed = $state(!pendingSeed);
-	let lastEmittedDraftKey = $state('');
-	let lastReceivedDraftKey = $state(initialDraft ? JSON.stringify(initialDraft) : '');
+    let hasHydratedSeed = $state(!pendingSeed);
+    let lastEmittedDraftKey = $state("");
+    let lastReceivedDraftKey = $state(initialDraft ? JSON.stringify(initialDraft) : "");
 
-	/**
-	 * The reason that this query must not run, or null. It compiles the draft,
-	 * because a filter with no value compiles to nothing.
-	 *
-	 * The switch is read here as well. `runBlockReason` reads a snapshot of the
-	 * settings, so without this read the warning stays after the user turns the
-	 * safeguard off on the settings page.
-	 */
-	const filterWarning = $derived.by(() => {
-		if (!$settings.requireQueryFilters) return null;
+    /**
+     * The reason that this query must not run, or null. It compiles the draft,
+     * because a filter with no value compiles to nothing.
+     *
+     * The switch is read here as well. `runBlockReason` reads a snapshot of the
+     * settings, so without this read the warning stays after the user turns the
+     * safeguard off on the settings page.
+     */
+    const filterWarning = $derived.by(() => {
+        if (!$settings.requireQueryFilters) return null;
 
-		return runBlockReason(
-			compileDraft(
-				{
-					tableName: table_name,
-					selectedFields,
-					outputFormat: selected_output_format,
-					spatialFilter
-				},
-				coordinateColumns
-			)
-		);
-	});
+        return runBlockReason(
+            compileDraft(
+                {
+                    tableName: table_name,
+                    selectedFields,
+                    outputFormat: selected_output_format,
+                    spatialFilter
+                },
+                coordinateColumns
+            )
+        );
+    });
 
-	/** The number columns of the query. An area filter can only test these. */
-	const numericColumnCount = $derived(
-		selectedFields.filter((field) => Utils.isNumericDataType(field.type)).length
-	);
+    /** The number columns of the query. An area filter can only test these. */
+    const numericColumnCount = $derived(
+        selectedFields.filter((field) => Utils.isNumericDataType(field.type)).length
+    );
 
-	/** The reason that the query takes no area, or null. */
-	const areaBlockReason = $derived.by(() => {
-		if (numericColumnCount < 2) {
-			return $t('query.area.needsColumns');
-		}
+    /** The reason that the query takes no area, or null. */
+    const areaBlockReason = $derived.by(() => {
+        if (numericColumnCount < 2) {
+            return $t("query.area.needsColumns");
+        }
 
-		return null;
-	});
+        return null;
+    });
 
-	/**
-	 * The column of the stored pair that the query no longer selects, or null.
-	 *
-	 * The user must know. The pair stays on the block, and the modal offers the
-	 * dialog again.
-	 */
-	const missingAreaColumn = $derived(
-		missingCoordinateColumn(
-			coordinateColumns,
-			selectedFields.map((field) => field.name)
-		)
-	);
+    /**
+     * The column of the stored pair that the query no longer selects, or null.
+     *
+     * The user must know. The pair stays on the block, and the modal offers the
+     * dialog again.
+     */
+    const missingAreaColumn = $derived(
+        missingCoordinateColumn(
+            coordinateColumns,
+            selectedFields.map((field) => field.name)
+        )
+    );
 
-	/** The two columns the area tests. The compile resolves the same pair. */
-	const areaColumns = $derived(
-		resolveCoordinateColumns(
-			coordinateColumns,
-			selectedFields.map((field) => field.name)
-		)
-	);
+    /** The two columns the area tests. The compile resolves the same pair. */
+    const areaColumns = $derived(
+        resolveCoordinateColumns(
+            coordinateColumns,
+            selectedFields.map((field) => field.name)
+        )
+    );
 
-	const firstVisibleItem = $derived(
-		fields.find((item) => !(item.ref as { hidden: boolean })?.hidden)
-	);
+    const firstVisibleItem = $derived(
+        fields.find((item) => !(item.ref as { hidden: boolean })?.hidden)
+    );
 
-	const firstVisibleMatchingItem = $derived.by(() => {
-		const normalized = searchQuery.trim().toLowerCase();
+    const firstVisibleMatchingItem = $derived.by(() => {
+        const normalized = searchQuery.trim().toLowerCase();
 
-		if (!normalized) {
-			return firstVisibleItem;
-		}
+        if (!normalized) {
+            return firstVisibleItem;
+        }
 
-		return fields.find((item) => item.name.toLowerCase().includes(normalized));
-	});
+        return fields.find((item) => item.name.toLowerCase().includes(normalized));
+    });
 
-	// $effect(() => {
-	// 	status.outputFormat = selected_output_format;
-	// });
+    // $effect(() => {
+    // 	status.outputFormat = selected_output_format;
+    // });
 
-	// Reload local controls when the workspace replaces this block's draft.
-	// Ignore drafts emitted by this component to prevent a write loop.
-	$effect(() => {
-		if (!initialDraft) {
-			return;
-		}
+    // Reload local controls when the workspace replaces this block's draft.
+    // Ignore drafts emitted by this component to prevent a write loop.
+    $effect(() => {
+        if (!initialDraft) {
+            return;
+        }
 
-		const draftKey = JSON.stringify(initialDraft);
-		if (draftKey === lastReceivedDraftKey) {
-			return;
-		}
-		lastReceivedDraftKey = draftKey;
+        const draftKey = JSON.stringify(initialDraft);
+        if (draftKey === lastReceivedDraftKey) {
+            return;
+        }
+        lastReceivedDraftKey = draftKey;
 
-		if (draftKey === lastEmittedDraftKey) {
-			return;
-		}
+        if (draftKey === lastEmittedDraftKey) {
+            return;
+        }
 
-		selectedFields = Utils.cloneObject(initialDraft.selectedFields);
-		selected_output_format = initialDraft.outputFormat;
-		spatialFilter = initialDraft.spatialFilter
-			? Utils.cloneObject(initialDraft.spatialFilter)
-			: null;
-		selectionTable = initialDraft.tableName;
-	});
+        selectedFields = Utils.cloneObject(initialDraft.selectedFields);
+        selected_output_format = initialDraft.outputFormat;
+        spatialFilter = initialDraft.spatialFilter
+            ? Utils.cloneObject(initialDraft.spatialFilter)
+            : null;
+        selectionTable = initialDraft.tableName;
+    });
 
-	// Load the schema for the selected table (cached per node). Needed for the
-	// "Add Parameter" list and to parse a deep-link seed. Does NOT clear the current
-	// selection — that only happens on a real table change (below).
-	$effect(() => {
-		if (!table_name || !client) {
-			fields = [];
-			return;
-		}
+    // Load the schema for the selected table (cached per node). Needed for the
+    // "Add Parameter" list and to parse a deep-link seed. Does NOT clear the current
+    // selection — that only happens on a real table change (below).
+    $effect(() => {
+        if (!table_name || !client) {
+            fields = [];
+            return;
+        }
 
-		const table = table_name;
+        const table = table_name;
 
-		client
-			.getCachedSchema(table)
-			.then((schema) => {
-				fields = schema.fields.map((field) => ({
-					name: field.name,
-					type: field.data_type
-				}));
+        client
+            .getCachedSchema(table)
+            .then((schema) => {
+                fields = schema.fields.map((field) => ({
+                    name: field.name,
+                    type: field.data_type
+                }));
 
-				// Hydrate a one-time deep-link seed once the schema is available.
-				if (pendingSeed && !hasHydratedSeed) {
-					hydrateFromSeed(table);
-					hasHydratedSeed = true;
-				}
-			})
-			.catch((error) => {
-				// A node answers 404 for a table it does not have. The parent already
-				// falls back to the default table, so this is the rest of the guard.
-				// Without the catch the browser reports an unhandled rejection, and
-				// the builder shows an empty column list with no reason.
-				console.warn(`Could not read the schema of the table "${table}".`, error);
+                // Hydrate a one-time deep-link seed once the schema is available.
+                if (pendingSeed && !hasHydratedSeed) {
+                    hydrateFromSeed(table);
+                    hasHydratedSeed = true;
+                }
+            })
+            .catch((error) => {
+                // A node answers 404 for a table it does not have. The parent already
+                // falls back to the default table, so this is the rest of the guard.
+                // Without the catch the browser reports an unhandled rejection, and
+                // the builder shows an empty column list with no reason.
+                console.warn(`Could not read the schema of the table "${table}".`, error);
 
-				fields = [];
+                fields = [];
 
-				if (pendingSeed && !hasHydratedSeed) {
-					hasHydratedSeed = true;
-					onSeedMismatch?.(table, 'table');
-				}
-			});
-	});
+                if (pendingSeed && !hasHydratedSeed) {
+                    hasHydratedSeed = true;
+                    onSeedMismatch?.(table, "table");
+                }
+            });
+    });
 
-	// Reset the selected columns when the user actually switches to a different
-	// table (columns from the old table don't apply). Skips the initial value so a
-	// restored draft keeps its selection.
-	$effect(() => {
-		const table = table_name;
+    // Reset the selected columns when the user actually switches to a different
+    // table (columns from the old table don't apply). Skips the initial value so a
+    // restored draft keeps its selection.
+    $effect(() => {
+        const table = table_name;
 
-		if (!table) {
-			return;
-		}
+        if (!table) {
+            return;
+        }
 
-		if (!hasInitialisedTable) {
-			selectionTable = table;
-			hasInitialisedTable = true;
-			return;
-		}
+        if (!hasInitialisedTable) {
+            selectionTable = table;
+            hasInitialisedTable = true;
+            return;
+        }
 
-		if (table !== selectionTable) {
-			selectedFields = [];
-			// The area names two columns of the old table, so it goes with them.
-			spatialFilter = null;
-		}
+        if (table !== selectionTable) {
+            selectedFields = [];
+            // The area names two columns of the old table, so it goes with them.
+            spatialFilter = null;
+        }
 
-		selectionTable = table;
-	});
+        selectionTable = table;
+    });
 
-	$effect(() => {
-		status.columns = selectedFields.length;
-		status.filters = selectedFields.reduce((total, field) => {
-			return total + field.selected_filters.length;
-		}, 0);
-	});
+    $effect(() => {
+        status.columns = selectedFields.length;
+        status.filters = selectedFields.reduce((total, field) => {
+            return total + field.selected_filters.length;
+        }, 0);
+    });
 
-	// Emit the current draft upward on every edit so the active block, JSON view
-	// and status badges stay in sync. Waits for a pending deep-link seed to be
-	// parsed first, so it doesn't overwrite the block with an empty draft.
-	$effect(() => {
-		if (!table_name) {
-			return;
-		}
+    // Emit the current draft upward on every edit so the active block, JSON view
+    // and status badges stay in sync. Waits for a pending deep-link seed to be
+    // parsed first, so it doesn't overwrite the block with an empty draft.
+    $effect(() => {
+        if (!table_name) {
+            return;
+        }
 
-		if (pendingSeed && !hasHydratedSeed) {
-			return;
-		}
-		const draft = buildDraft();
-		const draftKey = JSON.stringify(draft);
-		if (draftKey === lastEmittedDraftKey) {
-			return;
-		}
-		lastEmittedDraftKey = draftKey;
-		onDraftChange?.(draft);
-	});
+        if (pendingSeed && !hasHydratedSeed) {
+            return;
+        }
+        const draft = buildDraft();
+        const draftKey = JSON.stringify(draft);
+        if (draftKey === lastEmittedDraftKey) {
+            return;
+        }
+        lastEmittedDraftKey = draftKey;
+        onDraftChange?.(draft);
+    });
 
-	/** The draft of the current controls. */
-	function buildDraft(): QueryDraft {
-		return {
-			tableName: table_name,
-			selectedFields: Utils.cloneObject(selectedFields),
-			outputFormat: selected_output_format,
-			spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
-		};
-	}
+    /** The draft of the current controls. */
+    function buildDraft(): QueryDraft {
+        return {
+            tableName: table_name,
+            selectedFields: Utils.cloneObject(selectedFields),
+            outputFormat: selected_output_format,
+            spatialFilter: spatialFilter ? Utils.cloneObject(spatialFilter) : null
+        };
+    }
 
-	let open = $state(false);
+    let open = $state(false);
 
-	async function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && searchInput) {
-			event.preventDefault();
-			event.stopPropagation();
+    async function handleKeydown(event: KeyboardEvent) {
+        if (event.key === "Enter" && searchInput) {
+            event.preventDefault();
+            event.stopPropagation();
 
-			if (firstVisibleMatchingItem) {
-				toggleColumnSelection(firstVisibleMatchingItem.name);
-			}
-		}
-	}
+            if (firstVisibleMatchingItem) {
+                toggleColumnSelection(firstVisibleMatchingItem.name);
+            }
+        }
+    }
 
-	function toggleColumnSelection(field_name: string) {
-		const index = fields.findIndex((f) => f.name === field_name);
+    function toggleColumnSelection(field_name: string) {
+        const index = fields.findIndex((f) => f.name === field_name);
 
-		if (index !== -1) {
-			const selectedIndex = selectedFields.findIndex((f) => f.name === field_name);
+        if (index !== -1) {
+            const selectedIndex = selectedFields.findIndex((f) => f.name === field_name);
 
-			if (selectedIndex === -1) {
-				selectedFields.push({
-					name: fields[index].name,
-					type: fields[index].type,
-					selected_filters: []
-				});
+            if (selectedIndex === -1) {
+                selectedFields.push({
+                    name: fields[index].name,
+                    type: fields[index].type,
+                    selected_filters: []
+                });
 
-				track('builder.column.add', {
-					props: {
-						column: fields[index].name,
-						dataType: Utils.dataTypeToString(fields[index].type),
-						columns: selectedFields.length
-					}
-				});
-			} else {
-				selectedFields.splice(selectedIndex, 1);
-			}
-		} else {
-			console.warn('Field not found:', field_name);
-		}
-	}
+                track("builder.column.add", {
+                    props: {
+                        column: fields[index].name,
+                        dataType: Utils.dataTypeToString(fields[index].type),
+                        columns: selectedFields.length
+                    }
+                });
+            } else {
+                selectedFields.splice(selectedIndex, 1);
+            }
+        } else {
+            console.warn("Field not found:", field_name);
+        }
+    }
 
-	function removeColumnSelection(field_name: string) {
-		selectedFields = selectedFields.filter((f) => f.name !== field_name);
-	}
+    function removeColumnSelection(field_name: string) {
+        selectedFields = selectedFields.filter((f) => f.name !== field_name);
+    }
 
-	function resetBuilder() {
-		selectedFields = [];
-		selected_output_format = defaultOutputFormat();
-	}
+    function resetBuilder() {
+        selectedFields = [];
+        selected_output_format = defaultOutputFormat();
+    }
 
-	// onReset = resetBuilder;
-	actions.resetQuery = resetBuilder;
+    // onReset = resetBuilder;
+    actions.resetQuery = resetBuilder;
 
-	/**
-	 * The query of the controls above. `compileDraft` is the one compile rule, so
-	 * a download from here also carries the area filter.
-	 */
-	function compileQuery(): CompiledQuery {
-		const compiled = compileDraft(
-			{
-				tableName: table_name,
-				selectedFields,
-				outputFormat: selected_output_format,
-				spatialFilter
-			},
-			coordinateColumns
-		);
+    /**
+     * The query of the controls above. `compileDraft` is the one compile rule, so
+     * a download from here also carries the area filter.
+     */
+    function compileQuery(): CompiledQuery {
+        const compiled = compileDraft(
+            {
+                tableName: table_name,
+                selectedFields,
+                outputFormat: selected_output_format,
+                spatialFilter
+            },
+            coordinateColumns
+        );
 
-		if (!compiled) {
-			throw new Error(translate('query.error.noColumns'));
-		}
+        if (!compiled) {
+            throw new Error(translate("query.error.noColumns"));
+        }
 
-		return compiled;
-	}
-	actions.compileQuery = compileQuery;
+        return compiled;
+    }
+    actions.compileQuery = compileQuery;
 
-	async function handleSubmit() {
-		let compiledQuery: CompiledQuery;
+    async function handleSubmit() {
+        let compiledQuery: CompiledQuery;
 
-		try {
-			compiledQuery = compileQuery();
-		} catch (error) {
-			console.error('Error compiling query:', error);
-			addToast({
-				key: 'query.toast.compileFailed',
-				message: error.message,
-				type: 'error'
-			});
-			return;
-		}
+        try {
+            compiledQuery = compileQuery();
+        } catch (error) {
+            console.error("Error compiling query:", error);
+            addToast({
+                key: "query.toast.compileFailed",
+                message: error.message,
+                type: "error"
+            });
+            return;
+        }
 
-		if (compiledQuery) {
-			await client.queryToDownload(
-				compiledQuery,
-				BeaconClient.outputFormatToExtension(compiledQuery)
-			);
-		}
-	}
-	actions.downloadData = handleSubmit;
+        if (compiledQuery) {
+            await client.queryToDownload(
+                compiledQuery,
+                BeaconClient.outputFormatToExtension(compiledQuery)
+            );
+        }
+    }
+    actions.downloadData = handleSubmit;
 
-	// Navigation does not belong here. The builder emits drafts. Only the workbench
-	// knows the StoredQuery block that the user edits. Visualisation links carry
-	// that id as `?q=`. A handler here must put the full query on the URL instead.
-	// The parent binds `actions`, so such a handler also replaces the one of the
-	// workbench without a warning.
+    // Navigation does not belong here. The builder emits drafts. Only the workbench
+    // knows the StoredQuery block that the user edits. Visualisation links carry
+    // that id as `?q=`. A handler here must put the full query on the URL instead.
+    // The parent binds `actions`, so such a handler also replaces the one of the
+    // workbench without a warning.
 
-	/** Take the area and the pair of the geospatial filter modal. */
-	function applyGeoFilter(next: SpatialSelection | null, pair: CoordinatePair | null): void {
-		spatialFilter = next;
-		if (!table_name || (pendingSeed && !hasHydratedSeed)) return;
+    /** Take the area and the pair of the geospatial filter modal. */
+    function applyGeoFilter(next: SpatialSelection | null, pair: CoordinatePair | null): void {
+        spatialFilter = next;
+        if (!table_name || (pendingSeed && !hasHydratedSeed)) return;
 
-		// Emit here, with the pair. The emit effect then finds the same draft key.
-		const draft = buildDraft();
-		lastEmittedDraftKey = JSON.stringify(draft);
-		onDraftChange?.(draft, pair);
-	}
+        // Emit here, with the pair. The emit effect then finds the same draft key.
+        const draft = buildDraft();
+        lastEmittedDraftKey = JSON.stringify(draft);
+        onDraftChange?.(draft, pair);
+    }
 
-	function hydrateFromSeed(table: string) {
-		const seed = hydrateDraftFromQuery(pendingSeed, fields);
+    function hydrateFromSeed(table: string) {
+        const seed = hydrateDraftFromQuery(pendingSeed, fields);
 
-		spatialFilter = seed.spatialFilter;
-		selectedFields = seed.selectedFields;
+        spatialFilter = seed.spatialFilter;
+        selectedFields = seed.selectedFields;
 
-		if (seed.outputFormat) {
-			selected_output_format = seed.outputFormat;
-		}
+        if (seed.outputFormat) {
+            selected_output_format = seed.outputFormat;
+        }
 
-		// The seed asked for columns, and the schema of this node holds none of
-		// them. The table therefore belongs to another node. The parent reports it,
-		// because it knows whether the app guessed the node. The generic
-		// "best effort" message below would hide the true cause.
-		const wantedColumns = pendingSeed?.query_parameters?.length ?? 0;
+        // The seed asked for columns, and the schema of this node holds none of
+        // them. The table therefore belongs to another node. The parent reports it,
+        // because it knows whether the app guessed the node. The generic
+        // "best effort" message below would hide the true cause.
+        const wantedColumns = pendingSeed?.query_parameters?.length ?? 0;
 
-		if (wantedColumns > 0 && seed.selectedFields.length === 0) {
-			onSeedMismatch?.(table, 'columns');
-			return;
-		}
+        if (wantedColumns > 0 && seed.selectedFields.length === 0) {
+            onSeedMismatch?.(table, "columns");
+            return;
+        }
 
-		if (seed.droppedParts > 0) {
-			addToast({
-				type: 'warning',
-				key: 'query.toast.bestEffort',
-				values: { count: seed.droppedParts }
-			});
-		}
-	}
+        if (seed.droppedParts > 0) {
+            addToast({
+                type: "warning",
+                key: "query.toast.bestEffort",
+                values: { count: seed.droppedParts }
+            });
+        }
+    }
 </script>
 
 <div id="new-query-builder">
-	<div class="flex flex-row items-center justify-between">
-		<h3>{$t('query.parameters.title')}</h3>
-		<div class="header-actions">
-			<Button variant="outline" onclick={() => (open = true)}>
-				{$t('query.parameters.add')}
-				<PlusIcon />
-			</Button>
-			{#if !spatialFilter}
-				<Button
-					variant="outline"
-					title={areaBlockReason ?? $t('query.area.addTitle')}
-					disabled={!!areaBlockReason}
-					onclick={() => (isGeoFilterOpen = true)}
-				>
-					{$t('query.area.add')}
-					<PlusIcon />
-				</Button>
-			{/if}
-		</div>
-	</div>
+    <div class="flex flex-row items-center justify-between">
+        <h3>{$t("query.parameters.title")}</h3>
+        <div class="header-actions">
+            <Button variant="outline" onclick={() => (open = true)}>
+                {$t("query.parameters.add")}
+                <PlusIcon />
+            </Button>
+            {#if !spatialFilter}
+                <Button
+                    variant="outline"
+                    title={areaBlockReason ?? $t("query.area.addTitle")}
+                    disabled={!!areaBlockReason}
+                    onclick={() => (isGeoFilterOpen = true)}
+                >
+                    {$t("query.area.add")}
+                    <PlusIcon />
+                </Button>
+            {/if}
+        </div>
+    </div>
 
-	<GeospatialFilterModal
-		bind:open={isGeoFilterOpen}
-		{selectedFields}
-		selection={spatialFilter}
-		{coordinateColumns}
-		onApply={applyGeoFilter}
-	/>
+    <GeospatialFilterModal
+        bind:open={isGeoFilterOpen}
+        {selectedFields}
+        selection={spatialFilter}
+        {coordinateColumns}
+        onApply={applyGeoFilter}
+    />
 
-	<Dialog.Root bind:open>
-		<Dialog.Content class="search-columns-dialog" showCloseButton={false}>
-			<Dialog.Header class="sr-only">
-				<Dialog.Title>{$t('query.parameters.dialogTitle')}</Dialog.Title>
-				<Dialog.Description>{$t('query.parameters.dialogDescription')}</Dialog.Description>
-			</Dialog.Header>
+    <Dialog.Root bind:open>
+        <Dialog.Content class="search-columns-dialog" showCloseButton={false}>
+            <Dialog.Header class="sr-only">
+                <Dialog.Title>{$t("query.parameters.dialogTitle")}</Dialog.Title>
+                <Dialog.Description>{$t("query.parameters.dialogDescription")}</Dialog.Description>
+            </Dialog.Header>
 
-			<SearchSelect.Root bind:query={searchQuery}>
-				<SearchSelect.Input
-					placeholder={$t('query.parameters.searchPlaceholder')}
-					bind:this={searchInput}
-					onKeydown={handleKeydown}
-				/>
-				<SearchSelect.List>
-					<SearchSelect.Empty>
-						{$t('query.parameters.emptyBeforeTable')}
-						<span class="search-columns-empty-table">{table_name}</span>{$t('query.parameters.emptyAfterTable')}
-					</SearchSelect.Empty>
+            <SearchSelect.Root bind:query={searchQuery}>
+                <SearchSelect.Input
+                    placeholder={$t("query.parameters.searchPlaceholder")}
+                    bind:this={searchInput}
+                    onKeydown={handleKeydown}
+                />
+                <SearchSelect.List>
+                    <SearchSelect.Empty>
+                        {$t("query.parameters.emptyBeforeTable")}
+                        <span class="search-columns-empty-table">{table_name}</span>{$t(
+                            "query.parameters.emptyAfterTable"
+                        )}
+                    </SearchSelect.Empty>
 
-					<SearchSelect.Group heading={$t('query.parameters.available', { count: fields.length })}>
-						{#each fields as field (field.name)}
-							<SearchSelect.Item
-								value={field.name}
-								class="search-columns-item"
-								onSelect={() => {
-									toggleColumnSelection(field.name);
-								}}
-								bind:this={field.ref}
-							>
-								<span class="search-columns-item-name">{field.name}</span>
-								<span class="search-columns-item-details">{Utils.dataTypeToString(field.type)}</span
-								>
-								{#if selectedFields.find((f) => f.name === field.name)}
-									<CheckIcon class="search-columns-item-icon" />
-								{/if}
-							</SearchSelect.Item>
-						{/each}
-					</SearchSelect.Group>
-				</SearchSelect.List>
-			</SearchSelect.Root>
-		</Dialog.Content>
-	</Dialog.Root>
+                    <SearchSelect.Group
+                        heading={$t("query.parameters.available", { count: fields.length })}
+                    >
+                        {#each fields as field (field.name)}
+                            <SearchSelect.Item
+                                value={field.name}
+                                class="search-columns-item"
+                                onSelect={() => {
+                                    toggleColumnSelection(field.name);
+                                }}
+                                bind:this={field.ref}
+                            >
+                                <span class="search-columns-item-name">{field.name}</span>
+                                <span class="search-columns-item-details"
+                                    >{Utils.dataTypeToString(field.type)}</span
+                                >
+                                {#if selectedFields.find((f) => f.name === field.name)}
+                                    <CheckIcon class="search-columns-item-icon" />
+                                {/if}
+                            </SearchSelect.Item>
+                        {/each}
+                    </SearchSelect.Group>
+                </SearchSelect.List>
+            </SearchSelect.Root>
+        </Dialog.Content>
+    </Dialog.Root>
 
-	{#if filterWarning}
-		<p class="filter-warning">
-			<TriangleAlertIcon size={16} />
-			{$t(filterWarning)}
-		</p>
-	{/if}
+    {#if filterWarning}
+        <p class="filter-warning">
+            <TriangleAlertIcon size={16} />
+            {$t(filterWarning)}
+        </p>
+    {/if}
 
-	{#if spatialFilter}
-		<div class="area-filter">
-			<MapPinnedIcon size={16} />
-			<span class="area-filter-label">
-				{$t('query.area.label', { area: $t(describeSelection(spatialFilter)) })}
-			</span>
+    {#if spatialFilter}
+        <div class="area-filter">
+            <MapPinnedIcon size={16} />
+            <span class="area-filter-label">
+                {$t("query.area.label", { area: $t(describeSelection(spatialFilter)) })}
+            </span>
 
-			{#if missingAreaColumn}
-				<span class="area-filter-hint missing">
-					<TriangleAlertIcon size={14} />
-					{$t('query.area.missingColumn', { column: missingAreaColumn })}
-				</span>
-			{:else if areaColumns}
-				<span class="area-filter-hint">
-					{areaColumns.latitude} / {areaColumns.longitude}
-				</span>
-			{:else}
-				<span class="area-filter-hint missing">
-					<TriangleAlertIcon size={14} />
-					{$t('query.area.noColumns')}
-				</span>
-			{/if}
+            {#if missingAreaColumn}
+                <span class="area-filter-hint missing">
+                    <TriangleAlertIcon size={14} />
+                    {$t("query.area.missingColumn", { column: missingAreaColumn })}
+                </span>
+            {:else if areaColumns}
+                <span class="area-filter-hint">
+                    {areaColumns.latitude} / {areaColumns.longitude}
+                </span>
+            {:else}
+                <span class="area-filter-hint missing">
+                    <TriangleAlertIcon size={14} />
+                    {$t("query.area.noColumns")}
+                </span>
+            {/if}
 
-			<Button
-				variant="ghost"
-				title={$t('query.area.editTitle')}
-				onclick={() => (isGeoFilterOpen = true)}
-			>
-				<PencilLineIcon size={16} />
-			</Button>
-			<Button variant="ghost" title={$t('query.area.removeTitle')} onclick={() => (spatialFilter = null)}>
-				<XIcon size={16} />
-			</Button>
-		</div>
-	{/if}
+            <Button
+                variant="ghost"
+                title={$t("query.area.editTitle")}
+                onclick={() => (isGeoFilterOpen = true)}
+            >
+                <PencilLineIcon size={16} />
+            </Button>
+            <Button
+                variant="ghost"
+                title={$t("query.area.removeTitle")}
+                onclick={() => (spatialFilter = null)}
+            >
+                <XIcon size={16} />
+            </Button>
+        </div>
+    {/if}
 
-	<div class="parameters-grid">
-		{#if selectedFields.length > 0}
-			{#each Utils.range(0, selectedFields.length) as index (index)}
-				<Parameter bind:column={selectedFields[index]} remove_column={removeColumnSelection} />
-			{/each}
-		{:else}
-			<h4 class="no-selection">{$t('query.parameters.empty')}</h4>
-		{/if}
-	</div>
+    <div class="parameters-grid">
+        {#if selectedFields.length > 0}
+            {#each Utils.range(0, selectedFields.length) as index (index)}
+                <Parameter
+                    bind:column={selectedFields[index]}
+                    remove_column={removeColumnSelection}
+                />
+            {/each}
+        {:else}
+            <h4 class="no-selection">{$t("query.parameters.empty")}</h4>
+        {/if}
+    </div>
 </div>
 
 <style lang="scss">
-	.filter-warning {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		margin: 0.5rem 0 0;
-		padding: 0.5rem 0.75rem;
-		border: 1px solid var(--destructive);
-		border-radius: var(--radius, 0.5rem);
-		font-size: 0.85rem;
-		color: var(--destructive);
+    .filter-warning {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0 0;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--destructive);
+        border-radius: var(--radius, 0.5rem);
+        font-size: var(--font-size-sm);
+        color: var(--destructive);
 
-		:global(svg) {
-			flex-shrink: 0;
-		}
-	}
+        :global(svg) {
+            flex-shrink: 0;
+        }
+    }
 
-	.header-actions {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 0.5rem;
-	}
+    .header-actions {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-	.area-filter {
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-		border: 1px solid var(--border);
-		border-radius: 0.5rem;
+    .area-filter {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
 
-		.area-filter-label {
-			font-weight: 600;
-		}
+        .area-filter-label {
+            font-weight: 600;
+        }
 
-		.area-filter-hint {
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			gap: 0.35rem;
-			flex-grow: 1;
-			font-size: 0.8rem;
-			color: var(--muted-foreground);
+        .area-filter-hint {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 0.35rem;
+            flex-grow: 1;
+            font-size: var(--font-size-sm);
+            color: var(--muted-foreground);
 
-			&.missing {
-				color: var(--destructive);
-			}
+            &.missing {
+                color: var(--destructive);
+            }
 
-			:global(svg) {
-				flex-shrink: 0;
-			}
-		}
-	}
+            :global(svg) {
+                flex-shrink: 0;
+            }
+        }
+    }
 
-	.parameters-grid {
-		display: grid;
-		gap: 0.5rem;
+    .parameters-grid {
+        display: grid;
+        gap: 0.5rem;
 
-		grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
 
-		// // sm: ≥ 640px
-		// @media (min-width: 640px) {
-		// 	grid-template-columns: repeat(1, minmax(0, 1fr));
-		// }
+        // // sm: ≥ 640px
+        // @media (min-width: 640px) {
+        // 	grid-template-columns: repeat(1, minmax(0, 1fr));
+        // }
 
-		// // md: ≥ 768px
-		// @media (min-width: 768px) {
-		// 	grid-template-columns: repeat(2, minmax(0, 1fr));
-		// }
+        // // md: ≥ 768px
+        // @media (min-width: 768px) {
+        // 	grid-template-columns: repeat(2, minmax(0, 1fr));
+        // }
 
-		// lg: ≥ 1024px
-		// @media (min-width: 1024px) {
-		// 	grid-template-columns: repeat(2, minmax(0, 1fr));
-		// }
-	}
-	#new-query-builder {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		margin-top: 1rem;
-	}
+        // lg: ≥ 1024px
+        // @media (min-width: 1024px) {
+        // 	grid-template-columns: repeat(2, minmax(0, 1fr));
+        // }
+    }
+    #new-query-builder {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-top: 1rem;
+    }
 
-	:global(.search-columns-dialog) {
-		padding: 0;
-		max-width: 42rem;
-	}
+    :global(.search-columns-dialog) {
+        padding: 0;
+        max-width: 42rem;
+    }
 
-	.search-columns-empty-table {
-		font-weight: 600;
-	}
+    .search-columns-empty-table {
+        font-weight: 600;
+    }
 
-	:global(.search-columns-item) {
-		display: flex;
-	}
+    :global(.search-columns-item) {
+        display: flex;
+    }
 
-	.search-columns-item-name {
-		font-weight: 600;
-		flex-grow: 1;
-	}
+    .search-columns-item-name {
+        font-weight: 600;
+        flex-grow: 1;
+    }
 
-	:global(.search-columns-item-icon) {
-		width: 1rem;
-		height: 1rem;
-	}
-	.no-selection {
-		color: hsl(0, 0%, 50%);
-	}
+    :global(.search-columns-item-icon) {
+        width: 1rem;
+        height: 1rem;
+    }
+    .no-selection {
+        color: hsl(0, 0%, 50%);
+    }
 </style>

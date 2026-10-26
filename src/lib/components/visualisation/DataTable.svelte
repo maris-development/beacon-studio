@@ -1,304 +1,337 @@
 <script lang="ts" generics="Row">
-	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
-	import ChrevonUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
-	import ChrevonUpIcon from '@lucide/svelte/icons/chevron-up';
-	import ChrevonDownIcon from '@lucide/svelte/icons/chevron-down';
-	import type { Column, SortDirection } from '@/util-types';
-	import { Utils } from '@/utils';
-	import { t } from '@/i18n';
+    import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
+    import ChrevonUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
+    import ChrevonUpIcon from "@lucide/svelte/icons/chevron-up";
+    import ChrevonDownIcon from "@lucide/svelte/icons/chevron-down";
+    import type { Column, SortDirection } from "@/util-types";
+    import { Utils } from "@/utils";
+    import { t } from "@/i18n";
 
-	type Props = {
-		onChangeSort?: (column: string, direction: SortDirection) => void;
-		onPageChange?: (page: number) => void;
-		onCellClick?: (row: Row, column: Column) => void;
-		columns: Column[];
-		rows: Row[];
-		pageSize?: number;
-		pageIndex?: number;
-		totalRows?: number;
-		isLoading?: boolean;
-		rowClass?: string;
-		size?: 'small' | 'medium' | 'large';
-	};
+    type Props = {
+        onChangeSort?: (column: string, direction: SortDirection) => void;
+        onPageChange?: (page: number) => void;
+        onCellClick?: (row: Row, column: Column) => void;
+        columns: Column[];
+        rows: Row[];
+        pageSize?: number;
+        pageIndex?: number;
+        totalRows?: number;
+        isLoading?: boolean;
+        rowClass?: string;
+        size?: "small" | "medium" | "large";
+        pagination?: boolean;
+        /** Shows a null or undefined cell as a styled NULL, apart from an empty string. */
+        showNull?: boolean;
+    };
 
-	let {
-		onChangeSort = () => {},
-		onPageChange = () => {},
-		onCellClick = () => {},
-		columns,
-		rows,
-		pageSize = 10,
-		pageIndex = 1,
-		totalRows = 0,
-		isLoading = false,
-		rowClass = '',
-		size = 'medium'
-	}: Props = $props();
+    let {
+        onChangeSort = () => {},
+        onPageChange = () => {},
+        onCellClick = () => {},
+        columns,
+        rows,
+        pageSize = 10,
+        pageIndex = 1,
+        totalRows = 0,
+        isLoading = false,
+        rowClass = "",
+        size = "medium",
+        pagination = true,
+        showNull = true
+    }: Props = $props();
 
-	let pageCount: number = $derived.by(() => {
-		return Math.ceil(totalRows / pageSize);
-	});
+    let pageCount: number = $derived.by(() => {
+        return Math.ceil(totalRows / pageSize);
+    });
 
-	function _changeSort(column: Column) {
-		// console.log('_changeSort', column.ref);
+    function _changeSort(column: Column) {
+        // console.log('_changeSort', column.ref);
 
-		//invert direction:
-		if (column.isSorted == true) {
-			// If the same column is clicked, toggle the direction
-			column.sortDirection = column.sortDirection === 'asc' ? 'desc' : 'asc';
+        //invert direction:
+        if (column.isSorted == true) {
+            // If the same column is clicked, toggle the direction
+            column.sortDirection = column.sortDirection === "asc" ? "desc" : "asc";
+        } else {
+            columns.forEach((col) => {
+                col.isSorted = false;
+                col.sortDirection = undefined;
+            });
 
-		} else {
-			columns.forEach(col => {
-				col.isSorted = false;
-				col.sortDirection = undefined;
-			});
+            column.isSorted = true;
+            column.sortDirection = "asc"; // default to ascending
+        }
 
-			column.isSorted = true;
-			column.sortDirection = 'asc'; // default to ascending
-		}
+        onChangeSort(column.key, column.sortDirection);
+    }
 
-		onChangeSort(column.key, column.sortDirection);
-	}
-
-	// `Row` is unconstrained, so it carries no index signature.
-	function cell(row: Row, column: Column): unknown {
-		return (row as Record<string, unknown>)[column.key];
-	}
-
-	
+    // `Row` is unconstrained, so it carries no index signature.
+    function cell(row: Row, column: Column): unknown {
+        return (row as Record<string, unknown>)[column.key];
+    }
 </script>
 
 <div class="data-table-wrapper">
-	<div class="table-wrapper">
-		<table class="dataset-table {size}">
-			<thead>
-				<tr>
-					{#each columns as column (column.key) }
-						{#if column.sortable}
-							<th class:sortable={column.sortable} data-key={column.key} onclick={() => _changeSort(column)} bind:this={column.ref} data-sort="">
-								{column.header}
-								{#if column.sortable == true}
-									 {#if (column.isSorted == true)}
-										{#if (column.sortDirection === 'asc')}
-											<span class="sort-indicator asc">
-												<ChrevonUpIcon size="1.25em" />
-											</span>
-										{/if}
-										{#if (column.sortDirection === 'desc')}
-											<span class="sort-indicator desc">
-												<ChrevonDownIcon size="1.25em" />
-											</span>
-										{/if}
-									{:else}
-										<span class="sort-indicator none">
-											<ChrevonUpDownIcon size="1.25em" />
-										</span>
-									{/if}
-								{/if}
-								
-							</th>
-						{:else}
-							<th data-key={column.key}>{column.header}</th>
-						{/if}
-					{/each}
-				</tr>
-			</thead>
-			<tbody>
-				{#if rows.length === 0 && !isLoading}
-					<tr>
-						<td colspan={columns.length} class="no-data">{$t('table.noData')}</td>
-					</tr>
-				{:else if rows.length === 0}
-					<tr>
-						<td colspan={columns.length} class="no-data">
-							<LoadingSpinner></LoadingSpinner>
-							<span>{$t('table.loadingData')}</span>
-						</td>
-					</tr>
-				{:else}
-					{#each rows as row, rowIndex (rowIndex)}
-						<tr class={rowClass}>
-							{#each columns as column (column.key)}
-								{#if column.rawHtml === true}
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-									<td onclick={() => onCellClick(row, column)}>{@html Utils.toString(cell(row, column))}</td>
-								{:else}
-									<td onclick={() => onCellClick(row, column)}>{Utils.toString(cell(row, column))}</td>
-								{/if}
-							{/each}
-						</tr>
-					{/each}
-				{/if}
-			</tbody>
-		</table>
-	</div>
-	<div class="pagination">
-		<button disabled={pageIndex <= 1} onclick={() => onPageChange(Math.max(1, pageIndex - 1))}>
-			{$t('table.previous')}
-		</button>
-		<div class="page-info">
-			{$t('table.pageBeforeInput')}
-			<input type="number" min="1" max={pageCount} bind:value={pageIndex} oninput={() => onPageChange(pageIndex)} />
-			{$t('table.pageAfterInput', { count: pageCount })}
-
-			
-
-		</div>
-		<button
-			disabled={pageIndex >= pageCount}
-			onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}>{$t('table.next')}</button
-		>
-	</div>
+    <div class="table-wrapper">
+        <table class="dataset-table {size}">
+            <thead>
+                <tr>
+                    {#each columns as column (column.key)}
+                        {#if column.sortable}
+                            <th
+                                class:sortable={column.sortable}
+                                data-key={column.key}
+                                onclick={() => _changeSort(column)}
+                                bind:this={column.ref}
+                                data-sort=""
+                            >
+                                {column.header}
+                                {#if column.sortable == true}
+                                    {#if column.isSorted == true}
+                                        {#if column.sortDirection === "asc"}
+                                            <span class="sort-indicator asc">
+                                                <ChrevonUpIcon size="1.25em" />
+                                            </span>
+                                        {/if}
+                                        {#if column.sortDirection === "desc"}
+                                            <span class="sort-indicator desc">
+                                                <ChrevonDownIcon size="1.25em" />
+                                            </span>
+                                        {/if}
+                                    {:else}
+                                        <span class="sort-indicator none">
+                                            <ChrevonUpDownIcon size="1.25em" />
+                                        </span>
+                                    {/if}
+                                {/if}
+                            </th>
+                        {:else}
+                            <th data-key={column.key}>{column.header}</th>
+                        {/if}
+                    {/each}
+                </tr>
+            </thead>
+            <tbody>
+                {#if rows.length === 0 && !isLoading}
+                    <tr>
+                        <td colspan={columns.length} class="no-data">{$t("table.noData")}</td>
+                    </tr>
+                {:else if rows.length === 0}
+                    <tr>
+                        <td colspan={columns.length} class="no-data">
+                            <LoadingSpinner></LoadingSpinner>
+                            <span>{$t("table.loadingData")}</span>
+                        </td>
+                    </tr>
+                {:else}
+                    {#each rows as row, rowIndex (rowIndex)}
+                        <tr class={rowClass}>
+                            {#each columns as column (column.key)}
+                                {#if showNull && cell(row, column) == null}
+                                    <td onclick={() => onCellClick(row, column)}
+                                        ><span class="null-value">{$t("table.nullValue")}</span></td
+                                    >
+                                {:else if column.rawHtml === true}
+                                    <!-- eslint-disable svelte/no-at-html-tags -->
+                                    <td onclick={() => onCellClick(row, column)}
+                                        >{@html Utils.toString(cell(row, column))}</td
+                                    >
+                                    <!-- eslint-enable svelte/no-at-html-tags -->
+                                {:else}
+                                    <td onclick={() => onCellClick(row, column)}
+                                        >{Utils.toString(cell(row, column))}</td
+                                    >
+                                {/if}
+                            {/each}
+                        </tr>
+                    {/each}
+                {/if}
+            </tbody>
+        </table>
+    </div>
+    {#if pagination}
+        <div class="pagination">
+            <button
+                disabled={pageIndex <= 1}
+                onclick={() => onPageChange(Math.max(1, pageIndex - 1))}
+            >
+                {$t("table.previous")}
+            </button>
+            <div class="page-info">
+                {$t("table.pageBeforeInput")}
+                <input
+                    type="number"
+                    min="1"
+                    max={pageCount}
+                    bind:value={pageIndex}
+                    oninput={() => onPageChange(pageIndex)}
+                />
+                {$t("table.pageAfterInput", { count: pageCount })}
+            </div>
+            <button
+                disabled={pageIndex >= pageCount}
+                onclick={() => onPageChange(Math.min(pageCount, pageIndex + 1))}
+                >{$t("table.next")}</button
+            >
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
-	.data-table-wrapper {
-		border: 1px solid var(--table-border);
-		border-radius: 8px;
-		overflow: hidden;
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		flex-grow: 1;
-		min-height: 0;
-		min-width: 0;
-		overflow: hidden;
+    .data-table-wrapper {
+        border: 1px solid var(--table-border);
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        min-height: 0;
+        min-width: 0;
+        overflow: hidden;
 
-		.table-wrapper {
-			overflow: auto;
-			flex-grow: 1;
-			min-height: 0;
-			min-width: 0;
+        .table-wrapper {
+            overflow: auto;
+            flex-grow: 1;
+            min-height: 0;
+            min-width: 0;
 
-			table.dataset-table {
-				min-width: 100%;
-				width: max-content;
-				border-collapse: collapse;
+            table.dataset-table {
+                min-width: 100%;
+                width: max-content;
+                border-collapse: collapse;
 
-				thead th,
-				tbody td {
-					padding: 0.5rem 0.75rem;
-					font-size: 0.875rem;
-					border-bottom: 1px solid var(--table-border);
-					white-space: nowrap;
-				}
+                thead th,
+                tbody td {
+                    padding: 0.5rem 0.75rem;
+                    font-size: var(--font-size-sm);
+                    border-bottom: 1px solid var(--table-border);
+                    white-space: nowrap;
+                }
 
-				&.small {
-					thead th, 
-					tbody td {
-						padding: 0.25rem 0.5rem;
-						font-size: 0.7rem;
-					}
-				}
+                &.small {
+                    thead th,
+                    tbody td {
+                        padding: 0.25rem 0.5rem;
+                        font-size: var(--font-size-xs);
+                    }
+                }
 
-				&.large {
-					thead th, 
-					tbody td {
-						padding: 1rem 1.5rem;
-						font-size: 1rem;
-					}
-				}
-				
-				
-				thead {
-					background-color: var(--table-header-background);
+                &.large {
+                    thead th,
+                    tbody td {
+                        padding: 1rem 1.5rem;
+                        font-size: var(--font-size-md);
+                    }
+                }
 
-					th {
-						position: sticky;
-						top: 0;
-						z-index: 1;
-						background-color: var(--table-header-background);
-						text-align: left;
-						font-weight: 600;
-						text-transform: uppercase;
-						color: var(--table-header-foreground);
+                thead {
+                    background-color: var(--table-header-background);
 
-						&.sortable {
-							cursor: pointer;
+                    th {
+                        position: sticky;
+                        top: 0;
+                        z-index: 1;
+                        background-color: var(--table-header-background);
+                        text-align: left;
+                        font-weight: 600;
+                        text-transform: uppercase;
+                        color: var(--table-header-foreground);
 
-							&:hover {
-								background-color: color-mix(in srgb, black 5%, var(--table-header-background));
-							}
-						}
+                        &.sortable {
+                            cursor: pointer;
 
-						.sort-indicator {
-							// margin-left: 0.5rem;
-							display: inline-block;
-							vertical-align: middle;
+                            &:hover {
+                                background-color: color-mix(
+                                    in srgb,
+                                    black 5%,
+                                    var(--table-header-background)
+                                );
+                            }
+                        }
 
-							&.none {
-								opacity: 0.5;
-							}
+                        .sort-indicator {
+                            // margin-left: 0.5rem;
+                            display: inline-block;
+                            vertical-align: middle;
 
-						}
-					}
-				}
+                            &.none {
+                                opacity: 0.5;
+                            }
+                        }
+                    }
+                }
 
-				tbody {
-					tr {
-						&:nth-child(even) {
-							background-color: var(--table-row-alternate);
-						}
+                tbody {
+                    tr {
+                        &:nth-child(even) {
+                            background-color: var(--table-row-alternate);
+                        }
 
-						td {
-							color: var(--table-foreground);
+                        td {
+                            color: var(--table-foreground);
 
-							&.no-data {
-								display: table-cell;
-								text-align: center;
+                            .null-value {
+                                color: var(--muted-foreground);
+                                font-style: italic;
+                                opacity: 0.7;
+                            }
 
-								> * {
-									display: inline-block;
-									margin: 0 auto;
-								}
-							}
-						}
+                            &.no-data {
+                                display: table-cell;
+                                text-align: center;
 
-						&:hover {
-							background-color: var(--table-row-hover);
-						}
-					}
-				}
-			}
-		}
+                                > * {
+                                    display: inline-block;
+                                    margin: 0 auto;
+                                }
+                            }
+                        }
 
-		.pagination {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 0.75rem 1rem;
-			background-color: var(--background);
-			border-top: 1px solid var(--border);
+                        &:hover {
+                            background-color: var(--table-row-hover);
+                        }
+                    }
+                }
+            }
+        }
 
-			button {
-				background-color: var(--primary);
-				color: var(--primary-foreground);
-				border: none;
-				padding: 0.5rem 1rem;
-				font-size: 0.875rem;
-				border-radius: 4px;
-				cursor: pointer;
-				transition: filter 0.2s ease;
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            background-color: var(--background);
+            border-top: 1px solid var(--border);
 
-				// Since Sass’s darken() won’t work directly on CSS vars,
-				// we use a CSS filter for a quick “hover‐darken”.
-				&:hover:not(:disabled) {
-					filter: brightness(0.9);
-				}
+            button {
+                background-color: var(--primary);
+                color: var(--primary-foreground);
+                border: none;
+                padding: 0.5rem 1rem;
+                font-size: var(--font-size-sm);
+                border-radius: 4px;
+                cursor: pointer;
+                transition: filter 0.2s ease;
 
-				&:disabled {
-					background-color: var(--muted);
-					color: var(--muted-foreground);
-					cursor: not-allowed;
-					opacity: 0.6;
-					filter: none; // reset any inherited filter
-				}
-			}
+                // Since Sass’s darken() won’t work directly on CSS vars,
+                // we use a CSS filter for a quick “hover‐darken”.
+                &:hover:not(:disabled) {
+                    filter: brightness(0.9);
+                }
 
-			.page-info {
-				font-size: 0.875rem;
-				color: var(--foreground);
-			}
-		}
-	}
+                &:disabled {
+                    background-color: var(--muted);
+                    color: var(--muted-foreground);
+                    cursor: not-allowed;
+                    opacity: 0.6;
+                    filter: none; // reset any inherited filter
+                }
+            }
+
+            .page-info {
+                font-size: var(--font-size-sm);
+                color: var(--foreground);
+            }
+        }
+    }
 </style>

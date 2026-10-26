@@ -7,13 +7,13 @@
  * the two apart.
  */
 
-import { browser } from '$app/environment';
+import { browser } from "$app/environment";
 
 /** A scheme at the start of a URL, for example `https://`. */
 const SCHEME = /^[a-z][a-z0-9+.-]*:\/\//i;
 
 /** The schemes a Beacon node can answer on. */
-const KNOWN_SCHEMES = ['http:', 'https:'];
+const KNOWN_SCHEMES = ["http:", "https:"];
 
 /** The origin and the path of one node. See {@link splitNodeUrl}. */
 export type NodeUrlParts = {
@@ -31,11 +31,11 @@ export type NodeUrlParts = {
  * it, and the value then keeps that scheme.
  */
 function defaultScheme(): string {
-    if (!browser) return 'https:';
+    if (!browser) return "https:";
 
     const scheme = window.location.protocol;
 
-    if (!KNOWN_SCHEMES.includes(scheme)) return 'https:';
+    if (!KNOWN_SCHEMES.includes(scheme)) return "https:";
 
     return scheme;
 }
@@ -47,7 +47,7 @@ function defaultScheme(): string {
  */
 function parse(url: string): URL | null {
     const trimmed = url.trim();
-    if (trimmed === '') return null;
+    if (trimmed === "") return null;
 
     let withScheme = trimmed;
 
@@ -64,7 +64,7 @@ function parse(url: string): URL | null {
 
 /** Removes every trailing slash. A path of `/` becomes `''`. */
 function stripTrailingSlash(path: string): string {
-    return path.replace(/\/+$/, '');
+    return path.replace(/\/+$/, "");
 }
 
 /**
@@ -82,13 +82,13 @@ export function splitNodeUrl(url: string): NodeUrlParts {
     const parsed = parse(url);
 
     if (!parsed) {
-        return { origin: stripTrailingSlash(url.trim()), pathPrefix: '' };
+        return { origin: stripTrailingSlash(url.trim()), pathPrefix: "" };
     }
 
     // A scheme that the URL standard calls "not special" gives the string
     // "null" as the origin. Build the origin by hand for that case.
     let origin = parsed.origin;
-    if (origin === 'null') {
+    if (origin === "null") {
         origin = `${parsed.protocol}//${parsed.host}`;
     }
 
@@ -104,4 +104,13 @@ export function normalizeUrl(url: string): string {
     const { origin, pathPrefix } = splitNodeUrl(url);
 
     return origin + pathPrefix;
+}
+
+/** The host of a node URL, for a short label. Returns the input when it does not parse. */
+export function nodeHost(url: string): string {
+    try {
+        return new URL(url).host;
+    } catch {
+        return url;
+    }
 }

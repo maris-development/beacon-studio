@@ -1,267 +1,431 @@
 <script lang="ts">
-	import { page } from '$app/state';
-	import { track } from '@/telemetry';
-	import { nodes } from '@/services/beacon-node';
-	import { ensureFresh } from '@/services/beacon-node-connect';
-	import { BeaconClient } from '@/beacon-api/client';
-	import DataTable from '@/components/visualisation/DataTable.svelte';
-	import { goto } from '$app/navigation';
-	import { Utils, VirtualPaginationData } from '@/utils';
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import type { Column } from '@/util-types';
-	import { resolve } from '$app/paths';
-	import Button from '@/components/buttons/Button.svelte';
-	import UploadDatasetsModal from '@/components/modals/UploadDatasetsModal.svelte';
-	import * as Select from '$lib/components/ui/select/index.js';
-	import BeaconNodeStatus from '@/components/BeaconNodeStatus.svelte';
-	import { Label } from '@/components/ui/label';
-	import { dataBrowserNodeId } from '@/stores/data-browser-node';
-	import { Input } from '@/components/ui/input';
-	import { t } from '@/i18n';
+    import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
+    import { page } from "$app/state";
+    import { untrack } from "svelte";
+    import FolderIcon from "@lucide/svelte/icons/folder";
+    import FileIcon from "@lucide/svelte/icons/file";
+    import Button from "@/components/buttons/Button.svelte";
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import NodePicker from "@/components/NodePicker.svelte";
+    import AdminAction from "@/components/AdminAction.svelte";
+    import UploadDialog from "@/components/data-browser/UploadDialog.svelte";
+    import StorageBar from "@/components/data-browser/StorageBar.svelte";
+    import { Input } from "@/components/ui/input";
+    import { makeBeaconClient } from "@/beacon-api/client";
+    import { currentNode } from "@/services/beacon-node";
+    import { track } from "@/telemetry";
+    import { withBack } from "@/data-browser/back";
+    import { normalizeFolder } from "@/data-browser/folders";
+    import {
+        DATASET_LIST_LIMIT,
+        datasetDetailQuery,
+        fileName,
+        folderParts,
+        formatSize,
+        listFolder,
+        parseEntries,
+        searchEntries,
+        sortFiles,
+        type DatasetEntry,
+        type FileSort
+    } from "@/data-browser/datasets";
+    import { parseDate } from "@/data-browser/editor-link";
+    import { sqlError } from "@/sql/statement";
+    import { formatDate, formatNumber, t, type Message } from "@/i18n";
 
-	type Dataset = {
-		dataset: string;
-	};
+    const PAGE_SIZE = 100;
 
-	let selectedNodeId = dataBrowserNodeId;
-	let selectedNode = $derived(
-		$nodes.find((node) => node.id === $selectedNodeId) ?? $nodes[0] ?? null
-	);
-	let client: BeaconClient;
+    let loadedUrl: string | null = null;
 
-	let columns: Column[] = $derived([{ key: 'dataset', header: $t('browser.datasets.column'), sortable: false }]);
-	let virtualSchemaData: VirtualPaginationData<Dataset> = new VirtualPaginationData<Dataset>([]);
-	let rows: { dataset: string }[] = $state([]);
-	let upload_files_modal_open: boolean = $state(false);
+    let entries: DatasetEntry[] = $state([]);
+    let total: number | null = $state(null);
+    let loading = $state(false);
+    let error: Message | null = $state(null);
+    let uploadOpen = $state(false);
+    // `q` is the parameter of old bookmarks.
+    let needle = $state(
+        page.url.searchParams.get("search") ?? page.url.searchParams.get("q") ?? ""
+    );
+    let sortKey: FileSort = $state("name");
+    let sortDirection: "asc" | "desc" = $state("asc");
+    // The page lives in the URL, so browser Back restores it with the folder.
+    let requestedPage = $derived(Number(page.url.searchParams.get("page") ?? "1") || 1);
 
-	let totalRows: number = $state(0);
-	let pageIndex: number = $state(Number(page.url.searchParams.get('page') ?? '1'));
-	let offset = $state(0);
-	let isLoading = $state(true);
-	let pageSize: number = 20;
-	let firstLoad = true;
+    let node = $derived($currentNode);
+    let nodeUrl = $derived(node?.url ?? null);
+    let folder = $derived(normalizeFolder(page.url.searchParams.get("folder") ?? ""));
+    let searching = $derived(needle.trim() !== "");
+    let cut = $derived(entries.length >= DATASET_LIST_LIMIT);
 
-	let loadedNodeId: string | null = null;
+    let listing = $derived.by(() => {
+        if (searching) {
+            return {
+                folders: [],
+                files: sortFiles(searchEntries(entries, needle), sortKey, sortDirection)
+            };
+        }
 
-	$effect(() => {
-		if (!selectedNode || selectedNode.id === loadedNodeId) return;
-		loadedNodeId = selectedNode.id;
+        const { folders, files } = listFolder(entries, folder);
+        return { folders, files: sortFiles(files, sortKey, sortDirection) };
+    });
 
-		// Persist a fallback pick (e.g. first node) the same as an explicit one.
-		if ($selectedNodeId !== selectedNode.id) selectedNodeId.set(selectedNode.id);
+    let rowCount = $derived(listing.folders.length + listing.files.length);
+    let pageCount = $derived(Math.max(1, Math.ceil(rowCount / PAGE_SIZE)));
+    // A new folder or search can hold fewer pages than the page asked for.
+    let pageIndex = $derived(Math.min(Math.max(1, requestedPage), pageCount));
+    let pageFolders = $derived(
+        listing.folders.slice((pageIndex - 1) * PAGE_SIZE, pageIndex * PAGE_SIZE)
+    );
+    let pageFiles = $derived.by(() => {
+        const start = Math.max(0, (pageIndex - 1) * PAGE_SIZE - listing.folders.length);
+        const room = PAGE_SIZE - pageFolders.length;
+        return listing.files.slice(start, start + room);
+    });
 
-		client = BeaconClient.new(selectedNode);
-		pageIndex = 1;
-		virtualSchemaData.resetFilter();
+    $effect(() => {
+        if (!nodeUrl) return;
+        untrack(() => load());
+    });
 
-		const searchInput = document.getElementById('search') as HTMLInputElement | null;
-		if (searchInput) searchInput.value = '';
+    async function load() {
+        const current = node;
+        if (!current) return;
 
-		firstLoad = true; // let getDatasets() run again despite the isLoading guard
-		getDatasets();
-	});
+        const client = makeBeaconClient(current);
+        loading = true;
+        error = null;
 
-	// Show a true status dot for the picker. `ensureFresh` skips a check that is
-	// not due, so this costs nothing on a second visit.
-	$effect(() => {
-		for (const node of $nodes) void ensureFresh(node);
-	});
+        // Another node: its file list must not show under the new node.
+        if (loadedUrl !== null && current.url !== loadedUrl) {
+            entries = [];
+            total = null;
+            if (requestedPage !== 1) goToPage(1);
+        }
+        loadedUrl = current.url;
 
-	async function getDatasets() {
-		if (isLoading && !firstLoad) return; // prevent multiple requests at once, might break pagination etc.
+        try {
+            const [raw, count] = await Promise.all([
+                client.datasets({ limit: DATASET_LIST_LIMIT }),
+                client.totalDatasets().catch(() => null)
+            ]);
+            if (current.url !== nodeUrl) return;
 
-		firstLoad = false;
-		isLoading = true;
+            entries = parseEntries(raw);
+            total = count;
+        } catch (caught) {
+            if (current.url === nodeUrl) {
+                entries = [];
+                error = sqlError(caught);
+            }
+        } finally {
+            if (current.url === nodeUrl) loading = false;
+        }
+    }
 
-		const datasets: string[] = await client.getDatasets();
+    function listHref(nextFolder: string): string {
+        const url = new URL(resolve("/data-browser/datasets"), page.url.origin);
+        if (nextFolder) url.searchParams.set("folder", nextFolder);
+        return `${url.pathname}${url.search}`;
+    }
 
-		if (datasets) {
-			totalRows = datasets.length;
-			virtualSchemaData.setData(datasets.map((dataset) => ({ dataset })));
-			getPage();
-		}
-	}
+    function backUrl(): string {
+        const url = new URL(page.url);
+        url.searchParams.delete("q");
+        if (needle.trim()) {
+            url.searchParams.set("search", needle.trim());
+        } else {
+            url.searchParams.delete("search");
+        }
+        url.searchParams.set("page", String(pageIndex));
+        return `${url.pathname}${url.search}`;
+    }
 
-	function getPage() {
-		offset = (pageIndex - 1) * pageSize;
+    function detailHref(entry: DatasetEntry): string {
+        if (!node) return "#";
+        const href = `${resolve("/data-browser/datasets/detail")}?${datasetDetailQuery(entry.path, node.url)}`;
+        return withBack(href, backUrl());
+    }
 
-		const data = virtualSchemaData.getPageData(offset, pageSize);
+    function goToPage(next: number) {
+        const url = new URL(page.url);
+        if (next <= 1) {
+            url.searchParams.delete("page");
+        } else {
+            url.searchParams.set("page", String(next));
+        }
+        goto(`${url.pathname}${url.search}`, { keepFocus: true, noScroll: true });
+    }
 
-		setData(data);
+    function openFolder(path: string) {
+        needle = "";
+        goto(listHref(path), { keepFocus: true, noScroll: true });
+    }
 
-		Utils.setPageUrlParameter(pageIndex);
-	}
+    function setSort(key: FileSort) {
+        if (sortKey === key) {
+            if (sortDirection === "asc") {
+                sortDirection = "desc";
+            } else {
+                sortDirection = "asc";
+            }
+        } else {
+            sortKey = key;
+            sortDirection = "asc";
+        }
+    }
 
-	function setData(datasets: Dataset[]) {
-		rows = datasets;
-
-		isLoading = false;
-	}
-
-	function onPageChange(page: number) {
-		pageIndex = page;
-
-		getPage();
-	}
-
-	function onSearchBoxChange() {
-		const searchTerm = (document.getElementById('search') as HTMLInputElement).value;
-
-		if (!searchTerm) {
-			totalRows = virtualSchemaData.resetFilter();
-			getPage();
-			return;
-		}
-
-		totalRows = virtualSchemaData.filter(function (field: Dataset) {
-			for (const value of Object.values(field)) {
-				if (typeof value === 'string') {
-					return value.toLowerCase().includes(searchTerm.toLowerCase());
-				}
-			}
-
-			return false;
-		});
-
-		track('browser.search', { props: { scope: 'datasets', term: searchTerm.slice(0, 60), results: totalRows } });
-
-		getPage();
-	}
-
-	function onCellClick(row: { dataset: string }) {
-		if (!selectedNode) return;
-
-		const filename = row.dataset;
-
-		const url = new URL(resolve('/data-browser/datasets/detail'), window.location.origin);
-
-		url.searchParams.set('file', filename);
-		url.searchParams.set('node', selectedNode.url);
-
-		goto(url.toString());
-	}
-
-	function onChangeSort(column: string, direction: 'asc' | 'desc') {
-		console.warn('[NOT IMPLEMENTED] Sorting by', column, 'in', direction, 'order');
-	}
+    function onSearch() {
+        if (requestedPage !== 1) goToPage(1);
+        if (searching) {
+            track("browser.search", {
+                props: {
+                    scope: "datasets",
+                    term: needle.trim().slice(0, 60),
+                    results: listing.files.length
+                }
+            });
+        }
+    }
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('nav.item.datasets') })}</title>
+    <title>{$t("app.pageTitle", { page: $t("nav.item.datasets") })}</title>
 </svelte:head>
 
 <Cookiecrumb
-	crumbs={[
-		{ label: $t('nav.item.dataBrowser'), href: resolve('/data-browser') },
-		{ label: $t('nav.item.datasets'), href: resolve('/data-browser/datasets') }
-	]}
+    crumbs={[
+        { label: $t("nav.item.dataBrowser"), href: resolve("/data-browser") },
+        { label: $t("nav.item.datasets"), href: resolve("/data-browser/datasets") }
+    ]}
 />
 
 <div class="page-wrapper">
-	<div class="page-container">
-		<h1>{$t('nav.item.datasets')}</h1>
+    <div class="page-container">
+        <h1>{$t("nav.item.datasets")}</h1>
 
-		<p>{$t('browser.datasets.intro')}</p>
+        <p>{$t("dataBrowser.datasets.intro")}</p>
 
-		<div class="mb-4 node-picker">
-			<Label size="sm" for="beacon-node-select">{$t('browser.picker.label')}</Label>
+        <NodePicker>
+            {#snippet actions()}
+                <AdminAction>
+                    {#snippet children({ disabled })}
+                        <Button
+                            variant="outline"
+                            disabled={disabled || !node}
+                            onclick={() => (uploadOpen = true)}
+                        >
+                            {$t("dataBrowser.datasets.upload")}
+                        </Button>
+                    {/snippet}
+                </AdminAction>
+            {/snippet}
+        </NodePicker>
 
-			<div class="flex items-center gap-2">
-				<Select.Root
-					type="single"
-					name="beaconNode"
-					value={selectedNode?.id ?? ''}
-					onValueChange={(id) => selectedNodeId.set(id)}
-				>
-					<Select.Trigger id="beacon-node-select" class="node-select-trigger">
-						{selectedNode?.name ?? $t('browser.picker.placeholder')}
-					</Select.Trigger>
-					<Select.Content>
-						<Select.Group>
-							<Select.Label>{$t('browser.picker.group')}</Select.Label>
-							{#each $nodes as node (node.id)}
-								<Select.Item value={node.id} label={node.name}>
-									{node.name}
-								</Select.Item>
-							{/each}
-						</Select.Group>
-					</Select.Content>
-				</Select.Root>
+        {#if !node}
+            <p>{$t("dataBrowser.datasets.pickNode")}</p>
+        {:else}
+            <StorageBar {node} />
 
-				{#if selectedNode}
-					<BeaconNodeStatus health={selectedNode} variant="dot" />
-				{/if}
-			</div>
-		</div>
+            <div class="toolbar">
+                <Input
+                    type="search"
+                    placeholder={$t("dataBrowser.datasets.search")}
+                    bind:value={needle}
+                    onchange={onSearch}
+                />
+                {#if total !== null}
+                    <span class="muted"
+                        >{$t("dataBrowser.datasets.fileCount", { count: total })}</span
+                    >
+                {/if}
+            </div>
 
-		{#if $nodes.length === 0}
-			<p>{$t('browser.datasets.noNodes')}</p>
-		{:else}
-			<div class="table-header-row">
-				<Input type="search" id="search" placeholder={$t('browser.searchPlaceholder')} class="search-input" onchange={onSearchBoxChange} />
+            {#if cut}
+                <p class="warning">
+                    {$t("dataBrowser.datasets.listCut", { limit: DATASET_LIST_LIMIT })}
+                </p>
+            {/if}
 
-				<Button
-					onclick={() => {
-						upload_files_modal_open = true;
-					}}
-					variant="outline">{$t('upload.files.title')}</Button
-				>
-			</div>
+            {#if !searching}
+                <nav class="path" aria-label={$t("dataBrowser.datasets.folderNav")}>
+                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
+                    <a href={listHref("")}>{$t("dataBrowser.datasets.all")}</a>
+                    {#each folderParts(folder) as part (part.path)}
+                        <span>/</span>
+                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
+                        <a href={listHref(part.path)}>{part.name}</a>
+                    {/each}
+                </nav>
+            {/if}
 
-			<DataTable
-				rowClass="arrow-row"
-				{onChangeSort}
-				{onPageChange}
-				{onCellClick}
-				{columns}
-				{rows}
-				{totalRows}
-				{pageSize}
-				{pageIndex}
-				{isLoading}
-			/>
+            {#if loading && entries.length === 0}
+                <p class="muted">{$t("dataBrowser.datasets.loading")}</p>
+            {:else if error}
+                <p class="error">{$t(error)}</p>
+            {:else if rowCount === 0}
+                <p class="muted">{$t("dataBrowser.datasets.empty")}</p>
+            {:else}
+                <table class="files">
+                    <thead>
+                        <tr>
+                            <th>
+                                <button type="button" onclick={() => setSort("name")}
+                                    >{$t("common.name")}</button
+                                >
+                            </th>
+                            <th>{$t("dataBrowser.datasets.column.format")}</th>
+                            <th>
+                                <button type="button" onclick={() => setSort("size")}>
+                                    {$t("dataBrowser.datasets.column.size")}
+                                </button>
+                            </th>
+                            <th>
+                                <button type="button" onclick={() => setSort("date")}>
+                                    {$t("dataBrowser.datasets.column.modified")}
+                                </button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {#each pageFolders as row (row.path)}
+                            <tr>
+                                <td colspan="4">
+                                    <button
+                                        type="button"
+                                        class="link"
+                                        onclick={() => openFolder(row.path)}
+                                    >
+                                        <FolderIcon class="size-4" />
+                                        {row.name}
+                                        <span class="muted">({$formatNumber(row.count)})</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        {/each}
+                        {#each pageFiles as entry (entry.path)}
+                            {@const modified = parseDate(entry.lastModified)}
+                            <tr>
+                                <td>
+                                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- detailHref resolves the path -->
+                                    <a class="link" href={detailHref(entry)}>
+                                        <FileIcon class="size-4" />
+                                        {#if searching}{entry.path}{:else}{fileName(
+                                                entry.path
+                                            )}{/if}
+                                    </a>
+                                </td>
+                                <td>{entry.format}</td>
+                                <td>{formatSize(entry.size, $formatNumber)}</td>
+                                <td
+                                    >{#if modified}{$formatDate(modified)}{/if}</td
+                                >
+                            </tr>
+                        {/each}
+                    </tbody>
+                </table>
 
-			{#if upload_files_modal_open}
-				<UploadDatasetsModal
-					onCancel={() => (upload_files_modal_open = false)}
-					node={selectedNode}
-				/>
-			{/if}
-		{/if}
-	</div>
+                {#if pageCount > 1}
+                    <div class="pager">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pageIndex <= 1}
+                            onclick={() => goToPage(pageIndex - 1)}
+                            >{$t("dataBrowser.datasets.previous")}</Button
+                        >
+                        <span class="muted">
+                            {$t("dataBrowser.datasets.pageOf", {
+                                page: pageIndex,
+                                count: pageCount
+                            })}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={pageIndex >= pageCount}
+                            onclick={() => goToPage(pageIndex + 1)}
+                            >{$t("dataBrowser.datasets.next")}</Button
+                        >
+                    </div>
+                {/if}
+            {/if}
+        {/if}
+    </div>
 </div>
 
+{#if uploadOpen && node}
+    <UploadDialog {node} {folder} onClose={() => (uploadOpen = false)} onUploaded={load} />
+{/if}
+
 <style lang="scss">
-	div.table-header-row {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 0.5rem;
-		margin-bottom: 0.5rem;
-	}
+    .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
 
-	div.node-picker {
-		display: flex;
-		flex-direction: column;
-		gap: 0.375rem;
-	}
+    .path {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+        font-family: var(--font-family-mono);
+    }
 
-	div.page-container :global(tr.arrow-row) {
-		position: relative;
+    .files {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: var(--font-size-sm);
 
-		cursor: pointer;
+        th,
+        td {
+            padding: 0.375rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
 
-		&::after {
-			content: '';
-			position: absolute;
-			top: 50%;
-			right: 1rem;
-			width: 1em;
-			height: 1em;
-			transform: translateY(-50%);
+        th button {
+            padding: 0;
+            border: 0;
+            background: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+    }
 
-			mask: url('/icons/arrow-right.svg') no-repeat center/contain;
-			background-color: currentColor;
-		}
-	}
+    .link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+        word-break: break-all;
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    .pager {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .muted {
+        color: var(--muted-foreground);
+    }
+
+    .warning,
+    .error {
+        color: var(--destructive);
+    }
 </style>

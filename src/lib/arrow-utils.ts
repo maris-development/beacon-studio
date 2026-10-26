@@ -1,24 +1,23 @@
-import * as ApacheArrow from 'apache-arrow';
-import type { SortDirection } from './util-types';
-import { alignLongitude, LongitudeRange, wrapLongitude } from './geo/longitude';
-
+import * as ApacheArrow from "apache-arrow";
+import type { SortDirection } from "./util-types";
+import { alignLongitude, LongitudeRange, wrapLongitude } from "./geo/longitude";
 
 export class ApacheArrowUtils {
     /**
-         * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
-         * 
-         * The cloning process follows these steps:
-         * 1. Attempts to use `structuredClone` for a deep and accurate clone.
-         * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
-         * 3. As a last resort, performs a shallow clone using object spread.
-         * 
-         * @typeParam T - The type of the value to clone.
-         * @param value - The value or Svelte `Readable` store to clone.
-         * @returns A cloned copy of the input value.
-         * @remarks
-         * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
-         * - Non-serializable properties may be lost if the fallback methods are used.
-         */
+     * Creates a deep clone of the provided value, attempting to preserve complex types such as Dates, Maps, and Sets.
+     *
+     * The cloning process follows these steps:
+     * 1. Attempts to use `structuredClone` for a deep and accurate clone.
+     * 2. Falls back to `JSON.parse(JSON.stringify(value))` for JSON-serializable objects, which removes proxies and non-serializable properties.
+     * 3. As a last resort, performs a shallow clone using object spread.
+     *
+     * @typeParam T - The type of the value to clone.
+     * @param value - The value or Svelte `Readable` store to clone.
+     * @returns A cloned copy of the input value.
+     * @remarks
+     * - If all cloning methods fail, a shallow clone is returned and a warning is logged.
+     * - Non-serializable properties may be lost if the fallback methods are used.
+     */
     static cloneObject<T>(value: T | ApacheArrow.Readable<T>): T {
         // 1) Best: structuredClone (fast, preserves Dates/Maps/Sets, etc.)
         try {
@@ -38,12 +37,11 @@ export class ApacheArrowUtils {
         // 3) Last resort, shallow clone
         const clone = { ...value } as T;
 
-        console.warn('cloneObject: shallow clone', clone)
+        console.warn("cloneObject: shallow clone", clone);
 
-        return clone
+        return clone;
     }
 
-    
     /**
      * Finds and returns rows from an Apache Arrow table whose latitude and longitude values
      * match the provided coordinates, rounded to a specified number of decimal places.
@@ -62,11 +60,10 @@ export class ApacheArrowUtils {
         table: ApacheArrow.Table<T>,
         latLon: [number, number],
         groupByDecimals: number = 3,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude",
         maxRows: number = 100
     ): unknown[] {
-
         const toKey = (lat: number, lon: number): string => {
             return `${lat.toFixed(groupByDecimals)},${lon.toFixed(groupByDecimals)}`;
         };
@@ -76,12 +73,12 @@ export class ApacheArrowUtils {
         const rows = table.numRows;
 
         if (!latCol || !lonCol) {
-            throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
+            throw new Error("Table must contain Latitude and Longitude columns (case insensitive)");
         }
 
         const results: unknown[] = [];
         const searchKey = toKey(latLon[0], latLon[1]);
-        const amounfOfFields = table.schema.fields.filter(f => f.name !== 'geometry').length;
+        const amounfOfFields = table.schema.fields.filter((f) => f.name !== "geometry").length;
 
         for (let i = 0; i < rows; i++) {
             const rowLat = latCol.get(i);
@@ -89,7 +86,6 @@ export class ApacheArrowUtils {
             const rowKey = toKey(rowLat, rowLon);
 
             if (rowKey === searchKey) {
-
                 const rowData = table.get(i).toArray().copyWithin(amounfOfFields, 0);
 
                 results.push(rowData);
@@ -118,11 +114,10 @@ export class ApacheArrowUtils {
      */
     static getTableGeometryBounds<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T> | null,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude'
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude"
     ): [[number, number], [number, number]] {
         // console.log('getTableGeometryBounds', table);
-
 
         if (!table) {
             //return world bounds:
@@ -136,7 +131,7 @@ export class ApacheArrowUtils {
         const lonCol = table.getChild(longitudeColumnName);
 
         if (!latCol || !lonCol) {
-            throw new Error('Table must contain Latitude and Longitude columns (case insensitive)');
+            throw new Error("Table must contain Latitude and Longitude columns (case insensitive)");
         }
 
         let minLat = Infinity;
@@ -178,60 +173,109 @@ export class ApacheArrowUtils {
         ];
     }
 
-    // A Dictionary vector decodes to its value type, so switch on that type.
     private static valueTypeId(type: ApacheArrow.DataType): ApacheArrow.Type {
-        if (ApacheArrow.DataType.isDictionary(type)) {
-            return type.dictionary.typeId;
-        }
-
-        return type.typeId;
+        return ApacheArrowUtils.valueType(type).typeId;
     }
 
     /**
      * Converts a typed value to its string representation based on the provided Apache Arrow type.
-     * 
+     *
      * @param value - The value to convert. Can be of any type.
      * @param type - The Apache Arrow type describing the value's type.
      * @returns The string representation of the value, or an empty string if the value is `null` or `undefined`.
      *
      * @remarks
-     * - For `Utf8`, `LargeUtf8`, `Int`, and `Float` types, the value is converted to a string using `String(value)`.
+     * - For `Utf8`, `LargeUtf8`, and `Int` types, the value is converted to a string using `String(value)`.
+     * - For a 32-bit `Float`, returns the shortest text that reads back to the same 32-bit value.
      * - For `Bool` type, returns `'true'` or `'false'`.
      * - For `Timestamp` type, converts the value to an ISO string using `Date`.
      * - For `Date` type, converts the value to an ISO date (`YYYY-MM-DD`).
-     * - For unsupported types, logs a warning and returns the stringified value.
-     * 
+     * - For other types, returns the stringified value. An object becomes JSON.
+     *
      */
-    static typedValueToString(value: unknown, type: ApacheArrow.Type): string {
+    static typedValueToString(value: unknown, type: ApacheArrow.DataType): string {
         if (value === null || value === undefined) {
-            return '';
+            return "";
         }
 
-        switch (ApacheArrowUtils.valueTypeId(type as unknown as ApacheArrow.DataType)) {
+        const valueType = ApacheArrowUtils.valueType(type);
+
+        switch (valueType.typeId) {
             case ApacheArrow.Type.Utf8:
             case ApacheArrow.Type.LargeUtf8:
+            case ApacheArrow.Type.Int:
                 return String(value);
 
-            case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Float:
+                if ((valueType as ApacheArrow.Float).precision === ApacheArrow.Precision.SINGLE) {
+                    return ApacheArrowUtils.float32ToString(value);
+                }
                 return String(value);
 
             case ApacheArrow.Type.Bool:
-                return value ? 'true' : 'false';
+                return value ? "true" : "false";
 
+            // Arrow returns a timestamp and a date as epoch milliseconds.
             case ApacheArrow.Type.Timestamp:
-                return new Date(value as number).toISOString();
+                return ApacheArrowUtils.isoString(value) ?? String(value);
 
-            // Arrow returns a date as epoch milliseconds.
             case ApacheArrow.Type.Date:
-                return new Date(value as number).toISOString().slice(0, 10);
+                return ApacheArrowUtils.isoString(value)?.slice(0, 10) ?? String(value);
 
             case ApacheArrow.Type.Struct: // Geometry = Struct<{x: Float, y: Float}>
-                return JSON.stringify(value);
+                return ApacheArrowUtils.toJson(value) ?? String(value);
 
             default:
-                console.warn(`Unsupported type for toString: ${type}`, type);
-                return String(value);
+                return ApacheArrowUtils.anyToString(value);
+        }
+    }
+
+    // A Dictionary vector decodes to its value type, so switch on that type.
+    private static valueType(type: ApacheArrow.DataType): ApacheArrow.DataType {
+        if (ApacheArrow.DataType.isDictionary(type)) {
+            return type.dictionary;
+        }
+
+        return type;
+    }
+
+    private static isoString(value: unknown): string | null {
+        const date = new Date(value as number);
+        if (Number.isNaN(date.getTime())) return null;
+
+        return date.toISOString();
+    }
+
+    // Float32 values arrive as 64-bit numbers, so `String` would show noise like 0.6000000238418579.
+    private static float32ToString(value: unknown): string {
+        if (typeof value !== "number" || !Number.isFinite(value)) return String(value);
+
+        for (let digits = 1; digits <= 9; digits++) {
+            const rounded = Number(value.toPrecision(digits));
+            if (Math.fround(rounded) === value) return String(rounded);
+        }
+
+        return String(value);
+    }
+
+    private static anyToString(value: unknown): string {
+        if (typeof value !== "object" || value === null) return String(value);
+
+        const text = String(value);
+        if (text !== "[object Object]") return text;
+
+        return ApacheArrowUtils.toJson(value) ?? text;
+    }
+
+    // `JSON.stringify` throws on a bigint, and Int64 values arrive as bigints.
+    private static toJson(value: unknown): string | null {
+        try {
+            return JSON.stringify(value, (_key, item) => {
+                if (typeof item === "bigint") return item.toString();
+                return item;
+            });
+        } catch {
+            return null;
         }
     }
 
@@ -239,8 +283,14 @@ export class ApacheArrowUtils {
         const record: Record<string, unknown> = {};
 
         schema.fields.forEach((field, index) => {
-            if (field.name === 'geometry') return; // Skip geometry field
-            record[field.name] = ApacheArrowUtils.typedValueToString(array[index], field.type);
+            if (field.name === "geometry") return; // Skip geometry field
+            const value = array[index];
+            // A null cell stays null, so a table can show it apart from an empty string.
+            if (value === null || value === undefined) {
+                record[field.name] = null;
+            } else {
+                record[field.name] = ApacheArrowUtils.typedValueToString(value, field.type);
+            }
         });
 
         return record;
@@ -270,7 +320,7 @@ export class ApacheArrowUtils {
      * When the raw values are decoded, this returns the typed array, and a null slot reads as 0.
      * Otherwise it reads each row with `get()`, and a null slot reads as null.
      */
-    static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector['toArray']> {
+    static decodedValues(vector: ApacheArrow.Vector): ReturnType<ApacheArrow.Vector["toArray"]> {
         if (ApacheArrowUtils.rawValuesAreDecoded(vector.type)) {
             return vector.toArray();
         }
@@ -284,7 +334,7 @@ export class ApacheArrowUtils {
      * Supports columns of type Timestamp, Date, Int, and Float. For unsupported types, returns `{min: NaN, max: NaN}`.
      * Skips null and undefined values during calculation.
      *
-     * 
+     *
      * @template T - The Apache Arrow TypeMap for the table.
      * @param table - The Apache Arrow table containing the data.
      * @param column - The name of the column to compute min and max for.
@@ -294,14 +344,13 @@ export class ApacheArrowUtils {
     static getColumnMinMax<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
         column: string
-    ): { min: number, max: number } {
-        const colIndex = table.schema.fields.map(field => field.name).indexOf(column);
+    ): { min: number; max: number } {
+        const colIndex = table.schema.fields.map((field) => field.name).indexOf(column);
 
         if (colIndex === -1) throw new Error(`Column "${column}" not found in table schema.`);
 
         const colVec: ApacheArrow.Vector = table.getChild(column);
         const colArray = ApacheArrowUtils.decodedValues(colVec);
-
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         switch ((colVec.type as any).typeId) {
@@ -311,10 +360,11 @@ export class ApacheArrowUtils {
             case ApacheArrow.Type.Float:
                 break;
             default:
-                console.warn(`Unsupported column type for min/max calculation: ${colVec.type.typeId} (${column})`);
+                console.warn(
+                    `Unsupported column type for min/max calculation: ${colVec.type.typeId} (${column})`
+                );
                 return { min: NaN, max: NaN }; // Return NaN for unsupported
         }
-
 
         let min = Number.POSITIVE_INFINITY;
         let max = Number.NEGATIVE_INFINITY;
@@ -328,7 +378,6 @@ export class ApacheArrowUtils {
         // An Int64 or Timestamp column holds bigints; callers expect numbers.
         return { min: Number(min), max: Number(max) };
     }
-
 
     /**
      * Sorts an Apache Arrow Table by a specified column and direction.
@@ -355,7 +404,7 @@ export class ApacheArrowUtils {
         column: string,
         direction: SortDirection
     ): ApacheArrow.Table<T> {
-        const colIndex = table.schema.fields.map(field => field.name).indexOf(column);
+        const colIndex = table.schema.fields.map((field) => field.name).indexOf(column);
 
         if (colIndex === -1) return table;
 
@@ -375,7 +424,6 @@ export class ApacheArrowUtils {
             case ApacheArrow.Type.Int:
             case ApacheArrow.Type.Time:
             case ApacheArrow.Type.Timestamp:
-
                 // BigInt sorting
                 sortedIndices = indexedArray
                     .sort((a, b) => {
@@ -383,56 +431,74 @@ export class ApacheArrowUtils {
                         const valB = b.value as bigint | null;
 
                         if (valA === null && valB === null) return 0;
-                        if (valA === null) return 1;  // nulls last
+                        if (valA === null) return 1; // nulls last
                         if (valB === null) return -1;
 
                         if (valA === valB) return 0;
 
-                        if (direction === 'asc') {
+                        if (direction === "asc") {
                             return valA < valB ? -1 : 1;
                         } else {
                             return valA > valB ? -1 : 1;
                         }
                     })
-                    .map(item => item.index);
+                    .map((item) => item.index);
                 break;
 
             case ApacheArrow.Type.Float:
             case ApacheArrow.Type.Date:
                 // Numeric sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as number;
-                    const valB = b.value as number;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? valA - valB : valB - valA;
-                }).map(item => item.index);
+                sortedIndices = indexedArray
+                    .sort((a, b) => {
+                        const valA = a.value as number;
+                        const valB = b.value as number;
+                        if (valA === null && valB === null) return 0;
+                        if (valA === null) return 1;
+                        if (valB === null) return -1;
+                        return direction === "asc" ? valA - valB : valB - valA;
+                    })
+                    .map((item) => item.index);
                 break;
 
             case ApacheArrow.Type.Utf8:
             case ApacheArrow.Type.LargeUtf8:
                 // String sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as string;
-                    const valB = b.value as string;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-                }).map(item => item.index);
+                sortedIndices = indexedArray
+                    .sort((a, b) => {
+                        const valA = a.value as string;
+                        const valB = b.value as string;
+                        if (valA === null && valB === null) return 0;
+                        if (valA === null) return 1;
+                        if (valB === null) return -1;
+                        return direction === "asc"
+                            ? valA.localeCompare(valB)
+                            : valB.localeCompare(valA);
+                    })
+                    .map((item) => item.index);
                 break;
 
             case ApacheArrow.Type.Bool:
                 // Boolean sorting
-                sortedIndices = indexedArray.sort((a, b) => {
-                    const valA = a.value as boolean;
-                    const valB = b.value as boolean;
-                    if (valA === null && valB === null) return 0;
-                    if (valA === null) return 1;
-                    if (valB === null) return -1;
-                    return direction === 'asc' ? (valA === valB ? 0 : valA ? 1 : -1) : (valA === valB ? 0 : valA ? -1 : 1);
-                }).map(item => item.index);
+                sortedIndices = indexedArray
+                    .sort((a, b) => {
+                        const valA = a.value as boolean;
+                        const valB = b.value as boolean;
+                        if (valA === null && valB === null) return 0;
+                        if (valA === null) return 1;
+                        if (valB === null) return -1;
+                        return direction === "asc"
+                            ? valA === valB
+                                ? 0
+                                : valA
+                                  ? 1
+                                  : -1
+                            : valA === valB
+                              ? 0
+                              : valA
+                                ? -1
+                                : 1;
+                    })
+                    .map((item) => item.index);
                 break;
 
             default:
@@ -442,7 +508,6 @@ export class ApacheArrowUtils {
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const sortedColumns: Record<string, any> = {};
-
 
         for (const field of table.schema.fields) {
             const name = field.name;
@@ -458,13 +523,12 @@ export class ApacheArrowUtils {
         (sortedTable as any).schema = table.schema;
 
         return sortedTable as unknown as ApacheArrow.Table<T>; //ignore ts errors
-
     }
 
     /**
      * Deduplicates rows in an Apache Arrow Table based on latitude and longitude columns.
      *
-     * 
+     *
      * This method scans the specified number of rows (or all rows if not specified) and removes duplicates
      * where the latitude and longitude values (rounded to two decimal places) are the same.
      * The resulting table preserves the original schema and contains only the first occurrence of each unique coordinate pair.
@@ -478,13 +542,11 @@ export class ApacheArrowUtils {
      */
     static deduplicateTable<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude",
         amountOfRows: number = undefined,
         decimals: number = 3
-
     ): ApacheArrow.Table<T> {
-
         if (!amountOfRows) {
             amountOfRows = table.numRows;
         }
@@ -546,9 +608,9 @@ export class ApacheArrowUtils {
      */
     static addPointGeometryColumn<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude',
-        geometryColumnName: string = 'geometry'
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude",
+        geometryColumnName: string = "geometry"
     ): ApacheArrow.Table {
         const latIndex = table.schema.fields.findIndex((f) => f.name === latitudeColumnName);
         const lonIndex = table.schema.fields.findIndex((f) => f.name === longitudeColumnName);
@@ -560,13 +622,13 @@ export class ApacheArrowUtils {
         }
 
         // GeoArrow interleaved point type + the extension metadata deck.gl detects.
-        const coordField = new ApacheArrow.Field('xy', new ApacheArrow.Float64(), false);
+        const coordField = new ApacheArrow.Field("xy", new ApacheArrow.Float64(), false);
         const pointType = new ApacheArrow.FixedSizeList(2, coordField);
         const geometryField = new ApacheArrow.Field(
             geometryColumnName,
             pointType,
             true,
-            new Map([['ARROW:extension:name', 'geoarrow.point']])
+            new Map([["ARROW:extension:name", "geoarrow.point"]])
         );
 
         const newFields: ApacheArrow.Field[] = [...table.schema.fields, geometryField];
@@ -606,7 +668,10 @@ export class ApacheArrowUtils {
                 }
             }
 
-            const childData = ApacheArrow.makeData({ type: new ApacheArrow.Float64(), data: coords });
+            const childData = ApacheArrow.makeData({
+                type: new ApacheArrow.Float64(),
+                data: coords
+            });
             const geometryData = ApacheArrow.makeData({
                 type: pointType,
                 length: rows,
@@ -642,8 +707,8 @@ export class ApacheArrowUtils {
     static countPointsInRing<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
         ring: [number, number][],
-        latitudeColumnName: string = 'Latitude',
-        longitudeColumnName: string = 'Longitude'
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude"
     ): number {
         if (ring.length < 4) return 0;
 
@@ -743,6 +808,4 @@ export class ApacheArrowUtils {
 
         return inside;
     }
-
 }
-

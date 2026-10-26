@@ -9,41 +9,41 @@
 	configuration, where a full size label crowds the control it names.
 -->
 <script lang="ts">
-	import type { Snippet } from 'svelte';
-	import type { HTMLLabelAttributes } from 'svelte/elements';
+    import type { Snippet } from "svelte";
+    import type { HTMLLabelAttributes } from "svelte/elements";
 
-	let {
-		ref = $bindable(null),
-		size = 'default',
-		class: className = '',
-		children,
-		...restProps
-	}: HTMLLabelAttributes & {
-		ref?: HTMLLabelElement | null;
-		size?: 'sm' | 'default';
-		children?: Snippet;
-	} = $props();
+    let {
+        ref = $bindable(null),
+        size = "default",
+        class: className = "",
+        children,
+        ...restProps
+    }: HTMLLabelAttributes & {
+        ref?: HTMLLabelElement | null;
+        size?: "sm" | "default";
+        children?: Snippet;
+    } = $props();
 </script>
 
 <label bind:this={ref} data-slot="label" data-size={size} class={className} {...restProps}>
-	{@render children?.()}
+    {@render children?.()}
 </label>
 
 <style lang="scss">
-	label {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-weight: 500;
-		line-height: 1;
-		user-select: none;
+    label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+        line-height: 1;
+        user-select: none;
 
-		&[data-size='sm'] {
-			font-size: 0.6875rem;
-			font-weight: 600;
-			text-transform: uppercase;
-			letter-spacing: 0.04em;
-			color: var(--muted-foreground, #6b7280);
-		}
-	}
+        &[data-size="sm"] {
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted-foreground, #6b7280);
+        }
+    }
 </style>

@@ -73,7 +73,7 @@ export default ts.config(
 		// `beacon-api` is not listed. It imports `stores/toasts` and
 		// `stores/query-store` today, so the rule would fail on existing code. Untangle
 		// that separately, then add it here.
-		files: ['src/lib/query/**', 'src/lib/geo/**', 'src/lib/stores/**'],
+		files: ['src/lib/query/**', 'src/lib/geo/**', 'src/lib/access/**', 'src/lib/stores/**'],
 		rules: {
 			'no-restricted-imports': [
 				'error',
