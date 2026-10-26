@@ -169,6 +169,21 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - Handoff to the SQL Console: `?sql=` opens a new tab and does not run it. With `?node=`, the page first selects that node, after `whenOpenNodesSettled()`. The page then removes both parameters from the URL.
 - An upload does not start a crawler. A table appears only through a crawler run (Run, or `schedule_secs`) or through "Create external table".
 
+## Workbench SQL Mode (Important)
+- A workbench SQL query only reads. It must never add, change, move, create or delete data.
+- A block stores `mode` (`builder` or `sql`) and `sql` on `StoredQuery`. Read them with `queryModeOf` and `sqlTextOf`, because an old record has neither field.
+- A SQL block keeps an empty draft. The draft holds only the output format, and `compiled` stays null.
+- Every workbench SQL request goes through `readOnlyPreview` or `readOnlyDownload` (`sql/guard.ts`). They check the text, and refused SQL sends no request.
+- The guard accepts one statement that starts with SELECT, WITH or VALUES, and that holds no write word (`WRITE_WORDS`).
+- The guard refuses a mark that another dialect reads in another way: a backslash before a quote, a nested `/*`, `$`, a backtick, `#`.
+- The guard follows the DataFusion generic dialect. It does not handle the MSSQL `[name]` rule or the MySQL `--x` rule.
+- The workbench never uses `withAdmin`, `withAdminFallback` or `makeAdminClient`. `makeBeaconClient` sends only the bearer token, and Beacon never treats a bearer token as the super-user.
+- `quoteIdent` also quotes a word of `WRITE_WORDS`. A name from the table tree therefore never fails the guard.
+- `QueryWorkspace.blockReason(block, requireFilter)` is the one run check for both modes. In a component, pass `$settings.requireQueryFilters`.
+- `workspace.preview` holds the preview runs. It is transient. Reset, a mode switch, a node switch and a close clear the entry of the block.
+- `SqlEditor` binds Ctrl+Enter with `addAction`. Monaco `addCommand` registers a global keybinding that stays after the editor is gone.
+- Save, share and visualise stay off for a SQL block (`workbench.sql.notYet`). Later sub-issues turn them on.
+
 ## Persisted Data and Migrations (Important)
 Sort each persisted value into one class. The class decides whether a change needs a migration.
 

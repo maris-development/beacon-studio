@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CatalogsView } from "@maris-development/beacon-client";
-import { CatalogCache, buildTree, filterTree, parseSchema, stringifyType } from "../catalog";
+import {
+    CatalogCache,
+    buildTree,
+    filterTree,
+    parseSchema,
+    splitDefault,
+    stringifyType
+} from "../catalog";
 
 const view: CatalogsView = {
     default_catalog: "beacon",
@@ -33,6 +40,34 @@ describe("buildTree", () => {
         expect(tree.defaults).toEqual({ catalog: "beacon", schema: "public" });
         expect(tree.catalogs.map((c) => c.name)).toEqual(["beacon", "remote"]);
         expect(tree.catalogs[0].schemas.map((s) => s.name)).toEqual(["public", "zeta", "system"]);
+    });
+});
+
+describe("splitDefault", () => {
+    it("lifts the tables of the default schema and keeps the rest", () => {
+        const { tables, rest } = splitDefault(buildTree(view));
+        expect(tables.map((t) => t.name)).toEqual(["argo", "wod"]);
+        expect(rest.catalogs.map((c) => c.name)).toEqual(["beacon", "remote"]);
+        expect(rest.catalogs[0].schemas.map((s) => s.name)).toEqual(["zeta", "system"]);
+    });
+
+    it("drops a catalog that held only the default schema", () => {
+        const { tables, rest } = splitDefault(
+            buildTree({
+                default_catalog: "beacon",
+                default_schema: "public",
+                catalogs: [
+                    {
+                        name: "beacon",
+                        schemas: [
+                            { name: "public", tables: [{ name: "argo", table_type: "BASE TABLE" }] }
+                        ]
+                    }
+                ]
+            })
+        );
+        expect(tables.map((t) => t.name)).toEqual(["argo"]);
+        expect(rest.catalogs).toEqual([]);
     });
 });
 

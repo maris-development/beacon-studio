@@ -18,8 +18,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
     import { addToast } from "@/stores/toasts";
     // import CircleDashedIcon from '@lucide/svelte/icons/circle-dashed';
     import { QueryWorkspace } from "./QueryWorkspace.svelte";
-    import type { StoredQuery } from "@/stores/stored-query";
-    import { runBlockReason } from "@/query/query-guard";
+    import { queryModeOf, type StoredQuery } from "@/stores/stored-query";
     import { settings } from "@/stores/settings";
     import { t, type Message } from "@/i18n";
 
@@ -38,13 +37,11 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
      * The reason that a block must not run, or null. The card shows a warning
      * triangle with this text.
      *
-     * The switch is read here as well. `runBlockReason` reads a snapshot of the
-     * settings, so without this read the cards keep the triangle after the user
-     * turns the safeguard off on the settings page.
+     * The switch comes from `$settings`, so the cards follow a change on the
+     * settings page.
      */
     function blockReasonFor(block: StoredQuery): Message | null {
-        if (!$settings.requireQueryFilters) return null;
-        return runBlockReason(QueryWorkspace.getQuery(block));
+        return QueryWorkspace.blockReason(block, $settings.requireQueryFilters);
     }
 
     let editingBlockId: string | null = $state(null);
@@ -327,33 +324,53 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                                     {$t("workbench.block.noNode")}
                                 </span>
                             {/if}
-                            <span class="query-stat" title={$t("workbench.block.tableTitle")}>
-                                {status.dataTable || $t("workbench.block.noTable")}
-                            </span>
-                            <span class="query-stat" title={$t("workbench.block.columnsTitle")}>
-                                {$t("common.columns", { count: status.columns })}
-                            </span>
-                            <span
-                                class="query-stat filter-stat"
-                                class:missing={blockReason}
-                                title={blockReason
-                                    ? $t(blockReason)
-                                    : $t("workbench.block.filtersTitle")}
-                            >
-                                {#if blockReason}
-                                    <TriangleAlertIcon size="0.75rem" />
-                                {/if}
-                                {$t("query.filterCount", { count: status.filters })}
-                            </span>
-                            <span class="query-stat" title={$t("workbench.block.runTitle")}>
+                            {#if queryModeOf(block) === "sql"}
+                                <span
+                                    class="query-stat filter-stat"
+                                    class:missing={blockReason}
+                                    title={blockReason
+                                        ? $t(blockReason)
+                                        : $t("workbench.block.sqlTitle")}
+                                >
+                                    {#if blockReason}
+                                        <TriangleAlertIcon size="0.75rem" />
+                                    {/if}
+                                    {$t("workbench.sql.summary")}
+                                </span>
                                 {#if run.isRunning}
-                                    {$t("workbench.block.running")}
-                                {:else if run.hasRun}
-                                    {$t("common.rows", { count: run.rows ?? 0 })}
-                                {:else}
-                                    {$t("workbench.block.notCached")}
+                                    <span class="query-stat" title={$t("workbench.block.runTitle")}>
+                                        {$t("workbench.block.running")}
+                                    </span>
                                 {/if}
-                            </span>
+                            {:else}
+                                <span class="query-stat" title={$t("workbench.block.tableTitle")}>
+                                    {status.dataTable || $t("workbench.block.noTable")}
+                                </span>
+                                <span class="query-stat" title={$t("workbench.block.columnsTitle")}>
+                                    {$t("common.columns", { count: status.columns })}
+                                </span>
+                                <span
+                                    class="query-stat filter-stat"
+                                    class:missing={blockReason}
+                                    title={blockReason
+                                        ? $t(blockReason)
+                                        : $t("workbench.block.filtersTitle")}
+                                >
+                                    {#if blockReason}
+                                        <TriangleAlertIcon size="0.75rem" />
+                                    {/if}
+                                    {$t("query.filterCount", { count: status.filters })}
+                                </span>
+                                <span class="query-stat" title={$t("workbench.block.runTitle")}>
+                                    {#if run.isRunning}
+                                        {$t("workbench.block.running")}
+                                    {:else if run.hasRun}
+                                        {$t("common.rows", { count: run.rows ?? 0 })}
+                                    {:else}
+                                        {$t("workbench.block.notCached")}
+                                    {/if}
+                                </span>
+                            {/if}
                         </div>
 
                         <!-- <div class="query-block-line">

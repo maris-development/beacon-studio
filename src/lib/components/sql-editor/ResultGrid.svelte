@@ -9,21 +9,32 @@
         columns,
         types = [],
         rows,
-        loading = false
+        loading = false,
+        numbered = false
     }: {
         columns: string[];
         types?: unknown[];
         rows: Record<string, unknown>[];
         loading?: boolean;
+        /** Add a first column with the number of each row. */
+        numbered?: boolean;
     } = $props();
 
-    let tableColumns: Column[] = $derived(
-        columns.map((key) => ({ key, header: key, sortable: false }))
-    );
+    // A key that no result column can have.
+    const NUMBER_KEY = "\u0000#";
+
+    let tableColumns: Column[] = $derived.by(() => {
+        const result = columns.map((key) => ({ key, header: key, sortable: false }));
+        if (numbered) result.unshift({ key: NUMBER_KEY, header: "#", sortable: false });
+
+        return result;
+    });
 
     let textRows = $derived(
-        rows.map((row) => {
+        rows.map((row, rowIndex) => {
             const text: Record<string, string | null> = {};
+            if (numbered) text[NUMBER_KEY] = String(rowIndex + 1);
+
             columns.forEach((key, index) => {
                 const value = row[key];
                 if (value === null || value === undefined) {

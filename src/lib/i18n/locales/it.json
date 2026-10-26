@@ -118,7 +118,7 @@
             },
             "requireQueryFilters": {
                 "label": "Richiedi un filtro",
-                "description": "Blocca nel banco di lavoro una query senza filtri. Beacon non deve leggere una tabella intera."
+                "description": "Blocca nel banco di lavoro una query senza filtri. Una query SQL richiede una clausola WHERE o LIMIT. Beacon non deve leggere una tabella intera."
             },
             "queryCellLimit": {
                 "label": "Limite di celle per query",
@@ -404,7 +404,11 @@
             "expandBuilder": "Espandi generatore",
             "code": "Codice",
             "collapseCode": "Comprimi codice",
-            "expandCode": "Espandi codice"
+            "expandCode": "Espandi codice",
+            "sql": "Query SQL",
+            "preview": "Anteprima",
+            "collapsePreview": "Comprimi anteprima",
+            "expandPreview": "Espandi anteprima"
         },
         "code": {
             "tabs": "Linguaggio del codice",
@@ -436,7 +440,8 @@
             "running": "In esecuzione...",
             "notCached": "Non in cache",
             "selectedColumns": "Colonne selezionate: {columns}",
-            "noColumns": "Nessuna colonna selezionata"
+            "noColumns": "Nessuna colonna selezionata",
+            "sqlTitle": "Query SQL"
         },
         "toast": {
             "nameEmpty": "Il nome della query non può essere vuoto.",
@@ -451,6 +456,47 @@
             "guessedNodeNoColumns": "Il link non indicava un nodo Beacon, e \"{node}\" non ha colonne della query in \"{table}\". La query viene mantenuta. Scegli il nodo di questa query.",
             "nodeNoTable": "\"{node}\" non ha la tabella \"{table}\". La query viene mantenuta. Scegli un altro nodo, oppure modifica la query.",
             "nodeNoColumns": "\"{node}\" non ha colonne della query in \"{table}\". La query viene mantenuta. Scegli un altro nodo, oppure modifica la query."
+        },
+        "mode": {
+            "label": "Modalità query",
+            "builder": "Generatore",
+            "sql": "SQL",
+            "confirm": {
+                "title": "Cambiare la modalità della query?",
+                "message": "La query attuale viene eliminata. Il nodo resta lo stesso.",
+                "confirm": "Cambia modalità"
+            }
+        },
+        "sql": {
+            "stepTitle": "Query SQL",
+            "stepDescription": "Scrivi una query che legge i dati.",
+            "readOnly": "Solo istruzioni di lettura",
+            "readOnlyTitle": "Il banco di lavoro esegue solo query che leggono i dati.",
+            "placeholder": "SELECT ... FROM ... WHERE ...",
+            "accessHint": "Il nodo controlla l'accesso a ogni tabella.",
+            "shortcut": "Ctrl + Invio",
+            "pickNode": "Scegli prima un nodo.",
+            "notYet": "Questa funzione non è ancora disponibile per le query SQL.",
+            "summary": "SQL",
+            "guard": {
+                "empty": "L'SQL non contiene nessuna istruzione.",
+                "unclosed": "Chiudi ogni stringa, ogni nome tra virgolette e ogni commento.",
+                "backslashQuote": "Scrivi una virgoletta in una stringa come due virgolette. Non mettere una barra rovesciata prima di una virgoletta.",
+                "nestedComment": "Rimuovi il commento dentro il commento.",
+                "lineEnd": "Usa un normale fine riga dopo un commento.",
+                "mark": "Il banco di lavoro non può leggere qui il segno {mark}. Rimuovilo, oppure metti un nome tra virgolette doppie.",
+                "several": "Esegui un'istruzione alla volta. Rimuovi il punto e virgola tra le istruzioni.",
+                "notRead": "Il banco di lavoro esegue solo query che leggono i dati. Inizia la query con SELECT, WITH o VALUES.",
+                "writeWord": "Il banco di lavoro esegue solo query che leggono i dati. Rimuovi {word}, oppure metti il nome della colonna tra virgolette doppie.",
+                "noFilter": "Questa query SQL non ha una clausola WHERE o LIMIT. Aggiungine una, oppure disattiva \"Richiedi un filtro\" nelle impostazioni."
+            }
+        },
+        "preview": {
+            "run": "Esegui",
+            "stop": "Ferma",
+            "emptyTitle": "Ancora nessuna query",
+            "emptyText": "Scrivi una query SQL a sinistra. L'anteprima mostra le prime righe del risultato.",
+            "duration": "{ms, number} ms"
         }
     },
     "history": {
@@ -1103,7 +1149,8 @@
             "noMatch": "Nessuna tabella corrisponde.",
             "showColumns": "Mostra colonne",
             "loadingColumns": "Caricamento colonne…",
-            "showMore": "{count, plural, one {Mostra # altra colonna} other {Mostra altre # colonne}}"
+            "showMore": "{count, plural, one {Mostra # altra colonna} other {Mostra altre # colonne}}",
+            "insert": "Inserisci il nome della tabella"
         },
         "plan": {
             "fold": "Comprimi",

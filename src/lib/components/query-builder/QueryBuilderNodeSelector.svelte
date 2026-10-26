@@ -32,6 +32,7 @@
         selected = null,
         missingUrl = null,
         nodesReady = true,
+        done = false,
         onPick
     }: {
         /** The number of this step in the builder. */
@@ -42,6 +43,8 @@
         missingUrl?: string | null;
         /** False while the app still reads the public node list. */
         nodesReady?: boolean;
+        /** True when the step is complete. See QueryBuilderStep. */
+        done?: boolean;
         /** Called with the node the user picked. */
         onPick: (node: BeaconNode) => void;
     } = $props();
@@ -82,7 +85,12 @@
     />
 {/if}
 
-<QueryBuilderStep {step} title={$t("query.node.title")} description={$t("query.node.description")}>
+<QueryBuilderStep
+    {step}
+    {done}
+    title={$t("query.node.title")}
+    description={$t("query.node.description")}
+>
     {#snippet actions()}
         <p class="node-count">{$t("query.node.count", { count: $nodes.length })}</p>
         <QueryBuilderViewToggle bind:mode={viewMode} />

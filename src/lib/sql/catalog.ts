@@ -1,4 +1,9 @@
-import type { Catalog, CatalogSchema, CatalogsView } from "@maris-development/beacon-client";
+import type {
+    Catalog,
+    CatalogSchema,
+    CatalogTable,
+    CatalogsView
+} from "@maris-development/beacon-client";
 import type { CatalogDefaults, TableRef } from "./identifiers";
 
 export type SchemaColumn = { name: string; dataType: string };
@@ -45,6 +50,28 @@ export function buildTree(view: CatalogsView): CatalogTree {
         }));
 
     return { catalogs, defaults };
+}
+
+/** The tables of the default schema, and the tree without that schema. */
+export function splitDefault(tree: CatalogTree): { tables: CatalogTable[]; rest: CatalogTree } {
+    let tables: CatalogTable[] = [];
+    const catalogs: Catalog[] = [];
+
+    for (const catalog of tree.catalogs) {
+        const schemas: CatalogSchema[] = [];
+
+        for (const schema of catalog.schemas) {
+            if (isDefault(catalog.name, schema.name, tree.defaults)) {
+                tables = schema.tables;
+            } else {
+                schemas.push(schema);
+            }
+        }
+
+        if (schemas.length > 0) catalogs.push({ name: catalog.name, schemas });
+    }
+
+    return { tables, rest: { catalogs, defaults: tree.defaults } };
 }
 
 /**

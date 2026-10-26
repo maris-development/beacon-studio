@@ -34,6 +34,9 @@ export type { NodeRef };
 /** Which collection a record belongs to. */
 export type StoredQueryRole = "block" | "saved" | "history";
 
+/** How the user writes the query: with the builder, or as SQL text. */
+export type QueryMode = "builder" | "sql";
+
 /**
  * The camera of the map viewer. The values match the MapLibre camera options.
  * `center` is [longitude, latitude].
@@ -115,6 +118,21 @@ export interface StoredQuery {
     rowCount: number | null;
     /** Duration (ms) of the most recent execution. */
     duration: number | null;
+    /** Missing on a record from before SQL mode. Read it with {@link queryModeOf}. */
+    mode?: QueryMode;
+    /** The SQL text of SQL mode. Read it with {@link sqlTextOf}. */
+    sql?: string;
+}
+
+/** The mode of a record. A record from before SQL mode is a builder record. */
+export function queryModeOf(record: StoredQuery | null | undefined): QueryMode {
+    if (record?.mode === "sql") return "sql";
+    return "builder";
+}
+
+/** The SQL text of a record, or an empty string. */
+export function sqlTextOf(record: StoredQuery | null | undefined): string {
+    return record?.sql ?? "";
 }
 
 /** The fields a caller supplies; everything else is defaulted. */
@@ -189,7 +207,9 @@ export function makeStoredQuery(input: StoredQueryInput): StoredQuery {
         lastExecutedAt: input.lastExecutedAt ?? null,
         executionCount: input.executionCount ?? 0,
         rowCount: input.rowCount ?? null,
-        duration: input.duration ?? null
+        duration: input.duration ?? null,
+        mode: input.mode ?? "builder",
+        sql: input.sql ?? ""
     };
 }
 

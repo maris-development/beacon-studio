@@ -118,7 +118,7 @@
             },
             "requireQueryFilters": {
                 "label": "Filter verplicht",
-                "description": "Blokkeert een query zonder filters in de werkbank. Beacon mag niet een hele tabel lezen."
+                "description": "Blokkeert een query zonder filters in de werkbank. Een SQL-query heeft een WHERE- of LIMIT-clausule nodig. Beacon mag niet een hele tabel lezen."
             },
             "queryCellLimit": {
                 "label": "Querycellimiet",
@@ -404,7 +404,11 @@
             "expandBuilder": "Bouwer uitklappen",
             "code": "Code",
             "collapseCode": "Code inklappen",
-            "expandCode": "Code uitklappen"
+            "expandCode": "Code uitklappen",
+            "sql": "SQL-query",
+            "preview": "Voorbeeld",
+            "collapsePreview": "Voorbeeld inklappen",
+            "expandPreview": "Voorbeeld uitklappen"
         },
         "code": {
             "tabs": "Codetaal",
@@ -436,7 +440,8 @@
             "running": "Bezig...",
             "notCached": "Niet in cache",
             "selectedColumns": "Gekozen kolommen: {columns}",
-            "noColumns": "Geen kolommen gekozen"
+            "noColumns": "Geen kolommen gekozen",
+            "sqlTitle": "SQL-query"
         },
         "toast": {
             "nameEmpty": "De querynaam mag niet leeg zijn.",
@@ -451,6 +456,47 @@
             "guessedNodeNoColumns": "De link noemde geen Beacon-node, en \"{node}\" heeft geen kolommen van de query in \"{table}\". De query blijft bewaard. Kies de node van deze query.",
             "nodeNoTable": "\"{node}\" heeft geen tabel \"{table}\". De query blijft bewaard. Kies een andere node, of bewerk de query.",
             "nodeNoColumns": "\"{node}\" heeft geen kolommen van de query in \"{table}\". De query blijft bewaard. Kies een andere node, of bewerk de query."
+        },
+        "mode": {
+            "label": "Querymodus",
+            "builder": "Bouwer",
+            "sql": "SQL",
+            "confirm": {
+                "title": "Querymodus wijzigen?",
+                "message": "De huidige query wordt verwijderd. De node blijft hetzelfde.",
+                "confirm": "Modus wijzigen"
+            }
+        },
+        "sql": {
+            "stepTitle": "SQL-query",
+            "stepDescription": "Typ een query die data leest.",
+            "readOnly": "Alleen leesopdrachten",
+            "readOnlyTitle": "De werkbank voert alleen queries uit die data lezen.",
+            "placeholder": "SELECT ... FROM ... WHERE ...",
+            "accessHint": "De node controleert de toegang tot elke tabel.",
+            "shortcut": "Ctrl + Enter",
+            "pickNode": "Kies eerst een node.",
+            "notYet": "Deze functie is nog niet beschikbaar voor SQL-queries.",
+            "summary": "SQL",
+            "guard": {
+                "empty": "De SQL bevat geen opdracht.",
+                "unclosed": "Sluit elke string, elke naam tussen aanhalingstekens en elk commentaar af.",
+                "backslashQuote": "Schrijf een aanhalingsteken in een string als twee aanhalingstekens. Zet geen backslash voor een aanhalingsteken.",
+                "nestedComment": "Verwijder het commentaar binnen het commentaar.",
+                "lineEnd": "Gebruik een normaal regeleinde na een commentaar.",
+                "mark": "De werkbank kan het teken {mark} hier niet lezen. Verwijder het, of zet een naam tussen dubbele aanhalingstekens.",
+                "several": "Voer één opdracht tegelijk uit. Verwijder de puntkomma tussen de opdrachten.",
+                "notRead": "De werkbank voert alleen queries uit die data lezen. Begin de query met SELECT, WITH of VALUES.",
+                "writeWord": "De werkbank voert alleen queries uit die data lezen. Verwijder {word}, of zet een kolomnaam tussen dubbele aanhalingstekens.",
+                "noFilter": "Deze SQL-query heeft geen WHERE- of LIMIT-clausule. Voeg er een toe, of zet \"Filter verplicht\" uit in de instellingen."
+            }
+        },
+        "preview": {
+            "run": "Uitvoeren",
+            "stop": "Stoppen",
+            "emptyTitle": "Nog geen query",
+            "emptyText": "Typ links een SQL-query. Het voorbeeld toont de eerste rijen van het resultaat.",
+            "duration": "{ms, number} ms"
         }
     },
     "history": {
@@ -1103,7 +1149,8 @@
             "noMatch": "Geen tabellen gevonden.",
             "showColumns": "Kolommen tonen",
             "loadingColumns": "Kolommen laden…",
-            "showMore": "{count, plural, one {Nog # kolom tonen} other {Nog # kolommen tonen}}"
+            "showMore": "{count, plural, one {Nog # kolom tonen} other {Nog # kolommen tonen}}",
+            "insert": "Tabelnaam invoegen"
         },
         "plan": {
             "fold": "Inklappen",

@@ -23,7 +23,7 @@ export interface FnMeta {
 export const MAX_COLUMN_ENTRIES = 5000;
 
 // Monaco SQL mode highlights keywords but suggests none.
-export const SQL_KEYWORDS = [
+const READ_KEYWORDS = [
     "SELECT",
     "FROM",
     "WHERE",
@@ -65,6 +65,11 @@ export const SQL_KEYWORDS = [
     "DESC",
     "NULLS FIRST",
     "NULLS LAST",
+    "VALUES"
+];
+
+// Statements that write or that do not read data. The workbench SQL mode does not suggest them.
+const STATEMENT_KEYWORDS = [
     "CREATE TABLE",
     "CREATE VIEW",
     "CREATE MATERIALIZED VIEW",
@@ -73,7 +78,6 @@ export const SQL_KEYWORDS = [
     "LOCATION",
     "OPTIONS",
     "INSERT INTO",
-    "VALUES",
     "UPDATE",
     "SET",
     "DELETE FROM",
@@ -85,6 +89,8 @@ export const SQL_KEYWORDS = [
     "SHOW TABLES",
     "DESCRIBE"
 ];
+
+export const SQL_KEYWORDS = [...READ_KEYWORDS, ...STATEMENT_KEYWORDS];
 
 function text(value: unknown): string | undefined {
     if (typeof value === "string") return value;
@@ -144,6 +150,8 @@ export function buildCompletions(input: {
     tree: CatalogTree | null;
     functions: FnMeta[];
     columns: LoadedColumns[];
+    /** Suggest only the keywords of a query that reads. */
+    readOnly?: boolean;
 }): CompletionEntry[] {
     const entries: CompletionEntry[] = [];
 
@@ -198,7 +206,10 @@ export function buildCompletions(input: {
         });
     }
 
-    for (const keyword of SQL_KEYWORDS) {
+    let keywords = SQL_KEYWORDS;
+    if (input.readOnly) keywords = READ_KEYWORDS;
+
+    for (const keyword of keywords) {
         entries.push({ label: keyword, kind: "keyword", insertText: keyword, snippet: false });
     }
 
