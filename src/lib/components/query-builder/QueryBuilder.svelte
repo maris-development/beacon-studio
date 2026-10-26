@@ -1,23 +1,22 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import type { BeaconNode } from '@/beacon-api/types';
-	import { BeaconClient } from '@/beacon-api/client';
-	import { track } from '@/telemetry';
-    import QueryBuilderNodeSelector from './QueryBuilderNodeSelector.svelte';
-    import QueryBuilderParameterBlock from './QueryBuilderParameterBlock.svelte';
-    import QueryBuilderOutputFormatSelector from './QueryBuilderOutputFormatSelector.svelte';
-    import type { QuerySelectionStatus } from '@/query/selection-status';
-    import type { QueryActions } from './QueryActions';
-    import type { CompiledQuery } from '@/beacon-api/types';
-    import { defaultOutputFormat, type QueryDraft } from '@/query/draft';
-    import type { CoordinatePair } from '@/geo/spatial-selection';
-    import QueryBuilderTableSelector from './QueryBuilderTableSelector.svelte';
-    import QueryBuilderStep from './QueryBuilderStep.svelte';
-	import Button from '../buttons/Button.svelte';
-	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
-	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
-	import { t, translate } from '@/i18n';
-		
+    import { onMount } from "svelte";
+    import type { BeaconNode } from "@/beacon-api/types";
+    import { BeaconClient } from "@/beacon-api/client";
+    import { track } from "@/telemetry";
+    import QueryBuilderNodeSelector from "./QueryBuilderNodeSelector.svelte";
+    import QueryBuilderParameterBlock from "./QueryBuilderParameterBlock.svelte";
+    import QueryBuilderOutputFormatSelector from "./QueryBuilderOutputFormatSelector.svelte";
+    import type { QuerySelectionStatus } from "@/query/selection-status";
+    import type { QueryActions } from "./QueryActions";
+    import type { CompiledQuery } from "@/beacon-api/types";
+    import { defaultOutputFormat, type QueryDraft } from "@/query/draft";
+    import type { CoordinatePair } from "@/geo/spatial-selection";
+    import QueryBuilderTableSelector from "./QueryBuilderTableSelector.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
+    import Button from "../buttons/Button.svelte";
+    import DownloadDataButton from "../buttons/DownloadDataButton.svelte";
+    import VisualiseDataButton from "../buttons/VisualiseDataButton.svelte";
+    import { t, translate } from "@/i18n";
 
     let {
         node,
@@ -31,13 +30,13 @@
         onDraftChange,
         onTableChange,
         status = $bindable<QuerySelectionStatus>({
-            dataTable: '',
+            dataTable: "",
             columns: 0,
             filters: 0,
-            selection: 0,
+            selection: 0
         }),
         actions: queryActions = $bindable<QueryActions>({}),
-        workbenchActions,
+        workbenchActions
     }: {
         /**
          * The Beacon node of this query, or null while it has none. The parent
@@ -56,7 +55,7 @@
          * builder finds this, because only the builder reads the tables and the
          * schema of the node. The parent writes the message.
          */
-        onSeedMismatch?: (table: string, part: 'table' | 'columns') => void;
+        onSeedMismatch?: (table: string, part: "table" | "columns") => void;
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
         /** The stored coordinate pair of the block, or null to detect it. */
@@ -78,9 +77,9 @@
     let client: BeaconClient | null = $state(null);
 
     let loaded = $state(false);
-    let selected_table_name = $state(initialDraft?.tableName ?? '');
+    let selected_table_name = $state(initialDraft?.tableName ?? "");
     let selected_output_format = $state(initialDraft?.outputFormat ?? defaultOutputFormat());
-	let table_names = $state<string[]>([]);
+    let table_names = $state<string[]>([]);
 
     /**
      * The reason why the node gave no tables, or null. A node can be down, and a
@@ -97,57 +96,57 @@
      */
     let seedBlocked = $state(false);
 
-	onMount(() => {
-		void loadTables();
-	});
+    onMount(() => {
+        void loadTables();
+    });
 
-	/**
-	 * Read the tables of the node, and pick the table to show.
-	 *
-	 * The retry button calls this method again. The metadata cache drops a failed
-	 * request, so a retry does reach the node.
-	 */
-	async function loadTables(): Promise<void> {
-		// No node, no tables. The user picks a node in the first step, which
-		// re-mounts this component with a client.
-		if (!node) return;
+    /**
+     * Read the tables of the node, and pick the table to show.
+     *
+     * The retry button calls this method again. The metadata cache drops a failed
+     * request, so a retry does reach the node.
+     */
+    async function loadTables(): Promise<void> {
+        // No node, no tables. The user picks a node in the first step, which
+        // re-mounts this component with a client.
+        if (!node) return;
 
-		// A share link can swap the active block's node while this call is in
-		// flight: the workbench first paints the previously active block, then
-		// its `onMount` opens the link and points the block at the linked node.
-		// `{#key}` then remounts this component, but the old async call keeps
-		// running. `node` is read live, so it would see the *new* node while
-		// `tables` below still holds the *old* one. Compare against the node
-		// this call started for, and drop a stale answer instead of reporting
-		// a mismatch against the wrong node.
-		//
-		// Compare the URL, not the object. The node list re-emits on an edit or
-		// a health check, which gives the same node a new object. That is not a
-		// new node, and this call must survive it.
-		const requestedUrl = node.url;
+        // A share link can swap the active block's node while this call is in
+        // flight: the workbench first paints the previously active block, then
+        // its `onMount` opens the link and points the block at the linked node.
+        // `{#key}` then remounts this component, but the old async call keeps
+        // running. `node` is read live, so it would see the *new* node while
+        // `tables` below still holds the *old* one. Compare against the node
+        // this call started for, and drop a stale answer instead of reporting
+        // a mismatch against the wrong node.
+        //
+        // Compare the URL, not the object. The node list re-emits on an edit or
+        // a health check, which gives the same node a new object. That is not a
+        // new node, and this call must survive it.
+        const requestedUrl = node.url;
 
-		loadError = null;
-		loaded = false;
-		client = BeaconClient.new(node);
+        loadError = null;
+        loaded = false;
+        client = BeaconClient.new(node);
 
-		let tables: string[];
+        let tables: string[];
 
-		try {
-			tables = await client.getCachedTables();
-		} catch (error) {
-			if (node?.url !== requestedUrl) return;
-			console.error('Could not read the tables of the Beacon node.', error);
-			loadError = (error as Error)?.message || translate('query.node.noAnswer');
-			loaded = true;
-			return;
-		}
+        try {
+            tables = await client.getCachedTables();
+        } catch (error) {
+            if (node?.url !== requestedUrl) return;
+            console.error("Could not read the tables of the Beacon node.", error);
+            loadError = (error as Error)?.message || translate("query.node.noAnswer");
+            loaded = true;
+            return;
+        }
 
-		if (node?.url !== requestedUrl) return;
+        if (node?.url !== requestedUrl) return;
 
-		// Restore the table of the draft or the seed. A new query selects no table.
-		const seedTable = typeof pendingSeed?.from === 'string' ? pendingSeed.from : null;
-		const draftTable = initialDraft?.tableName || null;
-        let wanted = draftTable ?? seedTable ?? '';
+        // Restore the table of the draft or the seed. A new query selects no table.
+        const seedTable = typeof pendingSeed?.from === "string" ? pendingSeed.from : null;
+        const draftTable = initialDraft?.tableName || null;
+        let wanted = draftTable ?? seedTable ?? "";
 
         // This node does not have the table that the query reads. Select no table,
         // and let the user pick one. A schema request for that table answers 404.
@@ -157,134 +156,161 @@
             // block. Keep the query, and let the user decide.
             seedBlocked = !!pendingSeed;
 
-            onSeedMismatch?.(wanted, 'table');
-            wanted = '';
+            onSeedMismatch?.(wanted, "table");
+            wanted = "";
         }
 
         selected_table_name = wanted;
-		table_names = tables;
+        table_names = tables;
         loaded = true;
-	}
+    }
 
-	/**
-	 * Pass a draft of the builder to the parent.
-	 *
-	 * A blocked seed needs one guard. The parameter block emits an empty draft at
-	 * its mount, and that draft compiles to nothing. The parent then drops the
-	 * compiled query of the block. Therefore drop an empty draft while the seed is
-	 * blocked. The first real edit of the user has columns, and that edit takes
-	 * the block over.
-	 */
-	function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
-		if (seedBlocked) {
-			if (draft.selectedFields.length === 0) return;
-			seedBlocked = false;
-		}
+    /**
+     * Pass a draft of the builder to the parent.
+     *
+     * A blocked seed needs one guard. The parameter block emits an empty draft at
+     * its mount, and that draft compiles to nothing. The parent then drops the
+     * compiled query of the block. Therefore drop an empty draft while the seed is
+     * blocked. The first real edit of the user has columns, and that edit takes
+     * the block over.
+     */
+    function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
+        if (seedBlocked) {
+            if (draft.selectedFields.length === 0) return;
+            seedBlocked = false;
+        }
 
-		onDraftChange?.(draft, pair);
-	}
+        onDraftChange?.(draft, pair);
+    }
 
-	/**
-	 * The seed for the parameter block. A blocked seed passes nothing, so the
-	 * block hydrates no column of another schema. See {@link loadTables}.
-	 */
-	const activeSeed = $derived.by(() => {
-		if (seedBlocked) return null;
-		return pendingSeed;
-	});
+    /**
+     * The seed for the parameter block. A blocked seed passes nothing, so the
+     * block hydrates no column of another schema. See {@link loadTables}.
+     */
+    const activeSeed = $derived.by(() => {
+        if (seedBlocked) return null;
+        return pendingSeed;
+    });
 
-	/** True when the node answered with its tables. Step 2 needs this. */
-	const nodeReady = $derived(!!node && !!client && !loadError);
-	/** True when the query has a table. Step 3 needs this. */
-	const tableReady = $derived(nodeReady && !!selected_table_name);
-	/** True when the query has a column. Step 4 needs this. */
-	const columnsReady = $derived(tableReady && status.columns > 0);
-	/** True when every step is done. The run buttons need this. */
-	const queryReady = $derived(columnsReady && !!selected_output_format);
+    /** True when the node answered with its tables. Step 2 needs this. */
+    const nodeReady = $derived(!!node && !!client && !loadError);
+    /** True when the query has a table. Step 3 needs this. */
+    const tableReady = $derived(nodeReady && !!selected_table_name);
+    /** True when the query has a column. Step 4 needs this. */
+    const columnsReady = $derived(tableReady && status.columns > 0);
+    /** True when every step is done. The run buttons need this. */
+    const queryReady = $derived(columnsReady && !!selected_output_format);
 
-	/**
-	 * The table for the parameter block. It stays empty until the node is ready,
-	 * so the block loads no schema and emits no draft. A stored draft or a blocked
-	 * seed therefore stays as it is.
-	 */
-	const activeTable = $derived.by(() => {
-		if (!nodeReady) return '';
-		return selected_table_name;
-	});
+    /**
+     * The table for the parameter block. It stays empty until the node is ready,
+     * so the block loads no schema and emits no draft. A stored draft or a blocked
+     * seed therefore stays as it is.
+     */
+    const activeTable = $derived.by(() => {
+        if (!nodeReady) return "";
+        return selected_table_name;
+    });
 
-	$effect(() => {
-		status.dataTable = selected_table_name;
+    $effect(() => {
+        status.dataTable = selected_table_name;
         onTableChange?.(selected_table_name);
-	});
+    });
 
-	/**
-	 * Reports a table that the user picks. The loader also writes
-	 * `selected_table_name`, for a draft, a seed or the default table. Those are
-	 * no choice of the user, so the selector calls this and an effect does not.
-	 */
-	function handleTablePick(table_name: string): void {
-		track('builder.table.select', {
-			nodeHost: node?.url,
-			props: { table: table_name, tables: table_names.length }
-		});
-	}
-
+    /**
+     * Reports a table that the user picks. The loader also writes
+     * `selected_table_name`, for a draft, a seed or the default table. Those are
+     * no choice of the user, so the selector calls this and an effect does not.
+     */
+    function handleTablePick(table_name: string): void {
+        track("builder.table.select", {
+            nodeHost: node?.url,
+            props: { table: table_name, tables: table_names.length }
+        });
+    }
 </script>
 
 <QueryBuilderNodeSelector
-	step={1}
-	selected={node}
-	missingUrl={missingNodeUrl}
-	{nodesReady}
-	onPick={onNodeChange}
+    step={1}
+    selected={node}
+    missingUrl={missingNodeUrl}
+    {nodesReady}
+    onPick={onNodeChange}
 />
 
-<hr>
+<hr />
 
 {#if node && loadError}
-	<!--
+    <!--
 		The node gave no tables. Name the reason, and offer a retry. The picker
 		above stays, so the user can also pick another node.
 	-->
-	<QueryBuilderStep step={2} title={$t('query.table.title')} description={$t('query.table.description')}>
-		<div class="load-error" role="alert">
-			<p class="load-error-title">{$t('query.node.tablesFailed', { node: node.name || node.url })}</p>
-			<p class="load-error-reason">{loadError}</p>
-			<Button variant="secondary" onclick={() => loadTables()}>{$t('query.node.retry')}</Button>
-		</div>
-	</QueryBuilderStep>
+    <QueryBuilderStep
+        step={2}
+        title={$t("query.table.title")}
+        description={$t("query.table.description")}
+    >
+        <div class="load-error" role="alert">
+            <p class="load-error-title">
+                {$t("query.node.tablesFailed", { node: node.name || node.url })}
+            </p>
+            <p class="load-error-reason">{loadError}</p>
+            <Button variant="secondary" onclick={() => loadTables()}
+                >{$t("query.node.retry")}</Button
+            >
+        </div>
+    </QueryBuilderStep>
 {:else}
-	<QueryBuilderTableSelector step={2} disabled={!nodeReady} {table_names} {loaded} {status} onPick={handleTablePick} bind:selected_table_name />
+    <QueryBuilderTableSelector
+        step={2}
+        disabled={!nodeReady}
+        {table_names}
+        {loaded}
+        {status}
+        onPick={handleTablePick}
+        bind:selected_table_name
+    />
 {/if}
 
-<hr>
+<hr />
 
 <!--
 	`pendingSeed` is null while the seed is blocked. This node does not hold the
 	table of that seed, so a hydration finds no column. See `loadTables`.
 -->
-<QueryBuilderParameterBlock step={3} table_name={activeTable} {client} {initialDraft} pendingSeed={activeSeed} {coordinateColumns} onDraftChange={handleDraftChange} {onSeedMismatch} bind:status bind:actions={queryActions} bind:selected_output_format />
+<QueryBuilderParameterBlock
+    step={3}
+    table_name={activeTable}
+    {client}
+    {initialDraft}
+    pendingSeed={activeSeed}
+    {coordinateColumns}
+    onDraftChange={handleDraftChange}
+    {onSeedMismatch}
+    bind:status
+    bind:actions={queryActions}
+    bind:selected_output_format
+/>
 
-<hr>
+<hr />
 
 <QueryBuilderOutputFormatSelector step={4} disabled={!columnsReady} bind:selected_output_format />
 
-<hr>
+<hr />
 
 <div class="builder-run">
-	<DownloadDataButton
-		downloadData={workbenchActions.downloadData}
-		disabled={!queryReady}
-		title={queryReady ? '' : $t('query.steps.incomplete')}
-	/>
+    <DownloadDataButton
+        downloadData={workbenchActions.downloadData}
+        disabled={!queryReady}
+        title={queryReady ? "" : $t("query.steps.incomplete")}
+    />
 
-	<VisualiseDataButton
-		visualiseTable={workbenchActions.visualiseTable}
-		visualiseChart={workbenchActions.visualiseChart}
-		visualiseMap={workbenchActions.visualiseMap}
-		disabled={!queryReady}
-		title={queryReady ? '' : $t('query.steps.incomplete')}
-	/>
+    <VisualiseDataButton
+        visualiseTable={workbenchActions.visualiseTable}
+        visualiseChart={workbenchActions.visualiseChart}
+        visualiseMap={workbenchActions.visualiseMap}
+        disabled={!queryReady}
+        title={queryReady ? "" : $t("query.steps.incomplete")}
+    />
 </div>
 
 <style lang="scss">
@@ -317,7 +343,7 @@
 
         .load-error-reason {
             margin: 0;
-            font-size: 0.875rem;
+            font-size: var(--font-size-sm);
             color: var(--muted-foreground);
         }
     }

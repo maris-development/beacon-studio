@@ -1,19 +1,19 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select/index.js';
-    import CircleCheck from '@lucide/svelte/icons/circle-check';
-	import Card from '../card/Card.svelte';
-	import QueryBuilderStep from './QueryBuilderStep.svelte';
-	import QueryBuilderViewToggle, { type ViewMode } from './QueryBuilderViewToggle.svelte';
-	import type { QuerySelectionStatus } from '@/query/selection-status';
-    import { askConfirm } from '@/stores/confirm';
-    import { t, translate } from '@/i18n';
+    import * as Select from "$lib/components/ui/select/index.js";
+    import CircleCheck from "@lucide/svelte/icons/circle-check";
+    import Card from "../card/Card.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
+    import QueryBuilderViewToggle, { type ViewMode } from "./QueryBuilderViewToggle.svelte";
+    import type { QuerySelectionStatus } from "@/query/selection-status";
+    import { askConfirm } from "@/stores/confirm";
+    import { t, translate } from "@/i18n";
 
     let {
         step,
         disabled = false,
         table_names = [],
         loaded = false,
-        selected_table_name = $bindable(''),
+        selected_table_name = $bindable(""),
         status,
         onPick
     }: {
@@ -28,12 +28,12 @@
         onPick?: (table_name: string) => void;
     } = $props();
 
-    let viewMode = $state<ViewMode>('cards');
+    let viewMode = $state<ViewMode>("cards");
     let viewModeInitialized = $state(false);
 
     $effect(() => {
         if (loaded && !viewModeInitialized) {
-            viewMode = table_names.length < 10 ? 'cards' : 'list';
+            viewMode = table_names.length < 10 ? "cards" : "list";
             viewModeInitialized = true;
         }
     });
@@ -43,9 +43,9 @@
 
         if (status && status.columns > 0) {
             const goAhead = await askConfirm({
-                title: translate('query.table.change.title'),
-                message: translate('query.table.change.message'),
-                confirmLabel: translate('query.table.change.confirm')
+                title: translate("query.table.change.title"),
+                message: translate("query.table.change.message"),
+                confirmLabel: translate("query.table.change.confirm")
             });
 
             if (!goAhead) return;
@@ -57,17 +57,17 @@
 
 <QueryBuilderStep
     {step}
-    title={$t('query.table.title')}
-    description={$t('query.table.description')}
-    hint={disabled ? $t('query.table.needsNode') : null}
+    title={$t("query.table.title")}
+    description={$t("query.table.description")}
+    hint={disabled ? $t("query.table.needsNode") : null}
 >
     {#snippet actions()}
         {#if !disabled}
             <p class="table-count">
                 {#if loaded}
-                    {$t('query.table.count', { count: table_names.length })}
+                    {$t("query.table.count", { count: table_names.length })}
                 {:else}
-                    {$t('query.table.countLoading')}
+                    {$t("query.table.countLoading")}
                 {/if}
             </p>
             <QueryBuilderViewToggle bind:mode={viewMode} />
@@ -75,25 +75,26 @@
     {/snippet}
 
     <div class="table-views">
-        {#if viewMode === 'cards'}
+        {#if viewMode === "cards"}
             <div class="cards-view">
                 {#each table_names as table_name (table_name)}
-                    <Card class={selected_table_name === table_name ? 'selected' : ''}
-                        onclick={() => pickTable(table_name)}>
+                    <Card
+                        class={selected_table_name === table_name ? "selected" : ""}
+                        onclick={() => pickTable(table_name)}
+                    >
                         <div class="table-header">
                             <h4 title={table_name}>{table_name}</h4>
                             {#if selected_table_name === table_name}
-                                <CircleCheck class="check" size="1rem"/>
+                                <CircleCheck class="check" size="1rem" />
                             {/if}
                         </div>
                         <p class="table-description">
-                             {$t('query.table.noDescription')}
+                            {$t("query.table.noDescription")}
                         </p>
                     </Card>
                 {/each}
             </div>
-
-        {:else if viewMode === 'list'}
+        {:else if viewMode === "list"}
             <!--
                 The value is a prop and not a binding. Therefore `onValueChange` runs
                 for a choice of the user only, and not for a table that the loader
@@ -105,11 +106,11 @@
                 bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
             >
                 <Select.Trigger class="table-select-trigger">
-                    {selected_table_name || $t('query.table.placeholder')}
+                    {selected_table_name || $t("query.table.placeholder")}
                 </Select.Trigger>
                 <Select.Content>
                     <Select.Group>
-                        <Select.Label>{$t('query.table.listLabel')}</Select.Label>
+                        <Select.Label>{$t("query.table.listLabel")}</Select.Label>
                         {#each table_names as table_name (table_name)}
                             <Select.Item value={table_name} label={table_name}>
                                 {table_name}
@@ -118,7 +119,6 @@
                     </Select.Group>
                 </Select.Content>
             </Select.Root>
-
         {/if}
     </div>
 </QueryBuilderStep>
@@ -168,7 +168,7 @@
 
             p.table-description {
                 margin: 0;
-                font-size: 0.875rem;
+                font-size: var(--font-size-sm);
                 color: hsl(0, 0%, 50%);
                 // Show one line only and ellipsize the rest of the text.
                 overflow: hidden;

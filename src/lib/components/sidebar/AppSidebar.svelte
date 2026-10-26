@@ -1,455 +1,487 @@
 <script lang="ts">
-	// Node service
-	import { currentNode, nodes, selectFirstIfNone } from '@/services/beacon-node';
-	import { ensureFresh } from '@/services/beacon-node-connect';
-	import { openNodesSettled } from '@/services/open-nodes-import';
-	import { BRAND } from '@/brand';
+    // Node service
+    import { currentNode, nodes, selectFirstIfNone } from "@/services/beacon-node";
+    import { ensureFresh } from "@/services/beacon-node-connect";
+    import { openNodesSettled } from "@/services/open-nodes-import";
+    import { BRAND } from "@/brand";
 
-	// Svelte lifecycle and navigation
-	import { onMount } from 'svelte';
-	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { page } from '$app/state';
-	import { addToast, dismissToast } from '@/stores/toasts';
-	import { openFeedback } from '$lib/feedback';
-	import { t, type MessageKey } from '@/i18n';
+    // Svelte lifecycle and navigation
+    import { onMount } from "svelte";
+    import { goto, beforeNavigate, afterNavigate } from "$app/navigation";
+    import { resolve } from "$app/paths";
+    import { page } from "$app/state";
+    import { addToast, dismissToast } from "@/stores/toasts";
+    import { openFeedback } from "$lib/feedback";
+    import { t } from "@/i18n";
 
-	// Icons
-	import EyeIcon from '@lucide/svelte/icons/eye';
-	import TextSearchIcon from '@lucide/svelte/icons/text-search';
-	import BookOpenIcon from '@lucide/svelte/icons/book-open';
-	import InfoIcon from '@lucide/svelte/icons/info';
-	import Table2Icon from '@lucide/svelte/icons/table-2';
-	import LinkIcon from '@lucide/svelte/icons/link-2';
-	import CpuIcon from '@lucide/svelte/icons/cpu';
-	import LifeBuoyIcon from '@lucide/svelte/icons/life-buoy';
-	import SendIcon from '@lucide/svelte/icons/send';
-	import Settings2Icon from '@lucide/svelte/icons/settings-2';
-	import PanelLeftCloseIcon from '@lucide/svelte/icons/panel-left-close';
-	import PanelLeftOpenIcon from '@lucide/svelte/icons/panel-left-open';
+    // Icons
+    import EyeIcon from "@lucide/svelte/icons/eye";
+    import TextSearchIcon from "@lucide/svelte/icons/text-search";
+    import BookOpenIcon from "@lucide/svelte/icons/book-open";
+    import InfoIcon from "@lucide/svelte/icons/info";
+    import Table2Icon from "@lucide/svelte/icons/table-2";
+    import LinkIcon from "@lucide/svelte/icons/link-2";
+    import CpuIcon from "@lucide/svelte/icons/cpu";
+    import ShieldIcon from "@lucide/svelte/icons/shield";
+    import RadarIcon from "@lucide/svelte/icons/radar";
+    import LifeBuoyIcon from "@lucide/svelte/icons/life-buoy";
+    import SendIcon from "@lucide/svelte/icons/send";
+    import Settings2Icon from "@lucide/svelte/icons/settings-2";
+    import PanelLeftCloseIcon from "@lucide/svelte/icons/panel-left-close";
+    import PanelLeftOpenIcon from "@lucide/svelte/icons/panel-left-open";
+    import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
 
-	// Components
-	import SidebarMenuItem from './SidebarMenuItem.svelte';
-	import SidebarCollapsibleMenu from './SidebarCollapsibleMenu.svelte';
-	import BuildVersion from './BuildVersion.svelte';
-	import LanguageMenu from './LanguageMenu.svelte';
+    // Components
+    import SidebarMenuItem from "./SidebarMenuItem.svelte";
+    import SidebarCollapsibleMenu from "./SidebarCollapsibleMenu.svelte";
+    import BuildVersion from "./BuildVersion.svelte";
+    import LanguageMenu from "./LanguageMenu.svelte";
+    import { settings } from "@/stores/settings";
+    import { signedInNodeIds } from "@/services/admin-session";
+    import { isLocked, visibleGroups, type Group, type MenuItem } from "./menu";
 
-	type SubItem = { title: MessageKey; url: string };
-	type MenuItem = {
-		title: MessageKey;
-		url: string;
-		/** Section root the item highlights on. Defaults to `url`. */
-		match?: string;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		icon: any;
-		children?: SubItem[];
-		target?: string;
-	};
-	type Group = { title: MessageKey; items: MenuItem[] };
+    const groups: Group[] = [
+        {
+            title: "nav.group.dataAccess",
+            items: [
+                {
+                    title: "nav.item.queryBuilder",
+                    url: resolve("/queries/workbench"),
+                    match: resolve("/queries"),
+                    icon: TextSearchIcon
+                }
+            ]
+        },
+        {
+            title: "nav.group.explore",
+            items: [
+                {
+                    title: "nav.item.workspace",
+                    url: resolve("/visualisations/map-viewer"),
+                    match: resolve("/visualisations"),
+                    icon: EyeIcon
+                }
+            ]
+        },
+        {
+            title: "nav.group.nodeManagement",
+            items: [
+                {
+                    title: "nav.item.dataBrowser",
+                    url: resolve("/data-browser"),
+                    icon: Table2Icon,
+                    children: [
+                        { title: "nav.item.datasets", url: resolve("/data-browser/datasets") },
+                        { title: "nav.item.dataTables", url: resolve("/data-browser/data-tables") }
+                    ]
+                },
+                {
+                    title: "nav.item.sqlConsole",
+                    url: resolve("/sql-editor"),
+                    icon: SquareTerminalIcon,
+                    adminOnly: true
+                },
+                {
+                    title: "nav.item.crawlers",
+                    url: resolve("/data-browser/crawlers"),
+                    icon: RadarIcon,
+                    adminOnly: true
+                },
+                {
+                    title: "nav.item.usersRoles",
+                    url: resolve("/node-management/users-roles"),
+                    icon: ShieldIcon,
+                    adminOnly: true
+                },
+                { title: "nav.item.systemInfo", url: resolve("/system-info"), icon: CpuIcon }
+            ]
+        },
+        {
+            title: "nav.group.studio",
+            items: [
+                { title: "nav.item.beaconNodes", url: resolve("/beacon-nodes"), icon: LinkIcon },
+                { title: "nav.item.settings", url: resolve("/settings"), icon: Settings2Icon }
+            ]
+        }
+    ];
 
-	const groups: Group[] = [
-		{
-			title: 'nav.group.dataAccess',
-			items: [
-				{
-					title: 'nav.item.queries',
-					url: resolve('/queries/workbench'),
-					match: resolve('/queries'),
-					icon: TextSearchIcon,
-					children: [
-						{ title: 'nav.item.queryBuilder', url: resolve('/queries/workbench') }
-					]
-				}
-			]
-		},
-		{
-			title: 'nav.group.explore',
-			items: [
-				{
-					title: 'nav.item.workspace',
-					url: resolve('/visualisations/map-viewer'),
-					match: resolve('/visualisations'),
-					icon: EyeIcon,
-					children: [
-						{ title: 'nav.item.mapViewer', url: resolve('/visualisations/map-viewer') },
-						{ title: 'nav.item.tableExplorer', url: resolve('/visualisations/table-explorer') },
-						{ title: 'nav.item.chartExplorer', url: resolve('/visualisations/chart-explorer') }
-					]
-				}
-			]
-		},
-		{
-			title: 'nav.group.nodeManagement',
-			items: [
-				{
-					title: 'nav.item.dataBrowser',
-					url: resolve('/data-browser'),
-					icon: Table2Icon,
-					children: [
-						{ title: 'nav.item.datasets', url: resolve('/data-browser/datasets') },
-						{ title: 'nav.item.dataTables', url: resolve('/data-browser/data-tables') }
-					]
-				},
-				{ title: 'nav.item.systemInfo', url: resolve('/system-info'), icon: CpuIcon }
-			]
-		},
-		{
-			title: 'nav.group.studio',
-			items: [
-				{ title: 'nav.item.beaconNodes', url: resolve('/beacon-nodes'), icon: LinkIcon },
-				{ title: 'nav.item.settings', url: resolve('/settings'), icon: Settings2Icon }
-			]
-		}
-	];
+    const footerLinks: MenuItem[] = [
+        {
+            title: "nav.item.aboutStudio",
+            url: BRAND.links.about,
+            icon: InfoIcon,
+            target: "_blank"
+        },
+        {
+            title: "nav.item.documentation",
+            url: BRAND.links.docs,
+            icon: BookOpenIcon,
+            target: "_blank"
+        },
+        {
+            title: "nav.item.github",
+            url: BRAND.links.source,
+            icon: LifeBuoyIcon,
+            target: "_blank"
+        }
+    ];
 
-	const footerLinks: MenuItem[] = [
-		{
-			title: 'nav.item.aboutStudio',
-			url: BRAND.links.about,
-			icon: InfoIcon,
-			target: '_blank'
-		},
-		{
-			title: 'nav.item.documentation',
-			url: BRAND.links.docs,
-			icon: BookOpenIcon,
-			target: '_blank'
-		},
-		{
-			title: 'nav.item.github',
-			url: BRAND.links.source,
-			icon: LifeBuoyIcon,
-			target: '_blank'
-		}
-	];
+    let shownGroups = $derived(visibleGroups(groups, $settings.adminFeatures));
 
-	// A brand hides a link with a null URL.
-	const footer = footerLinks.filter((item) => item.url !== null);
+    let hasSession = $derived(!!$currentNode && $signedInNodeIds.has($currentNode.id));
 
-	// The layout owns both flags, because the page header holds the menu button.
-	let {
-		collapsed = $bindable(false),
-		isMobile = false
-	}: { collapsed?: boolean; isMobile?: boolean } = $props();
+    function lockOf(item: MenuItem): string | undefined {
+        if (!isLocked(item, hasSession)) return undefined;
+        if (!$currentNode) return $t("nav.adminLock.noNode");
 
-	// The sidebar shows the status of the selection on every page. Refresh a
-	// stale result. `ensureFresh` skips a check that is not due.
-	$effect(() => {
-		const node = $currentNode;
-		if (node) void ensureFresh(node);
-	});
+        return $t("nav.adminLock.signIn", { node: $currentNode.name });
+    }
 
-	// The routes that work with an empty list. Both of them can add a node.
-	const NODE_FREE_ROUTES = new Set(['/', '/beacon-nodes']);
+    // A brand hides a link with a null URL.
+    const shownFooterLinks = footerLinks.filter((item) => item.url !== null);
 
-	// `page.route.id` carries no base path, so it needs no `resolve`.
-	function needsNode(routeId: string | null | undefined): boolean {
-		return !NODE_FREE_ROUTES.has(routeId ?? '');
-	}
+    // The layout owns both flags, because the page header holds the menu button.
+    let {
+        collapsed = $bindable(false),
+        isMobile = false
+    }: { collapsed?: boolean; isMobile?: boolean } = $props();
 
-	function warnNoNode(): void {
-		addToast({ type: 'error', key: 'nav.needsNode' });
-	}
+    // The sidebar shows the status of the selection on every page. Refresh a
+    // stale result. `ensureFresh` skips a check that is not due.
+    $effect(() => {
+        const node = $currentNode;
+        if (node) void ensureFresh(node);
+    });
 
-	// The app needs at least one node for every route but the two above: this
-	// selection is the node of the browse pages and of a new query, and a query
-	// record holds its own node. Block the navigation instead of following it, so
-	// the user stays on the page they came from and sees why the target failed.
-	beforeNavigate((navigation) => {
-		// The public list can still add a node. Let the move through until it lands.
-		if (!$openNodesSettled) return;
-		if ($nodes.length > 0) return;
-		if (!needsNode(navigation.to?.route.id)) return;
+    // The routes that work with an empty list. Both of them can add a node.
+    const NODE_FREE_ROUTES = new Set(["/", "/beacon-nodes"]);
 
-		navigation.cancel();
-		warnNoNode();
-	});
+    // `page.route.id` carries no base path, so it needs no `resolve`.
+    function needsNode(routeId: string | null | undefined): boolean {
+        return !NODE_FREE_ROUTES.has(routeId ?? "");
+    }
 
-	onMount(() => {
-		// Give the browse pages a node, with no modal. A query carries its own node,
-		// and the builder asks for one where it is missing.
-		selectFirstIfNone();
-	});
+    function warnNoNode(): void {
+        addToast({ type: "error", key: "nav.needsNode" });
+    }
 
-	// `beforeNavigate` never runs for the page a session opens on. A direct load of
-	// a blocked route (a bookmark, a refresh, a shared link) has no prior page to
-	// stay on, so send it home instead. A first visit has no saved node, so this
-	// waits for the public list before the app gives up on the page.
-	$effect(() => {
-		if (!$openNodesSettled) return;
-		if ($nodes.length > 0) return;
-		if (!needsNode(page.route.id)) return;
+    // The app needs at least one node for every route but the two above: this
+    // selection is the node of the browse pages and of a new query, and a query
+    // record holds its own node. Block the navigation instead of following it, so
+    // the user stays on the page they came from and sees why the target failed.
+    beforeNavigate((navigation) => {
+        // The public list can still add a node. Let the move through until it lands.
+        if (!$openNodesSettled) return;
+        if ($nodes.length > 0) return;
+        if (!needsNode(navigation.to?.route.id)) return;
 
-		warnNoNode();
-		goto(resolve('/'));
-	});
+        navigation.cancel();
+        warnNoNode();
+    });
 
-	// The id of the open "please wait" toast. A plain let, so the effect below
-	// does not re-run on its own write.
-	let waitToastId: number | null = null;
+    onMount(() => {
+        // Give the browse pages a node, with no modal. A query carries its own node,
+        // and the builder asks for one where it is missing.
+        selectFirstIfNone();
+    });
 
-	// Name the wait. The app reads the public node list on a first visit only.
-	$effect(() => {
-		if ($openNodesSettled) {
-			if (waitToastId !== null) {
-				dismissToast(waitToastId);
-				waitToastId = null;
-			}
-			return;
-		}
+    // `beforeNavigate` never runs for the page a session opens on. A direct load of
+    // a blocked route (a bookmark, a refresh, a shared link) has no prior page to
+    // stay on, so send it home instead. A first visit has no saved node, so this
+    // waits for the public list before the app gives up on the page.
+    $effect(() => {
+        if (!$openNodesSettled) return;
+        if ($nodes.length > 0) return;
+        if (!needsNode(page.route.id)) return;
 
-		if (waitToastId !== null) return;
-		if ($nodes.length > 0) return;
-		if (!needsNode(page.route.id)) return;
+        warnNoNode();
+        goto(resolve("/"));
+    });
 
-		waitToastId = addToast({
-			type: 'info',
-			timeout: 0,
-			key: 'nav.waitForNodes'
-		});
-	});
+    // The id of the open "please wait" toast. A plain let, so the effect below
+    // does not re-run on its own write.
+    let waitToastId: number | null = null;
 
-	// Close the overlay sidebar after navigating on mobile
-	afterNavigate(() => {
-		if (isMobile) collapsed = true;
-	});
+    // Name the wait. The app reads the public node list on a first visit only.
+    $effect(() => {
+        if ($openNodesSettled) {
+            if (waitToastId !== null) {
+                dismissToast(waitToastId);
+                waitToastId = null;
+            }
+            return;
+        }
+
+        if (waitToastId !== null) return;
+        if ($nodes.length > 0) return;
+        if (!needsNode(page.route.id)) return;
+
+        waitToastId = addToast({
+            type: "info",
+            timeout: 0,
+            key: "nav.waitForNodes"
+        });
+    });
+
+    // Close the overlay sidebar after navigating on mobile
+    afterNavigate(() => {
+        if (isMobile) collapsed = true;
+    });
 </script>
 
 {#if isMobile && !collapsed}
-	<button class="sidebar-backdrop" 
-			aria-label={$t('nav.closeMenu')} 
-			onclick={() => (collapsed = true)}></button>
+    <button
+        class="sidebar-backdrop"
+        aria-label={$t("nav.closeMenu")}
+        onclick={() => (collapsed = true)}
+    ></button>
 {/if}
 
 <div class="sidebar" class:collapsed>
-	<div class="sidebar-header">
-		<div class="logo-wrapper">
-			<a class="header-link" href={resolve('/')}>
-				<img src={BRAND.logo} alt={$t('app.logoAlt')} class="beacon-logo" />
-				<span class="app-name">{BRAND.name}</span>
-			</a>
-			<button
-				class="collapse-toggle"
-				onclick={(e) => {
-					e.stopPropagation();
-					collapsed = !collapsed;
-				}}
-			>
-				{#if collapsed}
-					<PanelLeftOpenIcon class="toggle-icon" />
-				{:else}
-					<PanelLeftCloseIcon class="toggle-icon" />
-				{/if}
-			</button>
-		</div>
+    <div class="sidebar-header">
+        <div class="logo-wrapper">
+            <a class="header-link" href={resolve("/")}>
+                <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
+                <span class="app-name">{BRAND.name}</span>
+            </a>
+            <button
+                class="collapse-toggle"
+                onclick={(e) => {
+                    e.stopPropagation();
+                    collapsed = !collapsed;
+                }}
+            >
+                {#if collapsed}
+                    <PanelLeftOpenIcon class="toggle-icon" />
+                {:else}
+                    <PanelLeftCloseIcon class="toggle-icon" />
+                {/if}
+            </button>
+        </div>
+    </div>
 
-	</div>
+    <div class="sidebar-content">
+        {#each shownGroups as group (group.title)}
+            <div class="menu-group">
+                <span class="menu-title">{$t(group.title)}</span>
+                {#each group.items as item (item.url)}
+                    {#if item.children?.length}
+                        <SidebarCollapsibleMenu
+                            title={$t(item.title)}
+                            url={item.url}
+                            match={item.match}
+                            icon={item.icon}
+                            items={item.children.map((child) => ({
+                                title: $t(child.title),
+                                url: child.url
+                            }))}
+                        />
+                    {:else}
+                        <SidebarMenuItem
+                            title={$t(item.title)}
+                            url={item.url}
+                            match={item.match}
+                            icon={item.icon}
+                            lock={lockOf(item)}
+                        />
+                    {/if}
+                {/each}
+            </div>
+        {/each}
+    </div>
 
-	<div class="sidebar-content">
-		{#each groups as group (group.title)}
-			<div class="menu-group">
-				<span class="menu-title">{$t(group.title)}</span>
-				{#each group.items as item (item.url)}
-					{#if item.children?.length}
-						<SidebarCollapsibleMenu
-							title={$t(item.title)}
-							url={item.url}
-							match={item.match}
-							icon={item.icon}
-							items={item.children.map((child) => ({ title: $t(child.title), url: child.url }))}
-						/>
-					{:else}
-						<SidebarMenuItem title={$t(item.title)} url={item.url} icon={item.icon} />
-					{/if}
-				{/each}
-			</div>
-		{/each}
-	</div>
-
-	<div class="sidebar-footer">
-		<div class="menu-group">
-			{#each footer as item (item.url)}
-				<SidebarMenuItem
-					title={$t(item.title)}
-					url={item.url}
-					icon={item.icon}
-					target={item.target}
-				/>
-			{/each}
-			<LanguageMenu />
-			<SidebarMenuItem
-				title={$t('nav.item.feedback')}
-				icon={SendIcon}
-				onclick={() => openFeedback(page.route.id)}
-			/>
-		</div>
-	</div>
+    <div class="sidebar-footer">
+        <div class="menu-group">
+            {#each shownFooterLinks as item (item.url)}
+                <SidebarMenuItem
+                    title={$t(item.title)}
+                    url={item.url}
+                    icon={item.icon}
+                    target={item.target}
+                />
+            {/each}
+            <LanguageMenu />
+            <SidebarMenuItem
+                title={$t("nav.item.feedback")}
+                icon={SendIcon}
+                onclick={() => openFeedback(page.route.id)}
+            />
+        </div>
+    </div>
 </div>
 
 <BuildVersion />
 
 <style lang="scss">
-	.sidebar {
-		--sidebar-bold-font-weight: 600;
+    .sidebar {
+        --sidebar-bold-font-weight: 600;
 
-		background: var(--sidebar);
-		border-right: 1px solid var(--sidebar-border);
+        background: var(--sidebar);
+        border-right: 1px solid var(--sidebar-border);
 
-		padding: 0.5rem;
-		display: flex;
-		flex-direction: column;
-		min-width: 250px;
-		// Keep the sidebar inside the viewport. The menu list scrolls on its own.
-		max-height: 100dvh;
-		overflow: hidden;
-		transition:
-			min-width 0.2s ease,
-			width 0.2s ease;
+        padding: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        min-width: 250px;
+        // Keep the sidebar inside the viewport. The menu list scrolls on its own.
+        max-height: 100dvh;
+        overflow: hidden;
+        transition:
+            min-width 0.2s ease,
+            width 0.2s ease;
 
-		.sidebar-header {
-			flex-shrink: 0;
-			padding-bottom: 1rem;
-			border-bottom: 1px solid var(--sidebar-border);
+        .sidebar-header {
+            flex-shrink: 0;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--sidebar-border);
 
-			.logo-wrapper {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
-				padding: 0.5rem;
+            .logo-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                padding: 0.5rem;
 
-				.header-link {
-					flex-grow: 1;
-					display: flex;
-					align-items: center;
-					gap: 0.5rem;
-					text-decoration: none;
-					color: inherit;
-					border-radius: 0.5rem;
+                .header-link {
+                    flex-grow: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    text-decoration: none;
+                    color: inherit;
+                    border-radius: 0.5rem;
 
-					.beacon-logo {
-						width: 1.75rem;
-						height: 1.75rem;
-						// padding: 0.5rem;
-						margin: 0.25rem;
-					}
+                    .beacon-logo {
+                        width: 1.75rem;
+                        height: 1.75rem;
+                        // padding: 0.5rem;
+                        margin: 0.25rem;
+                    }
 
-					.app-name {
-						flex-grow: 1;
-						font-size: 1rem;
-						font-weight: 600;
-						line-height: 1.5rem;
-						margin: 0;
-						overflow: hidden;
-						text-overflow: ellipsis;
-						white-space: nowrap;
-					}
+                    .app-name {
+                        flex-grow: 1;
+                        font-size: var(--font-size-md);
+                        font-weight: 600;
+                        line-height: 1.5rem;
+                        margin: 0;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
 
-					&:hover {
-						background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
-					}
-				}
+                    &:hover {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--background) 90%,
+                            var(--primary) 10%
+                        );
+                    }
+                }
 
-				.collapse-toggle {
-					flex-shrink: 0;
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					background: none;
-					border: none;
-					cursor: pointer;
-					padding: 0.25rem;
-					border-radius: 0.375rem;
-					color: inherit;
+                .collapse-toggle {
+                    flex-shrink: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0.25rem;
+                    border-radius: 0.375rem;
+                    color: inherit;
 
-					:global(.toggle-icon) {
-						width: 1rem;
-						height: 1rem;
-					}
+                    :global(.toggle-icon) {
+                        width: 1rem;
+                        height: 1rem;
+                    }
 
-					&:hover {
-						background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
-					}
-				}
-			}
-		}
+                    &:hover {
+                        background-color: color-mix(
+                            in srgb,
+                            var(--background) 90%,
+                            var(--primary) 10%
+                        );
+                    }
+                }
+            }
+        }
 
-		.sidebar-content {
-			flex-grow: 1;
-			min-height: 0;
-			overflow-y: auto;
-			overflow-x: hidden;
-		}
+        .sidebar-content {
+            flex-grow: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
 
-		.sidebar-footer {
-			flex-shrink: 0;
+        .sidebar-footer {
+            flex-shrink: 0;
 
-			.menu-group {
-				border-top: 1px solid var(--sidebar-border);
-			}
-		}
+            .menu-group {
+                border-top: 1px solid var(--sidebar-border);
+            }
+        }
 
-		.menu-group {
-			padding-top: 1rem;
-			padding-bottom: 1rem;
-			gap: 0.5rem;
-			display: flex;
-			flex-direction: column;
+        .menu-group {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            gap: 0.5rem;
+            display: flex;
+            flex-direction: column;
 
-			.menu-title {
-				font-size: 0.75rem;
-				font-weight: 600;
-				line-height: 1rem;
-				text-transform: uppercase;
-				color: var(--foreground);
-			}
+            .menu-title {
+                font-size: var(--font-size-xs);
+                font-weight: 600;
+                line-height: 1rem;
+                text-transform: uppercase;
+                color: var(--foreground);
+            }
 
-			:global(> .menu-item > .item-title),
-			:global(.submenu-title) {
-				font-weight: var(--sidebar-bold-font-weight);
-			}
-		}
+            :global(> .menu-item > .item-title),
+            :global(.submenu-title) {
+                font-weight: var(--sidebar-bold-font-weight);
+            }
+        }
 
-		&.collapsed {
-			min-width: unset;
-			width: 2.5rem;
+        &.collapsed {
+            min-width: unset;
+            width: 2.5rem;
 
-			.sidebar-content,
-			.sidebar-footer,
-			.logo-wrapper .header-link {
-				display: none;
-			}
+            .sidebar-content,
+            .sidebar-footer,
+            .logo-wrapper .header-link {
+                display: none;
+            }
 
-			.logo-wrapper {
-				justify-content: center;
-			}
-		}
+            .logo-wrapper {
+                justify-content: center;
+            }
+        }
 
-		// --- Mobile: overlay the content instead of taking layout space ---
-		@media (max-width: 767px) {
-			position: fixed;
-			top: 0;
-			left: 0;
-			height: 100dvh;
-			width: 16rem;
-			max-width: 85vw;
-			z-index: 50;
-			background: var(--app-background);
-			box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
+        // --- Mobile: overlay the content instead of taking layout space ---
+        @media (max-width: 767px) {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100dvh;
+            width: 16rem;
+            max-width: 85vw;
+            z-index: 50;
+            background: var(--app-background);
+            box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
 
-			// Closed: leave the screen. The page header keeps the menu button.
-			&.collapsed {
-				display: none;
-			}
-		}
-	}
+            // Closed: leave the screen. The page header keeps the menu button.
+            &.collapsed {
+                display: none;
+            }
+        }
+    }
 
-	.sidebar-backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: 40;
-		border: none;
-		padding: 0;
-		background: rgba(0, 0, 0, 0.4);
-		cursor: pointer;
-	}
+    .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        border: none;
+        padding: 0;
+        background: rgba(0, 0, 0, 0.4);
+        cursor: pointer;
+    }
 </style>

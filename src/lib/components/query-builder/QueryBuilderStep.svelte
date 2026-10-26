@@ -76,7 +76,7 @@
 				border-radius: 50%;
 				background-color: var(--muted);
 				color: var(--primary);
-				font-size: 0.875rem;
+				font-size: var(--font-size-sm);
 				font-weight: 600;
 			}
 
@@ -90,7 +90,7 @@
 
 				.step-description {
 					margin: 0.25rem 0 0;
-					font-size: 0.875rem;
+					font-size: var(--font-size-sm);
 					color: var(--muted-foreground);
 				}
 			}
