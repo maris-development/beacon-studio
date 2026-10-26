@@ -90,7 +90,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - Shared state:
   - `src/lib/stores/query-store.svelte.ts` (persistent in-memory query-result cache; `queryStore.ensure()`)
   - `src/lib/stores/opfs-arrow-cache.ts` (OPFS tier under the query store: raw compressed Arrow IPC bytes, survives reloads/restarts)
-  - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, consumed by `queries/query-history`)
+  - `src/lib/stores/query-history.ts` (persisted log of executed queries; recorded by `queryStore.ensure()`, listed by `QueryHistoryModal`)
   - `src/lib/services/beacon-node.ts` (the single owner of the Beacon node list and the selection; read `$nodes` / `$currentNode` in a component, and write only through its actions)
   - A child `onMount` runs before the layout `onMount`. State that a page reads at mount
     therefore cannot come from `+layout.svelte` `onMount`. The public node list is fetched
@@ -112,7 +112,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
 5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
-7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. The `queries/query-history` page lists them and re-runs each by navigating to a visualiser with `?q=<record id>`, and shares each as a `SharedQuery` in `?query=`; `query-editor` preloads a query supplied via either form.
+7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. `QueryHistoryModal` in the action bar lists them, and opens each as a block on the current page. `query-editor` preloads a query from `?q=` or `?query=`.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
@@ -260,6 +260,9 @@ message the change never reaches production.
   - API client (`@maris-development/beacon-client`; legacy `beacon-api/client.ts` where still used)
 - Prefer fixing root causes over adding one-off patches in page components.
 - `QueryBuilder` gates steps 2 to 4 and keeps every step mounted. The parameter block gets an empty `table_name` until the node answers. An empty table stops its schema load, its draft emit and its column reset. Gate the block only through `table_name`, so a stored draft or a blocked seed stays intact.
+- The saved-query list and the history list are modals in `QueryActionBar`. Open calls `QueryActions.openStoredQuery`, then `QueryWorkspace.openStoredQuery`.
+- Do not open a list entry with `goto`. A page reads `?q=` only in `onMount`, and a `goto` to the same route does not remount it.
+- `openStoredQuery` selects a block with the same compiled query and node URL. A block copy gets a new id, so an id test never finds it.
 - Prefer creating own components with clear explicit code instead of relying on libraries/packages for components.
 
 ## Validation Checklist Before Finishing

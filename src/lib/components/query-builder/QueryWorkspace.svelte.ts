@@ -440,6 +440,43 @@ export class QueryWorkspace {
 	}
 
 	/**
+	 * Open a saved query or a history entry from a list, and select its block.
+	 *
+	 * A block that holds the same query on the same node counts as open, and the
+	 * method selects it. The block is a copy with its own id, so the method
+	 * compares the content. An edit of the block makes it a different query.
+	 */
+	openStoredQuery(entry: StoredQuery): void {
+		const open = this.findBlockWithQuery(entry);
+		if (open) {
+			this.select(open.id);
+			return;
+		}
+
+		this.addFromStoredQuery(entry);
+
+		if (hasNodeRef(entry.node) && !resolveRef(entry.node)) {
+			this.warnMissingNode(entry.node.url || null);
+		}
+	}
+
+	/** The first block with the same query and node URL as the record, or null. */
+	private findBlockWithQuery(record: StoredQuery): StoredQuery | null {
+		const query = QueryWorkspace.getQuery(record);
+		if (!query) return null;
+
+		const key = JSON.stringify(query);
+
+		return (
+			this.blocks.find(
+				(block) =>
+					block.node?.url === record.node?.url &&
+					JSON.stringify(QueryWorkspace.getQuery(block)) === key
+			) ?? null
+		);
+	}
+
+	/**
 	 * Open a query with no draft as a new block. Share links and the JSON editor
 	 * use this. Pass `node` to name the node of the query. Without it the
 	 * block takes the default. See {@link defaultNodeRef}.

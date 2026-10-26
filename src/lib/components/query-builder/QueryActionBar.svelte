@@ -4,6 +4,8 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import * as QueryFunctions from '@/query/functions';
 	import CacheInfoModal from '@/components/modals/CacheInfoModal.svelte';
+	import SavedQueriesModal from '@/components/queries/SavedQueriesModal.svelte';
+	import QueryHistoryModal from '@/components/queries/QueryHistoryModal.svelte';
 	import DownloadDataButton from '../buttons/DownloadDataButton.svelte';
 	import VisualiseDataButton from '../buttons/VisualiseDataButton.svelte';
     // icons
@@ -17,7 +19,11 @@
     import UrlIcon from '@lucide/svelte/icons/link-2';
 	import InfoIcon from '@lucide/svelte/icons/info';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
+	import BookmarkIcon from '@lucide/svelte/icons/bookmark';
+	import HistoryIcon from '@lucide/svelte/icons/history';
 	import { settings } from '@/stores/settings';
+	import { savedQueries } from '@/stores/saved-queries';
+	import type { StoredQuery } from '@/stores/stored-query';
 	import { t } from '@/i18n';
 	
 
@@ -48,11 +54,29 @@
 		showingCacheInfoModal = false;
 	}
 
-	
+	let showingSavedModal = $state(false);
+	let showingHistoryModal = $state(false);
+
+	/** Load the entry on this page, and close the list. */
+	function openStoredQuery(entry: StoredQuery): void {
+		queryActions.openStoredQuery?.(entry);
+		showingSavedModal = false;
+		showingHistoryModal = false;
+	}
+
+
 </script>
 
 {#if showingCacheInfoModal}
 	<CacheInfoModal onClose={() => closeCacheInfoModal()} />
+{/if}
+
+{#if showingSavedModal}
+	<SavedQueriesModal onOpen={openStoredQuery} onClose={() => (showingSavedModal = false)} />
+{/if}
+
+{#if showingHistoryModal}
+	<QueryHistoryModal onOpen={openStoredQuery} onClose={() => (showingHistoryModal = false)} />
 {/if}
 
 
@@ -140,7 +164,19 @@
 				<SaveIcon />
 				{$t('query.actions.save')}
 			</Button>
-		{/if}	
+		{/if}
+
+		{#if queryActions.openStoredQuery}
+			<Button variant="outline" onclick={() => (showingSavedModal = true)} title={$t('saved.title')}>
+				<BookmarkIcon />
+				{$t('query.actions.saved', { count: $savedQueries.length })}
+			</Button>
+
+			<Button variant="outline" onclick={() => (showingHistoryModal = true)} title={$t('history.title')}>
+				<HistoryIcon />
+				{$t('query.actions.history')}
+			</Button>
+		{/if}
 		
 
 		<Button onclick={queryActions.resetQuery} variant="destructive" title={$t('query.actions.resetTitle')}>

@@ -57,9 +57,7 @@
 					match: resolve('/queries'),
 					icon: TextSearchIcon,
 					children: [
-						{ title: 'nav.item.queryBuilder', url: resolve('/queries/workbench') },
-						{ title: 'nav.item.savedQueries', url: resolve('/queries/saved') },
-						{ title: 'nav.item.queryHistory', url: resolve('/queries/history') }
+						{ title: 'nav.item.queryBuilder', url: resolve('/queries/workbench') }
 					]
 				}
 			]

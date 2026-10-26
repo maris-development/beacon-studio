@@ -43,8 +43,6 @@
 		"item": {
 			"queries": "Queries",
 			"queryBuilder": "Query-werkbank",
-			"savedQueries": "Opgeslagen queries",
-			"queryHistory": "Querygeschiedenis",
 			"workspace": "Werkruimte",
 			"mapViewer": "Kaartviewer",
 			"tableExplorer": "Tabelverkenner",
@@ -181,8 +179,6 @@
 		"untitled": "Naamloos",
 		"filterCount": "{count, plural, one {# filter} other {# filters}}",
 		"entry": {
-			"noColumns": "(geen kolommen)",
-			"openInBuilder": "Openen in Query-werkbank",
 			"table": "Tabel",
 			"map": "Kaart",
 			"chart": "Grafiek"
@@ -226,14 +222,10 @@
 			"downloadSql": "SQL downloaden",
 			"save": "Query opslaan",
 			"saveTitle": "Query opslaan",
+			"saved": "Opgeslagen ({count, number})",
+			"history": "Geschiedenis",
 			"resetTitle": "Queryselectie terugzetten",
 			"cacheInfo": "Informatie over querycaching"
-		},
-		"share": {
-			"copyTitle": "Kopieer een link die in elke browser werkt",
-			"none": "Dit item heeft geen deelbare query.",
-			"copied": "Deellink gekopieerd naar klembord.",
-			"copyFailed": "Kan de deellink niet kopiëren."
 		},
 		"guard": {
 			"noFilters": "Deze query heeft geen filters. Voeg minstens één filter toe, of zet \"Filter verplicht\" uit in de instellingen."
@@ -452,37 +444,38 @@
 	},
 	"history": {
 		"title": "Querygeschiedenis",
-		"intro": "Queries die je hebt uitgevoerd. Voer ze opnieuw uit, bekijk ze of bewerk ze.",
-		"clear": "Geschiedenis wissen",
-		"empty": {
-			"title": "Nog geen queries",
-			"text": "Zodra je een query uitvoert, verschijnt die hier."
-		},
+		"empty": "Er staan geen queries in de geschiedenis.",
 		"entry": {
-			"never": "nooit",
-			"duration": "{ms, number} ms",
-			"runCount": "· {count, number}× uitgevoerd",
 			"remove": "Uit geschiedenis verwijderen"
+		},
+		"delete": {
+			"title": "Item uit geschiedenis verwijderen",
+			"message": "\"{name}\" uit de geschiedenis verwijderen?"
 		}
 	},
 	"saved": {
 		"title": "Opgeslagen queries",
-		"intro": "Queries die je hebt opgeslagen vanuit de query-werkbank. Voer ze opnieuw uit, visualiseer ze of open ze.",
-		"clear": "Opgeslagen wissen",
-		"empty": {
-			"title": "Nog geen opgeslagen queries",
-			"beforeLink": "Bouw een query in de",
-			"beforeButton": "en klik op",
-			"afterButton": "om die hier toe te voegen."
-		},
+		"empty": "Er zijn geen opgeslagen queries.",
 		"entry": {
-			"savedAgo": "opgeslagen {time}",
 			"remove": "Opgeslagen query verwijderen"
+		},
+		"delete": {
+			"title": "Opgeslagen query verwijderen",
+			"message": "Opgeslagen query \"{name}\" verwijderen?"
 		},
 		"toast": {
 			"noQuery": "Kan niet opslaan: kies een tabel en minstens één kolom.",
 			"saved": "Query \"{name}\" opgeslagen.",
 			"saveFailed": "Kan query niet opslaan:"
+		}
+	},
+	"queryList": {
+		"open": "Openen",
+		"column": {
+			"node": "Node",
+			"saved": "Opgeslagen",
+			"lastRun": "Laatst uitgevoerd",
+			"rows": "Rijen"
 		}
 	},
 	"download": {

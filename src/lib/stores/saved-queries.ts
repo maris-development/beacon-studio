@@ -1,7 +1,7 @@
 /**
  * Saved queries are a persisted list of queries that a user kept. They are
  * separate from the execution history. The user makes an entry with the "Save
- * Query" button in the workbench. The user can run, rename, remove or edit it.
+ * Query" button in the workbench. The user can run, remove or edit it.
  *
  * The app never writes these entries automatically, and it never merges them.
  * A save is a snapshot. Each save is a separate entry with its own identity.

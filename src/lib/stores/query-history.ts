@@ -1,6 +1,6 @@
 /**
  * Query history is a persisted log of executed queries. A user can open, run
- * again, view or edit an earlier query. See the query-history page.
+ * again, view or edit an earlier query. See `QueryHistoryModal`.
  *
  * The query store writes these entries. Every visualiser runs its queries
  * through that one point. Entries use {@link StoredQuery.datasetKey} as their

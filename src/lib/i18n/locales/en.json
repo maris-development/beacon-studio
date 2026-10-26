@@ -43,8 +43,6 @@
 		"item": {
 			"queries": "Queries",
 			"queryBuilder": "Query Workbench",
-			"savedQueries": "Saved Queries",
-			"queryHistory": "Query History",
 			"workspace": "Workspace",
 			"mapViewer": "Map Viewer",
 			"tableExplorer": "Table Explorer",
@@ -181,8 +179,6 @@
 		"untitled": "Untitled",
 		"filterCount": "{count, plural, one {# filter} other {# filters}}",
 		"entry": {
-			"noColumns": "(no columns)",
-			"openInBuilder": "Open in Query Workbench",
 			"table": "Table",
 			"map": "Map",
 			"chart": "Chart"
@@ -226,14 +222,10 @@
 			"downloadSql": "Download SQL",
 			"save": "Save Query",
 			"saveTitle": "Save query",
+			"saved": "Saved ({count, number})",
+			"history": "History",
 			"resetTitle": "Reset query selection",
 			"cacheInfo": "Query caching information"
-		},
-		"share": {
-			"copyTitle": "Copy a link that works in any browser",
-			"none": "This entry has no shareable query.",
-			"copied": "Share link copied to clipboard.",
-			"copyFailed": "Could not copy the share link."
 		},
 		"guard": {
 			"noFilters": "This query has no filters. Add at least one filter, or turn off \"Require a filter\" in the settings."
@@ -452,37 +444,38 @@
 	},
 	"history": {
 		"title": "Query History",
-		"intro": "Queries you've executed. Re-run, view, or edit any of them.",
-		"clear": "Clear history",
-		"empty": {
-			"title": "No queries yet",
-			"text": "Once you execute a query, it will show up here."
-		},
+		"empty": "There are no queries in the history.",
 		"entry": {
-			"never": "never",
-			"duration": "{ms, number} ms",
-			"runCount": "· run {count, number}×",
 			"remove": "Remove from history"
+		},
+		"delete": {
+			"title": "Delete history entry",
+			"message": "Delete \"{name}\" from the history?"
 		}
 	},
 	"saved": {
 		"title": "Saved Queries",
-		"intro": "Queries you've saved from the query workbench. Re-run, visualise, or open any saved query.",
-		"clear": "Clear saved",
-		"empty": {
-			"title": "No saved queries yet",
-			"beforeLink": "Build a query in the",
-			"beforeButton": "and click",
-			"afterButton": "to add it here."
-		},
+		"empty": "There are no saved queries.",
 		"entry": {
-			"savedAgo": "saved {time}",
 			"remove": "Remove saved query"
+		},
+		"delete": {
+			"title": "Delete saved query",
+			"message": "Delete the saved query \"{name}\"?"
 		},
 		"toast": {
 			"noQuery": "Can not save: please select a table and at least one column.",
 			"saved": "Query \"{name}\" saved.",
 			"saveFailed": "Failed to save query:"
+		}
+	},
+	"queryList": {
+		"open": "Open",
+		"column": {
+			"node": "Node",
+			"saved": "Saved",
+			"lastRun": "Last run",
+			"rows": "Rows"
 		}
 	},
 	"download": {

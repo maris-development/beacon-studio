@@ -5,7 +5,7 @@ import { addToast } from '@/stores/toasts';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { runBlockReason } from '@/query/query-guard';
-import type { ShareableQuery } from '@/stores/stored-query';
+import type { ShareableQuery, StoredQuery } from '@/stores/stored-query';
 import type { Message } from '@/i18n';
 
 export type ActionCallback = (() => void | Promise<void>) | undefined;
@@ -19,6 +19,11 @@ export type QueryActions = {
     saveQuery?: ActionCallback;   // links to visualise data in map page
     resetQuery?: ActionCallback;          // reset query selection
     editQuery?: ActionCallback;           // edit query selection
+    /**
+     * Open a saved query or a history entry on the current page. The action bar
+     * shows the saved and history buttons only when this action exists.
+     */
+    openStoredQuery?: (entry: StoredQuery) => void;
     /**
      * The Beacon node of the active query, or null. The Python export needs the
      * URL and the token of that node. See `PythonQueryBuilder.toPythonCode`.
@@ -233,6 +238,14 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         workspace.saveBlock(block.id);
     }
 
+    /**
+     * Open a list entry as a block of this workspace. A `goto` with `?q=` does
+     * not work here: the page reads that parameter only at its mount.
+     */
+    function openStoredQuery(entry: StoredQuery): void {
+        workspace.openStoredQuery(entry);
+    }
+
     return {
         compileQuery,
         downloadData,
@@ -241,6 +254,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         visualiseMap,
         resetQuery,
         saveQuery,
+        openStoredQuery,
         getNode,
         getShareableQuery,
         runBlockReason: activeRunBlockReason

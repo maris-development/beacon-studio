@@ -43,8 +43,6 @@
 		"item": {
 			"queries": "Query",
 			"queryBuilder": "Banco di lavoro query",
-			"savedQueries": "Query salvate",
-			"queryHistory": "Cronologia query",
 			"workspace": "Spazio di lavoro",
 			"mapViewer": "Visualizzatore mappa",
 			"tableExplorer": "Esplora tabelle",
@@ -181,8 +179,6 @@
 		"untitled": "Senza titolo",
 		"filterCount": "{count, plural, one {# filtro} other {# filtri}}",
 		"entry": {
-			"noColumns": "(nessuna colonna)",
-			"openInBuilder": "Apri nel Banco di lavoro query",
 			"table": "Tabella",
 			"map": "Mappa",
 			"chart": "Grafico"
@@ -226,14 +222,10 @@
 			"downloadSql": "Scarica SQL",
 			"save": "Salva query",
 			"saveTitle": "Salva query",
+			"saved": "Salvate ({count, number})",
+			"history": "Cronologia",
 			"resetTitle": "Ripristina selezione query",
 			"cacheInfo": "Informazioni sulla cache delle query"
-		},
-		"share": {
-			"copyTitle": "Copia un link che funziona in qualsiasi browser",
-			"none": "Questa voce non ha una query condivisibile.",
-			"copied": "Link di condivisione copiato negli appunti.",
-			"copyFailed": "Impossibile copiare il link di condivisione."
 		},
 		"guard": {
 			"noFilters": "Questa query non ha filtri. Aggiungi almeno un filtro, oppure disattiva \"Richiedi un filtro\" nelle impostazioni."
@@ -452,37 +444,38 @@
 	},
 	"history": {
 		"title": "Cronologia query",
-		"intro": "Query che hai eseguito. Eseguile di nuovo, visualizzale o modificale.",
-		"clear": "Cancella cronologia",
-		"empty": {
-			"title": "Ancora nessuna query",
-			"text": "Quando esegui una query, compare qui."
-		},
+		"empty": "Non ci sono query nella cronologia.",
 		"entry": {
-			"never": "mai",
-			"duration": "{ms, number} ms",
-			"runCount": "· eseguita {count, number}×",
 			"remove": "Rimuovi dalla cronologia"
+		},
+		"delete": {
+			"title": "Elimina voce della cronologia",
+			"message": "Eliminare \"{name}\" dalla cronologia?"
 		}
 	},
 	"saved": {
 		"title": "Query salvate",
-		"intro": "Query che hai salvato dal banco di lavoro query. Eseguile di nuovo, visualizzale o apri qualsiasi query salvata.",
-		"clear": "Cancella salvate",
-		"empty": {
-			"title": "Ancora nessuna query salvata",
-			"beforeLink": "Crea una query nel",
-			"beforeButton": "e fai clic su",
-			"afterButton": "per aggiungerla qui."
-		},
+		"empty": "Non ci sono query salvate.",
 		"entry": {
-			"savedAgo": "salvata {time}",
 			"remove": "Rimuovi query salvata"
+		},
+		"delete": {
+			"title": "Elimina query salvata",
+			"message": "Eliminare la query salvata \"{name}\"?"
 		},
 		"toast": {
 			"noQuery": "Impossibile salvare: seleziona una tabella e almeno una colonna.",
 			"saved": "Query \"{name}\" salvata.",
 			"saveFailed": "Impossibile salvare la query:"
+		}
+	},
+	"queryList": {
+		"open": "Apri",
+		"column": {
+			"node": "Nodo",
+			"saved": "Salvata",
+			"lastRun": "Ultima esecuzione",
+			"rows": "Righe"
 		}
 	},
 	"download": {
