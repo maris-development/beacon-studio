@@ -418,6 +418,35 @@ class QueryStore {
         }
     }
 
+    /**
+     * Records a SQL preview or a SQL download in the persisted query history. Neither one runs
+     * through {@link ensure}, so the result cache holds nothing. The key is the one of a full
+     * run, so the history keeps one row for the SQL. Pass `rowCount` only when the run read
+     * every row. Best-effort, like {@link recordDownload}.
+     */
+    recordSqlRun(
+        sql: string,
+        node: BeaconNode,
+        run: { duration: number; rowCount?: number; storedQueryId?: string }
+    ): void {
+        try {
+            const query: SqlRunQuery = { sql: sql.trim() };
+            const origin = resolveStoredQuery(run.storedQueryId);
+            recordExecution({
+                datasetKey: this.keyFor(query, node),
+                ...recordFieldsOf(query),
+                draft: origin?.draft ?? null,
+                coordinateColumns: origin?.coordinateColumns ?? null,
+                name: origin?.name,
+                node: snapshotNode(node),
+                rowCount: run.rowCount,
+                duration: run.duration
+            });
+        } catch (error) {
+            console.warn("Failed to record SQL run in query history.", error);
+        }
+    }
+
     /** Snapshot of the in-memory cache for the cache-info UI (most-recent first). */
     stats(): MemoryCacheStats {
         const entries: MemoryCacheEntryInfo[] = [];

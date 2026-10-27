@@ -41,8 +41,32 @@
         return queryActions.runBlockReason?.() ?? null;
     });
 
-    /** True in SQL mode. Save and share come in a later release. */
+    /** True in SQL mode. The JSON and Python exports need a builder query. */
     const sqlMode = $derived(queryActions.getMode?.() === "sql");
+
+    /** The hint on the exports that SQL mode disables. */
+    const builderOnlyHint = $derived.by(() => {
+        if (!sqlMode) return undefined;
+        return $t("workbench.sql.builderOnly");
+    });
+
+    /** Copy the SQL: the text of a SQL block, or the SQL form of a builder query. */
+    function copySql(): void {
+        if (sqlMode) {
+            void QueryFunctions.copySqlText(queryActions.getSql?.() ?? "");
+        } else {
+            void QueryFunctions.copySQL(queryActions.compileQuery);
+        }
+    }
+
+    /** Download the SQL as a file. See {@link copySql}. */
+    function downloadSql(): void {
+        if (sqlMode) {
+            QueryFunctions.downloadSqlText(queryActions.getSql?.() ?? "");
+        } else {
+            QueryFunctions.downloadSQL(queryActions.compileQuery);
+        }
+    }
 
     let showingCacheInfoModal = $state(false);
 
@@ -104,12 +128,8 @@
         {#if queryActions.compileQuery}
             <!-- Add name of active query on top of dropdown -->
             <DropdownMenu.Root>
-                <DropdownMenu.Trigger disabled={sqlMode}>
-                    <Button
-                        variant="outline"
-                        disabled={sqlMode}
-                        title={sqlMode ? $t("workbench.sql.notYet") : ""}
-                    >
+                <DropdownMenu.Trigger>
+                    <Button variant="outline">
                         <ShareIcon2 />
                         {$t("query.actions.share")}
                     </Button>
@@ -123,54 +143,59 @@
                         <span>{$t("query.actions.shareUrl")}</span>
                     </DropdownMenu.Item>
 
-                    <DropdownMenu.Item
-                        onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}
-                    >
-                        <CopyIcon class="text-muted-foreground" />
-                        <span>{$t("query.actions.copyJson")}</span>
-                    </DropdownMenu.Item>
+                    <!-- A disabled item gets no hover events, so the wrapper holds the hint. -->
+                    <span class="menu-hint" title={builderOnlyHint}>
+                        <DropdownMenu.Item
+                            disabled={sqlMode}
+                            onclick={() => QueryFunctions.copyJSON(queryActions.compileQuery)}
+                        >
+                            <CopyIcon class="text-muted-foreground" />
+                            <span>{$t("query.actions.copyJson")}</span>
+                        </DropdownMenu.Item>
 
-                    <DropdownMenu.Item
-                        onclick={() =>
-                            QueryFunctions.copyPython(
-                                queryActions.compileQuery,
-                                queryActions.getNode?.() ?? null
-                            )}
-                    >
-                        <CopyIcon class="text-muted-foreground" />
-                        <span>{$t("query.actions.copyPython")}</span>
-                    </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                            disabled={sqlMode}
+                            onclick={() =>
+                                QueryFunctions.copyPython(
+                                    queryActions.compileQuery,
+                                    queryActions.getNode?.() ?? null
+                                )}
+                        >
+                            <CopyIcon class="text-muted-foreground" />
+                            <span>{$t("query.actions.copyPython")}</span>
+                        </DropdownMenu.Item>
+                    </span>
 
-                    <DropdownMenu.Item
-                        onclick={() => QueryFunctions.copySQL(queryActions.compileQuery)}
-                    >
+                    <DropdownMenu.Item onclick={copySql}>
                         <CopyIcon class="text-muted-foreground" />
                         <span>{$t("query.actions.copySql")}</span>
                     </DropdownMenu.Item>
 
                     <DropdownMenu.Separator />
 
-                    <DropdownMenu.Item
-                        onclick={() => QueryFunctions.downloadJSON(queryActions.compileQuery)}
-                    >
-                        <JsonIcon class="text-muted-foreground" />
-                        <span>{$t("query.actions.downloadJson")}</span>
-                    </DropdownMenu.Item>
+                    <span class="menu-hint" title={builderOnlyHint}>
+                        <DropdownMenu.Item
+                            disabled={sqlMode}
+                            onclick={() => QueryFunctions.downloadJSON(queryActions.compileQuery)}
+                        >
+                            <JsonIcon class="text-muted-foreground" />
+                            <span>{$t("query.actions.downloadJson")}</span>
+                        </DropdownMenu.Item>
 
-                    <DropdownMenu.Item
-                        onclick={() =>
-                            QueryFunctions.downloadPython(
-                                queryActions.compileQuery,
-                                queryActions.getNode?.() ?? null
-                            )}
-                    >
-                        <PythonIcon class="text-muted-foreground" />
-                        <span>{$t("query.actions.downloadPython")}</span>
-                    </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                            disabled={sqlMode}
+                            onclick={() =>
+                                QueryFunctions.downloadPython(
+                                    queryActions.compileQuery,
+                                    queryActions.getNode?.() ?? null
+                                )}
+                        >
+                            <PythonIcon class="text-muted-foreground" />
+                            <span>{$t("query.actions.downloadPython")}</span>
+                        </DropdownMenu.Item>
+                    </span>
 
-                    <DropdownMenu.Item
-                        onclick={() => QueryFunctions.downloadSQL(queryActions.compileQuery)}
-                    >
+                    <DropdownMenu.Item onclick={downloadSql}>
                         <SQLIcon class="text-muted-foreground" />
                         <span>{$t("query.actions.downloadSql")}</span>
                     </DropdownMenu.Item>
@@ -182,8 +207,7 @@
             <Button
                 variant="outline"
                 onclick={queryActions.saveQuery}
-                disabled={sqlMode}
-                title={sqlMode ? $t("workbench.sql.notYet") : $t("query.actions.saveTitle")}
+                title={$t("query.actions.saveTitle")}
             >
                 <SaveIcon />
                 {$t("query.actions.save")}
@@ -243,5 +267,9 @@
         align-items: center;
         gap: 0.5rem;
         flex-wrap: wrap;
+    }
+
+    .menu-hint {
+        display: block;
     }
 </style>

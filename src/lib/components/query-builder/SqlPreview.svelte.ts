@@ -3,6 +3,7 @@ import { makeBeaconClient } from "@/beacon-api/client";
 import { readOnlyPreview } from "@/sql/guard";
 import type { PreviewResult } from "@/sql/run";
 import { isSqlDisabled, sqlError } from "@/sql/statement";
+import { queryStore } from "@/stores/query-store.svelte";
 import type { Message, MessageKey } from "@/i18n";
 
 export type SqlOutcome =
@@ -60,6 +61,7 @@ export class SqlPreview {
                     result: result.value,
                     duration: performance.now() - started
                 };
+                this.record(blockId, node, sql, outcome.result, outcome.duration);
             }
         } catch (error) {
             if (own.signal.aborted) {
@@ -83,6 +85,24 @@ export class SqlPreview {
         this.owners[blockId]?.abort();
         delete this.owners[blockId];
         delete this.outcomes[blockId];
+    }
+
+    /** Adds a finished preview to the history. A truncated preview gives no row count. */
+    private record(
+        blockId: string,
+        node: BeaconNode,
+        sql: string,
+        result: PreviewResult,
+        duration: number
+    ): void {
+        if (result.cancelled) return;
+
+        let rowCount: number | undefined;
+        if (!result.truncated) {
+            rowCount = result.rows.length;
+        }
+
+        queryStore.recordSqlRun(sql, node, { duration, rowCount, storedQueryId: blockId });
     }
 
     private finish(own: AbortController, blockId: string, outcome: SqlOutcome): void {

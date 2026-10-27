@@ -15,12 +15,13 @@
 import { createQueryCollection } from "@/stores/query-collection";
 import {
     cloneStoredQuery,
+    runQueryOf,
     snapshotNode,
     type NodeRef,
     type StoredQuery
 } from "@/stores/stored-query";
 import type { CompiledQuery } from "@/beacon-api/types";
-import { compileDraft, type QueryDraft } from "@/query/draft";
+import type { QueryDraft } from "@/query/draft";
 import { getCurrentNode } from "@/services/beacon-node";
 import { describeQuery, track } from "@/telemetry";
 
@@ -53,7 +54,7 @@ export function addSavedQuery(input: SaveQueryInput): StoredQuery {
 
     track("query.save", {
         nodeHost: saved.node?.url,
-        props: { ...describeQuery(saved.compiled), copy: false, hasDraft: saved.draft !== null }
+        props: { ...describeQuery(runQueryOf(saved)), copy: false, hasDraft: saved.draft !== null }
     });
 
     return saved;
@@ -70,7 +71,7 @@ export function saveQueryFrom(source: StoredQuery, name?: string): StoredQuery {
 
     track("query.save", {
         nodeHost: copy.node?.url,
-        props: { ...describeQuery(copy.compiled), copy: true, source: source.role }
+        props: { ...describeQuery(runQueryOf(copy)), copy: true, source: source.role }
     });
 
     return copy;
@@ -90,9 +91,9 @@ export function isSaved(record: StoredQuery): boolean {
         .some((saved) => saved.node?.url === record.node?.url && queryOf(saved) === query);
 }
 
-/** The compiled query of a record as JSON, or null when the draft is incomplete. */
+/** The query of a record as JSON, or null when the record holds none. See `runQueryOf`. */
 function queryOf(record: StoredQuery): string | null {
-    const query = record.compiled ?? compileDraft(record.draft, record.coordinateColumns ?? null);
+    const query = runQueryOf(record);
     if (!query) return null;
 
     return JSON.stringify(query);

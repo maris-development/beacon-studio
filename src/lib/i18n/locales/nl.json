@@ -476,7 +476,7 @@
             "accessHint": "De node controleert de toegang tot elke tabel.",
             "shortcut": "Ctrl + Enter",
             "pickNode": "Kies eerst een node.",
-            "notYet": "Deze functie is nog niet beschikbaar voor SQL-queries.",
+            "builderOnly": "Deze export is alleen voor queries uit de Bouwer.",
             "summary": "SQL",
             "guard": {
                 "empty": "De SQL bevat geen opdracht.",

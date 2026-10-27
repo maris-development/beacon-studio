@@ -16,11 +16,13 @@ import {
     LEGACY_NODE_PARAM,
     nodeRefFromUrl,
     queryModeOf,
+    runQueryOf,
     type NodeRef,
     type StoredQuery
 } from "@/stores/stored-query";
 import type { QueryCollection } from "@/stores/query-collection";
 import type { CompiledQuery } from "@/beacon-api/types";
+import { isSqlRunQuery } from "@/query/run-query";
 import type { CoordinatePair } from "@/geo/spatial-selection";
 import { resolveRef } from "@/services/beacon-node";
 import { addToast } from "@/stores/toasts";
@@ -79,8 +81,13 @@ export interface ResolvedUrlQuery {
      * uses the `datasetKey` of this record to show a cached result immediately.
      */
     entry: StoredQuery | null;
-    /** The query to run. Null if the URL carried no usable data, and for a SQL record. */
+    /** The query to run. Null if the URL carried no usable data, and for a SQL query. */
     query: CompiledQuery | null;
+    /**
+     * The trimmed SQL text of a SQL query, else null. A share link carries it in `sql`. A
+     * `?q=` record holds it in its own `sql`.
+     */
+    sql: string | null;
     /**
      * The name that the link carried, or null. A share link holds the name that
      * the sender gave the query. A new block takes it. It is empty when the sender
@@ -147,6 +154,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
         return {
             entry,
             query: entry.compiled,
+            sql: sqlOf(entry),
             name: entry.name,
             storedQueryId: entry.id,
             node: entry.node,
@@ -164,6 +172,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
             return {
                 entry: null,
                 query: payload.query,
+                sql: payload.sql ?? null,
                 name: payload.name,
                 node,
                 missingNodeUrl: missingUrlOf(node),
@@ -182,6 +191,7 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
             return {
                 entry: null,
                 query: null,
+                sql: null,
                 name: null,
                 node: null,
                 missingNodeUrl: null,
@@ -193,11 +203,19 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
     return {
         entry: null,
         query: null,
+        sql: null,
         name: null,
         node: null,
         missingNodeUrl: null,
         containsQueryParam
     };
+}
+
+/** The SQL text of a SQL record, or null. */
+function sqlOf(entry: StoredQuery): string | null {
+    const query = runQueryOf(entry);
+    if (isSqlRunQuery(query)) return query.sql;
+    return null;
 }
 
 /**

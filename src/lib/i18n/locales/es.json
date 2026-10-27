@@ -476,7 +476,7 @@
             "accessHint": "El nodo comprueba el acceso a cada tabla.",
             "shortcut": "Ctrl + Enter",
             "pickNode": "Elige primero un nodo.",
-            "notYet": "Esta función todavía no está disponible para consultas SQL.",
+            "builderOnly": "Esta exportación es solo para consultas del Constructor.",
             "summary": "SQL",
             "guard": {
                 "empty": "El SQL no contiene ninguna sentencia.",

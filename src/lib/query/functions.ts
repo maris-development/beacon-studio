@@ -8,7 +8,7 @@ import {
     SQLQueryBuilder,
     SQLQueryExporter
 } from "@/beacon-api/query";
-import { buildShareLink, type ShareableQuery } from "@/stores/stored-query";
+import { buildShareLink, queryModeOf, sqlTextOf, type ShareableQuery } from "@/stores/stored-query";
 
 function tryCompileQuery(compileQuery: () => CompiledQuery): CompiledQuery | null {
     let result: CompiledQuery | null = null;
@@ -230,14 +230,13 @@ export function downloadPython(compileQuery: () => CompiledQuery, node: BeaconNo
     }
 }
 
-export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> {
+/** The SQL of a compiled query, or null with a toast. */
+function tryToSQL(compileQuery: () => CompiledQuery): string | null {
     const compiledQuery = tryCompileQuery(compileQuery);
-    if (!compiledQuery) return;
-
-    let sqlQuery: string;
+    if (!compiledQuery) return null;
 
     try {
-        sqlQuery = SQLQueryBuilder.toSQL(compiledQuery);
+        return SQLQueryBuilder.toSQL(compiledQuery);
     } catch (error) {
         console.error("Error generating SQL code:", error);
 
@@ -247,14 +246,30 @@ export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> 
             type: "error"
         });
 
-        return;
+        return null;
     }
+}
+
+/** True for SQL text with no statement, with a toast. */
+function isEmptySql(sql: string): boolean {
+    if (sql.trim() !== "") return false;
+
+    addToast({ key: "workbench.sql.guard.empty", type: "warning" });
+    return true;
+}
+
+export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> {
+    const sqlQuery = tryToSQL(compileQuery);
+    if (!sqlQuery) return;
+
+    await copySqlText(sqlQuery);
+}
+
+/** Copy SQL text to the clipboard. A workbench SQL block uses this with its own text. */
+export async function copySqlText(sqlQuery: string): Promise<void> {
+    if (isEmptySql(sqlQuery)) return;
 
     try {
-        if (!sqlQuery) {
-            return;
-        }
-
         const copied = await Utils.copyToClipboard(sqlQuery);
 
         if (!copied) {
@@ -282,32 +297,18 @@ export async function copySQL(compileQuery: () => CompiledQuery): Promise<void> 
         return;
     }
 }
-//todo
 export function downloadSQL(compileQuery: () => CompiledQuery): void {
-    const compiledQuery = tryCompileQuery(compileQuery);
-    if (!compiledQuery) return;
+    const sqlQuery = tryToSQL(compileQuery);
+    if (!sqlQuery) return;
 
-    let sqlQuery: string;
+    downloadSqlText(sqlQuery);
+}
 
-    try {
-        sqlQuery = SQLQueryBuilder.toSQL(compiledQuery);
-    } catch (error) {
-        console.error("Error generating SQL code:", error);
-
-        addToast({
-            key: "query.export.sqlFailed",
-            message: error.message,
-            type: "error"
-        });
-
-        return;
-    }
+/** Save SQL text as a `.sql` file. A workbench SQL block uses this with its own text. */
+export function downloadSqlText(sqlQuery: string): void {
+    if (isEmptySql(sqlQuery)) return;
 
     try {
-        if (!sqlQuery) {
-            return;
-        }
-
         SQLQueryExporter.downloadAsSql(sqlQuery);
 
         addToast({
@@ -334,7 +335,9 @@ export function downloadSQL(compileQuery: () => CompiledQuery): void {
  * of a node that this app does not have, so the link still names it.
  */
 export async function copyUrl(record: ShareableQuery | null): Promise<void> {
-    if (!record?.compiled) {
+    if (queryModeOf(record) === "sql") {
+        if (isEmptySql(sqlTextOf(record))) return;
+    } else if (!record?.compiled) {
         addToast({
             key: "query.export.shareEmpty",
             type: "error"

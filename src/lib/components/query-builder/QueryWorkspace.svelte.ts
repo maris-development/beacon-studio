@@ -65,6 +65,7 @@ import {
     hasNodeRef,
     nodeRefFromUrl,
     queryModeOf,
+    runQueryOf,
     snapshotNode,
     sqlTextOf,
     type NodeRef,
@@ -195,6 +196,17 @@ export class QueryWorkspace {
                 return;
             }
             this.addFromStoredQuery(resolved.entry);
+            this.warnMissingNode(resolved.missingNodeUrl);
+            return;
+        }
+
+        if (resolved.sql) {
+            this.addFromSql(
+                resolved.sql,
+                resolved.name || undefined,
+                resolved.node,
+                resolved.coordinateColumns
+            );
             this.warnMissingNode(resolved.missingNodeUrl);
             return;
         }
@@ -597,6 +609,36 @@ export class QueryWorkspace {
         return block;
     }
 
+    /**
+     * Open the SQL text of a share link as a new SQL block. Pass `node` to name the node of
+     * the query. Without it the block takes the default. See {@link defaultNodeRef}.
+     */
+    addFromSql(
+        sql: string,
+        name?: string,
+        node?: NodeRef | null,
+        coordinateColumns?: CoordinatePair | null
+    ): StoredQuery {
+        let ref = this.defaultNodeRef();
+        if (hasNodeRef(node)) {
+            ref = { ...node! };
+        }
+
+        const block = queryBlocks.append({
+            name: name ?? translate("workbench.untitledBlock", { number: nextBlockNumber() }),
+            mode: "sql",
+            sql,
+            draft: makeEmptyDraft(),
+            coordinateColumns: coordinateColumns ?? null,
+            node: ref
+        });
+        this.select(block.id);
+        track("workbench.block.add", {
+            props: { origin: "query", mode: "sql", blocks: this.blocks.length }
+        });
+        return block;
+    }
+
     /** Put an independent copy after the source block and select it. */
     duplicateBlock(id: string): void {
         const index = this.blocks.findIndex((b) => b.id === id);
@@ -630,8 +672,13 @@ export class QueryWorkspace {
     saveBlock(id: string): boolean {
         const block = this.blocks.find((candidate) => candidate.id === id);
 
-        if (!block || !QueryWorkspace.getQuery(block)) {
-            addToast({ key: "saved.toast.noQuery", type: "warning" });
+        if (!block || !QueryWorkspace.resultQueryOf(block)) {
+            let key: MessageKey = "saved.toast.noQuery";
+            if (queryModeOf(block) === "sql") {
+                key = "workbench.sql.guard.empty";
+            }
+
+            addToast({ key, type: "warning" });
             return false;
         }
 
@@ -661,10 +708,8 @@ export class QueryWorkspace {
         const block = this.blocks.find((b) => b.id === id);
         if (!block) return;
 
-        const hasQuery = !!QueryWorkspace.getQuery(block);
-        // SQL text has no save yet, so the dialog offers only to discard it.
-        const hasColumns =
-            (block.draft?.selectedFields.length ?? 0) > 0 || sqlTextOf(block).trim() !== "";
+        const hasQuery = !!QueryWorkspace.resultQueryOf(block);
+        const hasColumns = (block.draft?.selectedFields.length ?? 0) > 0;
 
         if (hasQuery && isSaved(block)) {
             const goAhead = await askConfirm({
@@ -947,12 +992,7 @@ export class QueryWorkspace {
      * A SQL block gives its trimmed text, so the cache key and the request hold the same text.
      */
     static resultQueryOf(block: StoredQuery | null): RunQuery | null {
-        if (queryModeOf(block) !== "sql") return QueryWorkspace.getQuery(block);
-
-        const sql = sqlTextOf(block).trim();
-        if (sql === "") return null;
-
-        return { sql };
+        return runQueryOf(block);
     }
 
     /** True when a mode switch would lose a query: columns or a compiled query, or SQL text. */

@@ -476,7 +476,7 @@
             "accessHint": "Il nodo controlla l'accesso a ogni tabella.",
             "shortcut": "Ctrl + Invio",
             "pickNode": "Scegli prima un nodo.",
-            "notYet": "Questa funzione non è ancora disponibile per le query SQL.",
+            "builderOnly": "Questa esportazione è solo per le query del Generatore.",
             "summary": "SQL",
             "guard": {
                 "empty": "L'SQL non contiene nessuna istruzione.",

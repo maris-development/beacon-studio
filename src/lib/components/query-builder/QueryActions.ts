@@ -47,8 +47,10 @@ export type QueryActions = {
     getNode?: () => BeaconNode | null;
     /** The active query as a share link carries it, or null. See `buildShareLink`. */
     getShareableQuery?: () => ShareableQuery | null;
-    /** The mode of the active query. SQL mode disables save and share. */
+    /** The mode of the active query. SQL mode disables the JSON and Python exports. */
     getMode?: () => QueryMode;
+    /** The text of the active SQL block. Copy SQL and Download SQL use it in SQL mode. */
+    getSql?: () => string;
     /**
      * The reason that the active query must not run, or null. The action bar
      * disables the run and download buttons with it, and names the reason.
@@ -81,17 +83,24 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return queryModeOf(workspace.activeBlock);
     }
 
-    /** True for a SQL block, with a toast. Save and share come in a later release. */
-    function refusesSql(block: StoredQuery | null): boolean {
-        if (queryModeOf(block) !== "sql") return false;
-
-        addToast({ key: "workbench.sql.notYet", type: "warning" });
-        return true;
+    function getSql(): string {
+        return sqlTextOf(workspace.activeBlock);
     }
 
     function getShareableQuery(): ShareableQuery | null {
         const block = workspace.activeBlock;
-        if (!block || queryModeOf(block) === "sql") return null;
+        if (!block) return null;
+
+        if (queryModeOf(block) === "sql") {
+            return {
+                compiled: null,
+                mode: "sql",
+                sql: sqlTextOf(block),
+                name: block.name,
+                node: block.node,
+                coordinateColumns: block.coordinateColumns ?? null
+            };
+        }
 
         return {
             compiled: QueryWorkspace.getQuery(block),
@@ -238,6 +247,8 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
         addToast({ key: "download.toast.started", type: "info" });
 
+        const started = performance.now();
+
         try {
             const result = await readOnlyDownload(makeBeaconClient(node), sql, format, {
                 requireFilter: isFilterRequired()
@@ -249,6 +260,10 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
             }
 
             saveBlob(await result.value.blob(), formatFileName(format, new Date()));
+            queryStore.recordSqlRun(sql, node, {
+                duration: performance.now() - started,
+                storedQueryId: block.id
+            });
             addToast({
                 key: "download.toast.directDone",
                 values: { extension: extensionOf(format) },
@@ -342,7 +357,6 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
      */
     function saveQuery(): void {
         const block = workspace.activeBlock;
-        if (refusesSql(block)) return;
 
         if (!block) {
             addToast({ key: "saved.toast.noQuery", type: "warning" });
@@ -372,6 +386,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         getNode,
         getShareableQuery,
         getMode,
+        getSql,
         runBlockReason: activeRunBlockReason
     };
 }

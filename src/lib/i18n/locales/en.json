@@ -476,7 +476,7 @@
             "accessHint": "The node checks the access of each table.",
             "shortcut": "Ctrl + Enter",
             "pickNode": "Pick a node first.",
-            "notYet": "This function is not available for SQL queries yet.",
+            "builderOnly": "This export is only for builder queries.",
             "summary": "SQL",
             "guard": {
                 "empty": "The SQL holds no statement.",
