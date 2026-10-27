@@ -618,7 +618,8 @@
             "crossSection": "Sección transversal",
             "crossSectionTitle": "Dibuja una línea. La línea se convierte en una banda con la anchura de abajo.",
             "clearTitle": "Quitar el área",
-            "applyFilter": "Aplicar filtro"
+            "applyFilter": "Aplicar filtro",
+            "sqlLocked": "El filtro de área solo funciona en el modo Constructor. En SQL, filtre las columnas de latitud y longitud con WHERE."
         }
     },
     "table": {

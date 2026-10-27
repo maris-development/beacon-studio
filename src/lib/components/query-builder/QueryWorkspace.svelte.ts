@@ -23,7 +23,8 @@
  * {@link seedFor}. From that point the draft leads.
  *
  * A block in SQL mode (`mode: 'sql'`) holds its query as text in `sql`. Its draft holds only
- * the output format, and `compiled` stays null.
+ * the output format, and `compiled` stays null. {@link resultQueryOf} gives the query that the
+ * query store runs for both modes.
  *
  * Each block also holds its own Beacon node, in `node`. The node is part of
  * the query, like the table. A switch of block therefore switches the node, and
@@ -37,6 +38,7 @@
  *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
 import type { CompiledQuery, MinMaxFilter } from "@/beacon-api/types";
+import type { RunQuery } from "@/query/run-query";
 import { Utils } from "@/utils";
 import {
     findGeoJsonFilter,
@@ -428,7 +430,8 @@ export class QueryWorkspace {
         const block = this.blocks.find((candidate) => candidate.id === id);
         if (!block || sqlTextOf(block) === sql) return;
 
-        queryBlocks.update(id, { sql });
+        // The last result belongs to the old text.
+        queryBlocks.update(id, { sql, datasetKey: null, rowCount: null });
     }
 
     /** Write the output format of the active SQL block. A builder block writes it through its draft. */
@@ -549,7 +552,7 @@ export class QueryWorkspace {
 
     /** The first block with the same query and node URL as the record, or null. */
     private findBlockWithQuery(record: StoredQuery): StoredQuery | null {
-        const query = QueryWorkspace.getQuery(record);
+        const query = QueryWorkspace.resultQueryOf(record);
         if (!query) return null;
 
         const key = JSON.stringify(query);
@@ -558,7 +561,7 @@ export class QueryWorkspace {
             this.blocks.find(
                 (block) =>
                     block.node?.url === record.node?.url &&
-                    JSON.stringify(QueryWorkspace.getQuery(block)) === key
+                    JSON.stringify(QueryWorkspace.resultQueryOf(block)) === key
             ) ?? null
         );
     }
@@ -770,7 +773,8 @@ export class QueryWorkspace {
      */
     updateActiveSpatialFilter(selection: SpatialSelection | null): void {
         const block = this.activeBlock;
-        if (!block) return;
+        // The area filter writes into the compiled query, and a SQL block has none.
+        if (!block || queryModeOf(block) === "sql") return;
 
         if (block.draft) {
             this.updateActiveDraft({ ...block.draft, spatialFilter: selection });
@@ -938,6 +942,19 @@ export class QueryWorkspace {
         return block?.compiled ?? compileDraft(block?.draft, block?.coordinateColumns ?? null);
     }
 
+    /**
+     * The query that the query store runs for a block, or null when the block holds none.
+     * A SQL block gives its trimmed text, so the cache key and the request hold the same text.
+     */
+    static resultQueryOf(block: StoredQuery | null): RunQuery | null {
+        if (queryModeOf(block) !== "sql") return QueryWorkspace.getQuery(block);
+
+        const sql = sqlTextOf(block).trim();
+        if (sql === "") return null;
+
+        return { sql };
+    }
+
     /** True when a mode switch would lose a query: columns or a compiled query, or SQL text. */
     static holdsQuery(block: StoredQuery | null): boolean {
         if (queryModeOf(block) === "sql") return sqlTextOf(block).trim() !== "";
@@ -976,7 +993,7 @@ export class QueryWorkspace {
         if (!block) return;
 
         if (queryModeOf(block) === "sql") {
-            queryBlocks.update(block.id, { sql: "" });
+            queryBlocks.update(block.id, { sql: "", datasetKey: null, rowCount: null });
             this.preview.clear(block.id);
             return;
         }

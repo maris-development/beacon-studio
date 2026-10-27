@@ -1,11 +1,16 @@
 /** The read-only guard of the workbench SQL mode. Every workbench SQL request goes through it. */
-import type {
-    OutputFormat,
-    QueryInput,
-    SimpleOutputFormat
-} from "@maris-development/beacon-client";
+import type { SimpleOutputFormat } from "@maris-development/beacon-client";
 import { message, type Message } from "@/i18n";
-import { runPreview, type BatchSource, type PreviewResult } from "./run";
+import {
+    readLimited,
+    runPreview,
+    type BatchSource,
+    type LimitedResult,
+    type PreviewResult,
+    type RawSource
+} from "./run";
+
+export type { RawSource } from "./run";
 
 /** The first words of a statement that reads data. */
 const READ_STARTS = new Set(["SELECT", "WITH", "VALUES"]);
@@ -171,11 +176,6 @@ export function sqlBlockReason(sql: string, options: { requireFilter: boolean })
 
 export type Guarded<T> = { kind: "refused"; reason: Message } | { kind: "done"; value: T };
 
-/** The part of the SDK client that a download needs. */
-export interface RawSource {
-    queryRaw(query: QueryInput, format?: OutputFormat, signal?: AbortSignal): Promise<Response>;
-}
-
 /** Runs the preview of read-only SQL. Refused SQL sends no request. */
 export async function readOnlyPreview(
     source: BatchSource,
@@ -202,5 +202,23 @@ export async function readOnlyDownload(
     if (reason) return { kind: "refused", reason };
 
     const value = await source.queryRaw({ sql: text, output: { format } });
+    return { kind: "done", value };
+}
+
+/** Reads the result of read-only SQL as an Arrow table, cut at the cell limit. Refused SQL sends no request. */
+export async function readOnlyResult(
+    source: RawSource,
+    sql: string,
+    options: { signal: AbortSignal; requireFilter: boolean; cellLimit: number }
+): Promise<Guarded<LimitedResult>> {
+    const text = sql.trim();
+    const reason = sqlBlockReason(text, options);
+    if (reason) return { kind: "refused", reason };
+
+    const value = await readLimited(
+        source,
+        { sql: text },
+        { signal: options.signal, cellLimit: options.cellLimit }
+    );
     return { kind: "done", value };
 }

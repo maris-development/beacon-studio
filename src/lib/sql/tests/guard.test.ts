@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { tableFromArrays } from "apache-arrow";
+import { tableFromArrays, tableToIPC } from "apache-arrow";
 import type { ArrowRecordBatch } from "@maris-development/beacon-client";
 import { translate } from "@/i18n";
 import {
@@ -7,6 +7,7 @@ import {
     readOnlyDownload,
     readOnlyPreview,
     readOnlyReason,
+    readOnlyResult,
     sqlBlockReason,
     type RawSource
 } from "../guard";
@@ -242,5 +243,54 @@ describe("readOnlyDownload", () => {
             output: { format: "parquet" }
         });
         expect(result.kind).toBe("done");
+    });
+});
+
+describe("readOnlyResult", () => {
+    // A copy owns a plain ArrayBuffer, which `BodyInit` asks for.
+    const ipc = () => tableToIPC(tableFromArrays({ n: Int32Array.from([1, 2]) }), "stream").slice();
+
+    it("sends no request for refused SQL", async () => {
+        const queryRaw = vi.fn<RawSource["queryRaw"]>(async () => new Response(ipc()));
+
+        const result = await readOnlyResult({ queryRaw }, "DELETE FROM argo", {
+            signal: new AbortController().signal,
+            requireFilter: false,
+            cellLimit: 1000
+        });
+
+        expect(result.kind).toBe("refused");
+        expect(queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("sends no request without a filter while the safeguard is on", async () => {
+        const queryRaw = vi.fn<RawSource["queryRaw"]>(async () => new Response(ipc()));
+
+        const result = await readOnlyResult({ queryRaw }, "SELECT * FROM argo", {
+            signal: new AbortController().signal,
+            requireFilter: true,
+            cellLimit: 1000
+        });
+
+        expect(result.kind).toBe("refused");
+        expect(queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("sends the checked text as SQL with no output format", async () => {
+        const queryRaw = vi.fn<RawSource["queryRaw"]>(async () => new Response(ipc()));
+
+        const result = await readOnlyResult({ queryRaw }, "  SELECT n FROM argo LIMIT 2\n", {
+            signal: new AbortController().signal,
+            requireFilter: true,
+            cellLimit: 1000
+        });
+
+        expect(queryRaw).toHaveBeenCalledWith(
+            { sql: "SELECT n FROM argo LIMIT 2" },
+            undefined,
+            expect.any(AbortSignal)
+        );
+        expect(result.kind).toBe("done");
+        if (result.kind === "done") expect(result.value.table.numRows).toBe(2);
     });
 });

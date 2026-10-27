@@ -17,6 +17,9 @@ const MAX_COLUMNS = 25;
 /** The longest filter list that one event carries. */
 const MAX_FILTERS = 20;
 
+/** The longest SQL text after a cut. */
+const CUT_SQL_CHARS = 200;
+
 export type Props = Record<string, unknown>;
 
 /** The encoded size of one value, in bytes. */
@@ -31,6 +34,15 @@ function byteSize(value: unknown): number {
         // A circular object cannot be encoded. Treat it as too large.
         return Number.MAX_SAFE_INTEGER;
     }
+}
+
+/** Cuts the SQL text and keeps the length that sits beside it. */
+function cutSql(props: Props): Props {
+    const sql = props.sql;
+
+    if (typeof sql !== "string" || sql.length <= CUT_SQL_CHARS) return props;
+
+    return { ...props, sql: sql.slice(0, CUT_SQL_CHARS), sqlTruncated: true };
 }
 
 /** Cuts the column list and keeps the count that sits beside it. */
@@ -105,7 +117,16 @@ function scalarsOnly(props: Props): Props {
     return kept;
 }
 
-const STEPS = [cutColumns, stripFilterValues, cutFilters, dropColumns, dropFilters, scalarsOnly];
+// `scalarsOnly` keeps a string, so the SQL text gets its cut first.
+const STEPS = [
+    cutSql,
+    cutColumns,
+    stripFilterValues,
+    cutFilters,
+    dropColumns,
+    dropFilters,
+    scalarsOnly
+];
 
 /**
  * Returns a props object that the server accepts, or null when there is nothing

@@ -17,7 +17,7 @@
      * deck.gl preview with it.
      */
     import maplibregl from "maplibre-gl";
-    import { onDestroy } from "svelte";
+    import { onDestroy, untrack } from "svelte";
     import {
         TerraDraw,
         TerraDrawLineStringMode,
@@ -57,7 +57,8 @@
         showApply = true,
         onDrawingChange,
         countFeatures,
-        countKey = null
+        countKey = null,
+        lockedReason = null
     }: {
         map: maplibregl.Map | null;
         selection?: SpatialSelection | null;
@@ -78,7 +79,11 @@
         countFeatures?: (ring: LngLat[]) => Promise<number | null>;
         /** Identifies the counted result. A new value counts the area again. */
         countKey?: string | null;
+        /** The reason that every tool is off, or null. The tool row shows it on hover. */
+        lockedReason?: string | null;
     } = $props();
+
+    const locked = $derived(!!lockedReason);
 
     /**
      * The mode that Terra Draw parks in when no tool is active.
@@ -258,6 +263,14 @@
         onDrawingChange?.(true);
     }
 
+    // A lock during a draw action ends it.
+    $effect(() => {
+        if (!locked) return;
+        untrack(() => {
+            if (activeTool) stopDrawing();
+        });
+    });
+
     function stopDrawing() {
         activeTool = null;
         draw?.setMode(IDLE_MODE);
@@ -407,11 +420,12 @@
             {/if}
         </p>
     {/if}
-    <div class="tool-row">
+    <!-- A disabled button takes no pointer events, so the row holds the title of a lock. -->
+    <div class="tool-row" title={lockedReason ?? undefined}>
         <Button
             variant={activeTool === "polygon" ? "default" : "outline"}
             title={$t("map.draw.polygonTitle")}
-            disabled={!ready}
+            disabled={!ready || locked}
             onclick={() => selectTool("polygon")}
         >
             <PentagonIcon size={16} />
@@ -420,7 +434,7 @@
         <Button
             variant={activeTool === "box" ? "default" : "outline"}
             title={$t("map.draw.boxTitle")}
-            disabled={!ready}
+            disabled={!ready || locked}
             onclick={() => selectTool("box")}
         >
             <SquareIcon size={16} />
@@ -429,7 +443,7 @@
         <Button
             variant={activeTool === "cross-section" ? "default" : "outline"}
             title={$t("map.draw.crossSectionTitle")}
-            disabled={!ready}
+            disabled={!ready || locked}
             onclick={() => selectTool("cross-section")}
         >
             <SplineIcon size={16} />
@@ -439,7 +453,7 @@
         <Button
             variant="outline"
             title={$t("map.draw.clearTitle")}
-            disabled={!selection && !activeTool}
+            disabled={locked || (!selection && !activeTool)}
             onclick={clearSelection}
         >
             <Trash2Icon size={16} />
@@ -449,7 +463,7 @@
             <Button
                 variant="default"
                 title={applyTitle}
-                disabled={!canApply || !isUsableSelection(selection)}
+                disabled={locked || !canApply || !isUsableSelection(selection)}
                 onclick={() => onApply?.()}
             >
                 <FilterIcon size={16} />

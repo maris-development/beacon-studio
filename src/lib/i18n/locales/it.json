@@ -618,7 +618,8 @@
             "crossSection": "Sezione",
             "crossSectionTitle": "Disegna una linea. La linea diventa una fascia con la larghezza indicata sotto.",
             "clearTitle": "Rimuovi l'area",
-            "applyFilter": "Applica filtro"
+            "applyFilter": "Applica filtro",
+            "sqlLocked": "Il filtro per area funziona solo in modalità Generatore. In SQL, filtra le colonne di latitudine e longitudine con WHERE."
         }
     },
     "table": {

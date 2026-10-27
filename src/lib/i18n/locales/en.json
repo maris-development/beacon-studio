@@ -618,7 +618,8 @@
             "crossSection": "Cross section",
             "crossSectionTitle": "Draw a line. The line becomes a band with the width below.",
             "clearTitle": "Remove the area",
-            "applyFilter": "Apply filter"
+            "applyFilter": "Apply filter",
+            "sqlLocked": "The area filter works only in Builder mode. In SQL, filter the latitude and longitude columns with WHERE."
         }
     },
     "table": {

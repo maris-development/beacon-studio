@@ -21,14 +21,20 @@
  * cache key, so results of two nodes never mix.
  *
  * The store runs one query at a time. See {@link QueryStore.ensure}.
+ *
+ * The store also runs the SQL text of a workbench SQL block (`{ sql }`). It runs as the
+ * normal user, through the read-only guard of `sql/guard.ts`.
  */
 
 import * as ApacheArrow from "apache-arrow";
 import { getArrowDecoder, type QueryInput } from "@maris-development/beacon-client";
 import { makeBeaconClient } from "@/beacon-api/client";
 import type { BeaconNode, CompiledQuery, QueryWarning } from "@/beacon-api/types";
+import { translate } from "@/i18n";
+import { isSqlRunQuery, type RunQuery, type SqlRunQuery } from "@/query/run-query";
+import { readOnlyResult } from "@/sql/guard";
 import { opfsArrowCache } from "@/stores/opfs-arrow-cache";
-import { recordExecution } from "@/stores/query-history";
+import { recordExecution, type RecordExecutionInput } from "@/stores/query-history";
 import { recordRunResult, resolveStoredQuery } from "@/stores/query-library";
 import { getSettings } from "@/stores/settings";
 import { snapshotNode } from "@/stores/stored-query";
@@ -91,7 +97,7 @@ export interface DatasetEntry {
     /** Stable cache key derived from the query (canonical JSON). */
     key: string;
     /** The query that produced this result (a clone; never mutated in place). */
-    query: CompiledQuery;
+    query: RunQuery;
     /** The decoded Arrow table. */
     table: ApacheArrow.Table;
     /** Number of rows in the result. */
@@ -118,6 +124,8 @@ export interface RunStats {
     decodeMs?: number;
     /** The size of the body, in bytes. */
     bytes?: number;
+    /** The highest row count that the cell limit gave a SQL run. */
+    rowLimit?: number;
 }
 
 class QueryStore {
@@ -169,12 +177,12 @@ class QueryStore {
      * The URL of the node is part of the key: results persist across sessions
      * (OPFS tier), so the same query on another node must never share an entry.
      */
-    keyFor(query: CompiledQuery, node: Pick<BeaconNode, "url"> | null): string {
+    keyFor(query: RunQuery, node: Pick<BeaconNode, "url"> | null): string {
         return stableStringify({ node: node?.url ?? null, query });
     }
 
     /** Returns a cached entry without fetching, or `undefined` if absent. */
-    peek(query: CompiledQuery, node: Pick<BeaconNode, "url"> | null): DatasetEntry | undefined {
+    peek(query: RunQuery, node: Pick<BeaconNode, "url"> | null): DatasetEntry | undefined {
         return this.cache.get(this.keyFor(query, node));
     }
 
@@ -221,11 +229,7 @@ class QueryStore {
      * history row. That row has no name and no draft. No record points to its
      * result.
      */
-    async ensure(
-        query: CompiledQuery,
-        node: BeaconNode,
-        storedQueryId?: string
-    ): Promise<DatasetEntry> {
+    async ensure(query: RunQuery, node: BeaconNode, storedQueryId?: string): Promise<DatasetEntry> {
         const key = this.keyFor(query, node);
 
         if (this.cacheEnabled) {
@@ -316,7 +320,7 @@ class QueryStore {
      * argument. Pass the node of the query with `query`: the URL of the node is
      * part of the key, so a call without it matches no entry.
      */
-    invalidate(query?: CompiledQuery, node?: Pick<BeaconNode, "url"> | null): void {
+    invalidate(query?: RunQuery, node?: Pick<BeaconNode, "url"> | null): void {
         if (!query) {
             this.cache.clear();
             this.mapTableCache.clear();
@@ -358,7 +362,7 @@ class QueryStore {
             const origin = resolveStoredQuery(storedQueryId);
             recordExecution({
                 datasetKey: entry.key,
-                compiled: entry.query,
+                ...recordFieldsOf(entry.query),
                 draft: origin?.draft ?? null,
                 coordinateColumns: origin?.coordinateColumns ?? null,
                 name: origin?.name,
@@ -423,7 +427,7 @@ class QueryStore {
             totalBytes += bytes;
             entries.push({
                 key: entry.key,
-                columns: (entry.query.query_parameters ?? []).map((p) => p.alias ?? p.column),
+                columns: columnNamesOf(entry),
                 rowCount: entry.rowCount,
                 colCount: entry.table.numCols,
                 bytes,
@@ -540,7 +544,7 @@ class QueryStore {
 
     /** Loads a dataset: rehydrate from the OPFS tier if present, else fetch. */
     private async load(
-        query: CompiledQuery,
+        query: RunQuery,
         key: string,
         node: BeaconNode,
         signal: AbortSignal
@@ -559,7 +563,7 @@ class QueryStore {
      * bytes and rebuilds the entry from the sidecar metadata. Returns `undefined` on
      * any miss or decode failure (which falls through to a fetch).
      */
-    private async restore(query: CompiledQuery, key: string): Promise<DatasetEntry | undefined> {
+    private async restore(query: RunQuery, key: string): Promise<DatasetEntry | undefined> {
         const hit = await opfsArrowCache.get(key);
         if (!hit) return undefined;
         try {
@@ -589,11 +593,13 @@ class QueryStore {
 
     /** Executes the query arrow-native on `node` and builds a {@link DatasetEntry}. */
     private async fetch(
-        query: CompiledQuery,
+        query: RunQuery,
         key: string,
         node: BeaconNode,
         signal: AbortSignal
     ): Promise<DatasetEntry> {
+        if (isSqlRunQuery(query)) return this.fetchSql(query, key, node, signal);
+
         const client = makeBeaconClient(node);
 
         // Clone so we never mutate the caller's query, then apply the cell-limit guard.
@@ -669,6 +675,68 @@ class QueryStore {
                 transferMs: Math.round(transferred - answered),
                 decodeMs: Math.round(decoded - transferred),
                 bytes: bytes.byteLength
+            }
+        };
+    }
+
+    /**
+     * Runs the SQL of a workbench SQL block on `node`, as the normal user. The read
+     * stops at the cell limit, because the column count is known only from the result.
+     */
+    private async fetchSql(
+        query: SqlRunQuery,
+        key: string,
+        node: BeaconNode,
+        signal: AbortSignal
+    ): Promise<DatasetEntry> {
+        const cellLimit = queryCellLimit();
+        const start = performance.now();
+
+        const result = await readOnlyResult(makeBeaconClient(node), query.sql, {
+            signal,
+            requireFilter: getSettings().requireQueryFilters,
+            cellLimit
+        });
+
+        // The viewers check the SQL before they run it. This refusal is a safety net.
+        if (result.kind === "refused") throw new Error(translate(result.reason));
+
+        const { table, truncated, rowLimit } = result.value;
+        const rowCount = table.numRows;
+        const queryId = result.value.queryId ?? Utils.randomUUID();
+        const warnings: QueryWarning[] = [];
+
+        if (truncated) {
+            warnings.push("limit_reached");
+            addToast({
+                type: "warning",
+                key: "query.toast.cellLimit",
+                values: { cellLimit, rowCount }
+            });
+        }
+
+        const duration = performance.now() - start;
+
+        if (this.cacheEnabled) {
+            // A cut result keeps only its own rows. The bytes of the node hold more.
+            const bytes = result.value.bytes ?? ApacheArrow.tableToIPC(table, "stream");
+            void opfsArrowCache.put(key, bytes, { rowCount, duration, queryId, warnings });
+        }
+
+        return {
+            key,
+            query: Utils.cloneObject(query),
+            table,
+            rowCount,
+            duration,
+            queryId,
+            warnings,
+            stats: {
+                tier: "network",
+                serverMs: result.value.serverMs,
+                transferMs: result.value.transferMs,
+                bytes: result.value.byteLength,
+                rowLimit
             }
         };
     }
@@ -759,6 +827,20 @@ function downloadFormat(query: CompiledQuery): string | null {
     if (format) return "geoparquet";
 
     return null;
+}
+
+/** The query fields of a history record. A SQL record holds its text and no compiled query. */
+function recordFieldsOf(query: RunQuery): Pick<RecordExecutionInput, "compiled" | "mode" | "sql"> {
+    if (isSqlRunQuery(query)) return { compiled: null, mode: "sql", sql: query.sql };
+
+    return { compiled: query, mode: "builder" };
+}
+
+/** The column names of a result, for the cache-info UI. SQL names its columns only in the result. */
+function columnNamesOf(entry: DatasetEntry): string[] {
+    if (isSqlRunQuery(entry.query)) return entry.table.schema.fields.map((field) => field.name);
+
+    return (entry.query.query_parameters ?? []).map((p) => p.alias ?? p.column);
 }
 
 /** Estimated in-memory footprint of an Arrow table (sum of its batch buffers). */

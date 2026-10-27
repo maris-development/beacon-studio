@@ -5,7 +5,7 @@
     import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
     import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
     import { Utils } from "@/utils";
-    import type { CompiledQuery } from "@/beacon-api/types";
+    import { isSqlRunQuery, type RunQuery } from "@/query/run-query";
     import * as Select from "$lib/components/ui/select/index.js";
     import Legend from "@/components/legend/Legend.svelte";
     import { Label } from "$lib/components/ui/label/index.js";
@@ -21,7 +21,6 @@
     import SettingsIcon from "@lucide/svelte/icons/settings";
     import type { CoordinatePair, SpatialSelection } from "@/geo/spatial-selection";
     import { addToast } from "@/stores/toasts";
-    import { runBlockReason } from "@/query/query-guard";
     import { settings } from "@/stores/settings";
     import { t } from "@/i18n";
 
@@ -65,14 +64,20 @@
 
     // `workspace.activeBlock` is a new object on every write to the block
     // collection — including our own `markBlockRun` below. Tracking that object
-    // (or `compiledQuery` derived from it) as an effect dependency would re-fire
+    // (or `resultQuery` derived from it) as an effect dependency would re-fire
     // the effect after every run, forever. Track primitives instead: the block id
-    // and a content key for the compiled query.
+    // and a content key for the query: the compiled query, or the SQL text.
     const activeBlockId = $derived(workspace.activeBlockId);
-    const compiledQuery: CompiledQuery | null = $derived(
-        QueryWorkspace.getQuery(workspace.activeBlock)
+    const resultQuery: RunQuery | null = $derived(
+        QueryWorkspace.resultQueryOf(workspace.activeBlock)
     );
-    const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+    const queryKey = $derived(resultQuery ? JSON.stringify(resultQuery) : null);
+
+    // The area filter writes into the compiled query, and a SQL block has none.
+    const areaLockedReason = $derived.by(() => {
+        if (isSqlRunQuery(resultQuery)) return $t("map.draw.sqlLocked");
+        return null;
+    });
 
     // The stored coordinate pair, as a primitive for the same reason as `queryKey`.
     const coordinateKey = $derived(
@@ -128,7 +133,11 @@
 
         // The safeguard stops a query with no filter. Show nothing, and run nothing.
         // The run key stays empty, so a revert of the edit runs the query again.
-        const blocked = runBlockReason(untrack(() => compiledQuery));
+        // A SQL block also gets the read-only check here.
+        const blocked = QueryWorkspace.blockReason(
+            untrack(() => workspace.activeBlock),
+            requireFilters
+        );
         if (blocked) {
             const blockedKey = `${blockId}:${nodeUrl}:${key}`;
             if (blockedKey !== lastBlockedKey) {
@@ -154,7 +163,7 @@
         // drive re-runs, not every downstream write this triggers.
         const { block, query, node } = untrack(() => ({
             block: workspace.activeBlock,
-            query: compiledQuery,
+            query: resultQuery,
             node: workspace.activeNode
         }));
         if (!block || !query || !node) return;
@@ -236,7 +245,7 @@
             <div class="map-wrapper">
                 <div bind:this={mapContainer} class="map"></div>
 
-                {#if compiledQuery}
+                {#if resultQuery}
                     <div class="map-info-wrapper">
                         <div class="my-ctrl-group">
                             <p class="summary">
@@ -317,11 +326,12 @@
                             onDrawingChange={(drawing) => map.setPicking(!drawing)}
                             countFeatures={(ring) => map.countFeaturesInRing(ring)}
                             countKey={map.datasetKey}
+                            lockedReason={areaLockedReason}
                         />
                     </div>
                 {/if}
 
-                {#if !compiledQuery}
+                {#if !resultQuery}
                     <div class="loading-overlay">
                         <p>{$t("map.selectQuery")}</p>
                     </div>

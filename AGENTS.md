@@ -24,11 +24,11 @@ This file is a quick operational guide for coding agents working in this reposit
   - query download (`queryToDownload`) and the output formats (`output_formats`, `outputFormatToExtension`);
   - the cached table lists of the query builder (`getCachedTables`, `getCachedDefaultTable`);
   - `ChooseBeaconModal.svelte`;
-  - the static cache facade (`ensureQuery`, `peekQuery*`, cache stats). It only calls `queryStore`.
+  - the static cache facade (cache stats, clear, on/off, `recordDownload`). It only calls `queryStore`. Run and peek a query on `queryStore` itself.
   Add no new use. Move a remaining use to the SDK when you touch it.
 - The SDK class is also called `BeaconClient`. Check the import source of `BeaconClient` in every file.
 - One temporary exception: `src/lib/beacon-api/crawler-run.ts` calls `POST /api/admin/crawlers/{name}/run` itself, because the SDK `admin.runCrawler()` returns `void` and drops the crawl report. Delete the file and `beacon-api/tests/crawler-run.test.ts` when an SDK release returns the report. Add no other direct calls.
-- SDK 2.0.0 drops a stop after the response headers and never cancels the body. `runPreview` (`src/lib/sql/run.ts`) races each batch read against the signal as a workaround. Remove the race when an SDK release holds beacon PR #591.
+- SDK 2.0.0 drops a stop after the response headers and never cancels the body. `runPreview` (`src/lib/sql/run.ts`) races each batch read against the signal as a workaround. Remove the race when an SDK release holds beacon PR #591. `readLimited` in the same file reads the body with its own reader and cancels it on a stop, so it needs no race.
 
 ## Core Commands
 - Install deps: `npm install`
@@ -87,6 +87,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/beacon-api/types.ts`
 - Domain modules (no Svelte, no DOM — plain TypeScript, safe to unit test):
   - `src/lib/query/draft.ts` (`QueryDraft`, `compileDraft` — the builder's editable state, and the compile to `CompiledQuery`)
+  - `src/lib/query/run-query.ts` (`RunQuery`: the query that `queryStore.ensure()` runs. A `CompiledQuery`, or `{ sql }` for a workbench SQL block. `QueryWorkspace.resultQueryOf(block)` gives it for both modes.)
   - `src/lib/query/seed-hydration.ts` (`hydrateDraftFromQuery` — the reverse: `CompiledQuery` back into a draft, best effort)
   - `src/lib/query/filter-types.ts` (`ParameterFilterType`, `SelectedFilterType` — the filter shapes the builder edits)
   - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
@@ -127,7 +128,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 1. User configures a query in the builder (`QueryBuilder.svelte`, on `/queries/workbench`) or in the raw editor (`/queries/query-editor`).
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
 3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
-4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`), which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
+4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`) with `QueryWorkspace.resultQueryOf(block)`, which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
 5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
 7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. `QueryHistoryModal` in the action bar lists them, and opens each as a block on the current page. `query-editor` preloads a query from `?q=` or `?query=`.
@@ -138,6 +139,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - `beacon-api/data-type.ts` holds the checks on a schema `DataType` (number, string, Timestamp, Date, Dictionary). A schema type can be any Arrow type, so each check must accept an unknown value and never throw.
 - A `Date32` / `Date64` column takes the same ISO filter strings as a Timestamp column (`2020-01-01T00:00:00Z`), so the builder gives both the timestamp filters (`isTemporalDataType`). The server drops the time from the literal (`gt 2020-06-16T12:00:00Z` excludes the whole 16th), so a date column gets a date-only input (`DateTimeInput` `dateOnly`) and stores `YYYY-MM-DD`. Arrow JS returns a date value as epoch milliseconds.
 - `queryCellLimit()` (in the query store, backed by the settings store) protects browser stability; `limit_reached` warnings are surfaced with toasts.
+- A SQL run has no column count before the result. `readLimited` (`sql/run.ts`) stops the stream at `cellLimit / columns` rows and cuts the table. The OPFS tier then stores the cut table (`tableToIPC`), not the bytes of the node.
 - The legacy `BeaconClient` fronts I/O only. Transforms of a fetched result (sort, dedup, min/max, geometry) do no I/O and live on `queryStore`; call it directly for those, and do not add pass-through statics for them.
 
 ## Map Viewer and Spatial Filters
@@ -173,7 +175,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - A workbench SQL query only reads. It must never add, change, move, create or delete data.
 - A block stores `mode` (`builder` or `sql`) and `sql` on `StoredQuery`. Read them with `queryModeOf` and `sqlTextOf`, because an old record has neither field.
 - A SQL block keeps an empty draft. The draft holds only the output format, and `compiled` stays null.
-- Every workbench SQL request goes through `readOnlyPreview` or `readOnlyDownload` (`sql/guard.ts`). They check the text, and refused SQL sends no request.
+- Every workbench SQL request goes through `readOnlyPreview`, `readOnlyDownload` or `readOnlyResult` (`sql/guard.ts`). They check the text, and refused SQL sends no request. `queryStore.ensure({ sql })` uses `readOnlyResult`.
 - The guard accepts one statement that starts with SELECT, WITH or VALUES, and that holds no write word (`WRITE_WORDS`).
 - The guard refuses a mark that another dialect reads in another way: a backslash before a quote, a nested `/*`, `$`, a backtick, `#`.
 - The guard follows the DataFusion generic dialect. It does not handle the MSSQL `[name]` rule or the MySQL `--x` rule.
@@ -182,7 +184,10 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - `QueryWorkspace.blockReason(block, requireFilter)` is the one run check for both modes. In a component, pass `$settings.requireQueryFilters`.
 - `workspace.preview` holds the preview runs. It is transient. Reset, a mode switch, a node switch and a close clear the entry of the block.
 - `SqlEditor` binds Ctrl+Enter with `addAction`. Monaco `addCommand` registers a global keybinding that stays after the editor is gone.
-- Save, share and visualise stay off for a SQL block (`workbench.sql.notYet`). Later sub-issues turn them on.
+- Visualise runs a SQL block through `queryStore.ensure({ sql })`. The cache key holds the trimmed text and the node URL. Save and share stay off (`workbench.sql.notYet`). Later sub-issues turn them on.
+- `updateBlockSql` drops `datasetKey` on a text change. Without that, a viewer shows the result of the old text from `peekByKey`.
+- The map takes the columns of a SQL block from the result schema, so its coordinate pair resolves only after the result.
+- A SQL block has no map area filter: the area writes into `compiled.filters`. `MapDrawTools` gets `lockedReason`, and `updateActiveSpatialFilter` ignores a SQL block.
 
 ## Persisted Data and Migrations (Important)
 Sort each persisted value into one class. The class decides whether a change needs a migration.

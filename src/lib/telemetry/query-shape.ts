@@ -1,5 +1,6 @@
 /**
- * Turns one compiled query into a compact telemetry payload.
+ * Turns one query into a compact telemetry payload. A compiled query gives a
+ * {@link QueryShape}. The SQL text of a workbench SQL block gives a {@link SqlShape}.
  *
  * The result answers the questions that the event table exists for: which table,
  * which columns, which filters, which time range and which output format.
@@ -10,7 +11,9 @@
  * The object goes into `props`. `fitProps` cuts it down when it is too large.
  */
 
-import type { CompiledQuery, Filter, From, GeoJsonPolygon, Output } from "@/beacon-api/types";
+import type { Filter, From, GeoJsonPolygon, Output } from "@/beacon-api/types";
+import { isSqlRunQuery, type RunQuery, type SqlRunQuery } from "@/query/run-query";
+import { hasRowFilter } from "@/sql/guard";
 
 /** The longest column list in one shape. The count stays complete. */
 const MAX_COLUMNS = 25;
@@ -20,6 +23,9 @@ const MAX_FILTERS = 20;
 
 /** The longest filter value, in characters. */
 const MAX_VALUE_CHARS = 40;
+
+/** The longest SQL text in one shape. `sqlLength` keeps the full length. */
+const MAX_SQL_CHARS = 1000;
 
 /** The filter keys that hold one value and one column. */
 const SIMPLE_KINDS = ["eq", "neq", "gt", "gt_eq", "lt", "lt_eq"] as const;
@@ -48,6 +54,18 @@ export interface QueryShape {
     bbox?: [number, number, number, number];
     columnsTruncated?: boolean;
     filtersTruncated?: boolean;
+}
+
+/** The shape of the SQL text of a workbench SQL block. A row with no `mode` holds a {@link QueryShape}. */
+export interface SqlShape {
+    mode: "sql";
+    sql: string;
+    sqlLength: number;
+    /** The text holds a `WHERE` or a `LIMIT`. */
+    hasFilter: boolean;
+    /** Always null. The cell limit gives the row cap only after the first batch, as `rowLimit` in the run stats. */
+    limit: null;
+    sqlTruncated?: boolean;
 }
 
 /** Cuts one filter value to a size that a row can hold. */
@@ -207,10 +225,12 @@ function spatialBbox(filters: Filter[]): [number, number, number, number] | unde
  *
  * The function never throws: a broken query must not stop a run.
  */
-export function describeQuery(query: CompiledQuery | null | undefined): QueryShape | null {
+export function describeQuery(query: RunQuery | null | undefined): QueryShape | SqlShape | null {
     if (!query) return null;
 
     try {
+        if (isSqlRunQuery(query)) return describeSql(query);
+
         const selects = query.query_parameters ?? [];
         const filters = query.filters ?? [];
 
@@ -255,4 +275,20 @@ export function describeQuery(query: CompiledQuery | null | undefined): QuerySha
     } catch {
         return null;
     }
+}
+
+function describeSql(query: SqlRunQuery): SqlShape {
+    const text = query.sql.trim();
+
+    const shape: SqlShape = {
+        mode: "sql",
+        sql: text.slice(0, MAX_SQL_CHARS),
+        sqlLength: text.length,
+        hasFilter: hasRowFilter(text),
+        limit: null
+    };
+
+    if (text.length > MAX_SQL_CHARS) shape.sqlTruncated = true;
+
+    return shape;
 }

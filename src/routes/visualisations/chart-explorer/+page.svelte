@@ -2,7 +2,7 @@
     import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
     import { onDestroy, onMount, untrack } from "svelte";
     import { page } from "$app/state";
-    import type { CompiledQuery } from "@/beacon-api/types";
+    import type { RunQuery } from "@/query/run-query";
     import { resolveUrlQuery } from "@/stores/query-library";
     import QuerySelectorHeader from "@/components/query-builder/QuerySelectorHeader.svelte";
     import { QueryWorkspace } from "@/components/query-builder/QueryWorkspace.svelte";
@@ -15,7 +15,6 @@
     import { ChartExplorerController } from "@/components/plots/ChartExplorerController.svelte";
     import { type ChartViewState } from "@/plots/plot-config";
     import { addToast } from "@/stores/toasts";
-    import { runBlockReason } from "@/query/query-guard";
     import { settings } from "@/stores/settings";
     import { t } from "@/i18n";
 
@@ -43,14 +42,14 @@
 
     // `workspace.activeBlock` is a new object on every write to the block
     // collection — including our own `markBlockRun` below. Tracking that object
-    // (or `compiledQuery` derived from it) as an effect dependency would re-fire
+    // (or `resultQuery` derived from it) as an effect dependency would re-fire
     // the effect after every run, forever. Track primitives instead: the block id
-    // and a content key for the compiled query.
+    // and a content key for the query: the compiled query, or the SQL text.
     const activeBlockId = $derived(workspace.activeBlockId);
-    const compiledQuery: CompiledQuery | null = $derived(
-        QueryWorkspace.getQuery(workspace.activeBlock)
+    const resultQuery: RunQuery | null = $derived(
+        QueryWorkspace.resultQueryOf(workspace.activeBlock)
     );
-    const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+    const queryKey = $derived(resultQuery ? JSON.stringify(resultQuery) : null);
 
     // The node of the active block. A block owns its node, so a switch of block
     // switches the node. The URL is a primitive, so the run effect below can track
@@ -88,7 +87,11 @@
 
         // The safeguard stops a query with no filter. Show nothing, and run nothing.
         // The run key stays empty, so a revert of the edit runs the query again.
-        const blocked = runBlockReason(untrack(() => compiledQuery));
+        // A SQL block also gets the read-only check here.
+        const blocked = QueryWorkspace.blockReason(
+            untrack(() => workspace.activeBlock),
+            requireFilters
+        );
         if (blocked) {
             const blockedKey = `${blockId}:${nodeUrl}:${key}`;
             if (blockedKey !== lastBlockedKey) {
@@ -114,7 +117,7 @@
         // drive re-runs, not every downstream write this triggers.
         const { block, query, node } = untrack(() => ({
             block: workspace.activeBlock,
-            query: compiledQuery,
+            query: resultQuery,
             node: workspace.activeNode
         }));
         if (!block || !query || !node) return;
@@ -230,7 +233,7 @@
         <VisualisationTabs />
 
         <div class="content page-container">
-            {#if !compiledQuery}
+            {#if !resultQuery}
                 <p>{$t("chart.selectQuery")}</p>
             {:else}
                 <PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />

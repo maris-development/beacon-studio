@@ -85,12 +85,12 @@ function nodeHost(url: string | undefined): string | null {
 
 /**
  * The props keys that name what a user asked for: a table, a column, a filter
- * value, a drawn area, a file or a search term.
+ * value, a drawn area, a file, a search term or the text of a SQL query.
  *
  * The `telemetryQueryDetails` setting governs these keys. The counts beside them
  * stay, because `columnCount`, `filterCount` and `filterKinds` name nothing.
  */
-const CONTENT_KEYS = ["table", "columns", "filters", "column", "file", "term", "bbox"];
+const CONTENT_KEYS = ["table", "columns", "filters", "column", "file", "term", "bbox", "sql"];
 
 /**
  * Removes the query content when the user switched that detail off.

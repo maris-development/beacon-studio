@@ -16,7 +16,12 @@
  */
 
 import { createQueryCollection } from "@/stores/query-collection";
-import { snapshotNode, type NodeRef, type StoredQuery } from "@/stores/stored-query";
+import {
+    snapshotNode,
+    type NodeRef,
+    type QueryMode,
+    type StoredQuery
+} from "@/stores/stored-query";
 import type { CompiledQuery } from "@/beacon-api/types";
 import type { QueryDraft } from "@/query/draft";
 import type { CoordinatePair } from "@/geo/spatial-selection";
@@ -47,7 +52,12 @@ export const queryHistory = createQueryCollection({
 export interface RecordExecutionInput {
     /** The result-cache key. History uses it as the identity. */
     datasetKey: string;
-    compiled: CompiledQuery;
+    /** The compiled query of a builder run. Null for a SQL run. */
+    compiled: CompiledQuery | null;
+    /** `sql` for the run of a workbench SQL block. */
+    mode?: QueryMode;
+    /** The SQL text of a SQL run. */
+    sql?: string;
     /** The builder state of the record that started the run, if it had one. */
     draft?: QueryDraft | null;
     /** The coordinate pair of the record that started the run, if it had one. */
@@ -76,6 +86,8 @@ export function recordExecution(input: RecordExecutionInput): StoredQuery {
             name: input.name ?? "Query",
             draft: input.draft ?? null,
             compiled: input.compiled,
+            mode: input.mode,
+            sql: input.sql,
             coordinateColumns: input.coordinateColumns ?? null,
             node: input.node ?? snapshotNode(getCurrentNode()),
             datasetKey: input.datasetKey,

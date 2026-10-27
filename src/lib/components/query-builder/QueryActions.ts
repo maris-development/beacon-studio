@@ -1,11 +1,13 @@
 import type { BeaconNode, CompiledQuery } from "@/beacon-api/types";
 import { QueryWorkspace } from "./QueryWorkspace.svelte";
 import { BeaconClient, makeBeaconClient } from "@/beacon-api/client";
+import { isAbortError, queryStore } from "@/stores/query-store.svelte";
 import { addToast } from "@/stores/toasts";
 import { goto } from "$app/navigation";
 import { resolve } from "$app/paths";
 import { isFilterRequired, runBlockReason } from "@/query/query-guard";
 import { defaultOutputFormat } from "@/query/draft";
+import { isSqlRunQuery } from "@/query/run-query";
 import {
     queryModeOf,
     sqlTextOf,
@@ -45,7 +47,7 @@ export type QueryActions = {
     getNode?: () => BeaconNode | null;
     /** The active query as a share link carries it, or null. See `buildShareLink`. */
     getShareableQuery?: () => ShareableQuery | null;
-    /** The mode of the active query. SQL mode disables save, share and visualise. */
+    /** The mode of the active query. SQL mode disables save and share. */
     getMode?: () => QueryMode;
     /**
      * The reason that the active query must not run, or null. The action bar
@@ -79,7 +81,7 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return queryModeOf(workspace.activeBlock);
     }
 
-    /** True for a SQL block, with a toast. Save, share and visualise come in a later release. */
+    /** True for a SQL block, with a toast. Save and share come in a later release. */
     function refusesSql(block: StoredQuery | null): boolean {
         if (queryModeOf(block) !== "sql") return false;
 
@@ -143,18 +145,35 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         return null;
     }
 
+    /**
+     * True when the SQL of a block must not run, with a toast. The query store
+     * checks again, but the user must see the reason here.
+     */
+    function refusesRun(block: StoredQuery): boolean {
+        if (sqlTextOf(block).trim() === "") {
+            addToast({ key: "workbench.sql.guard.empty", type: "warning" });
+            return true;
+        }
+
+        const reason = QueryWorkspace.blockReason(block, isFilterRequired());
+        if (!reason) return false;
+
+        addToast({ key: reason.key, values: reason.values, type: "warning" });
+        return true;
+    }
+
     async function runActive(): Promise<string | null> {
         const block = workspace.activeBlock;
-        if (refusesSql(block)) return null;
+        if (block && queryModeOf(block) === "sql" && refusesRun(block)) return null;
 
-        const query = QueryWorkspace.getQuery(block);
+        const query = QueryWorkspace.resultQueryOf(block);
 
         if (!block || !query) {
             addToast({ key: "workbench.toast.noQuery", type: "warning" });
             return null;
         }
 
-        if (isBlocked(query)) return null;
+        if (!isSqlRunQuery(query) && isBlocked(query)) return null;
 
         const node = requireNode();
         if (!node) return null;
@@ -168,14 +187,14 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
         try {
             // With `storedQueryId` the store writes the cache key of the result to
             // this block. The visualisation pages then link to that block.
-            const entry = await BeaconClient.ensureQuery(query, node, block.id);
+            const entry = await queryStore.ensure(query, node, block.id);
             workspace.markBlockRun(block.id, entry.rowCount);
         } catch (e) {
             workspace.endBlockRun(block.id, token);
 
             // The app runs one query at a time. A newer run stopped this one. That
             // is the intent of the user, so it needs no error.
-            if (BeaconClient.isQueryAbort(e)) return null;
+            if (isAbortError(e)) return null;
 
             addToast({
                 key: "workbench.toast.runFailed",
@@ -197,19 +216,9 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
     /** Download the full result of a SQL block. The guard checks the SQL before any request. */
     async function downloadSql(block: StoredQuery): Promise<void> {
+        if (refusesRun(block)) return;
+
         const sql = sqlTextOf(block);
-
-        if (sql.trim() === "") {
-            addToast({ key: "workbench.sql.guard.empty", type: "warning" });
-            return;
-        }
-
-        const reason = QueryWorkspace.blockReason(block, isFilterRequired());
-        if (reason) {
-            addToast({ key: reason.key, values: reason.values, type: "warning" });
-            return;
-        }
-
         const node = requireNode();
         if (!node) return;
 

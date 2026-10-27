@@ -86,8 +86,9 @@
         });
     });
 
-    function downloadTitle(): string {
-        if (downloadReady) return "";
+    /** The title of a disabled button: the guard reason, or the missing step. */
+    function blockedTitle(ready: boolean): string {
+        if (ready) return "";
         if (reason) return $t(reason);
         return $t("query.steps.incomplete");
     }
@@ -179,15 +180,15 @@
     <DownloadDataButton
         downloadData={workbenchActions.downloadData}
         disabled={!downloadReady}
-        title={downloadTitle()}
+        title={blockedTitle(downloadReady)}
     />
 
     <VisualiseDataButton
         visualiseTable={workbenchActions.visualiseTable}
         visualiseChart={workbenchActions.visualiseChart}
         visualiseMap={workbenchActions.visualiseMap}
-        disabled
-        title={$t("workbench.sql.notYet")}
+        disabled={!sqlReady}
+        title={blockedTitle(sqlReady)}
     />
 </div>
 

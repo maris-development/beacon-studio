@@ -41,7 +41,7 @@
         return queryActions.runBlockReason?.() ?? null;
     });
 
-    /** True in SQL mode. Save, share and visualise come in a later release. */
+    /** True in SQL mode. Save and share come in a later release. */
     const sqlMode = $derived(queryActions.getMode?.() === "sql");
 
     let showingCacheInfoModal = $state(false);
@@ -95,8 +95,8 @@
                 visualiseTable={queryActions.visualiseTable}
                 visualiseChart={queryActions.visualiseChart}
                 visualiseMap={queryActions.visualiseMap}
-                disabled={sqlMode || !!blockReason}
-                title={sqlMode ? $t("workbench.sql.notYet") : blockReason ? $t(blockReason) : ""}
+                disabled={!!blockReason}
+                title={blockReason ? $t(blockReason) : ""}
             />
         {/if}
 

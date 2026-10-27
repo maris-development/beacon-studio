@@ -15,12 +15,7 @@ import { BeaconClient as BeaconSdkClient } from "@maris-development/beacon-clien
 import { normalizeUrl, splitNodeUrl } from "@/services/beacon-node-url";
 import { PUBLIC_NODE_TABLES } from "@/services/open-nodes";
 
-import {
-    isAbortError,
-    queryStore,
-    type DatasetEntry,
-    type MemoryCacheStats
-} from "@/stores/query-store.svelte";
+import { queryStore, type DatasetEntry, type MemoryCacheStats } from "@/stores/query-store.svelte";
 
 export type { DatasetEntry, MemoryCacheStats };
 
@@ -44,12 +39,10 @@ const schemaCache = new Map<string, Promise<Schema>>();
  *     {@link queryToDownload}, over plain JSON/`fetch`.
  *  2. **Cached metadata** ({@link getCachedTables} / {@link getCachedDefaultTable} /
  *     {@link getCachedSchema}): memoization by base URL that survives navigation.
- *  3. **Query execution + result cache** (the `static` query methods below): the
- *     native zstd Arrow IPC path via `@maris-development/beacon-client`, with a two-tier
- *     (memory + OPFS) result cache. These are `static` because the result cache is
- *     app-wide, independent of any single client instance's node. They take the
- *     node of the query as an argument: a query record owns its node, and the URL
- *     of that node is part of the cache key.
+ *  3. **Result cache control** (the `static` cache methods below): stats, clear,
+ *     on/off and the download record of the two-tier (memory + OPFS) result cache.
+ *     These are `static` because the result cache is app-wide, independent of any
+ *     single client instance's node. A query runs through `queryStore.ensure`.
  *
  * Prefer this facade for anything that talks to a Beacon node; do not import
  * `@maris-development/beacon-client` directly from app code.
@@ -536,49 +529,14 @@ export class BeaconClient {
         }
     }
 
-    // -- Query execution + result cache (app-wide, per query) --------------------
+    // -- Result cache control (app-wide, per query) ------------------------------
     // Static: the result cache is one app-wide store, so it must not be bound to
     // the node of one client. Every method takes the node of the query, because a
     // query record owns its node. The URL of that node is part of the cache key.
 
-    /**
-     * Executes `query` on `node` (or returns the cached result) and caches the
-     * resulting Arrow table across navigations.
-     *
-     * The app runs one query at a time. A call for another query aborts the run
-     * that is busy. That older promise rejects with an `AbortError`. Test a
-     * rejection with {@link isQueryAbort}, and show no error for an abort. See
-     * `QueryStore.ensure`.
-     */
-    static ensureQuery(
-        query: CompiledQuery,
-        node: BeaconNode,
-        storedQueryId?: string
-    ): Promise<DatasetEntry> {
-        return queryStore.ensure(query, node, storedQueryId);
-    }
-
-    /** Returns a cached result without executing, or `undefined` if absent. */
-    static peekQuery(query: CompiledQuery, node: BeaconNode | null): DatasetEntry | undefined {
-        return queryStore.peek(query, node);
-    }
-
     /** Stops the query that runs, if there is one. */
     static cancelQuery(): void {
         queryStore.cancel();
-    }
-
-    /** True when a rejection is the abort of a superseded run, not a failure. */
-    static isQueryAbort(error: unknown): boolean {
-        return isAbortError(error);
-    }
-
-    /**
-     * Returns a cached result by its cache key — for callers holding a StoredQuery's
-     * `datasetKey` rather than the query itself, e.g. a page deep-linked with `?q=`.
-     */
-    static peekQueryByKey(key: string | null | undefined): DatasetEntry | undefined {
-        return queryStore.peekByKey(key);
     }
 
     /**
@@ -609,7 +567,7 @@ export class BeaconClient {
 
     /**
      * Records a server-materialized download in the query history. Downloads bypass
-     * {@link ensureQuery} and the result cache, so the row count is unknown here; an
+     * `queryStore.ensure` and the result cache, so the row count is unknown here; an
      * existing history entry's count is preserved. `duration` is the client-observed
      * round-trip time in milliseconds.
      */

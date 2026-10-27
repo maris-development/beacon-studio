@@ -51,7 +51,7 @@ track("query.execute", {
 | `session.ts`     | The endpoints, and the short-lived session token.                                                                                                                 |
 | `identity.ts`    | `installId` (localStorage), `sessionId` (sessionStorage), the platform and the build.                                                                             |
 | `props.ts`       | `fitProps` keeps one props object inside the server cap. It cuts the object in steps, because the server drops a whole object that is too large.                  |
-| `query-shape.ts` | `describeQuery` turns a `CompiledQuery` into a compact payload.                                                                                                   |
+| `query-shape.ts` | `describeQuery` turns a `CompiledQuery`, or the SQL text of a workbench SQL block, into a compact payload.                                                        |
 | `context.ts`     | The client facts that the server cannot read from the request: viewport, locale, timezone, cores, memory.                                                         |
 | `console.ts`     | Reports `console.warn` and `console.error`. `console.log` needs the `telemetryConsoleLog` setting. It reports one message once per minute, with a `repeat` count. |
 | `errors.ts`      | Reports an uncaught error and a rejected promise. The console patch sees neither.                                                                                 |
@@ -154,6 +154,17 @@ and `query.open`.
 | `props.offset`           | The row offset of the query, or null.                                                                   |
 | `props.bbox`             | The drawn area, as `[west, south, east, north]`.                                                        |
 
+A workbench SQL block gives a SQL shape in place of the keys above. A row with
+no `props.mode` holds a builder query.
+
+| metric_key        | description                                                        |
+| ----------------- | ------------------------------------------------------------------ |
+| `props.mode`      | Always `sql`.                                                      |
+| `props.sql`       | The trimmed SQL text. It holds 1000 characters at most.            |
+| `props.sqlLength` | The length of the full text. It is always complete.                |
+| `props.hasFilter` | True when the text holds a `WHERE` or a `LIMIT`.                   |
+| `props.limit`     | Always null. `props.rowLimit` holds the row cap of the cell limit. |
+
 ### Props per event
 
 | metric_key           | description                                                                                                                          |
@@ -188,6 +199,7 @@ and `query.open`.
 | `props.transferMs`   | The read of the body. `query.execute` only.                                                                                          |
 | `props.decodeMs`     | The decode of the Arrow stream. `query.execute` only.                                                                                |
 | `props.bytes`        | The size of the body, in bytes. `query.execute` only.                                                                                |
+| `props.rowLimit`     | The row cap that the cell limit gave a SQL run: the cell limit divided by the column count. `query.execute` only.                    |
 | `props.renderMs`     | The render after the result arrived. `query.visualise` only.                                                                         |
 | `props.errorKind`    | The name of the error class. `query.error` only.                                                                                     |
 | `props.status`       | `query.error`: the HTTP status. `node.select`: the health of the node.                                                               |
@@ -223,6 +235,7 @@ A large props object loses fields. These flags say which.
 
 | metric_key                    | description                                                           |
 | ----------------------------- | --------------------------------------------------------------------- |
+| `props.sqlTruncated`          | The SQL text is cut. `sqlLength` stays correct.                       |
 | `props.columnsTruncated`      | The column list is cut, or absent. `columnCount` stays correct.       |
 | `props.filtersTruncated`      | The filter list is cut, or absent. `filterCount` stays correct.       |
 | `props.filterValuesTruncated` | The filters hold no values.                                           |
@@ -260,8 +273,8 @@ settings store cannot import this module.
 
 `telemetryQueryDetails` is on by default. An opt-out keeps the events, and removes
 the keys in `CONTENT_KEYS` from every props object: `table`, `columns`, `filters`,
-`column`, `file`, `term` and `bbox`. The counts beside them stay, because
-`columnCount`, `filterCount` and `filterKinds` name nothing. `applyContentRule` in
+`column`, `file`, `term`, `bbox` and `sql`. The counts beside them stay, because
+`columnCount`, `filterCount`, `filterKinds` and `sqlLength` name nothing. `applyContentRule` in
 `index.ts` does that, on every event.
 
 Each stripped event carries `props.queryDetails: false`. A reader then knows that

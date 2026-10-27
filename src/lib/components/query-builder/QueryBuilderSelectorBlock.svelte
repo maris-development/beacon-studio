@@ -337,11 +337,6 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                                     {/if}
                                     {$t("workbench.sql.summary")}
                                 </span>
-                                {#if run.isRunning}
-                                    <span class="query-stat" title={$t("workbench.block.runTitle")}>
-                                        {$t("workbench.block.running")}
-                                    </span>
-                                {/if}
                             {:else}
                                 <span class="query-stat" title={$t("workbench.block.tableTitle")}>
                                     {status.dataTable || $t("workbench.block.noTable")}
@@ -361,16 +356,16 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                                     {/if}
                                     {$t("query.filterCount", { count: status.filters })}
                                 </span>
-                                <span class="query-stat" title={$t("workbench.block.runTitle")}>
-                                    {#if run.isRunning}
-                                        {$t("workbench.block.running")}
-                                    {:else if run.hasRun}
-                                        {$t("common.rows", { count: run.rows ?? 0 })}
-                                    {:else}
-                                        {$t("workbench.block.notCached")}
-                                    {/if}
-                                </span>
                             {/if}
+                            <span class="query-stat" title={$t("workbench.block.runTitle")}>
+                                {#if run.isRunning}
+                                    {$t("workbench.block.running")}
+                                {:else if run.hasRun}
+                                    {$t("common.rows", { count: run.rows ?? 0 })}
+                                {:else}
+                                    {$t("workbench.block.notCached")}
+                                {/if}
+                            </span>
                         </div>
 
                         <!-- <div class="query-block-line">

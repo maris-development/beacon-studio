@@ -7,7 +7,7 @@
     import Button from "@/components/buttons/Button.svelte";
     import Trash2Icon from "@lucide/svelte/icons/trash-2";
     import { SQLQueryBuilder } from "@/beacon-api/query";
-    import type { StoredQuery } from "@/stores/stored-query";
+    import { queryModeOf, sqlTextOf, type StoredQuery } from "@/stores/stored-query";
     import { t, formatDate, formatNumber } from "@/i18n";
 
     type QueryListKind = "saved" | "history";
@@ -31,6 +31,7 @@
 
     /** The query as SQL on one line, or an empty string. */
     function sqlLine(entry: StoredQuery): string {
+        if (queryModeOf(entry) === "sql") return sqlTextOf(entry).trim().replace(/\s+/g, " ");
         if (!entry.compiled) return "";
 
         try {

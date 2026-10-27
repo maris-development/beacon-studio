@@ -26,9 +26,9 @@ import maplibregl, { NavigationControl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as ApacheArrow from "apache-arrow";
 import { unmount } from "svelte";
-import { BeaconClient, type DatasetEntry } from "@/beacon-api/client";
-import { queryStore } from "@/stores/query-store.svelte";
-import type { BeaconNode, CompiledQuery, Select as QuerySelect } from "@/beacon-api/types";
+import { isAbortError, queryStore, type DatasetEntry } from "@/stores/query-store.svelte";
+import type { BeaconNode, Select as QuerySelect } from "@/beacon-api/types";
+import { isSqlRunQuery, type RunQuery } from "@/query/run-query";
 import { ApacheArrowUtils } from "@/arrow-utils";
 import { getSettings } from "@/stores/settings";
 import { addToast } from "@/stores/toasts";
@@ -395,7 +395,7 @@ export class MapViewController {
      * Reports one map view. The call comes after the render, so `renderMs` holds
      * the time that the map itself took: the dedup pass and the geometry build.
      */
-    private reportVisualise(query: CompiledQuery, node: BeaconNode, readyAt: number): void {
+    private reportVisualise(query: RunQuery, node: BeaconNode, readyAt: number): void {
         track("query.visualise", {
             nodeHost: node.url,
             rowCount: this.entry?.rowCount,
@@ -410,7 +410,7 @@ export class MapViewController {
     }
 
     async runAndShowQuery(
-        query: CompiledQuery,
+        query: RunQuery,
         node: BeaconNode,
         blockId: string,
         keepCamera: boolean,
@@ -422,9 +422,10 @@ export class MapViewController {
 
         try {
             this.storedCoordinateColumns = coordinateColumns;
-            this.deriveColumnNames(query);
+            this.deriveColumnNames(query, this.entry);
 
-            this.entry = await BeaconClient.ensureQuery(query, node, blockId);
+            this.entry = await queryStore.ensure(query, node, blockId);
+            this.deriveColumnNames(query, this.entry);
             this.markRun(blockId, this.entry.rowCount);
 
             const readyAt = performance.now();
@@ -444,7 +445,7 @@ export class MapViewController {
 
             // The app runs one query at a time. A newer run stopped this one. The
             // user asked for that, so it is no error.
-            if (BeaconClient.isQueryAbort(error)) return;
+            if (isAbortError(error)) return;
 
             console.error("Failed to execute query:", error);
             addToast({
@@ -460,7 +461,7 @@ export class MapViewController {
      * stays empty when the cache has no result for this key.
      */
     showQueryFromCache(datasetKey: string | null): void {
-        this.entry = (datasetKey && BeaconClient.peekQueryByKey(datasetKey)) || null;
+        this.entry = queryStore.peekByKey(datasetKey) ?? null;
     }
 
     /** Remove the current result from the map. */
@@ -470,10 +471,15 @@ export class MapViewController {
         this.isLoading = false;
     }
 
-    private deriveColumnNames(query: CompiledQuery): void {
-        this.availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
-            return param.alias ?? param.column;
-        });
+    /** The columns of the query. SQL names its columns only in the result, so they wait for `entry`. */
+    private deriveColumnNames(query: RunQuery, entry: DatasetEntry | null): void {
+        if (isSqlRunQuery(query)) {
+            this.availableColumnNames = entry?.table.schema.fields.map((field) => field.name) ?? [];
+        } else {
+            this.availableColumnNames = query.query_parameters.map((param: QuerySelect) => {
+                return param.alias ?? param.column;
+            });
+        }
 
         this.resolveColumns();
     }

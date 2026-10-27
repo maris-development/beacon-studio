@@ -22,8 +22,9 @@
  * plain methods and runes for them to drive.
  */
 import { untrack } from "svelte";
-import { BeaconClient, type DatasetEntry } from "@/beacon-api/client";
-import type { BeaconNode, CompiledQuery } from "@/beacon-api/types";
+import type { BeaconNode } from "@/beacon-api/types";
+import type { RunQuery } from "@/query/run-query";
+import { isAbortError, queryStore, type DatasetEntry } from "@/stores/query-store.svelte";
 import { addToast } from "@/stores/toasts";
 import type { CoordinatePair, SpatialSelection } from "@/geo/spatial-selection";
 import {
@@ -432,7 +433,7 @@ export class ChartExplorerController {
      * Reports one chart view. The call comes after the plot setup, so `renderMs`
      * holds the time that the chart itself took.
      */
-    private reportVisualise(query: CompiledQuery, node: BeaconNode, readyAt: number): void {
+    private reportVisualise(query: RunQuery, node: BeaconNode, readyAt: number): void {
         track("query.visualise", {
             nodeHost: node.url,
             rowCount: this.entry?.rowCount,
@@ -446,13 +447,13 @@ export class ChartExplorerController {
         });
     }
 
-    async runAndShowQuery(query: CompiledQuery, node: BeaconNode, blockId: string): Promise<void> {
+    async runAndShowQuery(query: RunQuery, node: BeaconNode, blockId: string): Promise<void> {
         const token = this.beginRun(blockId);
         this.latestRun = token;
         this.isLoading = true;
 
         try {
-            this.entry = await BeaconClient.ensureQuery(query, node, blockId);
+            this.entry = await queryStore.ensure(query, node, blockId);
             this.markRun(blockId, this.entry.rowCount);
             this.isLoading = false;
 
@@ -472,7 +473,7 @@ export class ChartExplorerController {
 
             // The app runs one query at a time. A newer run stopped this one. The
             // user asked for that, so it is no error.
-            if (BeaconClient.isQueryAbort(error)) return;
+            if (isAbortError(error)) return;
 
             console.error("Failed to execute query:", error);
             addToast({
@@ -488,7 +489,7 @@ export class ChartExplorerController {
      * stays empty when the cache has no result for this key.
      */
     showQueryFromCache(datasetKey: string | null): void {
-        this.entry = (datasetKey && BeaconClient.peekQueryByKey(datasetKey)) || null;
+        this.entry = queryStore.peekByKey(datasetKey) ?? null;
         if (this.entry) this.syncPlotToColumns();
     }
 

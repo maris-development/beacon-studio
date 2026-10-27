@@ -15,6 +15,7 @@ import {
     decodeSharedQuery,
     LEGACY_NODE_PARAM,
     nodeRefFromUrl,
+    queryModeOf,
     type NodeRef,
     type StoredQuery
 } from "@/stores/stored-query";
@@ -78,7 +79,7 @@ export interface ResolvedUrlQuery {
      * uses the `datasetKey` of this record to show a cached result immediately.
      */
     entry: StoredQuery | null;
-    /** The query to run. Null if the URL carried no usable data. */
+    /** The query to run. Null if the URL carried no usable data, and for a SQL record. */
     query: CompiledQuery | null;
     /**
      * The name that the link carried, or null. A share link holds the name that
@@ -88,7 +89,7 @@ export interface ResolvedUrlQuery {
     name: string | null;
     /**
      * The value of `entry.id`, or undefined if there is no record. Send it to
-     * `ensureQuery(query, node, storedQueryId)`. The app then writes the run
+     * `queryStore.ensure(query, node, storedQueryId)`. The app then writes the run
      * to the record. See `QueryStore.ensure` for the effects of this link.
      */
     storedQueryId?: string;
@@ -141,7 +142,8 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
     const id = url.searchParams.get("q");
     const entry = resolveStoredQuery(id);
 
-    if (entry?.compiled) {
+    // A SQL record holds its query as text, and no compiled query.
+    if (entry && (entry.compiled || queryModeOf(entry) === "sql")) {
         return {
             entry,
             query: entry.compiled,

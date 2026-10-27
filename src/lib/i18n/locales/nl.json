@@ -618,7 +618,8 @@
             "crossSection": "Doorsnede",
             "crossSectionTitle": "Teken een lijn. De lijn wordt een band met de breedte hieronder.",
             "clearTitle": "Het gebied verwijderen",
-            "applyFilter": "Filter toepassen"
+            "applyFilter": "Filter toepassen",
+            "sqlLocked": "Het gebiedsfilter werkt alleen in de modus Bouwer. Filter in SQL de breedtegraad- en lengtegraadkolom met WHERE."
         }
     },
     "table": {
