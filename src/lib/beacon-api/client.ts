@@ -1,23 +1,28 @@
-
-import { MemoryCache } from '@/cache';
-import type { BeaconNode, BeaconSystemInfo, CompiledQuery, FunctionNameObject, QueryMetricsResult, Schema, TableDefinition, TableExtension } from './types';
-import { Utils } from '@/utils';
-import { addToast } from '@/stores/toasts';
-import { BeaconClient as BeaconSdkClient } from '@maris-development/beacon-client';
-import { normalizeUrl, splitNodeUrl } from '@/services/beacon-node-url';
-import { PUBLIC_NODE_TABLES } from '@/services/open-nodes';
+import { MemoryCache } from "@/cache";
+import type {
+    BeaconNode,
+    BeaconSystemInfo,
+    CompiledQuery,
+    FunctionNameObject,
+    QueryMetricsResult,
+    Schema,
+    TableDefinition,
+    TableExtension
+} from "./types";
+import { Utils } from "@/utils";
+import { addToast } from "@/stores/toasts";
+import { BeaconClient as BeaconSdkClient } from "@maris-development/beacon-client";
+import { normalizeUrl, splitNodeUrl } from "@/services/beacon-node-url";
+import { PUBLIC_NODE_TABLES } from "@/services/open-nodes";
 
 import {
     isAbortError,
     queryStore,
     type DatasetEntry,
     type MemoryCacheStats
-} from '@/stores/query-store.svelte';
+} from "@/stores/query-store.svelte";
 
-export type {
-    DatasetEntry,
-    MemoryCacheStats,
-}
+export type { DatasetEntry, MemoryCacheStats };
 
 // Re-exported so consumers depend only on the client facade, never on the
 // underlying modules directly.
@@ -29,7 +34,6 @@ export type {
 const tablesCache = new Map<string, Promise<string[]>>();
 const defaultTableCache = new Map<string, Promise<string>>();
 const schemaCache = new Map<string, Promise<Schema>>();
-
 
 /**
  * Unified Beacon client facade. This is the single entry point the app uses to talk
@@ -94,13 +98,13 @@ export class BeaconClient {
     }
 
     static output_formats: Record<string, string> = {
-        Parquet: 'parquet',
-        CSV: 'csv',
-        Arrow: 'arrow',
-        NetCDF: 'netcdf'
+        Parquet: "parquet",
+        CSV: "csv",
+        Arrow: "arrow",
+        NetCDF: "netcdf"
     };
 
-    static outputFormatToExtension(query: CompiledQuery, prefix: string = ''): string {
+    static outputFormatToExtension(query: CompiledQuery, prefix: string = ""): string {
         switch (true) {
             case Utils.objectHasProperty(query.output.format, "geoparquet"):
             case query.output.format === "parquet":
@@ -182,14 +186,18 @@ export class BeaconClient {
         BeaconClient.clearMetadataCache(this.baseUrl);
     }
 
-    async queryToDownload(query: CompiledQuery, unknownDispositionExtension: string = '.blob', storedQueryId?: string): Promise<void> {
-        const endpoint = this.buildUrl('/api/query');
+    async queryToDownload(
+        query: CompiledQuery,
+        unknownDispositionExtension: string = ".blob",
+        storedQueryId?: string
+    ): Promise<void> {
+        const endpoint = this.buildUrl("/api/query");
 
         const request_info: RequestInit = {
-            method: 'POST',
-            headers: this.getAuthHeaders({ 'Content-Type': 'application/json' }),
+            method: "POST",
+            headers: this.getAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(query),
-            cache: 'no-cache',
+            cache: "no-cache"
         };
 
         const started = performance.now();
@@ -197,7 +205,9 @@ export class BeaconClient {
 
         if (!response.ok) {
             const error_message = await response.text();
-            throw new Error(`Download failed: ${response.status} ${response.statusText} - ${error_message}`);
+            throw new Error(
+                `Download failed: ${response.status} ${response.statusText} - ${error_message}`
+            );
         }
 
         const blob = await response.blob();
@@ -208,12 +218,17 @@ export class BeaconClient {
         // history row. Only a health check builds such a client, and it downloads
         // nothing, so this drops no real download.
         if (this.node) {
-            BeaconClient.recordDownload(query, this.node, performance.now() - started, storedQueryId);
+            BeaconClient.recordDownload(
+                query,
+                this.node,
+                performance.now() - started,
+                storedQueryId
+            );
         }
 
         // Try to get the filename from the headers
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = 'download';
+        const contentDisposition = response.headers.get("Content-Disposition");
+        let filename = "download";
 
         const match = contentDisposition?.match(/filename="([^"]+)"/);
         if (match) {
@@ -223,7 +238,7 @@ export class BeaconClient {
         }
 
         // Trigger download
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
         link.download = filename;
         document.body.appendChild(link);
@@ -234,13 +249,13 @@ export class BeaconClient {
     }
 
     async explainQuery(query: CompiledQuery): Promise<Record<string, unknown>> {
-        const url = this.buildUrl('/api/explain-query');
+        const url = this.buildUrl("/api/explain-query");
 
         const request_info: RequestInit = {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(query),
-            cache: 'no-cache',
+            cache: "no-cache"
         };
 
         const response = await this.fetch<Record<string, unknown>>(url, request_info);
@@ -251,28 +266,34 @@ export class BeaconClient {
     async getQueryMetrics(query_id: string): Promise<QueryMetricsResult> {
         const url = this.buildUrl(`/api/query/metrics/${query_id}`);
 
-        const response: QueryMetricsResult = await this.fetch(url)
+        const response: QueryMetricsResult = await this.fetch(url);
 
         return response;
     }
 
     async getQueryFunctions(): Promise<Array<FunctionNameObject>> {
-        const request: Array<FunctionNameObject> = await this.fetch(this.buildUrl('/api/functions'));
+        const request: Array<FunctionNameObject> = await this.fetch(
+            this.buildUrl("/api/functions")
+        );
 
         return request;
     }
 
-    async getDatasets(pattern: string | null = null, offset: number = 0, limit: number = 100): Promise<Array<string>> {
-        const url = this.buildUrl('/api/datasets')
+    async getDatasets(
+        pattern: string | null = null,
+        offset: number = 0,
+        limit: number = 100
+    ): Promise<Array<string>> {
+        const url = this.buildUrl("/api/datasets");
 
         if (pattern) {
-            url.searchParams.append('pattern', pattern);
+            url.searchParams.append("pattern", pattern);
         }
         if (offset !== null) {
-            url.searchParams.append('offset', offset.toString());
+            url.searchParams.append("offset", offset.toString());
         }
         if (limit !== null) {
-            url.searchParams.append('limit', limit.toString());
+            url.searchParams.append("limit", limit.toString());
         }
 
         const response: Array<string> = await this.fetch(url);
@@ -281,9 +302,9 @@ export class BeaconClient {
     }
 
     async getDatasetSchema(file: string): Promise<Schema> {
-        const url = this.buildUrl('/api/dataset-schema');
+        const url = this.buildUrl("/api/dataset-schema");
 
-        url.searchParams.append('file', file);
+        url.searchParams.append("file", file);
 
         const response: Schema = await this.fetch(url);
 
@@ -291,7 +312,7 @@ export class BeaconClient {
     }
 
     async getTotalDatasets(): Promise<number> {
-        const url = this.buildUrl('/api/total-datasets');
+        const url = this.buildUrl("/api/total-datasets");
 
         const response: number = await this.fetch(url);
 
@@ -299,7 +320,7 @@ export class BeaconClient {
     }
 
     async getTables(): Promise<Array<string>> {
-        const url = this.buildUrl('/api/tables');
+        const url = this.buildUrl("/api/tables");
         const response: Array<string> = await this.fetch(url);
 
         // Temporary fix: a public demo node shows only its curated tables.
@@ -312,7 +333,7 @@ export class BeaconClient {
     }
 
     async getDefaultTable(): Promise<string> {
-        const url = this.buildUrl('/api/default-table');
+        const url = this.buildUrl("/api/default-table");
 
         const response: string = await this.fetch(url);
 
@@ -320,9 +341,9 @@ export class BeaconClient {
     }
 
     async getTableSchema(table: string): Promise<Schema> {
-        const url = this.buildUrl('/api/table-schema');
+        const url = this.buildUrl("/api/table-schema");
 
-        url.searchParams.append('table_name', table);
+        url.searchParams.append("table_name", table);
 
         const response: Schema = await this.fetch(url);
 
@@ -330,7 +351,7 @@ export class BeaconClient {
     }
 
     async getDefaultTableSchema(): Promise<Schema> {
-        const url = this.buildUrl('/api/default-table-schema');
+        const url = this.buildUrl("/api/default-table-schema");
 
         const cacheResult = this.memCache.get<Schema>(url.toString());
 
@@ -347,12 +368,10 @@ export class BeaconClient {
         return response;
     }
 
-
     async getTableExtensions(table: string): Promise<Array<TableExtension>> {
+        const url = this.buildUrl("/api/table-extensions");
 
-        const url = this.buildUrl('/api/table-extensions');
-
-        url.searchParams.append('table_name', table);
+        url.searchParams.append("table_name", table);
 
         const response: Array<TableExtension> = await this.fetch(url);
 
@@ -361,9 +380,9 @@ export class BeaconClient {
 
     // TODO: always fails and has no callers. Beacon 2.0 retires `/api/table-config`.
     async getTableConfig(table: string): Promise<TableDefinition> {
-        const url = this.buildUrl('/api/table-config');
+        const url = this.buildUrl("/api/table-config");
 
-        url.searchParams.append('table_name', table);
+        url.searchParams.append("table_name", table);
 
         const response: TableDefinition = await this.fetch(url);
 
@@ -384,7 +403,7 @@ export class BeaconClient {
             const table_definition = await this.getTableConfig(table_name);
 
             // Check if the table is a preset table
-            if ('preset' in table_definition.table_type) {
+            if ("preset" in table_definition.table_type) {
                 preset_tables.push(table_definition);
             }
         }
@@ -393,7 +412,7 @@ export class BeaconClient {
     }
 
     async getSystemInfo(): Promise<BeaconSystemInfo> {
-        const url = this.buildUrl('/api/info');
+        const url = this.buildUrl("/api/info");
 
         const response: BeaconSystemInfo = await this.fetch(url);
 
@@ -406,10 +425,9 @@ export class BeaconClient {
      * a background check. See {@link testConnection} for the interactive test.
      */
     async getHealth(init: RequestInit = {}): Promise<boolean> {
+        const url = this.buildUrl("/api/health");
 
-        const url = this.buildUrl('/api/health');
-
-        const response: string = await this.fetch(url, init, 'text');
+        const response: string = await this.fetch(url, init, "text");
 
         return response == "Ok";
     }
@@ -425,21 +443,23 @@ export class BeaconClient {
      * Displays an error toast notification if the connection fails.
      */
     async testConnection(): Promise<boolean> {
-        const result = await this.getHealth().then((isHealthy) => {
-            // Connection successful
-            if (!isHealthy) {
-                throw new Error('Connected successfully, but Beacon node is not healthy.');
-            }
+        const result = await this.getHealth()
+            .then((isHealthy) => {
+                // Connection successful
+                if (!isHealthy) {
+                    throw new Error("Connected successfully, but Beacon node is not healthy.");
+                }
 
-            return true;
-        }).catch(() => {
-            addToast({
-                key: 'query.toast.connectFailed',
-                type: 'error',
-                timeout: 0
+                return true;
+            })
+            .catch(() => {
+                addToast({
+                    key: "query.toast.connectFailed",
+                    type: "error",
+                    timeout: 0
+                });
+                return false;
             });
-            return false;
-        });
 
         return result;
     }
@@ -448,42 +468,47 @@ export class BeaconClient {
     fetch<T>(input: string | URL | Request, init?: RequestInit): Promise<T>;
 
     // Overload #2 - Explicit text
-    fetch(input: string | URL | Request, init: RequestInit | undefined, responseType: 'text'): Promise<string>;
+    fetch(
+        input: string | URL | Request,
+        init: RequestInit | undefined,
+        responseType: "text"
+    ): Promise<string>;
 
     // Overload #3 - Explicit JSON
-    fetch<T>(input: string | URL | Request, init: RequestInit | undefined, responseType: 'json'): Promise<T>;
-
+    fetch<T>(
+        input: string | URL | Request,
+        init: RequestInit | undefined,
+        responseType: "json"
+    ): Promise<T>;
 
     fetch<T>(
         input: string | URL | globalThis.Request,
         init?: RequestInit,
-        responseType?: 'json' | 'text'
-    ): Promise<unknown> { // use overloads for typing
-        if (!responseType) responseType = 'json';
+        responseType?: "json" | "text"
+    ): Promise<unknown> {
+        // use overloads for typing
+        if (!responseType) responseType = "json";
         if (!init) init = {};
 
         //merge headers with auth headers:
         init.headers = this.getAuthHeaders(init.headers);
 
-        if (responseType === 'text') {
+        if (responseType === "text") {
             return fetch(input, init).then(BeaconClient.responseToTextOrError);
         }
 
         return fetch(input, init).then(BeaconClient.responseToJsonOrError<T>);
     }
 
-    getAuthHeaders(
-        existing_headers: HeadersInit = {}
-    ): HeadersInit {
+    getAuthHeaders(existing_headers: HeadersInit = {}): HeadersInit {
         const headers = new Headers(existing_headers);
 
         if (this.token) {
-            headers.set('Authorization', `Bearer ${this.token}`);
+            headers.set("Authorization", `Bearer ${this.token}`);
         }
 
         return headers;
     }
-
 
     // ============================================================================
     // Static members
@@ -599,27 +624,26 @@ export class BeaconClient {
 
     static responseToTextOrError(response: Response): Promise<string> {
         if (!response.ok) {
-            return response.text().then(text => {
+            return response.text().then((text) => {
                 // Wrap whatever you want—here I’m embedding the server message
                 throw new Error(`HTTP ${response.status} ${response.statusText}\n${text}`);
             });
         }
-        return response.text().then(content => {
+        return response.text().then((content) => {
             return content;
         });
     }
 
     static responseToJsonOrError<T = unknown>(response: Response): Promise<T | null> {
         if (!response.ok) {
-            return response.text().then(text => {
+            return response.text().then((text) => {
                 // Wrap whatever you want—here I’m embedding the server message
                 throw new Error(`HTTP ${response.status} ${response.statusText}\n${text}`);
             });
         }
 
-        return response.text().then(content => {
-
-            if (content === '') {
+        return response.text().then((content) => {
+            if (content === "") {
                 return null; // Handle empty content gracefully
             }
 
@@ -628,9 +652,7 @@ export class BeaconClient {
             return json;
         });
     }
-
 }
-
 
 /**
  * Builds a `@maris-development/beacon-client` client for the given Beacon node.
@@ -646,15 +668,15 @@ export class BeaconClient {
  * @throws if no node (or no URL) is provided.
  */
 export function makeBeaconClient(node: BeaconNode | null): BeaconSdkClient {
-	if (!node?.url) {
-		throw new Error('No Beacon node selected');
-	}
+    if (!node?.url) {
+        throw new Error("No Beacon node selected");
+    }
 
-	const headers = node.token ? { Authorization: 'Bearer ' + node.token } : undefined;
+    const headers = node.token ? { Authorization: "Bearer " + node.token } : undefined;
 
-	return new BeaconSdkClient({
-		url: normalizeUrl(node.url),
-		headers,
-		timeoutMs: 0
-	});
+    return new BeaconSdkClient({
+        url: normalizeUrl(node.url),
+        headers,
+        timeoutMs: 0
+    });
 }

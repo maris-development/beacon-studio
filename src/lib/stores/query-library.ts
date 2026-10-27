@@ -8,20 +8,20 @@
  * type: a block, a saved query and a history entry all use the same link form.
  */
 
-import { queryBlocks } from '@/stores/query-blocks';
-import { queryHistory } from '@/stores/query-history';
-import { savedQueries } from '@/stores/saved-queries';
+import { queryBlocks } from "@/stores/query-blocks";
+import { queryHistory } from "@/stores/query-history";
+import { savedQueries } from "@/stores/saved-queries";
 import {
-	decodeSharedQuery,
-	LEGACY_NODE_PARAM,
-	nodeRefFromUrl,
-	type NodeRef,
-	type StoredQuery
-} from '@/stores/stored-query';
-import type { QueryCollection } from '@/stores/query-collection';
-import type { CompiledQuery } from '@/beacon-api/types';
-import type { CoordinatePair } from '@/geo/spatial-selection';
-import { resolveRef } from '@/services/beacon-node';
+    decodeSharedQuery,
+    LEGACY_NODE_PARAM,
+    nodeRefFromUrl,
+    type NodeRef,
+    type StoredQuery
+} from "@/stores/stored-query";
+import type { QueryCollection } from "@/stores/query-collection";
+import type { CompiledQuery } from "@/beacon-api/types";
+import type { CoordinatePair } from "@/geo/spatial-selection";
+import { resolveRef } from "@/services/beacon-node";
 import { addToast } from "@/stores/toasts";
 
 /** The search order for {@link resolveStoredQuery}. The most active collection is first. */
@@ -35,12 +35,12 @@ const COLLECTIONS: QueryCollection[] = [queryBlocks, savedQueries, queryHistory]
  * A caller must then show the "no query available" state.
  */
 export function resolveStoredQuery(id: string | null | undefined): StoredQuery | null {
-	if (!id) return null;
-	for (const collection of COLLECTIONS) {
-		const found = collection.find(id);
-		if (found) return found;
-	}
-	return null;
+    if (!id) return null;
+    for (const collection of COLLECTIONS) {
+        const found = collection.find(id);
+        if (found) return found;
+    }
+    return null;
 }
 
 /**
@@ -49,73 +49,73 @@ export function resolveStoredQuery(id: string | null | undefined): StoredQuery |
  * the query runs.
  */
 export function recordRunResult(
-	id: string | null | undefined,
-	result: { datasetKey: string; rowCount: number; duration: number }
+    id: string | null | undefined,
+    result: { datasetKey: string; rowCount: number; duration: number }
 ): void {
-	if (!id) return;
-	const now = Date.now();
-	for (const collection of COLLECTIONS) {
-		if (!collection.find(id)) continue;
-		const existing = collection.find(id);
-		collection.update(id, {
-			datasetKey: result.datasetKey,
-			rowCount: result.rowCount,
-			duration: result.duration,
-			lastExecutedAt: now,
-			executionCount: (existing?.executionCount ?? 0) + 1
-		});
-		return;
-	}
+    if (!id) return;
+    const now = Date.now();
+    for (const collection of COLLECTIONS) {
+        if (!collection.find(id)) continue;
+        const existing = collection.find(id);
+        collection.update(id, {
+            datasetKey: result.datasetKey,
+            rowCount: result.rowCount,
+            duration: result.duration,
+            lastExecutedAt: now,
+            executionCount: (existing?.executionCount ?? 0) + 1
+        });
+        return;
+    }
 }
 
 // -- URL resolution ----------------------------------------------------------
 
 /** The result for a page that a deep-link opened. */
 export interface ResolvedUrlQuery {
-	/**
-	 * The library record that the link named. A `?q=` link has one. A share link
-	 * (`?query=`) has none, because it carries a query but no identity. A page
-	 * uses the `datasetKey` of this record to show a cached result immediately.
-	 */
-	entry: StoredQuery | null;
-	/** The query to run. Null if the URL carried no usable data. */
-	query: CompiledQuery | null;
-	/**
-	 * The name that the link carried, or null. A share link holds the name that
-	 * the sender gave the query. A new block takes it. It is empty when the sender
-	 * had no name, and the block then falls back to its own numbering.
-	 */
-	name: string | null;
-	/**
-	 * The value of `entry.id`, or undefined if there is no record. Send it to
-	 * `ensureQuery(query, node, storedQueryId)`. The app then writes the run
-	 * to the record. See `QueryStore.ensure` for the effects of this link.
-	 */
-	storedQueryId?: string;
-	/**
-	 * The node that must run the query. A `?q=` link takes it from the record. A
-	 * share link takes it from `nodeUrl` in its payload. It is null when the link
-	 * named none. The caller then falls back to its own default.
-	 */
-	node: NodeRef | null;
-	/**
-	 * The URL of a node that the link named, but that the node list does not
-	 * hold. The page shows a toast, and asks the user to add that node. It is
-	 * null when the node resolves, and when the link named none.
-	 */
-	missingNodeUrl: string | null;
-	/**
-	 * The coordinate pair that a share link carried, or null. A link of an older
-	 * app version carries none. The new block then takes the pair of its query.
-	 */
-	coordinateColumns?: CoordinatePair | null;
+    /**
+     * The library record that the link named. A `?q=` link has one. A share link
+     * (`?query=`) has none, because it carries a query but no identity. A page
+     * uses the `datasetKey` of this record to show a cached result immediately.
+     */
+    entry: StoredQuery | null;
+    /** The query to run. Null if the URL carried no usable data. */
+    query: CompiledQuery | null;
+    /**
+     * The name that the link carried, or null. A share link holds the name that
+     * the sender gave the query. A new block takes it. It is empty when the sender
+     * had no name, and the block then falls back to its own numbering.
+     */
+    name: string | null;
+    /**
+     * The value of `entry.id`, or undefined if there is no record. Send it to
+     * `ensureQuery(query, node, storedQueryId)`. The app then writes the run
+     * to the record. See `QueryStore.ensure` for the effects of this link.
+     */
+    storedQueryId?: string;
+    /**
+     * The node that must run the query. A `?q=` link takes it from the record. A
+     * share link takes it from `nodeUrl` in its payload. It is null when the link
+     * named none. The caller then falls back to its own default.
+     */
+    node: NodeRef | null;
+    /**
+     * The URL of a node that the link named, but that the node list does not
+     * hold. The page shows a toast, and asks the user to add that node. It is
+     * null when the node resolves, and when the link named none.
+     */
+    missingNodeUrl: string | null;
+    /**
+     * The coordinate pair that a share link carried, or null. A link of an older
+     * app version carries none. The new block then takes the pair of its query.
+     */
+    coordinateColumns?: CoordinatePair | null;
 
-	/**
-	 * True if the URL had either `?q=` or `?query=`. A page uses this to decide
-	 * whether to show a toast for a missing query. A page shows no toast when the
-	 * user navigates to the workbench, and then removes all blocks.
-	 */
-	containsQueryParam: boolean;
+    /**
+     * True if the URL had either `?q=` or `?query=`. A page uses this to decide
+     * whether to show a toast for a missing query. A page shows no toast when the
+     * user navigates to the workbench, and then removes all blocks.
+     */
+    containsQueryParam: boolean;
 }
 
 /**
@@ -133,55 +133,69 @@ export interface ResolvedUrlQuery {
  * result. It is not an error.
  */
 export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
-	// Read this from the URL, and not from the result below. A `?q=` link to a
-	// record that history dropped resolves to nothing, but the URL still asked
-	// for a query. That stale bookmark is the case the flag exists for.
-	const containsQueryParam = url.searchParams.has('q') || url.searchParams.has('query');
+    // Read this from the URL, and not from the result below. A `?q=` link to a
+    // record that history dropped resolves to nothing, but the URL still asked
+    // for a query. That stale bookmark is the case the flag exists for.
+    const containsQueryParam = url.searchParams.has("q") || url.searchParams.has("query");
 
-	const id = url.searchParams.get('q');
-	const entry = resolveStoredQuery(id);
+    const id = url.searchParams.get("q");
+    const entry = resolveStoredQuery(id);
 
-	if (entry?.compiled) {
-		return {
-			entry,
-			query: entry.compiled,
-			name: entry.name,
-			storedQueryId: entry.id,
-			node: entry.node,
-			missingNodeUrl: missingUrlOf(entry.node),
-			containsQueryParam
-		};
-	}
+    if (entry?.compiled) {
+        return {
+            entry,
+            query: entry.compiled,
+            name: entry.name,
+            storedQueryId: entry.id,
+            node: entry.node,
+            missingNodeUrl: missingUrlOf(entry.node),
+            containsQueryParam
+        };
+    }
 
-	const shared = url.searchParams.get('query');
-	if (shared) {
-		try {
-			const payload = decodeSharedQuery(shared, url.searchParams.get(LEGACY_NODE_PARAM));
-			const node = sharedNodeRef(payload.nodeUrl);
+    const shared = url.searchParams.get("query");
+    if (shared) {
+        try {
+            const payload = decodeSharedQuery(shared, url.searchParams.get(LEGACY_NODE_PARAM));
+            const node = sharedNodeRef(payload.nodeUrl);
 
-			return {
-				entry: null,
-				query: payload.query,
-				name: payload.name,
-				node,
-				missingNodeUrl: missingUrlOf(node),
-				coordinateColumns: payload.coordinateColumns ?? null,
-				containsQueryParam
-			};
-		} catch (error) {
-			console.error('Failed to decode a shared query from the URL.', error);
+            return {
+                entry: null,
+                query: payload.query,
+                name: payload.name,
+                node,
+                missingNodeUrl: missingUrlOf(node),
+                coordinateColumns: payload.coordinateColumns ?? null,
+                containsQueryParam
+            };
+        } catch (error) {
+            console.error("Failed to decode a shared query from the URL.", error);
 
-			addToast({
-				key: 'query.toast.decodeFailed',
-				message: String(error?.message ?? error),
-				type: 'error'
-			});
+            addToast({
+                key: "query.toast.decodeFailed",
+                message: String(error?.message ?? error),
+                type: "error"
+            });
 
-			return { entry: null, query: null, name: null, node: null, missingNodeUrl: null, containsQueryParam };
-		}
-	}
+            return {
+                entry: null,
+                query: null,
+                name: null,
+                node: null,
+                missingNodeUrl: null,
+                containsQueryParam
+            };
+        }
+    }
 
-	return { entry: null, query: null, name: null, node: null, missingNodeUrl: null, containsQueryParam };
+    return {
+        entry: null,
+        query: null,
+        name: null,
+        node: null,
+        missingNodeUrl: null,
+        containsQueryParam
+    };
 }
 
 /**
@@ -189,20 +203,20 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
  * sender named no node. The caller then uses its own default.
  */
 function sharedNodeRef(nodeUrl: string): NodeRef | null {
-	const shared = nodeUrl.trim();
-	if (!shared) return null;
+    const shared = nodeUrl.trim();
+    if (!shared) return null;
 
-	// The list can already hold this node. Take the full ref then, so the record
-	// keeps the name that the user gave it.
-	const known = resolveRef(nodeRefFromUrl(shared));
-	if (known) return { id: known.id, name: known.name, url: known.url };
+    // The list can already hold this node. Take the full ref then, so the record
+    // keeps the name that the user gave it.
+    const known = resolveRef(nodeRefFromUrl(shared));
+    if (known) return { id: known.id, name: known.name, url: known.url };
 
-	return nodeRefFromUrl(shared);
+    return nodeRefFromUrl(shared);
 }
 
 /** The URL of a ref that the node list does not hold, else null. */
 function missingUrlOf(ref: NodeRef | null): string | null {
-	if (!ref?.url) return null;
-	if (resolveRef(ref)) return null;
-	return ref.url;
+    if (!ref?.url) return null;
+    if (resolveRef(ref)) return null;
+    return ref.url;
 }
