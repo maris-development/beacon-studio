@@ -22,6 +22,10 @@
  * from the JSON editor. The builder fills the draft after the schema loads. See
  * {@link seedFor}. From that point the draft leads.
  *
+ * A block in SQL mode (`mode: 'sql'`) holds its query as text in `sql`. Its draft holds only
+ * the output format, and `compiled` stays null. {@link resultQueryOf} gives the query that the
+ * query store runs for both modes.
+ *
  * Each block also holds its own Beacon node, in `node`. The node is part of
  * the query, like the table. A switch of block therefore switches the node, and
  * two open blocks can read two nodes. {@link activeNode} resolves the ref of
@@ -33,939 +37,1115 @@
  *   builder edit -> updateActiveDraft(draft) -> queryBlocks.update()
  *   block        -> getQuery()/getStatus()   -> JSON view, action bar, cards
  */
-import type { CompiledQuery, MinMaxFilter } from '@/beacon-api/types';
-import { Utils } from '@/utils';
+import type { CompiledQuery, MinMaxFilter } from "@/beacon-api/types";
+import type { RunQuery } from "@/query/run-query";
+import { Utils } from "@/utils";
 import {
-	findGeoJsonFilter,
-	fromGeoJsonFilter,
-	holdsGeoJsonFilter,
-	isGeoJsonFilter,
-	isUsableSelection,
-	resolveCoordinateColumns,
-	toSpatialFilters,
-	type CoordinatePair,
-	type SpatialSelection
-} from '@/geo/spatial-selection';
+    findGeoJsonFilter,
+    fromGeoJsonFilter,
+    holdsGeoJsonFilter,
+    isGeoJsonFilter,
+    isUsableSelection,
+    resolveCoordinateColumns,
+    toSpatialFilters,
+    type CoordinatePair,
+    type SpatialSelection
+} from "@/geo/spatial-selection";
 import {
-	ensureBlockCounter,
-	getBlocksState,
-	needsDraftSeed,
-	nextBlockNumber,
-	queryBlocks,
-	setActiveBlockId
-} from '@/stores/query-blocks';
-import type { ResolvedUrlQuery } from '@/stores/query-library';
+    ensureBlockCounter,
+    getBlocksState,
+    needsDraftSeed,
+    nextBlockNumber,
+    queryBlocks,
+    setActiveBlockId
+} from "@/stores/query-blocks";
+import type { ResolvedUrlQuery } from "@/stores/query-library";
 import {
-	cloneStoredQuery,
-	hasNodeRef,
-	nodeRefFromUrl,
-	snapshotNode,
-	type NodeRef,
-	type MapViewState,
-	type StoredQuery
-} from '@/stores/stored-query';
-import { getCurrentNode, nodes, matchRef, resolveRef } from '@/services/beacon-node';
-import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-import';
-import type { BeaconNode } from '@/beacon-api/types';
-import { askChoice, askConfirm } from '@/stores/confirm';
-import { isSaved, saveQueryFrom } from '@/stores/saved-queries';
-import { addToast } from '@/stores/toasts';
-import { track } from '@/telemetry';
-import { translate, type MessageKey } from '@/i18n';
-import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from '@/query/selection-status';
-import { compileDraft, makeEmptyDraft, type QueryDraft } from '@/query/draft';
-import { isPlotRenderable, type ChartViewState } from '@/plots/plot-config';
+    cloneStoredQuery,
+    hasNodeRef,
+    nodeRefFromUrl,
+    queryModeOf,
+    runQueryOf,
+    snapshotNode,
+    sqlTextOf,
+    type NodeRef,
+    type MapViewState,
+    type QueryMode,
+    type StoredQuery
+} from "@/stores/stored-query";
+import { getCurrentNode, nodes, matchRef, resolveRef } from "@/services/beacon-node";
+import { openNodesSettled, whenOpenNodesSettled } from "@/services/open-nodes-import";
+import type { BeaconNode } from "@/beacon-api/types";
+import { askChoice, askConfirm } from "@/stores/confirm";
+import { isSaved, saveQueryFrom } from "@/stores/saved-queries";
+import { addToast } from "@/stores/toasts";
+import { track } from "@/telemetry";
+import { translate, type Message, type MessageKey } from "@/i18n";
+import { makeEmptyQuerySelectionStatus, type QuerySelectionStatus } from "@/query/selection-status";
+import { compileDraft, makeEmptyDraft, type QueryDraft } from "@/query/draft";
+import { isPlotRenderable, type ChartViewState } from "@/plots/plot-config";
+import { runBlockReason } from "@/query/query-guard";
+import { sqlBlockReason } from "@/sql/guard";
+import { SqlPreview } from "./SqlPreview.svelte";
 
 /** Small run/cache summary used by the block cards. */
 export type BlockRunState = {
-	hasRun: boolean;
-	rows: number | null;
-	isRunning: boolean;
+    hasRun: boolean;
+    rows: number | null;
+    isRunning: boolean;
 };
 
 export class QueryWorkspace {
-	/**
-	 * A reactive mirror of the persisted block collection. Do not assign to this
-	 * field. The subscription below is the only writer.
-	 */
-	blocks = $state<StoredQuery[]>([]);
-
-	/** The id of the block that the user edits or visualises now. */
-	activeBlockId = $state<string | null>(null);
-
-	/**
-	 * A "runs now" flag for each block. The record does not hold this flag. An
-	 * active run is a fact about this tab at this moment, not about the stored
-	 * query. A persisted flag would keep a spinner on a block after a reload.
-	 */
-	private running = $state<Record<string, boolean>>({});
-
-	/**
-	 * The run of now for each block. The number names one run. A run that another
-	 * run of the same block stops must not clear the spinner, because the newer
-	 * run owns it. See {@link beginBlockRun}.
-	 */
-	private runToken = $state<Record<string, number>>({});
-
-	/** The number for the next run. It only grows. */
-	private nextRunToken = 1;
-
-	/**
-	 * A reactive mirror of the configured nodes. The workspace resolves the
-	 * ref of a block against this list, so a new node, an edit of a URL or a
-	 * health check reaches the builder at once. Do not assign to this field.
-	 */
-	private nodeList = $state<BeaconNode[]>([]);
-
-	/** True after the public list settles. Both node warnings wait for it. */
-	private nodesSettled = $state(false);
-
-	/**
-	 * The blocks whose node the app guessed. A share link can name no node, so
-	 * the block falls back to the default node. That node often has other
-	 * tables, and the query then loads no columns.
-	 *
-	 * The record does not hold this flag. It is a fact about the link, not about
-	 * the query. The user sees the report once, and the block is theirs after
-	 * that. Therefore a reload must not report it again.
-	 */
-	private guessedNode = $state<Record<string, boolean>>({});
-
-	/** Releases the store subscriptions. See {@link destroy}. */
-	private unsubscribe: () => void;
-
-	constructor() {
-		const stopBlocks = queryBlocks.subscribe((entries) => {
-			this.blocks = entries;
-		});
-
-		const stopNodes = nodes.subscribe((list) => {
-			this.nodeList = list;
-		});
-
-		const stopSettled = openNodesSettled.subscribe((value) => {
-			this.nodesSettled = value;
-		});
-
-		this.unsubscribe = () => {
-			stopBlocks();
-			stopNodes();
-			stopSettled();
-		};
-
-		this.restoreSelection();
-	}
-
-	/**
-	 * Detach from the block collection. The workbench builds a new workspace at
-	 * every mount. Without this method each visit leaves one more subscriber. That
-	 * subscriber writes into an object that the app no longer uses.
-	 */
-	destroy(): void {
-		this.unsubscribe();
-	}
-
-	/**
-	 * Add the query from a deep-link as a new block. The method does not replace
-	 * the workspace. "Open in workbench" must not close the tabs of the user.
-	 *
-	 * A second visit to the same link has no extra effect. If `?q=` names a block
-	 * that is already open, the method selects that block.
-	 */
-	openFromUrl(resolved: ResolvedUrlQuery): void {
-		if (resolved.entry) {
-			const alreadyOpen = this.blocks.find((block) => block.id === resolved.entry?.id);
-			if (alreadyOpen) {
-				this.select(alreadyOpen.id);
-				this.warnMissingNode(resolved.missingNodeUrl);
-				return;
-			}
-			this.addFromStoredQuery(resolved.entry);
-			this.warnMissingNode(resolved.missingNodeUrl);
-			return;
-		}
-
-		if (resolved.query) {
-			// A share link carries the node of the sender. Keep that ref, even when
-			// the list holds no node for it. The builder then names the URL, and asks
-			// the user to add it. A link with no node lets the block fall back to the
-			// default. An empty name does the same for the name of the block.
-			const block = this.addFromQuery(
-				resolved.query,
-				resolved.name || undefined,
-				resolved.node,
-				resolved.coordinateColumns
-			);
-
-			// Mark the guess. The default node often has other tables, and the
-			// builder then loads no columns. See {@link reportSeedMismatch}.
-			if (!hasNodeRef(resolved.node)) {
-				this.guessedNode = { ...this.guessedNode, [block.id]: true };
-			}
-
-			this.warnMissingNode(resolved.missingNodeUrl);
-		}
-	}
-
-	/**
-	 * Tell the user that a link names a node that the app does not have. The
-	 * builder shows the same URL on the node picker, so this toast repeats it
-	 * once. It writes nothing when every node resolves.
-	 */
-	private warnMissingNode(url: string | null): void {
-		if (!url) return;
-
-		// The public list can still add this node. Ask again after it settles.
-		void whenOpenNodesSettled().then(() => {
-			if (resolveRef(nodeRefFromUrl(url))) return;
-
-			addToast({
-				type: 'warning',
-				key: 'workbench.toast.missingNode',
-				values: { url }
-			});
-		});
-	}
-
-	/**
-	 * The node for a query that names no node, for example a share link: the node
-	 * of the active block, else the node that the sidebar selected. An empty block
-	 * gets no node. See {@link addBlock}.
-	 */
-	private defaultNodeRef(): NodeRef {
-		const active = this.activeBlock;
-
-		if (hasNodeRef(active?.node)) {
-			return { ...active!.node };
-		}
-
-		return snapshotNode(getCurrentNode());
-	}
-
-	/** The active block, or null. */
-	get activeBlock(): StoredQuery | null {
-		return this.blocks.find((b) => b.id === this.activeBlockId) ?? null;
-	}
-
-	/**
-	 * The node of a block, or null. The result is null in two cases: the block
-	 * names no node yet, and the node list holds no node for its ref. The
-	 * caller must handle both, and must not run a query without a node.
-	 */
-	nodeFor(block: StoredQuery | null): BeaconNode | null {
-		return matchRef(this.nodeList, block?.node);
-	}
-
-	/** The node of the active block, or null. See {@link nodeFor}. */
-	get activeNode(): BeaconNode | null {
-		return this.nodeFor(this.activeBlock);
-	}
-
-	/**
-	 * The URL of a node that a block names, but that the node list does not
-	 * hold. It is null while the node resolves, and while the block names none.
-	 * The builder shows this URL, and offers to add the node.
-	 */
-	missingNodeUrlFor(block: StoredQuery | null): string | null {
-		if (!hasNodeRef(block?.node)) return null;
-		if (this.nodeFor(block)) return null;
-
-		// The public list can still add this node. Claim nothing until it settles.
-		if (!this.nodesSettled) return null;
-
-		return block?.node.url || null;
-	}
-
-	/** {@link missingNodeUrlFor} for the active block. */
-	get missingNodeUrl(): string | null {
-		return this.missingNodeUrlFor(this.activeBlock);
-	}
-
-	/** True after the public list settles. See {@link missingNodeUrlFor}. */
-	get nodesReady(): boolean {
-		return this.nodesSettled;
-	}
-
-	/**
-	 * Put a node on a block.
-	 *
-	 * A block with a draft loses that draft. The table and the columns of one node
-	 * do not apply to another. The method keeps the output format, which is a
-	 * preference of the user and not a property of the node.
-	 *
-	 * A block with no draft keeps its query. Such a block comes from a share link
-	 * or from the JSON editor, and its query lives in `compiled`. The user picks a
-	 * node to run that query on, so the method must not drop it. The builder seeds
-	 * a draft from it against the new node. See {@link seedFor}.
-	 *
-	 * The method also drops the link to the last result, because the cache key
-	 * holds the URL of the node.
-	 *
-	 * The method returns false when the user refused the warning. It warns only
-	 * when the draft has columns to lose.
-	 */
-	async setBlockNode(id: string, node: BeaconNode): Promise<boolean> {
-		const block = this.blocks.find((candidate) => candidate.id === id);
-		if (!block) return false;
-
-		// Compare the node, not the ref. A share link gives a ref with no id, and
-		// `matchRef` resolves it by URL. Such a block already runs on this node, so
-		// a pick of the same node must change nothing.
-		if (this.nodeFor(block)?.id === node.id) return true;
-
-		const columns = block.draft?.selectedFields.length ?? 0;
-
-		if (columns > 0) {
-			const goAhead = await askConfirm({
-				title: translate('workbench.changeNode.title'),
-				message: translate('workbench.changeNode.message'),
-				confirmLabel: translate('workbench.changeNode.confirm')
-			});
-
-			if (!goAhead) return false;
-		}
-
-		// A write during the dialog replaces the block object.
-		const current = this.blocks.find((candidate) => candidate.id === id);
-		if (!current) return false;
-
-		if (needsDraftSeed(current)) {
-			queryBlocks.update(id, {
-				node: snapshotNode(node),
-				datasetKey: null,
-				rowCount: null
-			});
-		} else {
-			const draft = makeEmptyDraft();
-			draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
-
-			queryBlocks.update(id, {
-				node: snapshotNode(node),
-				draft,
-				compiled: null,
-				// The pair names columns of the old tables.
-				coordinateColumns: null,
-				datasetKey: null,
-				rowCount: null
-			});
-		}
-
-		// The user chose this node. It is no longer a guess of the app.
-		this.clearGuessedNode(id);
-
-		return true;
-	}
-
-	/** {@link setBlockNode} for the active block. */
-	setActiveNode(node: BeaconNode): Promise<boolean> {
-		if (!this.activeBlockId) return Promise.resolve(false);
-		return this.setBlockNode(this.activeBlockId, node);
-	}
-
-	/** True when the app guessed the node of this block. See {@link guessedNode}. */
-	hasGuessedNode(id: string | null | undefined): boolean {
-		return !!id && !!this.guessedNode[id];
-	}
-
-	/**
-	 * Tell the builder that the node of a block does not hold the query.
-	 *
-	 * The builder finds this, because only the builder reads the tables and the
-	 * schema of the node. The message belongs here, because only the workspace
-	 * knows whether the app guessed the node.
-	 *
-	 * `table` is the table that the query reads. `part` says what is missing: the
-	 * table itself, or the columns inside it.
-	 */
-	reportSeedMismatch(blockId: string, table: string, part: 'table' | 'columns'): void {
-		const node = this.nodeFor(this.blocks.find((b) => b.id === blockId) ?? null);
-		const nodeName = node?.name || node?.url || translate('workbench.thisNode');
-
-		if (this.hasGuessedNode(blockId)) {
-			let key: MessageKey = 'workbench.toast.guessedNodeNoTable';
-			if (part === 'columns') {
-				key = 'workbench.toast.guessedNodeNoColumns';
-			}
-
-			addToast({ type: 'error', key, values: { node: nodeName, table } });
-
-			// Report this one time. The user now picks a node, or edits the query.
-			this.clearGuessedNode(blockId);
-			return;
-		}
-
-		let key: MessageKey = 'workbench.toast.nodeNoTable';
-		if (part === 'columns') {
-			key = 'workbench.toast.nodeNoColumns';
-		}
-
-		addToast({ type: 'warning', key, values: { node: nodeName, table } });
-	}
-
-	/** Forget the guess for a block. The user now owns the choice of node. */
-	private clearGuessedNode(id: string): void {
-		if (!this.guessedNode[id]) return;
-
-		const next = { ...this.guessedNode };
-		delete next[id];
-		this.guessedNode = next;
-	}
-
-	/** Add an empty block and select it. It has no node, so the user picks one first. */
-	addBlock(name?: string): StoredQuery {
-		const block = queryBlocks.append({
-			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
-			draft: makeEmptyDraft(),
-			node: snapshotNode(null)
-		});
-		this.select(block.id);
-		track('workbench.block.add', { props: { origin: 'empty', blocks: this.blocks.length } });
-		return block;
-	}
-
-	/**
-	 * Open a saved query or a history entry as a new block, and select it. The
-	 * block is an independent copy. An edit to the block must not change the
-	 * source record.
-	 */
-	addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
-		const block = cloneStoredQuery(source, {
-			role: 'block',
-			name: name ?? source.name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() })
-		});
-		queryBlocks.insertAt(this.blocks.length, block);
-		this.select(block.id);
-		track('workbench.block.add', { props: { origin: source.role, blocks: this.blocks.length } });
-		return block;
-	}
-
-	/**
-	 * Open a saved query or a history entry from a list, and select its block.
-	 *
-	 * A block that holds the same query on the same node counts as open, and the
-	 * method selects it. The block is a copy with its own id, so the method
-	 * compares the content. An edit of the block makes it a different query.
-	 */
-	openStoredQuery(entry: StoredQuery): void {
-		const open = this.findBlockWithQuery(entry);
-		if (open) {
-			this.select(open.id);
-			return;
-		}
-
-		this.addFromStoredQuery(entry);
-
-		if (hasNodeRef(entry.node) && !resolveRef(entry.node)) {
-			this.warnMissingNode(entry.node.url || null);
-		}
-	}
-
-	/** The first block with the same query and node URL as the record, or null. */
-	private findBlockWithQuery(record: StoredQuery): StoredQuery | null {
-		const query = QueryWorkspace.getQuery(record);
-		if (!query) return null;
-
-		const key = JSON.stringify(query);
-
-		return (
-			this.blocks.find(
-				(block) =>
-					block.node?.url === record.node?.url &&
-					JSON.stringify(QueryWorkspace.getQuery(block)) === key
-			) ?? null
-		);
-	}
-
-	/**
-	 * Open a query with no draft as a new block. Share links and the JSON editor
-	 * use this. Pass `node` to name the node of the query. Without it the
-	 * block takes the default. See {@link defaultNodeRef}.
-	 *
-	 * Without `coordinateColumns` the block takes the pair of the area filter in
-	 * the query. See `makeStoredQuery`.
-	 */
-	addFromQuery(
-		query: CompiledQuery,
-		name?: string,
-		node?: NodeRef | null,
-		coordinateColumns?: CoordinatePair | null
-	): StoredQuery {
-		let ref = this.defaultNodeRef();
-		if (hasNodeRef(node)) {
-			ref = { ...node! };
-		}
-
-		const block = queryBlocks.append({
-			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
-			draft: null,
-			compiled: Utils.cloneObject(query),
-			coordinateColumns: coordinateColumns ?? null,
-			node: ref
-		});
-		this.select(block.id);
-		track('workbench.block.add', { props: { origin: 'query', blocks: this.blocks.length } });
-		return block;
-	}
-
-	/** Put an independent copy after the source block and select it. */
-	duplicateBlock(id: string): void {
-		const index = this.blocks.findIndex((b) => b.id === id);
-		if (index === -1) return;
-
-		const copy = cloneStoredQuery(this.blocks[index], {
-			role: 'block',
-			name: translate('workbench.copyName', { name: this.blocks[index].name })
-		});
-		queryBlocks.insertAt(index + 1, copy);
-		this.select(copy.id);
-		track('workbench.block.add', { props: { origin: 'duplicate', blocks: this.blocks.length } });
-	}
-
-	/** Give a block a new name. */
-	renameBlock(id: string, name: string): boolean {
-		const block = this.blocks.find((candidate) => candidate.id === id);
-		if (!block) return false;
-		if (block.name === name) return true;
-
-		queryBlocks.update(id, { name });
-		return true;
-	}
-
-	/**
-	 * Save a copy of a block in the saved queries, and report the result with a
-	 * toast. Returns false when the block holds no query, or the save fails.
-	 */
-	saveBlock(id: string): boolean {
-		const block = this.blocks.find((candidate) => candidate.id === id);
-
-		if (!block || !QueryWorkspace.getQuery(block)) {
-			addToast({ key: 'saved.toast.noQuery', type: 'warning' });
-			return false;
-		}
-
-		try {
-			saveQueryFrom(block);
-			addToast({ key: 'saved.toast.saved', values: { name: block.name }, type: 'success' });
-			return true;
-		} catch (e) {
-			addToast({ key: 'saved.toast.saveFailed', message: String((e as Error)?.message ?? e), type: 'error' });
-			return false;
-		}
-	}
-
-	/**
-	 * Remove a block. Keep one block, and correct the active selection.
-	 *
-	 * A block with columns or a query asks first. The dialog tells if a saved
-	 * query holds the same query. An unsaved block offers to save before it closes.
-	 */
-	async closeBlock(id: string): Promise<void> {
-		if (this.blocks.length === 1) return;
-
-		const block = this.blocks.find((b) => b.id === id);
-		if (!block) return;
-
-		const hasQuery = !!QueryWorkspace.getQuery(block);
-		const hasColumns = (block.draft?.selectedFields.length ?? 0) > 0;
-
-		if (hasQuery && isSaved(block)) {
-			const goAhead = await askConfirm({
-				title: translate('workbench.closeBlock.title'),
-				message: translate('workbench.closeBlock.savedMessage'),
-				confirmLabel: translate('workbench.closeBlock.confirm')
-			});
-
-			if (!goAhead) return;
-		} else if (hasQuery) {
-			const answer = await askChoice({
-				title: translate('workbench.closeBlock.title'),
-				message: translate('workbench.closeBlock.unsavedMessage'),
-				note: translate('workbench.closeBlock.note'),
-				alternateLabel: translate('workbench.closeBlock.discard'),
-				alternateDestructive: true,
-				confirmLabel: translate('workbench.closeBlock.saveAndClose')
-			});
-
-			if (answer === 'cancel') return;
-			if (answer === 'confirm' && !this.saveBlock(id)) return;
-		} else if (hasColumns) {
-			// An incomplete draft has no query to save.
-			const goAhead = await askConfirm({
-				title: translate('workbench.closeBlock.title'),
-				message: translate('workbench.closeBlock.unsavedMessage'),
-				note: translate('workbench.closeBlock.note'),
-				confirmLabel: translate('workbench.closeBlock.discard'),
-				destructive: true
-			});
-
-			if (!goAhead) return;
-		}
-
-		// The blocks can change during the dialog, so find the position now.
-		const index = this.blocks.findIndex((b) => b.id === id);
-		if (index === -1 || this.blocks.length === 1) return;
-
-		queryBlocks.remove(id);
-
-		if (this.activeBlockId === id) {
-			const fallback = this.blocks[index] ?? this.blocks[index - 1] ?? this.blocks[0];
-			this.select(fallback?.id ?? null);
-		}
-	}
-
-	selectBlock(id: string): void {
-		this.select(id);
-	}
-
-	/**
-	 * Write the builder draft to the active block, and derive a new compiled
-	 * query. The builder calls this method at every edit.
-	 *
-	 * The method also removes the link to the last result. That cached dataset
-	 * belongs to the query before the edit.
-	 *
-	 * A block that waits for a seed keeps its query in `compiled`, and has no
-	 * draft. The builder can emit an empty draft for such a block, for example
-	 * when the node holds no column of the query. That draft compiles to nothing,
-	 * and the write would destroy the query of a share link. Therefore the method
-	 * drops it. A draft with content is a real edit of the user, and that edit
-	 * takes the block over.
-	 *
-	 * Pass `pair` to store a new coordinate pair in the same write. Undefined
-	 * keeps the stored pair. See {@link updateActiveCoordinateColumns}.
-	 */
-	updateActiveDraft(draft: QueryDraft, pair?: CoordinatePair | null): void {
-		const block = this.activeBlock;
-		if (!block) return;
-
-		if (JSON.stringify(block.draft) === JSON.stringify(draft)) {
-			if (pair !== undefined) this.updateActiveCoordinateColumns(pair);
-			return;
-		}
-
-		let coordinateColumns = block.coordinateColumns ?? null;
-		if (pair !== undefined) coordinateColumns = pair && { ...pair };
-
-		const compiled = compileDraft(draft, coordinateColumns);
-		if (!compiled && needsDraftSeed(block)) return;
-
-		queryBlocks.update(block.id, {
-			draft: Utils.cloneObject(draft),
-			compiled,
-			coordinateColumns,
-			datasetKey: null,
-			rowCount: null
-		});
-	}
-
-	/**
-	 * Write the area that the user drew on the map into the active block.
-	 *
-	 * A block that has a draft keeps the area in that draft, so the builder can
-	 * show it and a save or a share link keeps it. A block from a share link or
-	 * from the JSON editor has no draft yet. That block gets the filters written
-	 * straight into its compiled query.
-	 *
-	 * Both paths remove the link to the last result, because that result belongs
-	 * to the query before the change.
-	 *
-	 * Call this from an event handler. Do not call it from a tracked effect: the
-	 * write replaces the block object, and the effect would run again.
-	 */
-	updateActiveSpatialFilter(selection: SpatialSelection | null): void {
-		const block = this.activeBlock;
-		if (!block) return;
-
-		if (block.draft) {
-			this.updateActiveDraft({ ...block.draft, spatialFilter: selection });
-			return;
-		}
-
-		if (!block.compiled) return;
-
-		const compiled = QueryWorkspace.withAreaFilters(
-			block.compiled,
-			selection,
-			block.coordinateColumns ?? null
-		);
-		if (!compiled) return;
-
-		queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
-	}
-
-	/**
-	 * Store the coordinate pair of the active block. The map plots this pair, and
-	 * the area filter tests it. Null means: detect the pair.
-	 *
-	 * A block with an area filter gets a new query, so the method drops the link
-	 * to the last result. A block with no area keeps that link, because only the
-	 * display changes.
-	 *
-	 * Call this from an event handler, for the reason of
-	 * {@link updateActiveSpatialFilter}.
-	 */
-	updateActiveCoordinateColumns(pair: CoordinatePair | null): void {
-		const block = this.activeBlock;
-		if (!block) return;
-
-		const next = pair ? { latitude: pair.latitude, longitude: pair.longitude } : null;
-		if (JSON.stringify(block.coordinateColumns ?? null) === JSON.stringify(next)) return;
-
-		let compiled: CompiledQuery | null = null;
-
-		if (block.draft) {
-			compiled = compileDraft(block.draft, next);
-		} else if (block.compiled) {
-			// A block with no draft holds its area in the query only.
-			const area = findGeoJsonFilter(block.compiled.filters ?? []);
-			const selection = area ? fromGeoJsonFilter(area) : null;
-			compiled = QueryWorkspace.withAreaFilters(block.compiled, selection, next);
-		}
-
-		if (compiled && JSON.stringify(compiled) !== JSON.stringify(block.compiled)) {
-			queryBlocks.update(block.id, {
-				coordinateColumns: next,
-				compiled,
-				datasetKey: null,
-				rowCount: null
-			});
-			return;
-		}
-
-		queryBlocks.update(block.id, { coordinateColumns: next });
-	}
-
-	/**
-	 * A copy of a query with the area filters of `selection` on the resolved
-	 * pair, in place of the area filters it holds. Returns null when the filters
-	 * do not change.
-	 */
-	private static withAreaFilters(
-		query: CompiledQuery,
-		selection: SpatialSelection | null,
-		pair: CoordinatePair | null
-	): CompiledQuery | null {
-		const compiled = Utils.cloneObject(query) as CompiledQuery;
-		const names = compiled.query_parameters.map((param) => param.alias ?? param.column);
-		const columns = resolveCoordinateColumns(pair, names);
-
-		// The area already on the query names its own two columns. Its box goes
-		// with it, also when the new area tests another pair.
-		const previous = findGeoJsonFilter(compiled.filters ?? []);
-		const spatialColumns = [
-			previous?.latitude_query_parameter,
-			previous?.longitude_query_parameter,
-			columns?.latitude,
-			columns?.longitude
-		].filter(Boolean);
-
-		let filters = (compiled.filters ?? []).filter((filter) => {
-			if (isGeoJsonFilter(filter) || holdsGeoJsonFilter(filter)) return false;
-			const minMax = filter as MinMaxFilter;
-			const isBox = 'min' in minMax && 'max' in minMax;
-			return !(isBox && spatialColumns.includes(minMax.for_query_parameter));
-		});
-
-		if (isUsableSelection(selection) && columns) {
-			filters = [
-				...filters,
-				...toSpatialFilters(selection!, columns.latitude, columns.longitude)
-			];
-		}
-
-		// A query with no area, and no pair of columns, keeps its filters.
-		if (JSON.stringify(compiled.filters ?? []) === JSON.stringify(filters)) return null;
-
-		compiled.filters = filters;
-		return compiled;
-	}
-
-	/**
-	 * Write the display state of the map viewer to the active block: the painted
-	 * column, the range of the legend and the camera.
-	 *
-	 * This state is not part of the query. Therefore the method keeps
-	 * `datasetKey` and `rowCount`. A change of the legend must not drop the
-	 * result of the last run.
-	 *
-	 * The method does nothing when the state did not change. The map viewer
-	 * calls it from an effect, so this guard stops a write loop.
-	 */
-	updateActiveMapView(state: MapViewState): void {
-		const block = this.activeBlock;
-		if (!block) return;
-
-		if (JSON.stringify(block.view?.map) === JSON.stringify(state)) return;
-
-		// A block with no stored view, and no column and no camera to store, stays
-		// untouched. A range alone restores nothing. This keeps a short visit to
-		// the map viewer out of the storage.
-		if (!block.view?.map && !state.dataColumn && !state.camera) return;
-
-		queryBlocks.update(block.id, {
-			view: { ...block.view, map: Utils.cloneObject(state) }
-		});
-	}
-
-	/**
-	 * Write the plots of the chart explorer to one block.
-	 *
-	 * The rules are the ones of {@link updateActiveMapView}. This state is not
-	 * part of the query, so the method keeps `datasetKey` and `rowCount`. A new
-	 * palette must not drop the result of the last run.
-	 *
-	 * The method does nothing when the state did not change. The chart page calls
-	 * it from an effect, so this guard stops a write loop.
-	 *
-	 * A block with no stored chart state, and no configured plot to store, stays
-	 * untouched. Therefore a short visit to the chart page writes nothing.
-	 *
-	 * The block is named, and not taken from the selection. The chart page delays
-	 * this write until the user stops typing, and by then the active block can be
-	 * another one.
-	 */
-	updateChartView(blockId: string, state: ChartViewState): void {
-		const block = this.blocks.find((candidate) => candidate.id === blockId);
-		if (!block) return;
-
-		if (JSON.stringify(block.view?.chart) === JSON.stringify(state)) return;
-
-		if (!block.view?.chart && !state.plots.some(isPlotRenderable)) return;
-
-		queryBlocks.update(block.id, {
-			view: { ...block.view, chart: Utils.cloneObject(state) }
-		});
-	}
-
-	/** Compile the draft of a block. Returns null if the draft is incomplete. */
-	static getQuery(block: StoredQuery | null): CompiledQuery | null {
-		return block?.compiled ?? compileDraft(block?.draft, block?.coordinateColumns ?? null);
-	}
-
-	/**
-	 * The query that the builder uses one time to fill the draft of a block.
-	 * Returns null after the block has its own draft.
-	 */
-	static seedFor(block: StoredQuery | null): CompiledQuery | null {
-		if (!needsDraftSeed(block)) {
-			return null;
-		}
-		return block?.compiled ?? null;
-	}
-
-	/** Set the active block back to an empty draft. The Reset button uses this. */
-	resetActive(): void {
-		const block = this.activeBlock;
-		if (!block) return;
-
-		const draft = makeEmptyDraft();
-		draft.tableName = block.draft?.tableName ?? '';
-
-		queryBlocks.update(block.id, {
-			draft,
-			compiled: null,
-			datasetKey: null,
-			rowCount: null
-		});
-	}
-
-	/** Derive the badge status from the draft of a block: table, columns and filters. */
-	static getStatus(block: StoredQuery | null): QuerySelectionStatus {
-		const status = makeEmptyQuerySelectionStatus();
-		const draft = block?.draft;
-		if (!draft) return status;
-
-		status.dataTable = draft.tableName ?? '';
-		status.columns = draft.selectedFields.length;
-		status.selection = status.columns;
-		status.filters = draft.selectedFields.reduce(
-			(total, field) => total + field.selected_filters.length,
-			0
-		);
-
-		// The drawn area is one more filter, but it belongs to no single column.
-		if (draft.spatialFilter) {
-			status.filters += 1;
-		}
-
-		return status;
-	}
-
-	/** The column names for a block card. */
-	static getSelectedColumns(block: StoredQuery | null): string[] {
-		return block?.draft?.selectedFields.map((f) => f.name) ?? [];
-	}
-
-	/**
-	 * The run state for the block cards. The link from the record to a cached
-	 * result gives the value of `hasRun`. The app does not track it separately.
-	 * Therefore the value survives a reload. An edit also clears it.
-	 */
-	getRunState(block: StoredQuery | null): BlockRunState {
-		return {
-			hasRun: !!block?.datasetKey,
-			rows: block?.rowCount ?? null,
-			isRunning: !!(block && this.running[block.id])
-		};
-	}
-
-	/** Start or stop the spinner of a block. The visualisation view calls this. */
-	markBlockRunning(id: string, running: boolean): void {
-		this.running = { ...this.running, [id]: running };
-	}
-
-	/**
-	 * Start the spinner of a block. The number it returns names this run. Give it
-	 * back to {@link endBlockRun}.
-	 *
-	 * The store runs one query at a time, so a new run stops the run in flight.
-	 * That older run rejects after the newer one set the spinner. A blind reset
-	 * would then clear the spinner of a query that still runs.
-	 */
-	beginBlockRun(id: string): number {
-		const token = this.nextRunToken++;
-		this.runToken = { ...this.runToken, [id]: token };
-		this.markBlockRunning(id, true);
-		return token;
-	}
-
-	/**
-	 * Stop the spinner of a block after the run with this number. It does nothing
-	 * when a newer run of the same block owns the spinner now.
-	 */
-	endBlockRun(id: string, token: number): void {
-		if (this.runToken[id] !== token) return;
-		this.markBlockRunning(id, false);
-	}
-
-	/**
-	 * Stop the spinner after a successful run. The query store writes the row
-	 * count and the dataset link, because it holds the cache key. This method
-	 * keeps its name, so a caller can read the start and the end as a pair.
-	 */
-	markBlockRun(id: string, _rows: number): void {
-		void _rows;
-		this.markBlockRunning(id, false);
-	}
-
-	private select(id: string | null): void {
-		this.activeBlockId = id;
-		setActiveBlockId(id);
-	}
-
-	private restoreSelection(): void {
-		if (!this.blocks.length) {
-			this.addBlock();
-			return;
-		}
-
-		ensureBlockCounter(this.blocks.length);
-
-		const persistedId = getBlocksState().activeBlockId;
-		if (persistedId && this.blocks.some((block) => block.id === persistedId)) {
-			this.select(persistedId);
-		} else {
-			this.select(this.blocks[0].id);
-		}
-	}
+    /**
+     * A reactive mirror of the persisted block collection. Do not assign to this
+     * field. The subscription below is the only writer.
+     */
+    blocks = $state<StoredQuery[]>([]);
+
+    /** The id of the block that the user edits or visualises now. */
+    activeBlockId = $state<string | null>(null);
+
+    /**
+     * A "runs now" flag for each block. The record does not hold this flag. An
+     * active run is a fact about this tab at this moment, not about the stored
+     * query. A persisted flag would keep a spinner on a block after a reload.
+     */
+    private running = $state<Record<string, boolean>>({});
+
+    /**
+     * The run of now for each block. The number names one run. A run that another
+     * run of the same block stops must not clear the spinner, because the newer
+     * run owns it. See {@link beginBlockRun}.
+     */
+    private runToken = $state<Record<string, number>>({});
+
+    /** The number for the next run. It only grows. */
+    private nextRunToken = 1;
+
+    /**
+     * A reactive mirror of the configured nodes. The workspace resolves the
+     * ref of a block against this list, so a new node, an edit of a URL or a
+     * health check reaches the builder at once. Do not assign to this field.
+     */
+    private nodeList = $state<BeaconNode[]>([]);
+
+    /** True after the public list settles. Both node warnings wait for it. */
+    private nodesSettled = $state(false);
+
+    /**
+     * The blocks whose node the app guessed. A share link can name no node, so
+     * the block falls back to the default node. That node often has other
+     * tables, and the query then loads no columns.
+     *
+     * The record does not hold this flag. It is a fact about the link, not about
+     * the query. The user sees the report once, and the block is theirs after
+     * that. Therefore a reload must not report it again.
+     */
+    private guessedNode = $state<Record<string, boolean>>({});
+
+    /** The SQL preview runs. Transient, as {@link running} is. */
+    readonly preview = new SqlPreview();
+
+    /** Releases the store subscriptions. See {@link destroy}. */
+    private unsubscribe: () => void;
+
+    constructor() {
+        const stopBlocks = queryBlocks.subscribe((entries) => {
+            this.blocks = entries;
+        });
+
+        const stopNodes = nodes.subscribe((list) => {
+            this.nodeList = list;
+        });
+
+        const stopSettled = openNodesSettled.subscribe((value) => {
+            this.nodesSettled = value;
+        });
+
+        this.unsubscribe = () => {
+            stopBlocks();
+            stopNodes();
+            stopSettled();
+        };
+
+        this.restoreSelection();
+    }
+
+    /**
+     * Detach from the block collection. The workbench builds a new workspace at
+     * every mount. Without this method each visit leaves one more subscriber. That
+     * subscriber writes into an object that the app no longer uses.
+     */
+    destroy(): void {
+        this.unsubscribe();
+    }
+
+    /**
+     * Add the query from a deep-link as a new block. The method does not replace
+     * the workspace. "Open in workbench" must not close the tabs of the user.
+     *
+     * A second visit to the same link has no extra effect. If `?q=` names a block
+     * that is already open, the method selects that block.
+     */
+    openFromUrl(resolved: ResolvedUrlQuery): void {
+        if (resolved.entry) {
+            const alreadyOpen = this.blocks.find((block) => block.id === resolved.entry?.id);
+            if (alreadyOpen) {
+                this.select(alreadyOpen.id);
+                this.warnMissingNode(resolved.missingNodeUrl);
+                return;
+            }
+            this.addFromStoredQuery(resolved.entry);
+            this.warnMissingNode(resolved.missingNodeUrl);
+            return;
+        }
+
+        if (resolved.sql) {
+            this.addFromSql(
+                resolved.sql,
+                resolved.name || undefined,
+                resolved.node,
+                resolved.coordinateColumns
+            );
+            this.warnMissingNode(resolved.missingNodeUrl);
+            return;
+        }
+
+        if (resolved.query) {
+            // A share link carries the node of the sender. Keep that ref, even when
+            // the list holds no node for it. The builder then names the URL, and asks
+            // the user to add it. A link with no node lets the block fall back to the
+            // default. An empty name does the same for the name of the block.
+            const block = this.addFromQuery(
+                resolved.query,
+                resolved.name || undefined,
+                resolved.node,
+                resolved.coordinateColumns
+            );
+
+            // Mark the guess. The default node often has other tables, and the
+            // builder then loads no columns. See {@link reportSeedMismatch}.
+            if (!hasNodeRef(resolved.node)) {
+                this.guessedNode = { ...this.guessedNode, [block.id]: true };
+            }
+
+            this.warnMissingNode(resolved.missingNodeUrl);
+        }
+    }
+
+    /**
+     * Tell the user that a link names a node that the app does not have. The
+     * builder shows the same URL on the node picker, so this toast repeats it
+     * once. It writes nothing when every node resolves.
+     */
+    private warnMissingNode(url: string | null): void {
+        if (!url) return;
+
+        // The public list can still add this node. Ask again after it settles.
+        void whenOpenNodesSettled().then(() => {
+            if (resolveRef(nodeRefFromUrl(url))) return;
+
+            addToast({
+                type: "warning",
+                key: "workbench.toast.missingNode",
+                values: { url }
+            });
+        });
+    }
+
+    /**
+     * The node for a query that names no node, for example a share link: the node
+     * of the active block, else the node that the sidebar selected. An empty block
+     * gets no node. See {@link addBlock}.
+     */
+    private defaultNodeRef(): NodeRef {
+        const active = this.activeBlock;
+
+        if (hasNodeRef(active?.node)) {
+            return { ...active!.node };
+        }
+
+        return snapshotNode(getCurrentNode());
+    }
+
+    /** The active block, or null. */
+    get activeBlock(): StoredQuery | null {
+        return this.blocks.find((b) => b.id === this.activeBlockId) ?? null;
+    }
+
+    /**
+     * The node of a block, or null. The result is null in two cases: the block
+     * names no node yet, and the node list holds no node for its ref. The
+     * caller must handle both, and must not run a query without a node.
+     */
+    nodeFor(block: StoredQuery | null): BeaconNode | null {
+        return matchRef(this.nodeList, block?.node);
+    }
+
+    /** The node of the active block, or null. See {@link nodeFor}. */
+    get activeNode(): BeaconNode | null {
+        return this.nodeFor(this.activeBlock);
+    }
+
+    /**
+     * The URL of a node that a block names, but that the node list does not
+     * hold. It is null while the node resolves, and while the block names none.
+     * The builder shows this URL, and offers to add the node.
+     */
+    missingNodeUrlFor(block: StoredQuery | null): string | null {
+        if (!hasNodeRef(block?.node)) return null;
+        if (this.nodeFor(block)) return null;
+
+        // The public list can still add this node. Claim nothing until it settles.
+        if (!this.nodesSettled) return null;
+
+        return block?.node.url || null;
+    }
+
+    /** {@link missingNodeUrlFor} for the active block. */
+    get missingNodeUrl(): string | null {
+        return this.missingNodeUrlFor(this.activeBlock);
+    }
+
+    /** True after the public list settles. See {@link missingNodeUrlFor}. */
+    get nodesReady(): boolean {
+        return this.nodesSettled;
+    }
+
+    /**
+     * Put a node on a block.
+     *
+     * A block with a draft loses that draft. The table and the columns of one node
+     * do not apply to another. The method keeps the output format, which is a
+     * preference of the user and not a property of the node.
+     *
+     * A block with no draft keeps its query. Such a block comes from a share link
+     * or from the JSON editor, and its query lives in `compiled`. The user picks a
+     * node to run that query on, so the method must not drop it. The builder seeds
+     * a draft from it against the new node. See {@link seedFor}.
+     *
+     * The method also drops the link to the last result, because the cache key
+     * holds the URL of the node.
+     *
+     * The method returns false when the user refused the warning. It warns only
+     * when the draft has columns to lose.
+     */
+    async setBlockNode(id: string, node: BeaconNode): Promise<boolean> {
+        const block = this.blocks.find((candidate) => candidate.id === id);
+        if (!block) return false;
+
+        // Compare the node, not the ref. A share link gives a ref with no id, and
+        // `matchRef` resolves it by URL. Such a block already runs on this node, so
+        // a pick of the same node must change nothing.
+        if (this.nodeFor(block)?.id === node.id) return true;
+
+        const columns = block.draft?.selectedFields.length ?? 0;
+
+        if (columns > 0) {
+            const goAhead = await askConfirm({
+                title: translate("workbench.changeNode.title"),
+                message: translate("workbench.changeNode.message"),
+                confirmLabel: translate("workbench.changeNode.confirm")
+            });
+
+            if (!goAhead) return false;
+        }
+
+        // A write during the dialog replaces the block object.
+        const current = this.blocks.find((candidate) => candidate.id === id);
+        if (!current) return false;
+
+        if (needsDraftSeed(current)) {
+            queryBlocks.update(id, {
+                node: snapshotNode(node),
+                datasetKey: null,
+                rowCount: null
+            });
+        } else {
+            const draft = makeEmptyDraft();
+            draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
+
+            queryBlocks.update(id, {
+                node: snapshotNode(node),
+                draft,
+                compiled: null,
+                // The pair names columns of the old tables.
+                coordinateColumns: null,
+                datasetKey: null,
+                rowCount: null
+            });
+        }
+
+        // The user chose this node. It is no longer a guess of the app.
+        this.clearGuessedNode(id);
+        this.preview.clear(id);
+
+        return true;
+    }
+
+    /** {@link setBlockNode} for the active block. */
+    setActiveNode(node: BeaconNode): Promise<boolean> {
+        if (!this.activeBlockId) return Promise.resolve(false);
+        return this.setBlockNode(this.activeBlockId, node);
+    }
+
+    /**
+     * Switch a block between the builder and SQL. The switch clears the query, and keeps the
+     * node and the output format. It asks first when the block holds a query. Returns false
+     * when the user refused.
+     */
+    async setBlockMode(id: string, mode: QueryMode): Promise<boolean> {
+        const block = this.blocks.find((candidate) => candidate.id === id);
+        if (!block) return false;
+        if (queryModeOf(block) === mode) return true;
+
+        if (QueryWorkspace.holdsQuery(block)) {
+            const goAhead = await askConfirm({
+                title: translate("workbench.mode.confirm.title"),
+                message: translate("workbench.mode.confirm.message"),
+                confirmLabel: translate("workbench.mode.confirm.confirm"),
+                destructive: true
+            });
+
+            if (!goAhead) return false;
+        }
+
+        // A write during the dialog replaces the block object.
+        const current = this.blocks.find((candidate) => candidate.id === id);
+        if (!current) return false;
+
+        const draft = makeEmptyDraft();
+        draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
+
+        queryBlocks.update(id, {
+            mode,
+            sql: "",
+            draft,
+            compiled: null,
+            coordinateColumns: null,
+            datasetKey: null,
+            rowCount: null
+        });
+        this.preview.clear(id);
+
+        return true;
+    }
+
+    /** {@link setBlockMode} for the active block. */
+    setActiveMode(mode: QueryMode): Promise<boolean> {
+        if (!this.activeBlockId) return Promise.resolve(false);
+        return this.setBlockMode(this.activeBlockId, mode);
+    }
+
+    /** Write the SQL text of a block. The editor calls this at every edit, and an echo writes nothing. */
+    updateBlockSql(id: string, sql: string): void {
+        const block = this.blocks.find((candidate) => candidate.id === id);
+        if (!block || sqlTextOf(block) === sql) return;
+
+        // The last result belongs to the old text.
+        queryBlocks.update(id, { sql, datasetKey: null, rowCount: null });
+    }
+
+    /** Write the output format of the active SQL block. A builder block writes it through its draft. */
+    updateActiveOutputFormat(format: string): void {
+        const block = this.activeBlock;
+        if (!block || queryModeOf(block) !== "sql") return;
+
+        const draft = block.draft ?? makeEmptyDraft();
+        if (draft.outputFormat === format) return;
+
+        queryBlocks.update(block.id, {
+            draft: { ...Utils.cloneObject(draft), outputFormat: format }
+        });
+    }
+
+    /** True when the app guessed the node of this block. See {@link guessedNode}. */
+    hasGuessedNode(id: string | null | undefined): boolean {
+        return !!id && !!this.guessedNode[id];
+    }
+
+    /**
+     * Tell the builder that the node of a block does not hold the query.
+     *
+     * The builder finds this, because only the builder reads the tables and the
+     * schema of the node. The message belongs here, because only the workspace
+     * knows whether the app guessed the node.
+     *
+     * `table` is the table that the query reads. `part` says what is missing: the
+     * table itself, or the columns inside it.
+     */
+    reportSeedMismatch(blockId: string, table: string, part: "table" | "columns"): void {
+        const node = this.nodeFor(this.blocks.find((b) => b.id === blockId) ?? null);
+        const nodeName = node?.name || node?.url || translate("workbench.thisNode");
+
+        if (this.hasGuessedNode(blockId)) {
+            let key: MessageKey = "workbench.toast.guessedNodeNoTable";
+            if (part === "columns") {
+                key = "workbench.toast.guessedNodeNoColumns";
+            }
+
+            addToast({ type: "error", key, values: { node: nodeName, table } });
+
+            // Report this one time. The user now picks a node, or edits the query.
+            this.clearGuessedNode(blockId);
+            return;
+        }
+
+        let key: MessageKey = "workbench.toast.nodeNoTable";
+        if (part === "columns") {
+            key = "workbench.toast.nodeNoColumns";
+        }
+
+        addToast({ type: "warning", key, values: { node: nodeName, table } });
+    }
+
+    /** Forget the guess for a block. The user now owns the choice of node. */
+    private clearGuessedNode(id: string): void {
+        if (!this.guessedNode[id]) return;
+
+        const next = { ...this.guessedNode };
+        delete next[id];
+        this.guessedNode = next;
+    }
+
+    /** Add an empty block and select it. It has no node, so the user picks one first. */
+    addBlock(name?: string): StoredQuery {
+        const block = queryBlocks.append({
+            name: name ?? translate("workbench.untitledBlock", { number: nextBlockNumber() }),
+            draft: makeEmptyDraft(),
+            node: snapshotNode(null)
+        });
+        this.select(block.id);
+        track("workbench.block.add", { props: { origin: "empty", blocks: this.blocks.length } });
+        return block;
+    }
+
+    /**
+     * Open a saved query or a history entry as a new block, and select it. The
+     * block is an independent copy. An edit to the block must not change the
+     * source record.
+     */
+    addFromStoredQuery(source: StoredQuery, name?: string): StoredQuery {
+        const block = cloneStoredQuery(source, {
+            role: "block",
+            name:
+                name ??
+                source.name ??
+                translate("workbench.untitledBlock", { number: nextBlockNumber() })
+        });
+        queryBlocks.insertAt(this.blocks.length, block);
+        this.select(block.id);
+        track("workbench.block.add", {
+            props: { origin: source.role, blocks: this.blocks.length }
+        });
+        return block;
+    }
+
+    /**
+     * Open a saved query or a history entry from a list, and select its block.
+     *
+     * A block that holds the same query on the same node counts as open, and the
+     * method selects it. The block is a copy with its own id, so the method
+     * compares the content. An edit of the block makes it a different query.
+     */
+    openStoredQuery(entry: StoredQuery): void {
+        const open = this.findBlockWithQuery(entry);
+        if (open) {
+            this.select(open.id);
+            return;
+        }
+
+        this.addFromStoredQuery(entry);
+
+        if (hasNodeRef(entry.node) && !resolveRef(entry.node)) {
+            this.warnMissingNode(entry.node.url || null);
+        }
+    }
+
+    /** The first block with the same query and node URL as the record, or null. */
+    private findBlockWithQuery(record: StoredQuery): StoredQuery | null {
+        const query = QueryWorkspace.resultQueryOf(record);
+        if (!query) return null;
+
+        const key = JSON.stringify(query);
+
+        return (
+            this.blocks.find(
+                (block) =>
+                    block.node?.url === record.node?.url &&
+                    JSON.stringify(QueryWorkspace.resultQueryOf(block)) === key
+            ) ?? null
+        );
+    }
+
+    /**
+     * Open a query with no draft as a new block. Share links and the JSON editor
+     * use this. Pass `node` to name the node of the query. Without it the
+     * block takes the default. See {@link defaultNodeRef}.
+     *
+     * Without `coordinateColumns` the block takes the pair of the area filter in
+     * the query. See `makeStoredQuery`.
+     */
+    addFromQuery(
+        query: CompiledQuery,
+        name?: string,
+        node?: NodeRef | null,
+        coordinateColumns?: CoordinatePair | null
+    ): StoredQuery {
+        let ref = this.defaultNodeRef();
+        if (hasNodeRef(node)) {
+            ref = { ...node! };
+        }
+
+        const block = queryBlocks.append({
+            name: name ?? translate("workbench.untitledBlock", { number: nextBlockNumber() }),
+            draft: null,
+            compiled: Utils.cloneObject(query),
+            coordinateColumns: coordinateColumns ?? null,
+            node: ref
+        });
+        this.select(block.id);
+        track("workbench.block.add", { props: { origin: "query", blocks: this.blocks.length } });
+        return block;
+    }
+
+    /**
+     * Open the SQL text of a share link as a new SQL block. Pass `node` to name the node of
+     * the query. Without it the block takes the default. See {@link defaultNodeRef}.
+     */
+    addFromSql(
+        sql: string,
+        name?: string,
+        node?: NodeRef | null,
+        coordinateColumns?: CoordinatePair | null
+    ): StoredQuery {
+        let ref = this.defaultNodeRef();
+        if (hasNodeRef(node)) {
+            ref = { ...node! };
+        }
+
+        const block = queryBlocks.append({
+            name: name ?? translate("workbench.untitledBlock", { number: nextBlockNumber() }),
+            mode: "sql",
+            sql,
+            draft: makeEmptyDraft(),
+            coordinateColumns: coordinateColumns ?? null,
+            node: ref
+        });
+        this.select(block.id);
+        track("workbench.block.add", {
+            props: { origin: "query", mode: "sql", blocks: this.blocks.length }
+        });
+        return block;
+    }
+
+    /** Put an independent copy after the source block and select it. */
+    duplicateBlock(id: string): void {
+        const index = this.blocks.findIndex((b) => b.id === id);
+        if (index === -1) return;
+
+        const copy = cloneStoredQuery(this.blocks[index], {
+            role: "block",
+            name: translate("workbench.copyName", { name: this.blocks[index].name })
+        });
+        queryBlocks.insertAt(index + 1, copy);
+        this.select(copy.id);
+        track("workbench.block.add", {
+            props: { origin: "duplicate", blocks: this.blocks.length }
+        });
+    }
+
+    /** Give a block a new name. */
+    renameBlock(id: string, name: string): boolean {
+        const block = this.blocks.find((candidate) => candidate.id === id);
+        if (!block) return false;
+        if (block.name === name) return true;
+
+        queryBlocks.update(id, { name });
+        return true;
+    }
+
+    /**
+     * Save a copy of a block in the saved queries, and report the result with a
+     * toast. Returns false when the block holds no query, or the save fails.
+     */
+    saveBlock(id: string): boolean {
+        const block = this.blocks.find((candidate) => candidate.id === id);
+
+        if (!block || !QueryWorkspace.resultQueryOf(block)) {
+            let key: MessageKey = "saved.toast.noQuery";
+            if (queryModeOf(block) === "sql") {
+                key = "workbench.sql.guard.empty";
+            }
+
+            addToast({ key, type: "warning" });
+            return false;
+        }
+
+        try {
+            saveQueryFrom(block);
+            addToast({ key: "saved.toast.saved", values: { name: block.name }, type: "success" });
+            return true;
+        } catch (e) {
+            addToast({
+                key: "saved.toast.saveFailed",
+                message: String((e as Error)?.message ?? e),
+                type: "error"
+            });
+            return false;
+        }
+    }
+
+    /**
+     * Remove a block. Keep one block, and correct the active selection.
+     *
+     * A block with columns or a query asks first. The dialog tells if a saved
+     * query holds the same query. An unsaved block offers to save before it closes.
+     */
+    async closeBlock(id: string): Promise<void> {
+        if (this.blocks.length === 1) return;
+
+        const block = this.blocks.find((b) => b.id === id);
+        if (!block) return;
+
+        const hasQuery = !!QueryWorkspace.resultQueryOf(block);
+        const hasColumns = (block.draft?.selectedFields.length ?? 0) > 0;
+
+        if (hasQuery && isSaved(block)) {
+            const goAhead = await askConfirm({
+                title: translate("workbench.closeBlock.title"),
+                message: translate("workbench.closeBlock.savedMessage"),
+                confirmLabel: translate("workbench.closeBlock.confirm")
+            });
+
+            if (!goAhead) return;
+        } else if (hasQuery) {
+            const answer = await askChoice({
+                title: translate("workbench.closeBlock.title"),
+                message: translate("workbench.closeBlock.unsavedMessage"),
+                note: translate("workbench.closeBlock.note"),
+                alternateLabel: translate("workbench.closeBlock.discard"),
+                alternateDestructive: true,
+                confirmLabel: translate("workbench.closeBlock.saveAndClose")
+            });
+
+            if (answer === "cancel") return;
+            if (answer === "confirm" && !this.saveBlock(id)) return;
+        } else if (hasColumns) {
+            // An incomplete draft has no query to save.
+            const goAhead = await askConfirm({
+                title: translate("workbench.closeBlock.title"),
+                message: translate("workbench.closeBlock.unsavedMessage"),
+                note: translate("workbench.closeBlock.note"),
+                confirmLabel: translate("workbench.closeBlock.discard"),
+                destructive: true
+            });
+
+            if (!goAhead) return;
+        }
+
+        // The blocks can change during the dialog, so find the position now.
+        const index = this.blocks.findIndex((b) => b.id === id);
+        if (index === -1 || this.blocks.length === 1) return;
+
+        queryBlocks.remove(id);
+        this.preview.clear(id);
+
+        if (this.activeBlockId === id) {
+            const fallback = this.blocks[index] ?? this.blocks[index - 1] ?? this.blocks[0];
+            this.select(fallback?.id ?? null);
+        }
+    }
+
+    selectBlock(id: string): void {
+        this.select(id);
+    }
+
+    /**
+     * Write the builder draft to the active block, and derive a new compiled
+     * query. The builder calls this method at every edit.
+     *
+     * The method also removes the link to the last result. That cached dataset
+     * belongs to the query before the edit.
+     *
+     * A block that waits for a seed keeps its query in `compiled`, and has no
+     * draft. The builder can emit an empty draft for such a block, for example
+     * when the node holds no column of the query. That draft compiles to nothing,
+     * and the write would destroy the query of a share link. Therefore the method
+     * drops it. A draft with content is a real edit of the user, and that edit
+     * takes the block over.
+     *
+     * Pass `pair` to store a new coordinate pair in the same write. Undefined
+     * keeps the stored pair. See {@link updateActiveCoordinateColumns}.
+     */
+    updateActiveDraft(draft: QueryDraft, pair?: CoordinatePair | null): void {
+        const block = this.activeBlock;
+        if (!block) return;
+
+        if (JSON.stringify(block.draft) === JSON.stringify(draft)) {
+            if (pair !== undefined) this.updateActiveCoordinateColumns(pair);
+            return;
+        }
+
+        let coordinateColumns = block.coordinateColumns ?? null;
+        if (pair !== undefined) coordinateColumns = pair && { ...pair };
+
+        const compiled = compileDraft(draft, coordinateColumns);
+        if (!compiled && needsDraftSeed(block)) return;
+
+        queryBlocks.update(block.id, {
+            draft: Utils.cloneObject(draft),
+            compiled,
+            coordinateColumns,
+            datasetKey: null,
+            rowCount: null
+        });
+    }
+
+    /**
+     * Write the area that the user drew on the map into the active block.
+     *
+     * A block that has a draft keeps the area in that draft, so the builder can
+     * show it and a save or a share link keeps it. A block from a share link or
+     * from the JSON editor has no draft yet. That block gets the filters written
+     * straight into its compiled query.
+     *
+     * Both paths remove the link to the last result, because that result belongs
+     * to the query before the change.
+     *
+     * Call this from an event handler. Do not call it from a tracked effect: the
+     * write replaces the block object, and the effect would run again.
+     */
+    updateActiveSpatialFilter(selection: SpatialSelection | null): void {
+        const block = this.activeBlock;
+        // The area filter writes into the compiled query, and a SQL block has none.
+        if (!block || queryModeOf(block) === "sql") return;
+
+        if (block.draft) {
+            this.updateActiveDraft({ ...block.draft, spatialFilter: selection });
+            return;
+        }
+
+        if (!block.compiled) return;
+
+        const compiled = QueryWorkspace.withAreaFilters(
+            block.compiled,
+            selection,
+            block.coordinateColumns ?? null
+        );
+        if (!compiled) return;
+
+        queryBlocks.update(block.id, { compiled, datasetKey: null, rowCount: null });
+    }
+
+    /**
+     * Store the coordinate pair of the active block. The map plots this pair, and
+     * the area filter tests it. Null means: detect the pair.
+     *
+     * A block with an area filter gets a new query, so the method drops the link
+     * to the last result. A block with no area keeps that link, because only the
+     * display changes.
+     *
+     * Call this from an event handler, for the reason of
+     * {@link updateActiveSpatialFilter}.
+     */
+    updateActiveCoordinateColumns(pair: CoordinatePair | null): void {
+        const block = this.activeBlock;
+        if (!block) return;
+
+        const next = pair ? { latitude: pair.latitude, longitude: pair.longitude } : null;
+        if (JSON.stringify(block.coordinateColumns ?? null) === JSON.stringify(next)) return;
+
+        let compiled: CompiledQuery | null = null;
+
+        if (block.draft) {
+            compiled = compileDraft(block.draft, next);
+        } else if (block.compiled) {
+            // A block with no draft holds its area in the query only.
+            const area = findGeoJsonFilter(block.compiled.filters ?? []);
+            const selection = area ? fromGeoJsonFilter(area) : null;
+            compiled = QueryWorkspace.withAreaFilters(block.compiled, selection, next);
+        }
+
+        if (compiled && JSON.stringify(compiled) !== JSON.stringify(block.compiled)) {
+            queryBlocks.update(block.id, {
+                coordinateColumns: next,
+                compiled,
+                datasetKey: null,
+                rowCount: null
+            });
+            return;
+        }
+
+        queryBlocks.update(block.id, { coordinateColumns: next });
+    }
+
+    /**
+     * A copy of a query with the area filters of `selection` on the resolved
+     * pair, in place of the area filters it holds. Returns null when the filters
+     * do not change.
+     */
+    private static withAreaFilters(
+        query: CompiledQuery,
+        selection: SpatialSelection | null,
+        pair: CoordinatePair | null
+    ): CompiledQuery | null {
+        const compiled = Utils.cloneObject(query) as CompiledQuery;
+        const names = compiled.query_parameters.map((param) => param.alias ?? param.column);
+        const columns = resolveCoordinateColumns(pair, names);
+
+        // The area already on the query names its own two columns. Its box goes
+        // with it, also when the new area tests another pair.
+        const previous = findGeoJsonFilter(compiled.filters ?? []);
+        const spatialColumns = [
+            previous?.latitude_query_parameter,
+            previous?.longitude_query_parameter,
+            columns?.latitude,
+            columns?.longitude
+        ].filter(Boolean);
+
+        let filters = (compiled.filters ?? []).filter((filter) => {
+            if (isGeoJsonFilter(filter) || holdsGeoJsonFilter(filter)) return false;
+            const minMax = filter as MinMaxFilter;
+            const isBox = "min" in minMax && "max" in minMax;
+            return !(isBox && spatialColumns.includes(minMax.for_query_parameter));
+        });
+
+        if (isUsableSelection(selection) && columns) {
+            filters = [
+                ...filters,
+                ...toSpatialFilters(selection!, columns.latitude, columns.longitude)
+            ];
+        }
+
+        // A query with no area, and no pair of columns, keeps its filters.
+        if (JSON.stringify(compiled.filters ?? []) === JSON.stringify(filters)) return null;
+
+        compiled.filters = filters;
+        return compiled;
+    }
+
+    /**
+     * Write the display state of the map viewer to the active block: the painted
+     * column, the range of the legend and the camera.
+     *
+     * This state is not part of the query. Therefore the method keeps
+     * `datasetKey` and `rowCount`. A change of the legend must not drop the
+     * result of the last run.
+     *
+     * The method does nothing when the state did not change. The map viewer
+     * calls it from an effect, so this guard stops a write loop.
+     */
+    updateActiveMapView(state: MapViewState): void {
+        const block = this.activeBlock;
+        if (!block) return;
+
+        if (JSON.stringify(block.view?.map) === JSON.stringify(state)) return;
+
+        // A block with no stored view, and no column and no camera to store, stays
+        // untouched. A range alone restores nothing. This keeps a short visit to
+        // the map viewer out of the storage.
+        if (!block.view?.map && !state.dataColumn && !state.camera) return;
+
+        queryBlocks.update(block.id, {
+            view: { ...block.view, map: Utils.cloneObject(state) }
+        });
+    }
+
+    /**
+     * Write the plots of the chart explorer to one block.
+     *
+     * The rules are the ones of {@link updateActiveMapView}. This state is not
+     * part of the query, so the method keeps `datasetKey` and `rowCount`. A new
+     * palette must not drop the result of the last run.
+     *
+     * The method does nothing when the state did not change. The chart page calls
+     * it from an effect, so this guard stops a write loop.
+     *
+     * A block with no stored chart state, and no configured plot to store, stays
+     * untouched. Therefore a short visit to the chart page writes nothing.
+     *
+     * The block is named, and not taken from the selection. The chart page delays
+     * this write until the user stops typing, and by then the active block can be
+     * another one.
+     */
+    updateChartView(blockId: string, state: ChartViewState): void {
+        const block = this.blocks.find((candidate) => candidate.id === blockId);
+        if (!block) return;
+
+        if (JSON.stringify(block.view?.chart) === JSON.stringify(state)) return;
+
+        if (!block.view?.chart && !state.plots.some(isPlotRenderable)) return;
+
+        queryBlocks.update(block.id, {
+            view: { ...block.view, chart: Utils.cloneObject(state) }
+        });
+    }
+
+    /** Compile the draft of a block. Returns null if the draft is incomplete. */
+    static getQuery(block: StoredQuery | null): CompiledQuery | null {
+        return block?.compiled ?? compileDraft(block?.draft, block?.coordinateColumns ?? null);
+    }
+
+    /**
+     * The query that the query store runs for a block, or null when the block holds none.
+     * A SQL block gives its trimmed text, so the cache key and the request hold the same text.
+     */
+    static resultQueryOf(block: StoredQuery | null): RunQuery | null {
+        return runQueryOf(block);
+    }
+
+    /** True when a mode switch would lose a query: columns or a compiled query, or SQL text. */
+    static holdsQuery(block: StoredQuery | null): boolean {
+        if (queryModeOf(block) === "sql") return sqlTextOf(block).trim() !== "";
+        return !!block?.compiled || (block?.draft?.selectedFields.length ?? 0) > 0;
+    }
+
+    /**
+     * The reason that a block must not run, or null. A SQL block always gets the read-only check.
+     * A component passes `$settings.requireQueryFilters`, so it reacts to the switch.
+     */
+    static blockReason(block: StoredQuery | null, requireFilter: boolean): Message | null {
+        if (queryModeOf(block) === "sql") {
+            const sql = sqlTextOf(block);
+            if (sql.trim() === "") return null;
+            return sqlBlockReason(sql, { requireFilter });
+        }
+
+        if (!requireFilter) return null;
+        return runBlockReason(QueryWorkspace.getQuery(block));
+    }
+
+    /**
+     * The query that the builder uses one time to fill the draft of a block.
+     * Returns null after the block has its own draft.
+     */
+    static seedFor(block: StoredQuery | null): CompiledQuery | null {
+        if (!needsDraftSeed(block)) {
+            return null;
+        }
+        return block?.compiled ?? null;
+    }
+
+    /** Set the active block back to an empty draft. The Reset button uses this. */
+    resetActive(): void {
+        const block = this.activeBlock;
+        if (!block) return;
+
+        if (queryModeOf(block) === "sql") {
+            queryBlocks.update(block.id, { sql: "", datasetKey: null, rowCount: null });
+            this.preview.clear(block.id);
+            return;
+        }
+
+        const draft = makeEmptyDraft();
+        draft.tableName = block.draft?.tableName ?? "";
+
+        queryBlocks.update(block.id, {
+            draft,
+            compiled: null,
+            datasetKey: null,
+            rowCount: null
+        });
+    }
+
+    /** Derive the badge status from the draft of a block: table, columns and filters. */
+    static getStatus(block: StoredQuery | null): QuerySelectionStatus {
+        const status = makeEmptyQuerySelectionStatus();
+        const draft = block?.draft;
+        if (!draft) return status;
+
+        status.dataTable = draft.tableName ?? "";
+        status.columns = draft.selectedFields.length;
+        status.selection = status.columns;
+        status.filters = draft.selectedFields.reduce(
+            (total, field) => total + field.selected_filters.length,
+            0
+        );
+
+        // The drawn area is one more filter, but it belongs to no single column.
+        if (draft.spatialFilter) {
+            status.filters += 1;
+        }
+
+        return status;
+    }
+
+    /** The column names for a block card. */
+    static getSelectedColumns(block: StoredQuery | null): string[] {
+        return block?.draft?.selectedFields.map((f) => f.name) ?? [];
+    }
+
+    /**
+     * The run state for the block cards. The link from the record to a cached
+     * result gives the value of `hasRun`. The app does not track it separately.
+     * Therefore the value survives a reload. An edit also clears it.
+     */
+    getRunState(block: StoredQuery | null): BlockRunState {
+        return {
+            hasRun: !!block?.datasetKey,
+            rows: block?.rowCount ?? null,
+            isRunning: !!(block && this.running[block.id])
+        };
+    }
+
+    /** Start or stop the spinner of a block. The visualisation view calls this. */
+    markBlockRunning(id: string, running: boolean): void {
+        this.running = { ...this.running, [id]: running };
+    }
+
+    /**
+     * Start the spinner of a block. The number it returns names this run. Give it
+     * back to {@link endBlockRun}.
+     *
+     * The store runs one query at a time, so a new run stops the run in flight.
+     * That older run rejects after the newer one set the spinner. A blind reset
+     * would then clear the spinner of a query that still runs.
+     */
+    beginBlockRun(id: string): number {
+        const token = this.nextRunToken++;
+        this.runToken = { ...this.runToken, [id]: token };
+        this.markBlockRunning(id, true);
+        return token;
+    }
+
+    /**
+     * Stop the spinner of a block after the run with this number. It does nothing
+     * when a newer run of the same block owns the spinner now.
+     */
+    endBlockRun(id: string, token: number): void {
+        if (this.runToken[id] !== token) return;
+        this.markBlockRunning(id, false);
+    }
+
+    /**
+     * Stop the spinner after a successful run. The query store writes the row
+     * count and the dataset link, because it holds the cache key. This method
+     * keeps its name, so a caller can read the start and the end as a pair.
+     */
+    markBlockRun(id: string, _rows: number): void {
+        void _rows;
+        this.markBlockRunning(id, false);
+    }
+
+    private select(id: string | null): void {
+        this.activeBlockId = id;
+        setActiveBlockId(id);
+    }
+
+    private restoreSelection(): void {
+        if (!this.blocks.length) {
+            this.addBlock();
+            return;
+        }
+
+        ensureBlockCounter(this.blocks.length);
+
+        const persistedId = getBlocksState().activeBlockId;
+        if (persistedId && this.blocks.some((block) => block.id === persistedId)) {
+            this.select(persistedId);
+        } else {
+            this.select(this.blocks[0].id);
+        }
+    }
 }

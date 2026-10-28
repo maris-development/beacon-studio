@@ -6,6 +6,7 @@
     import * as monaco from "monaco-editor";
     import "@/monaco/environment";
     import type { CompletionEntry, CompletionKind } from "@/sql/completion";
+    import { translate } from "@/i18n";
 
     type Props = {
         tabId: string;
@@ -14,9 +15,11 @@
         completions: CompletionEntry[];
         onChange: (tabId: string, sql: string) => void;
         onRun: () => void;
+        /** The text that an empty editor shows. */
+        placeholder?: string;
     };
 
-    let { tabId, value, tabIds, completions, onChange, onRun }: Props = $props();
+    let { tabId, value, tabIds, completions, onChange, onRun, placeholder }: Props = $props();
 
     let container: HTMLDivElement;
     let editor = $state.raw<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -66,10 +69,17 @@
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             fontSize: 13,
-            theme: "vs"
+            theme: "vs",
+            placeholder
         });
 
-        created.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => onRun());
+        // An action goes away with the editor. A command from `addCommand` stays global.
+        created.addAction({
+            id: "beacon.sql.run",
+            label: translate("sqlEditor.toolbar.run"),
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+            run: () => onRun()
+        });
 
         // The provider is global for the `sql` language, so it answers for this editor only.
         const provider = monaco.languages.registerCompletionItemProvider("sql", {
@@ -130,6 +140,13 @@
             untrack(() => value)
         );
         if (editor.getModel() !== model) editor.setModel(model);
+    });
+
+    // A change from outside, for example a reset, replaces the text. A typed change is already in the model.
+    $effect(() => {
+        const text = value;
+        const model = models.get(tabId);
+        if (model && model.getValue() !== text) model.setValue(text);
     });
 
     // The model of a closed tab goes away.

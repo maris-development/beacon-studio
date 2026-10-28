@@ -118,7 +118,7 @@
             },
             "requireQueryFilters": {
                 "label": "Require a filter",
-                "description": "Blocks a query with no filters in the workbench. Beacon must not read a whole table."
+                "description": "Blocks a query with no filters in the workbench. A SQL query needs a WHERE or LIMIT clause. Beacon must not read a whole table."
             },
             "queryCellLimit": {
                 "label": "Query cell limit",
@@ -364,17 +364,6 @@
             "isNotNull": "Is NOT NULL"
         }
     },
-    "editor": {
-        "title": "Query editor",
-        "crumb": "Query Editor",
-        "error": {
-            "noColumn": "Every query parameter must include column or column_name."
-        },
-        "toast": {
-            "executeFailed": "Error executing query:",
-            "parseFailed": "Failed to parse query JSON:"
-        }
-    },
     "workbench": {
         "title": "Query workbench",
         "untitledBlock": "Untitled ({number})",
@@ -404,7 +393,11 @@
             "expandBuilder": "Expand builder",
             "code": "Code",
             "collapseCode": "Collapse code",
-            "expandCode": "Expand code"
+            "expandCode": "Expand code",
+            "sql": "SQL query",
+            "preview": "Preview",
+            "collapsePreview": "Collapse preview",
+            "expandPreview": "Expand preview"
         },
         "code": {
             "tabs": "Code language",
@@ -436,7 +429,8 @@
             "running": "Running...",
             "notCached": "Not cached",
             "selectedColumns": "Selected columns: {columns}",
-            "noColumns": "No columns selected"
+            "noColumns": "No columns selected",
+            "sqlTitle": "SQL query"
         },
         "toast": {
             "nameEmpty": "Query name cannot be empty.",
@@ -451,6 +445,47 @@
             "guessedNodeNoColumns": "The link named no Beacon node, and \"{node}\" has no columns of the query in \"{table}\". The query is kept. Pick the node of this query.",
             "nodeNoTable": "\"{node}\" has no table \"{table}\". The query is kept. Pick another node, or edit the query.",
             "nodeNoColumns": "\"{node}\" has no columns of the query in \"{table}\". The query is kept. Pick another node, or edit the query."
+        },
+        "mode": {
+            "label": "Query mode",
+            "builder": "Builder",
+            "sql": "SQL",
+            "confirm": {
+                "title": "Change the query mode?",
+                "message": "The current query is deleted. The node stays the same.",
+                "confirm": "Change mode"
+            }
+        },
+        "sql": {
+            "stepTitle": "SQL Query",
+            "stepDescription": "Type a query that reads data.",
+            "readOnly": "Read statements only",
+            "readOnlyTitle": "The workbench runs only queries that read data.",
+            "placeholder": "SELECT ... FROM ... WHERE ...",
+            "accessHint": "The node checks the access of each table.",
+            "shortcut": "Ctrl + Enter",
+            "pickNode": "Pick a node first.",
+            "builderOnly": "This export is only for builder queries.",
+            "summary": "SQL",
+            "guard": {
+                "empty": "The SQL holds no statement.",
+                "unclosed": "Close each string, quoted name and comment.",
+                "backslashQuote": "Write a quote in a string as two quotes. Do not put a backslash before a quote.",
+                "nestedComment": "Remove the comment inside the comment.",
+                "lineEnd": "Use a normal line end after a comment.",
+                "mark": "The workbench cannot read the sign {mark} here. Remove it, or put a name in double quotes.",
+                "several": "Run one statement at a time. Remove the semicolon between the statements.",
+                "notRead": "The workbench runs only queries that read data. Start the query with SELECT, WITH or VALUES.",
+                "writeWord": "The workbench runs only queries that read data. Remove {word}, or put a column name in double quotes.",
+                "noFilter": "This SQL query has no WHERE or LIMIT clause. Add one, or turn off \"Require a filter\" in the settings."
+            }
+        },
+        "preview": {
+            "run": "Run",
+            "stop": "Stop",
+            "emptyTitle": "No query yet",
+            "emptyText": "Type a SQL query on the left. The preview shows the first rows of the result.",
+            "duration": "{ms, number} ms"
         }
     },
     "history": {
@@ -572,7 +607,8 @@
             "crossSection": "Cross section",
             "crossSectionTitle": "Draw a line. The line becomes a band with the width below.",
             "clearTitle": "Remove the area",
-            "applyFilter": "Apply filter"
+            "applyFilter": "Apply filter",
+            "sqlLocked": "The area filter works only in Builder mode. In SQL, filter the latitude and longitude columns with WHERE."
         }
     },
     "table": {
@@ -1103,7 +1139,8 @@
             "noMatch": "No tables match.",
             "showColumns": "Show columns",
             "loadingColumns": "Loading columns…",
-            "showMore": "{count, plural, one {Show # more column} other {Show # more columns}}"
+            "showMore": "{count, plural, one {Show # more column} other {Show # more columns}}",
+            "insert": "Insert the table name"
         },
         "plan": {
             "fold": "Fold",

@@ -118,7 +118,7 @@
             },
             "requireQueryFilters": {
                 "label": "Exigir un filtro",
-                "description": "Bloquea en el banco de trabajo una consulta sin filtros. Beacon no debe leer una tabla entera."
+                "description": "Bloquea en el banco de trabajo una consulta sin filtros. Una consulta SQL necesita una cláusula WHERE o LIMIT. Beacon no debe leer una tabla entera."
             },
             "queryCellLimit": {
                 "label": "Límite de celdas por consulta",
@@ -364,17 +364,6 @@
             "isNotNull": "NO es NULL"
         }
     },
-    "editor": {
-        "title": "Editor de consultas",
-        "crumb": "Editor de consultas",
-        "error": {
-            "noColumn": "Cada parámetro de consulta debe incluir column o column_name."
-        },
-        "toast": {
-            "executeFailed": "Error al ejecutar la consulta:",
-            "parseFailed": "No se pudo analizar el JSON de la consulta:"
-        }
-    },
     "workbench": {
         "title": "Banco de trabajo de consultas",
         "untitledBlock": "Sin título ({number})",
@@ -404,7 +393,11 @@
             "expandBuilder": "Expandir el constructor",
             "code": "Código",
             "collapseCode": "Contraer el código",
-            "expandCode": "Expandir el código"
+            "expandCode": "Expandir el código",
+            "sql": "Consulta SQL",
+            "preview": "Vista previa",
+            "collapsePreview": "Contraer la vista previa",
+            "expandPreview": "Expandir la vista previa"
         },
         "code": {
             "tabs": "Lenguaje del código",
@@ -436,7 +429,8 @@
             "running": "Ejecutando...",
             "notCached": "Sin caché",
             "selectedColumns": "Columnas seleccionadas: {columns}",
-            "noColumns": "No hay columnas seleccionadas"
+            "noColumns": "No hay columnas seleccionadas",
+            "sqlTitle": "Consulta SQL"
         },
         "toast": {
             "nameEmpty": "El nombre de la consulta no puede estar vacío.",
@@ -451,6 +445,47 @@
             "guessedNodeNoColumns": "El enlace no indicaba ningún nodo Beacon y \"{node}\" no tiene ninguna columna de la consulta en \"{table}\". La consulta se conserva. Elige el nodo de esta consulta.",
             "nodeNoTable": "\"{node}\" no tiene la tabla \"{table}\". La consulta se conserva. Elige otro nodo o edita la consulta.",
             "nodeNoColumns": "\"{node}\" no tiene ninguna columna de la consulta en \"{table}\". La consulta se conserva. Elige otro nodo o edita la consulta."
+        },
+        "mode": {
+            "label": "Modo de consulta",
+            "builder": "Constructor",
+            "sql": "SQL",
+            "confirm": {
+                "title": "¿Cambiar el modo de consulta?",
+                "message": "La consulta actual se elimina. El nodo sigue siendo el mismo.",
+                "confirm": "Cambiar modo"
+            }
+        },
+        "sql": {
+            "stepTitle": "Consulta SQL",
+            "stepDescription": "Escribe una consulta que lea datos.",
+            "readOnly": "Solo sentencias de lectura",
+            "readOnlyTitle": "El banco de trabajo solo ejecuta consultas que leen datos.",
+            "placeholder": "SELECT ... FROM ... WHERE ...",
+            "accessHint": "El nodo comprueba el acceso a cada tabla.",
+            "shortcut": "Ctrl + Enter",
+            "pickNode": "Elige primero un nodo.",
+            "builderOnly": "Esta exportación es solo para consultas del Constructor.",
+            "summary": "SQL",
+            "guard": {
+                "empty": "El SQL no contiene ninguna sentencia.",
+                "unclosed": "Cierra cada cadena, cada nombre entre comillas y cada comentario.",
+                "backslashQuote": "Escribe una comilla en una cadena como dos comillas. No pongas una barra invertida antes de una comilla.",
+                "nestedComment": "Quita el comentario dentro del comentario.",
+                "lineEnd": "Usa un fin de línea normal después de un comentario.",
+                "mark": "El banco de trabajo no puede leer aquí el signo {mark}. Quítalo, o pon un nombre entre comillas dobles.",
+                "several": "Ejecuta una sentencia cada vez. Quita el punto y coma entre las sentencias.",
+                "notRead": "El banco de trabajo solo ejecuta consultas que leen datos. Empieza la consulta con SELECT, WITH o VALUES.",
+                "writeWord": "El banco de trabajo solo ejecuta consultas que leen datos. Quita {word}, o pon el nombre de la columna entre comillas dobles.",
+                "noFilter": "Esta consulta SQL no tiene una cláusula WHERE o LIMIT. Añade una o desactiva \"Exigir un filtro\" en los ajustes."
+            }
+        },
+        "preview": {
+            "run": "Ejecutar",
+            "stop": "Detener",
+            "emptyTitle": "Todavía no hay consulta",
+            "emptyText": "Escribe una consulta SQL a la izquierda. La vista previa muestra las primeras filas del resultado.",
+            "duration": "{ms, number} ms"
         }
     },
     "history": {
@@ -572,7 +607,8 @@
             "crossSection": "Sección transversal",
             "crossSectionTitle": "Dibuja una línea. La línea se convierte en una banda con la anchura de abajo.",
             "clearTitle": "Quitar el área",
-            "applyFilter": "Aplicar filtro"
+            "applyFilter": "Aplicar filtro",
+            "sqlLocked": "El filtro de área solo funciona en el modo Constructor. En SQL, filtre las columnas de latitud y longitud con WHERE."
         }
     },
     "table": {
@@ -1103,7 +1139,8 @@
             "noMatch": "Ninguna tabla coincide.",
             "showColumns": "Mostrar columnas",
             "loadingColumns": "Cargando columnas…",
-            "showMore": "{count, plural, one {Mostrar # columna más} other {Mostrar # columnas más}}"
+            "showMore": "{count, plural, one {Mostrar # columna más} other {Mostrar # columnas más}}",
+            "insert": "Insertar el nombre de la tabla"
         },
         "plan": {
             "fold": "Plegar",

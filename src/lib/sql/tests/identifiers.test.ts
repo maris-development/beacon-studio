@@ -21,6 +21,12 @@ describe("quoteIdent", () => {
         expect(quoteIdent("temp")).toBe("temp");
     });
 
+    it("quotes a word that the workbench guard reads as a write", () => {
+        expect(quoteIdent("copy")).toBe('"copy"');
+        expect(quoteIdent("merge")).toBe('"merge"');
+        expect(quoteIdent("refresh")).toBe('"refresh"');
+    });
+
     it("doubles a quote inside the name", () => {
         expect(quoteIdent('a"b')).toBe('"a""b"');
     });

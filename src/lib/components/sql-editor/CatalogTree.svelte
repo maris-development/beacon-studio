@@ -1,13 +1,17 @@
 <!--
-	Catalog > schema > table > columns. A click on a name inserts it into the editor.
+	Catalog > schema > table > columns. A click on a name, or on "+", inserts it into the editor.
 -->
 <script lang="ts">
+    import type { CatalogTable } from "@maris-development/beacon-client";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+    import PlusIcon from "@lucide/svelte/icons/plus";
     import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
+    import TableIcon from "@lucide/svelte/icons/table-2";
     import { Input } from "@/components/ui/input";
     import {
         COLUMN_PAGE_SIZE,
         filterTree,
+        splitDefault,
         tableKey,
         type CatalogTree,
         type SchemaColumn
@@ -23,9 +27,22 @@
         loadColumns: (ref: TableRef) => Promise<SchemaColumn[]>;
         onInsert: (text: string) => void;
         onRefresh: () => void;
+        /** The text while there is no tree, for example before a node is picked. */
+        placeholder?: string | null;
+        /** List the tables of the default schema at the top, with no catalog and schema level. */
+        flatDefault?: boolean;
     };
 
-    let { tree, loading, error, loadColumns, onInsert, onRefresh }: Props = $props();
+    let {
+        tree,
+        loading,
+        error,
+        loadColumns,
+        onInsert,
+        onRefresh,
+        placeholder = null,
+        flatDefault = false
+    }: Props = $props();
 
     type ColumnState = { columns: SchemaColumn[]; shown: number } | { error: Message } | "loading";
 
@@ -57,6 +74,12 @@
 
     // A separate value, so the click handlers need no null check on `shown`.
     let defaults = $derived(tree?.defaults ?? { catalog: "", schema: "" });
+
+    let parts = $derived.by(() => {
+        if (!shown) return null;
+        if (!flatDefault) return { tables: [], rest: shown };
+        return splitDefault(shown);
+    });
 
     // A filter shows every match, so it opens everything.
     let filtering = $derived(needle.trim() !== "");
@@ -95,6 +118,71 @@
     }
 </script>
 
+{#snippet tableItem(ref: TableRef, table: CatalogTable)}
+    {@const key = tableKey(ref)}
+    {@const colState = columns[key]}
+    <li>
+        <div class="row">
+            <button
+                type="button"
+                class="toggle"
+                aria-label={$t("sqlEditor.catalog.showColumns")}
+                onclick={() => toggleTable(ref)}
+            >
+                <ChevronRightIcon class="chevron {open[`t:${key}`] ? 'open' : ''}" />
+                <TableIcon class="table-icon" />
+            </button>
+            <button
+                type="button"
+                class="insert"
+                title={table.table_type}
+                onclick={() => onInsert(sqlName(ref, defaults))}
+            >
+                {table.name}
+            </button>
+            <button
+                type="button"
+                class="icon-button add"
+                title={$t("sqlEditor.catalog.insert")}
+                aria-label={$t("sqlEditor.catalog.insert")}
+                onclick={() => onInsert(sqlName(ref, defaults))}
+            >
+                <PlusIcon class="size-4" />
+            </button>
+        </div>
+
+        {#if open[`t:${key}`]}
+            {#if colState === "loading"}
+                <p class="muted nested">{$t("sqlEditor.catalog.loadingColumns")}</p>
+            {:else if colState && "error" in colState}
+                <p class="error nested">{$t(colState.error)}</p>
+            {:else if colState && "columns" in colState}
+                <ul class="level columns">
+                    {#each colState.columns.slice(0, colState.shown) as column (column.name)}
+                        <li>
+                            <button
+                                type="button"
+                                class="insert column"
+                                onclick={() => onInsert(quoteIdent(column.name))}
+                            >
+                                <span>{column.name}</span>
+                                <span class="type">{column.dataType}</span>
+                            </button>
+                        </li>
+                    {/each}
+                </ul>
+                {#if colState.columns.length > colState.shown}
+                    <button type="button" class="more" onclick={() => showMore(key)}>
+                        {$t("sqlEditor.catalog.showMore", {
+                            count: colState.columns.length - colState.shown
+                        })}
+                    </button>
+                {/if}
+            {/if}
+        {/if}
+    </li>
+{/snippet}
+
 <div class="catalog">
     <div class="catalog-head">
         <Input type="search" placeholder={$t("sqlEditor.catalog.filter")} bind:value={needle} />
@@ -113,11 +201,17 @@
         <p class="muted">{$t("sqlEditor.catalog.loading")}</p>
     {:else if error}
         <p class="error">{$t(error)}</p>
+    {:else if !tree && placeholder}
+        <p class="muted">{placeholder}</p>
     {:else if shown && shown.catalogs.length === 0}
         <p class="muted">{$t("sqlEditor.catalog.noMatch")}</p>
-    {:else if shown}
-        <ul class="level">
-            {#each shown.catalogs as catalog (catalog.name)}
+    {:else if parts}
+        <ul class="level top">
+            {#each parts.tables as table (table.name)}
+                {@render tableItem({ ...defaults, name: table.name }, table)}
+            {/each}
+
+            {#each parts.rest.catalogs as catalog (catalog.name)}
                 {@const catalogKey = `c:${catalog.name}`}
                 <li>
                     <button type="button" class="row" onclick={() => toggle(catalogKey)}>
@@ -144,95 +238,14 @@
                                     {#if isOpen(schemaKey)}
                                         <ul class="level">
                                             {#each schema.tables as table (table.name)}
-                                                {@const ref = {
-                                                    catalog: catalog.name,
-                                                    schema: schema.name,
-                                                    name: table.name
-                                                }}
-                                                {@const key = tableKey(ref)}
-                                                {@const colState = columns[key]}
-                                                <li>
-                                                    <div class="row">
-                                                        <button
-                                                            type="button"
-                                                            class="toggle"
-                                                            aria-label={$t(
-                                                                "sqlEditor.catalog.showColumns"
-                                                            )}
-                                                            onclick={() => toggleTable(ref)}
-                                                        >
-                                                            <ChevronRightIcon
-                                                                class="chevron {open[`t:${key}`]
-                                                                    ? 'open'
-                                                                    : ''}"
-                                                            />
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            class="insert"
-                                                            title={table.table_type}
-                                                            onclick={() =>
-                                                                onInsert(sqlName(ref, defaults))}
-                                                        >
-                                                            {table.name}
-                                                        </button>
-                                                    </div>
-
-                                                    {#if open[`t:${key}`]}
-                                                        {#if colState === "loading"}
-                                                            <p class="muted nested">
-                                                                {$t(
-                                                                    "sqlEditor.catalog.loadingColumns"
-                                                                )}
-                                                            </p>
-                                                        {:else if colState && "error" in colState}
-                                                            <p class="error nested">
-                                                                {$t(colState.error)}
-                                                            </p>
-                                                        {:else if colState && "columns" in colState}
-                                                            <ul class="level columns">
-                                                                {#each colState.columns.slice(0, colState.shown) as column (column.name)}
-                                                                    <li>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="insert column"
-                                                                            onclick={() =>
-                                                                                onInsert(
-                                                                                    quoteIdent(
-                                                                                        column.name
-                                                                                    )
-                                                                                )}
-                                                                        >
-                                                                            <span
-                                                                                >{column.name}</span
-                                                                            >
-                                                                            <span class="type"
-                                                                                >{column.dataType}</span
-                                                                            >
-                                                                        </button>
-                                                                    </li>
-                                                                {/each}
-                                                            </ul>
-                                                            {#if colState.columns.length > colState.shown}
-                                                                <button
-                                                                    type="button"
-                                                                    class="more"
-                                                                    onclick={() => showMore(key)}
-                                                                >
-                                                                    {$t(
-                                                                        "sqlEditor.catalog.showMore",
-                                                                        {
-                                                                            count:
-                                                                                colState.columns
-                                                                                    .length -
-                                                                                colState.shown
-                                                                        }
-                                                                    )}
-                                                                </button>
-                                                            {/if}
-                                                        {/if}
-                                                    {/if}
-                                                </li>
+                                                {@render tableItem(
+                                                    {
+                                                        catalog: catalog.name,
+                                                        schema: schema.name,
+                                                        name: table.name
+                                                    },
+                                                    table
+                                                )}
                                             {/each}
                                         </ul>
                                     {/if}
@@ -280,6 +293,10 @@
         margin: 0;
         padding-left: 0.75rem;
 
+        &.top {
+            padding-left: 0;
+        }
+
         &.columns {
             padding-left: 1.75rem;
         }
@@ -291,6 +308,33 @@
         gap: 0.25rem;
         width: 100%;
         padding: 0.125rem 0;
+    }
+
+    .toggle {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 0.25rem;
+        color: var(--muted-foreground);
+    }
+
+    // "+" sits at the end of the row.
+    .add {
+        flex-shrink: 0;
+        margin-left: auto;
+        padding: 0.125rem;
+        border-radius: 0.25rem;
+        color: var(--muted-foreground);
+
+        &:hover {
+            background: var(--accent);
+            color: var(--foreground);
+        }
+    }
+
+    :global(.table-icon) {
+        width: 0.875rem;
+        height: 0.875rem;
     }
 
     .insert {

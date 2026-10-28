@@ -14,6 +14,7 @@
     import SqlEditor from "@/components/sql-editor/SqlEditor.svelte";
     import SqlTabs from "@/components/sql-editor/SqlTabs.svelte";
     import CatalogTree from "@/components/sql-editor/CatalogTree.svelte";
+    import { CatalogState } from "@/components/sql-editor/CatalogState.svelte";
     import ResultGrid from "@/components/sql-editor/ResultGrid.svelte";
     import PlanTree from "@/components/sql-editor/PlanTree.svelte";
     import DownloadMenu from "@/components/sql-editor/DownloadMenu.svelte";
@@ -24,10 +25,7 @@
     import { addToast } from "@/stores/toasts";
     import { adminPageState, signedInNodeIds, withAdmin } from "@/services/admin-session";
     import AdminSessionRequired from "@/components/AdminSessionRequired.svelte";
-    import { CatalogCache, type CatalogTree as Tree, type SchemaColumn } from "@/sql/catalog";
-    import { buildCompletions, parseFunctions, type FnMeta } from "@/sql/completion";
     import { downloadFileName, type DownloadFormat } from "@/sql/download";
-    import type { TableRef } from "@/sql/identifiers";
     import { planRoot } from "@/sql/plan";
     import { withAdminFallback } from "@/sql/privilege";
     import { PREVIEW_ROW_LIMIT, runPreview, type PreviewResult } from "@/sql/run";
@@ -97,12 +95,7 @@
     const owners = new Map<string, AbortController>();
     let controller: AbortController | null = null;
 
-    const cache = new CatalogCache();
-    let tree: Tree | null = $state(null);
-    let treeLoading = $state(false);
-    let treeError: Message | null = $state(null);
-    let functions: FnMeta[] = $state([]);
-    let columnsVersion = $state(0);
+    const catalog = new CatalogState();
 
     let activeTab = $derived(tabs.tabs.find((tab) => tab.id === tabs.activeId) ?? tabs.tabs[0]);
     let node = $derived($currentNode);
@@ -111,14 +104,7 @@
     let gate = $derived(adminPageState(node, $signedInNodeIds));
     let outcome = $derived(outcomes[activeTab.id] ?? null);
 
-    let completions = $derived.by(() => {
-        void columnsVersion;
-
-        let loaded: ReturnType<CatalogCache["loadedColumns"]> = [];
-        if (nodeUrl) loaded = cache.loadedColumns(nodeUrl);
-
-        return buildCompletions({ tree, functions, columns: loaded });
-    });
+    let completions = $derived(catalog.completions());
 
     $effect(() => {
         saveTabs($state.snapshot(tabs));
@@ -130,46 +116,8 @@
         untrack(() => loadCatalogue(false));
     });
 
-    async function loadCatalogue(refresh: boolean) {
-        const current = node;
-        if (!current) return;
-
-        const client = makeBeaconClient(current);
-        treeLoading = true;
-        treeError = null;
-
-        try {
-            const result = await cache.tree(current.url, client, refresh);
-            // A node switch during the load makes this answer stale.
-            if (current.url === nodeUrl) tree = result;
-        } catch (error) {
-            if (current.url === nodeUrl) {
-                tree = null;
-                treeError = sqlError(error);
-            }
-        } finally {
-            if (current.url === nodeUrl) treeLoading = false;
-        }
-
-        // A failure removes the function suggestions only.
-        client.functions().then(
-            (raw) => {
-                if (current.url === nodeUrl) functions = parseFunctions(raw);
-            },
-            () => {
-                if (current.url === nodeUrl) functions = [];
-            }
-        );
-    }
-
-    async function loadColumns(ref: TableRef): Promise<SchemaColumn[]> {
-        const current = node;
-        if (!current) return [];
-
-        const result = await cache.columnsOf(current.url, makeBeaconClient(current), ref);
-        columnsVersion += 1;
-
-        return result;
+    function loadCatalogue(refresh: boolean) {
+        if (node) void catalog.load(node, refresh);
     }
 
     function begin(action: Action): { own: AbortController; tabId: string } {
@@ -446,10 +394,13 @@
 
                 <aside class="catalog-panel" class:open={catalogOpen}>
                     <CatalogTree
-                        {tree}
-                        loading={treeLoading}
-                        error={treeError}
-                        {loadColumns}
+                        tree={catalog.tree}
+                        loading={catalog.loading}
+                        error={catalog.error}
+                        loadColumns={async (ref) => {
+                            if (!node) return [];
+                            return catalog.loadColumns(node, ref);
+                        }}
                         onInsert={(text) => editor?.insert(text)}
                         onRefresh={() => loadCatalogue(true)}
                     />

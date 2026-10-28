@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { tableFromArrays } from "apache-arrow";
+import { Table, tableFromArrays, tableToIPC, type RecordBatch } from "apache-arrow";
 import type { ArrowRecordBatch } from "@maris-development/beacon-client";
-import { runPreview, type BatchSource } from "../run";
+import { readLimited, runPreview, type BatchSource, type RawSource } from "../run";
 
 function batch(from: number, count: number): ArrowRecordBatch {
     const n = Int32Array.from({ length: count }, (_, i) => from + i);
@@ -225,5 +225,165 @@ describe("runPreview", () => {
         await runPreview(source, structured, { signal: new AbortController().signal });
 
         expect(received).toEqual(structured);
+    });
+});
+
+/** A batch with two columns, so a cell limit of 1000 gives 500 rows. */
+function pairBatch(from: number, count: number): RecordBatch {
+    const n = Int32Array.from({ length: count }, (_, i) => from + i);
+    return tableFromArrays({ n, m: Float64Array.from(n) }).batches[0];
+}
+
+/** An Arrow IPC stream with one batch for each count. */
+function ipcOf(...counts: number[]): Uint8Array {
+    let from = 0;
+    const batches = counts.map((count) => {
+        const next = pairBatch(from, count);
+        from += count;
+        return next;
+    });
+    return tableToIPC(new Table(batches), "stream");
+}
+
+// The 8 bytes of the end marker. A stream without them waits for more batches.
+const END_MARKER_BYTES = 8;
+
+/** A body that sends `bytes` and then never ends, like a node that still runs. */
+function hangingBody(bytes: Uint8Array) {
+    const cancelled = vi.fn();
+    const body = new ReadableStream<Uint8Array>({
+        start: (controller) => controller.enqueue(bytes),
+        cancel: cancelled
+    });
+    return { body, cancelled };
+}
+
+function bodyOf(body: Uint8Array | ReadableStream<Uint8Array>): BodyInit {
+    // A copy owns a plain ArrayBuffer, which `BodyInit` asks for.
+    if (body instanceof Uint8Array) return body.slice();
+    return body;
+}
+
+function rawSourceOf(
+    body: Uint8Array | ReadableStream<Uint8Array>,
+    headers: Record<string, string> = {}
+) {
+    const init = bodyOf(body);
+    const queryRaw = vi.fn<RawSource["queryRaw"]>(async () => new Response(init, { headers }));
+    return { source: { queryRaw } as RawSource, queryRaw };
+}
+
+describe("readLimited", () => {
+    it("reads a complete result and keeps the bytes of the node", async () => {
+        const bytes = ipcOf(100, 100);
+        const { source } = rawSourceOf(bytes, { "x-beacon-query-id": "q1" });
+
+        const result = await readLimited(
+            source,
+            { sql: "SELECT n, m" },
+            {
+                signal: new AbortController().signal,
+                cellLimit: 10_000
+            }
+        );
+
+        expect(result.table.numRows).toBe(200);
+        expect(result.truncated).toBe(false);
+        expect(result.rowLimit).toBe(5000);
+        expect(result.bytes).toEqual(bytes);
+        expect(result.byteLength).toBe(bytes.byteLength);
+        expect(result.queryId).toBe("q1");
+    });
+
+    it("stops at the cell limit and cuts the table", async () => {
+        const { source } = rawSourceOf(ipcOf(300, 300, 300));
+
+        const result = await readLimited(
+            source,
+            { sql: "SELECT n, m" },
+            {
+                signal: new AbortController().signal,
+                cellLimit: 1000
+            }
+        );
+
+        expect(result.rowLimit).toBe(500);
+        expect(result.table.numRows).toBe(500);
+        expect(result.table.getChild("n")?.get(499)).toBe(499);
+        expect(result.truncated).toBe(true);
+        expect(result.bytes).toBeNull();
+    });
+
+    it("cancels the body at the cell limit", async () => {
+        const { body, cancelled } = hangingBody(ipcOf(300, 300));
+        const { source } = rawSourceOf(body);
+
+        const result = await readLimited(
+            source,
+            { sql: "SELECT n, m" },
+            {
+                signal: new AbortController().signal,
+                cellLimit: 1000
+            }
+        );
+
+        expect(result.truncated).toBe(true);
+        expect(cancelled).toHaveBeenCalled();
+    });
+
+    it("rejects with the abort and cancels the body on a stop while the body hangs", async () => {
+        const controller = new AbortController();
+        const bytes = ipcOf(10);
+        const { body, cancelled } = hangingBody(
+            bytes.subarray(0, bytes.byteLength - END_MARKER_BYTES)
+        );
+        const { source } = rawSourceOf(body);
+
+        const running = readLimited(
+            source,
+            { sql: "SELECT n, m" },
+            {
+                signal: controller.signal,
+                cellLimit: 1000
+            }
+        );
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        controller.abort();
+
+        await expect(running).rejects.toMatchObject({ name: "AbortError" });
+        expect(cancelled).toHaveBeenCalled();
+    });
+
+    it("sends no request when the signal is already aborted", async () => {
+        const controller = new AbortController();
+        controller.abort();
+        const { source, queryRaw } = rawSourceOf(ipcOf(10));
+
+        await expect(
+            readLimited(
+                source,
+                { sql: "SELECT n, m" },
+                { signal: controller.signal, cellLimit: 1000 }
+            )
+        ).rejects.toMatchObject({ name: "AbortError" });
+        expect(queryRaw).not.toHaveBeenCalled();
+    });
+
+    it("keeps the schema of a result with no rows", async () => {
+        const schema = pairBatch(0, 1).schema;
+        const { source } = rawSourceOf(tableToIPC(new Table(schema), "stream"));
+
+        const result = await readLimited(
+            source,
+            { sql: "SELECT n, m WHERE false" },
+            {
+                signal: new AbortController().signal,
+                cellLimit: 1000
+            }
+        );
+
+        expect(result.table.numRows).toBe(0);
+        expect(result.table.schema.fields.map((field) => field.name)).toEqual(["n", "m"]);
+        expect(result.truncated).toBe(false);
     });
 });

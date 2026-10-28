@@ -1,3 +1,5 @@
+import { WRITE_WORDS } from "./guard";
+
 export type TableRef = { catalog: string; schema: string; name: string };
 
 /** The catalog and schema that an unqualified table name resolves against. */
@@ -83,7 +85,14 @@ const RESERVED_WORDS = new Set([
 ]);
 
 export function quoteIdent(name: string): string {
-    if (BARE_IDENT.test(name) && !RESERVED_WORDS.has(name)) return name;
+    // A bare write word fails the workbench guard, so it gets quotes as well.
+    if (
+        BARE_IDENT.test(name) &&
+        !RESERVED_WORDS.has(name) &&
+        !WRITE_WORDS.has(name.toUpperCase())
+    ) {
+        return name;
+    }
 
     return `"${name.replace(/"/g, '""')}"`;
 }

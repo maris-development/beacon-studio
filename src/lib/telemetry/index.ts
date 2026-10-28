@@ -11,21 +11,21 @@
  * import a component. See the layer rule in AGENTS.md.
  */
 
-import { dev } from '$app/environment';
-import { TELEMETRY_BUILD_ENABLED } from '@/build-info';
-import { splitNodeUrl } from '@/services/beacon-node-url';
-import { getSettings, settings, type SettingKey } from '@/stores/settings';
-import { sessionContext } from './context';
-import { forgetIdentity, installId, platform, sessionId, studioVersion } from './identity';
-import { fitProps, type Props } from './props';
-import { clearQueue, enqueue, flush, startQueue } from './queue';
-import { categoryOf, type TelemetryEvent, type TelemetryFields, type TelemetryName } from './types';
-import { Utils } from '@/utils';
+import { dev } from "$app/environment";
+import { TELEMETRY_BUILD_ENABLED } from "@/build-info";
+import { splitNodeUrl } from "@/services/beacon-node-url";
+import { getSettings, settings, type SettingKey } from "@/stores/settings";
+import { sessionContext } from "./context";
+import { forgetIdentity, installId, platform, sessionId, studioVersion } from "./identity";
+import { fitProps, type Props } from "./props";
+import { clearQueue, enqueue, flush, startQueue } from "./queue";
+import { categoryOf, type TelemetryEvent, type TelemetryFields, type TelemetryName } from "./types";
+import { Utils } from "@/utils";
 
-export type { TelemetryFields, TelemetryName, QuerySource } from './types';
-export { describeQuery } from './query-shape';
-export { flush } from './queue';
-export { forgetIdentity } from './identity';
+export type { TelemetryFields, TelemetryName, QuerySource } from "./types";
+export { describeQuery } from "./query-shape";
+export { flush } from "./queue";
+export { forgetIdentity } from "./identity";
 
 /** Set this to true to send telemetry from a dev session, and to patch the console there. */
 const DEV_OVERRIDE = false;
@@ -39,7 +39,7 @@ const DEV_OVERRIDE = false;
  * console, which makes a debug session harder.
  */
 function isDisabled(): boolean {
-	return !TELEMETRY_BUILD_ENABLED || (dev && !DEV_OVERRIDE);
+    return !TELEMETRY_BUILD_ENABLED || (dev && !DEV_OVERRIDE);
 }
 
 let started = false;
@@ -68,7 +68,7 @@ let routeId: string | null = null;
  * carries both, and the query string holds the shared query payload.
  */
 export function setRoute(route: string | null): void {
-	routeId = route;
+    routeId = route;
 }
 
 /**
@@ -78,19 +78,19 @@ export function setRoute(route: string | null): void {
  * The origin also keys the health store, so both sides count the same node once.
  */
 function nodeHost(url: string | undefined): string | null {
-	if (!url) return null;
+    if (!url) return null;
 
-	return splitNodeUrl(url).origin || null;
+    return splitNodeUrl(url).origin || null;
 }
 
 /**
  * The props keys that name what a user asked for: a table, a column, a filter
- * value, a drawn area, a file or a search term.
+ * value, a drawn area, a file, a search term or the text of a SQL query.
  *
  * The `telemetryQueryDetails` setting governs these keys. The counts beside them
  * stay, because `columnCount`, `filterCount` and `filterKinds` name nothing.
  */
-const CONTENT_KEYS = ['table', 'columns', 'filters', 'column', 'file', 'term', 'bbox'];
+const CONTENT_KEYS = ["table", "columns", "filters", "column", "file", "term", "bbox", "sql"];
 
 /**
  * Removes the query content when the user switched that detail off.
@@ -100,33 +100,33 @@ const CONTENT_KEYS = ['table', 'columns', 'filters', 'column', 'file', 'term', '
  * is absent by choice, and not because an old client sent the row.
  */
 function applyContentRule(props: Props | null | undefined): Props | null {
-	if (!props) return null;
+    if (!props) return null;
 
-	if (getSettings().telemetryQueryDetails) return props;
+    if (getSettings().telemetryQueryDetails) return props;
 
-	const kept: Props = {};
+    const kept: Props = {};
 
-	for (const [key, value] of Object.entries(props)) {
-		if (CONTENT_KEYS.includes(key)) continue;
+    for (const [key, value] of Object.entries(props)) {
+        if (CONTENT_KEYS.includes(key)) continue;
 
-		kept[key] = value;
-	}
+        kept[key] = value;
+    }
 
-	kept.queryDetails = false;
+    kept.queryDetails = false;
 
-	return kept;
+    return kept;
 }
 
 /** Raises the session totals that `session.end` reports. */
 function count(name: TelemetryName): void {
-	if (name === 'page.view') counts.pages += 1;
-	else if (name === 'query.execute') counts.queries += 1;
-	else if (name === 'query.download') counts.downloads += 1;
-	else if (name === 'query.visualise') counts.visualises += 1;
-	else if (name === 'query.cancel') counts.cancels += 1;
-	else if (name === 'query.error' || name === 'app.error' || name === 'console.error') {
-		counts.errors += 1;
-	}
+    if (name === "page.view") counts.pages += 1;
+    else if (name === "query.execute") counts.queries += 1;
+    else if (name === "query.download") counts.downloads += 1;
+    else if (name === "query.visualise") counts.visualises += 1;
+    else if (name === "query.cancel") counts.cancels += 1;
+    else if (name === "query.error" || name === "app.error" || name === "console.error") {
+        counts.errors += 1;
+    }
 }
 
 /**
@@ -136,36 +136,36 @@ function count(name: TelemetryName): void {
  * The function does nothing when the user switched telemetry off.
  */
 export function track(name: TelemetryName, fields: TelemetryFields = {}): void {
-	try {
-		if (typeof window === 'undefined') return;
-		if (isDisabled()) return;
-		if (!getSettings().telemetryEnabled) return;
+    try {
+        if (typeof window === "undefined") return;
+        if (isDisabled()) return;
+        if (!getSettings().telemetryEnabled) return;
 
-		count(name);
+        count(name);
 
-		const event: TelemetryEvent = {
-			event_id: Utils.randomUUID(),
-			install_id: installId(),
-			session_id: sessionId(),
-			studio_version: studioVersion(),
-			platform: platform(),
-			occurred_at: Date.now(),
-			category: categoryOf(name),
-			name,
-			level: fields.level ?? null,
-			route: fields.route ?? routeId,
-			node_host: nodeHost(fields.nodeHost),
-			query_id: fields.queryId ?? null,
-			message: fields.message ?? null,
-			duration_ms: Math.round(fields.durationMs ?? 0) || null,
-			row_count: fields.rowCount ?? null,
-			props: fitProps(applyContentRule(fields.props))
-		};
+        const event: TelemetryEvent = {
+            event_id: Utils.randomUUID(),
+            install_id: installId(),
+            session_id: sessionId(),
+            studio_version: studioVersion(),
+            platform: platform(),
+            occurred_at: Date.now(),
+            category: categoryOf(name),
+            name,
+            level: fields.level ?? null,
+            route: fields.route ?? routeId,
+            node_host: nodeHost(fields.nodeHost),
+            query_id: fields.queryId ?? null,
+            message: fields.message ?? null,
+            duration_ms: Math.round(fields.durationMs ?? 0) || null,
+            row_count: fields.rowCount ?? null,
+            props: fitProps(applyContentRule(fields.props))
+        };
 
-		enqueue(event);
-	} catch {
-		// A broken event must never reach the caller.
-	}
+        enqueue(event);
+    } catch {
+        // A broken event must never reach the caller.
+    }
 }
 
 /**
@@ -176,24 +176,24 @@ export function track(name: TelemetryName, fields: TelemetryFields = {}): void {
  * field states which of the two cases the reader has.
  */
 export function diagnostics(): Record<string, string> {
-	try {
-		const enabled = TELEMETRY_BUILD_ENABLED && getSettings().telemetryEnabled;
+    try {
+        const enabled = TELEMETRY_BUILD_ENABLED && getSettings().telemetryEnabled;
 
-		const fields: Record<string, string> = {
-			version: studioVersion(),
-			platform: platform(),
-			telemetry: enabled ? 'on' : 'off'
-		};
+        const fields: Record<string, string> = {
+            version: studioVersion(),
+            platform: platform(),
+            telemetry: enabled ? "on" : "off"
+        };
 
-		if (enabled) {
-			fields.install_id = installId();
-			fields.session_id = sessionId();
-		}
+        if (enabled) {
+            fields.install_id = installId();
+            fields.session_id = sessionId();
+        }
 
-		return fields;
-	} catch {
-		return {};
-	}
+        return fields;
+    } catch {
+        return {};
+    }
 }
 
 /**
@@ -206,22 +206,22 @@ export function diagnostics(): Record<string, string> {
  * defaults people change. A reset of every key reports every changed key.
  */
 function watchSettings(): () => void {
-	let previous = getSettings();
+    let previous = getSettings();
 
-	return settings.subscribe((value) => {
-		const wasEnabled = previous.telemetryEnabled;
+    return settings.subscribe((value) => {
+        const wasEnabled = previous.telemetryEnabled;
 
-		for (const key of Object.keys(value) as SettingKey[]) {
-			if (previous[key] === value[key]) continue;
+        for (const key of Object.keys(value) as SettingKey[]) {
+            if (previous[key] === value[key]) continue;
 
-			// An opt-out never reports itself: `track` reads the new value first.
-			track('settings.change', { props: { key, value: value[key] } });
-		}
+            // An opt-out never reports itself: `track` reads the new value first.
+            track("settings.change", { props: { key, value: value[key] } });
+        }
 
-		previous = value;
+        previous = value;
 
-		if (wasEnabled && !value.telemetryEnabled) stopTelemetry();
-	});
+        if (wasEnabled && !value.telemetryEnabled) stopTelemetry();
+    });
 }
 
 /**
@@ -232,48 +232,48 @@ function watchSettings(): () => void {
  * console methods untouched.
  */
 export function initTelemetry(): () => void {
-	if (started || isDisabled()) return () => {};
+    if (started || isDisabled()) return () => {};
 
-	started = true;
-	startedAt = Date.now();
-	ended = false;
+    started = true;
+    startedAt = Date.now();
+    ended = false;
 
-	try {
-		// This handler runs before the one of the queue, so `session.end` joins the
-		// last batch. A listener runs in the order of its registration.
-		stopExit = watchExit();
-		stopQueue = startQueue();
-		stopWatch = watchSettings();
+    try {
+        // This handler runs before the one of the queue, so `session.end` joins the
+        // last batch. A listener runs in the order of its registration.
+        stopExit = watchExit();
+        stopQueue = startQueue();
+        stopWatch = watchSettings();
 
-		// Both modules import this one, so load them here and not at the top.
-		void import('./console').then((module) => {
-			stopConsole = module.startConsoleCapture();
-		});
+        // Both modules import this one, so load them here and not at the top.
+        void import("./console").then((module) => {
+            stopConsole = module.startConsoleCapture();
+        });
 
-		void import('./errors').then((module) => {
-			stopErrors = module.startErrorCapture();
-		});
+        void import("./errors").then((module) => {
+            stopErrors = module.startErrorCapture();
+        });
 
-		track('app.start', {
-			props: { platform: platform(), version: studioVersion(), ...sessionContext() }
-		});
-	} catch {
-		// A failed start leaves the app untouched.
-	}
+        track("app.start", {
+            props: { platform: platform(), version: studioVersion(), ...sessionContext() }
+        });
+    } catch {
+        // A failed start leaves the app untouched.
+    }
 
-	return () => {
-		stopConsole?.();
-		stopQueue?.();
-		stopWatch?.();
-		stopErrors?.();
-		stopExit?.();
-		stopConsole = null;
-		stopQueue = null;
-		stopWatch = null;
-		stopErrors = null;
-		stopExit = null;
-		started = false;
-	};
+    return () => {
+        stopConsole?.();
+        stopQueue?.();
+        stopWatch?.();
+        stopErrors?.();
+        stopExit?.();
+        stopConsole = null;
+        stopQueue = null;
+        stopWatch = null;
+        stopErrors = null;
+        stopExit = null;
+        started = false;
+    };
 }
 
 /**
@@ -283,20 +283,20 @@ export function initTelemetry(): () => void {
  * on the same event, so the totals still reach the server.
  */
 function watchExit(): () => void {
-	const onExit = () => {
-		if (ended) return;
+    const onExit = () => {
+        if (ended) return;
 
-		ended = true;
+        ended = true;
 
-		track('session.end', {
-			durationMs: Date.now() - startedAt,
-			props: { ...counts }
-		});
-	};
+        track("session.end", {
+            durationMs: Date.now() - startedAt,
+            props: { ...counts }
+        });
+    };
 
-	window.addEventListener('pagehide', onExit);
+    window.addEventListener("pagehide", onExit);
 
-	return () => window.removeEventListener('pagehide', onExit);
+    return () => window.removeEventListener("pagehide", onExit);
 }
 
 /**
@@ -306,15 +306,15 @@ function watchExit(): () => void {
  * cannot send an event that carries the old install id.
  */
 export function stopTelemetry(): void {
-	if (isDisabled()) return;
+    if (isDisabled()) return;
 
-	clearQueue();
-	forgetIdentity();
+    clearQueue();
+    forgetIdentity();
 }
 
 /** Sends the buffer now. Use it before a navigation that leaves the app. */
 export function flushTelemetry(): void {
-	if (isDisabled()) return;
+    if (isDisabled()) return;
 
-	void flush();
+    void flush();
 }

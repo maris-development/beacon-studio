@@ -1,338 +1,343 @@
 <script lang="ts">
-	import Cookiecrumb from '@/components/cookiecrumb/CookieCrumb.svelte';
-	import { onDestroy, onMount, untrack } from 'svelte';
-	import { page } from '$app/state';
-	import type { CompiledQuery } from '@/beacon-api/types';
-	import { resolveUrlQuery } from '@/stores/query-library';
-	import QuerySelectorHeader from '@/components/query-builder/QuerySelectorHeader.svelte';
-	import { QueryWorkspace } from '@/components/query-builder/QueryWorkspace.svelte';
-	import { getDefaultQueryActions } from '@/components/query-builder/QueryActions';
-	import VisualisationTabs from '@/components/visualisation/VisualisationTabs.svelte';
-	import LoadingSpinner from '@/components/loading-overlay/LoadingSpinner.svelte';
-	import PlotCanvas from '@/components/plots/PlotCanvas.svelte';
-	import PlotConfigPanel from '@/components/plots/PlotConfigPanel.svelte';
-	import PlotTabs from '@/components/plots/PlotTabs.svelte';
-	import { ChartExplorerController } from '@/components/plots/ChartExplorerController.svelte';
-	import { type ChartViewState } from '@/plots/plot-config';
-	import { addToast } from '@/stores/toasts';
-	import { runBlockReason } from '@/query/query-guard';
-	import { settings } from '@/stores/settings';
-	import { t } from '@/i18n';
+    import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
+    import { page } from "$app/state";
+    import type { RunQuery } from "@/query/run-query";
+    import { resolveUrlQuery } from "@/stores/query-library";
+    import QuerySelectorHeader from "@/components/query-builder/QuerySelectorHeader.svelte";
+    import { QueryWorkspace } from "@/components/query-builder/QueryWorkspace.svelte";
+    import { getDefaultQueryActions } from "@/components/query-builder/QueryActions";
+    import VisualisationTabs from "@/components/visualisation/VisualisationTabs.svelte";
+    import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
+    import PlotCanvas from "@/components/plots/PlotCanvas.svelte";
+    import PlotConfigPanel from "@/components/plots/PlotConfigPanel.svelte";
+    import PlotTabs from "@/components/plots/PlotTabs.svelte";
+    import { ChartExplorerController } from "@/components/plots/ChartExplorerController.svelte";
+    import { type ChartViewState } from "@/plots/plot-config";
+    import { addToast } from "@/stores/toasts";
+    import { settings } from "@/stores/settings";
+    import { t } from "@/i18n";
 
-	const workspace = $state(new QueryWorkspace());
+    const workspace = $state(new QueryWorkspace());
 
-	// The controller owns the result, the plots and the numbers behind them. The
-	// page keeps only the query effect and the markup.
-	const charts = new ChartExplorerController(
-		// The controller names the block of its run. The active block can change
-		// while a query runs, so the callbacks must not read the selection.
-		(id) => workspace.beginBlockRun(id),
-		(id, token) => workspace.endBlockRun(id, token),
-		(id, rows) => workspace.markBlockRun(id, rows)
-	);
+    // The controller owns the result, the plots and the numbers behind them. The
+    // page keeps only the query effect and the markup.
+    const charts = new ChartExplorerController(
+        // The controller names the block of its run. The active block can change
+        // while a query runs, so the callbacks must not read the selection.
+        (id) => workspace.beginBlockRun(id),
+        (id, token) => workspace.endBlockRun(id, token),
+        (id, rows) => workspace.markBlockRun(id, rows)
+    );
 
-	onMount(() => {
-		// A deep-link opens one more block. `?q=` comes from "open in workbench"
-		// and brings the saved builder state. `?query=` comes from a share link.
-		workspace.openFromUrl(resolveUrlQuery(page.url));
+    onMount(() => {
+        // A deep-link opens one more block. `?q=` comes from "open in workbench"
+        // and brings the saved builder state. `?query=` comes from a share link.
+        workspace.openFromUrl(resolveUrlQuery(page.url));
 
-		return () => workspace.destroy();
-	});
+        return () => workspace.destroy();
+    });
 
-	const queryActions = $derived(getDefaultQueryActions(workspace));
+    const queryActions = $derived(getDefaultQueryActions(workspace));
 
-	// `workspace.activeBlock` is a new object on every write to the block
-	// collection — including our own `markBlockRun` below. Tracking that object
-	// (or `compiledQuery` derived from it) as an effect dependency would re-fire
-	// the effect after every run, forever. Track primitives instead: the block id
-	// and a content key for the compiled query.
-	const activeBlockId = $derived(workspace.activeBlockId);
-	const compiledQuery: CompiledQuery | null = $derived(
-		QueryWorkspace.getQuery(workspace.activeBlock)
-	);
-	const queryKey = $derived(compiledQuery ? JSON.stringify(compiledQuery) : null);
+    // `workspace.activeBlock` is a new object on every write to the block
+    // collection — including our own `markBlockRun` below. Tracking that object
+    // (or `resultQuery` derived from it) as an effect dependency would re-fire
+    // the effect after every run, forever. Track primitives instead: the block id
+    // and a content key for the query: the compiled query, or the SQL text.
+    const activeBlockId = $derived(workspace.activeBlockId);
+    const resultQuery: RunQuery | null = $derived(
+        QueryWorkspace.resultQueryOf(workspace.activeBlock)
+    );
+    const queryKey = $derived(resultQuery ? JSON.stringify(resultQuery) : null);
 
-	// The node of the active block. A block owns its node, so a switch of block
-	// switches the node. The URL is a primitive, so the run effect below can track
-	// it. It is null while the block names no node, and while the node list
-	// holds no node for its ref. The effect then runs nothing.
-	//
-	// The URL also belongs in the run key. A user can add a node that a share link
-	// asked for. The query must then run, with no other change to the block.
-	const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
+    // The node of the active block. A block owns its node, so a switch of block
+    // switches the node. The URL is a primitive, so the run effect below can track
+    // it. It is null while the block names no node, and while the node list
+    // holds no node for its ref. The effect then runs nothing.
+    //
+    // The URL also belongs in the run key. A user can add a node that a share link
+    // asked for. The query must then run, with no other change to the block.
+    const activeNodeUrl = $derived(workspace.activeNode?.url ?? null);
 
-	let lastRunKey: string | null = $state(null);
-	/**
-	 * The query that the safeguard stopped last. It keeps the warning to one
-	 * toast: this effect writes `lastRunKey`, which makes it run a second time.
-	 */
-	let lastBlockedKey: string | null = $state(null);
-	/** The block of the last run. A new block brings its own plots. */
-	let lastRunBlockId: string | null = $state(null);
+    let lastRunKey: string | null = $state(null);
+    /**
+     * The query that the safeguard stopped last. It keeps the warning to one
+     * toast: this effect writes `lastRunKey`, which makes it run a second time.
+     */
+    let lastBlockedKey: string | null = $state(null);
+    /** The block of the last run. A new block brings its own plots. */
+    let lastRunBlockId: string | null = $state(null);
 
-	// The safeguard blocks a query with no filter. It belongs in the run key, so
-	// the query runs after the user turns the safeguard off.
-	const requireFilters = $derived($settings.requireQueryFilters);
+    // The safeguard blocks a query with no filter. It belongs in the run key, so
+    // the query runs after the user turns the safeguard off.
+    const requireFilters = $derived($settings.requireQueryFilters);
 
-	// Re-run only when the selected block, or its compiled query content, actually changes.
-	$effect(() => {
-		const blockId = activeBlockId;
-		const key = queryKey;
-		const nodeUrl = activeNodeUrl;
+    // Re-run only when the selected block, or its compiled query content, actually changes.
+    $effect(() => {
+        const blockId = activeBlockId;
+        const key = queryKey;
+        const nodeUrl = activeNodeUrl;
 
-		if (!blockId || !key || !nodeUrl) {
-			charts.clearQueryResult();
-			lastRunKey = null;
-			return;
-		}
+        if (!blockId || !key || !nodeUrl) {
+            charts.clearQueryResult();
+            lastRunKey = null;
+            return;
+        }
 
-		// The safeguard stops a query with no filter. Show nothing, and run nothing.
-		// The run key stays empty, so a revert of the edit runs the query again.
-		const blocked = runBlockReason(untrack(() => compiledQuery));
-		if (blocked) {
-			const blockedKey = `${blockId}:${nodeUrl}:${key}`;
-			if (blockedKey !== lastBlockedKey) {
-				lastBlockedKey = blockedKey;
-				addToast({ type: 'warning', key: blocked.key, values: blocked.values });
-			}
+        // The safeguard stops a query with no filter. Show nothing, and run nothing.
+        // The run key stays empty, so a revert of the edit runs the query again.
+        // A SQL block also gets the read-only check here.
+        const blocked = QueryWorkspace.blockReason(
+            untrack(() => workspace.activeBlock),
+            requireFilters
+        );
+        if (blocked) {
+            const blockedKey = `${blockId}:${nodeUrl}:${key}`;
+            if (blockedKey !== lastBlockedKey) {
+                lastBlockedKey = blockedKey;
+                addToast({ type: "warning", key: blocked.key, values: blocked.values });
+            }
 
-			charts.clearQueryResult();
-			lastRunKey = null;
-			return;
-		}
+            charts.clearQueryResult();
+            lastRunKey = null;
+            return;
+        }
 
-		lastBlockedKey = null;
+        lastBlockedKey = null;
 
-		const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
-		if (runKey === lastRunKey) return;
+        const runKey = `${blockId}:${nodeUrl}:${key}:${requireFilters}`;
+        if (runKey === lastRunKey) return;
 
-		const isSameBlock = blockId === lastRunBlockId;
-		lastRunKey = runKey;
-		lastRunBlockId = blockId;
+        const isSameBlock = blockId === lastRunBlockId;
+        lastRunKey = runKey;
+        lastRunBlockId = blockId;
 
-		// Read the live block/query untracked: we only want blockId+key above to
-		// drive re-runs, not every downstream write this triggers.
-		const { block, query, node } = untrack(() => ({
-			block: workspace.activeBlock,
-			query: compiledQuery,
-			node: workspace.activeNode
-		}));
-		if (!block || !query || !node) return;
+        // Read the live block/query untracked: we only want blockId+key above to
+        // drive re-runs, not every downstream write this triggers.
+        const { block, query, node } = untrack(() => ({
+            block: workspace.activeBlock,
+            query: resultQuery,
+            node: workspace.activeNode
+        }));
+        if (!block || !query || !node) return;
 
-		// The saved plots of this block belong on the page again. A block with no
-		// saved plots gets one default plot.
-		if (!isSameBlock) {
-			charts.applyViewState(
-				block.id,
-				block.view?.chart,
-				block.draft?.spatialFilter ?? null,
-				block.coordinateColumns ?? null
-			);
-		} else {
-			// The same block can carry a new area, for example after the user applied
-			// a cross section on the map. A cross section plot reads that line.
-			charts.setSelection(block.draft?.spatialFilter ?? null, block.coordinateColumns ?? null);
-		}
+        // The saved plots of this block belong on the page again. A block with no
+        // saved plots gets one default plot.
+        if (!isSameBlock) {
+            charts.applyViewState(
+                block.id,
+                block.view?.chart,
+                block.draft?.spatialFilter ?? null,
+                block.coordinateColumns ?? null
+            );
+        } else {
+            // The same block can carry a new area, for example after the user applied
+            // a cross section on the map. A cross section plot reads that line.
+            charts.setSelection(
+                block.draft?.spatialFilter ?? null,
+                block.coordinateColumns ?? null
+            );
+        }
 
-		// Show a cached result at once if the block already has one.
-		charts.showQueryFromCache(block.datasetKey);
+        // Show a cached result at once if the block already has one.
+        charts.showQueryFromCache(block.datasetKey);
 
-		charts.runAndShowQuery(query, node, block.id);
-	});
+        charts.runAndShowQuery(query, node, block.id);
+    });
 
-	// Keep the plots with the block. Therefore a visit to the map or the table
-	// page, and a reload, bring the same plots back.
-	//
-	// The write is delayed. It serialises every block into localStorage, which is
-	// far too much work for one keystroke in a title field. The delay collects a
-	// burst of edits into one write.
-	//
-	// `viewStateFor` returns null while the controller still holds the plots of
-	// another block.
-	const PERSIST_DELAY_MS = 400;
+    // Keep the plots with the block. Therefore a visit to the map or the table
+    // page, and a reload, bring the same plots back.
+    //
+    // The write is delayed. It serialises every block into localStorage, which is
+    // far too much work for one keystroke in a title field. The delay collects a
+    // burst of edits into one write.
+    //
+    // `viewStateFor` returns null while the controller still holds the plots of
+    // another block.
+    const PERSIST_DELAY_MS = 400;
 
-	let persistTimer: ReturnType<typeof setTimeout> | null = null;
-	let pendingWrite: { blockId: string; state: ChartViewState } | null = null;
+    let persistTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingWrite: { blockId: string; state: ChartViewState } | null = null;
 
-	$effect(() => {
-		const blockId = activeBlockId;
-		const state = charts.viewStateFor(blockId);
-		if (!blockId || !state) return;
+    $effect(() => {
+        const blockId = activeBlockId;
+        const state = charts.viewStateFor(blockId);
+        if (!blockId || !state) return;
 
-		// The block id travels with the state. By the time the write runs, the user
-		// can have selected another block, and this state belongs to the old one.
-		pendingWrite = { blockId, state };
+        // The block id travels with the state. By the time the write runs, the user
+        // can have selected another block, and this state belongs to the old one.
+        pendingWrite = { blockId, state };
 
-		if (persistTimer) clearTimeout(persistTimer);
-		persistTimer = setTimeout(flushPersist, PERSIST_DELAY_MS);
-	});
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = setTimeout(flushPersist, PERSIST_DELAY_MS);
+    });
 
-	onDestroy(flushPersist);
+    onDestroy(flushPersist);
 
-	function flushPersist() {
-		if (persistTimer) clearTimeout(persistTimer);
-		persistTimer = null;
+    function flushPersist() {
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = null;
 
-		const write = pendingWrite;
-		pendingWrite = null;
-		if (!write) return;
+        const write = pendingWrite;
+        pendingWrite = null;
+        if (!write) return;
 
-		untrack(() => workspace.updateChartView(write.blockId, write.state));
-	}
+        untrack(() => workspace.updateChartView(write.blockId, write.state));
+    }
 
-	// Rebuild the numbers of the plot when the choices behind them change.
-	//
-	// The reads below are the dependencies. The work itself is deferred past the
-	// next paint, because it walks every row: at 600k rows a synchronous build
-	// here would hold the navigation and leave the user on the previous page,
-	// with a frozen window, until the whole chart was ready.
-	$effect(() => {
-		void [charts.seriesKey, charts.contourKey, charts.interpolationKey, charts.table];
-		untrack(() => charts.schedulePrepare());
-	});
+    // Rebuild the numbers of the plot when the choices behind them change.
+    //
+    // The reads below are the dependencies. The work itself is deferred past the
+    // next paint, because it walks every row: at 600k rows a synchronous build
+    // here would hold the navigation and leave the user on the previous page,
+    // with a frozen window, until the whole chart was ready.
+    $effect(() => {
+        void [charts.seriesKey, charts.contourKey, charts.interpolationKey, charts.table];
+        untrack(() => charts.schedulePrepare());
+    });
 
-	onDestroy(() => charts.cancelPrepare());
+    onDestroy(() => charts.cancelPrepare());
 
-	// -- export --------------------------------------------------------------
+    // -- export --------------------------------------------------------------
 
-	let plotCanvas: ReturnType<typeof PlotCanvas> | null = $state(null);
+    let plotCanvas: ReturnType<typeof PlotCanvas> | null = $state(null);
 
-	function exportPng() {
-		const plot = charts.activePlot;
-		if (!plot || !plotCanvas) return;
+    function exportPng() {
+        const plot = charts.activePlot;
+        if (!plot || !plotCanvas) return;
 
-		plotCanvas.exportPng(plot.title || plot.name);
-	}
+        plotCanvas.exportPng(plot.title || plot.name);
+    }
 
-	function resetView() {
-		plotCanvas?.resetView();
-	}
+    function resetView() {
+        plotCanvas?.resetView();
+    }
 </script>
 
 <svelte:head>
-	<title>{$t('app.pageTitle', { page: $t('chart.title') })}</title>
+    <title>{$t("app.pageTitle", { page: $t("chart.title") })}</title>
 </svelte:head>
 
 <Cookiecrumb
-	crumbs={[
-		{ label: $t('visualisation.title'), href: '/visualisations' },
-		{ label: $t('chart.title'), href: '/visualisations/chart-explorer' }
-	]}
+    crumbs={[
+        { label: $t("visualisation.title"), href: "/visualisations" },
+        { label: $t("chart.title"), href: "/visualisations/chart-explorer" }
+    ]}
 />
 
 <div class="page-wrapper">
-	<QuerySelectorHeader {workspace} {queryActions} mode="view" />
+    <QuerySelectorHeader {workspace} {queryActions} mode="view" />
 
-	<div class="vertical-tabs-wrapper">
-		<VisualisationTabs />
+    <div class="vertical-tabs-wrapper">
+        <VisualisationTabs />
 
-		<div class="content page-container">
-			{#if !compiledQuery}
-				<p>{$t('chart.selectQuery')}</p>
-			{:else}
+        <div class="content page-container">
+            {#if !resultQuery}
+                <p>{$t("chart.selectQuery")}</p>
+            {:else}
+                <PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
 
-				<PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
+                <div class="plot-layout">
+                    <PlotConfigPanel controller={charts} />
 
-				<div class="plot-layout">
-					<PlotConfigPanel controller={charts} />
+                    <div class="plot-area">
+                        {#if charts.activePlot}
+                            <PlotCanvas
+                                bind:this={plotCanvas}
+                                plot={charts.activePlot}
+                                series={charts.displaySeries}
+                                caption={charts.caption}
+                                contours={charts.contours}
+                                interpolation={charts.interpolation}
+                                message={charts.message}
+                                onBusyChange={(busy) => charts.setCanvasBusy(busy)}
+                            />
+                        {/if}
 
-					<div class="plot-area">
-						{#if charts.activePlot}
-							<PlotCanvas
-								bind:this={plotCanvas}
-								plot={charts.activePlot}
-								series={charts.displaySeries}
-								caption={charts.caption}
-								contours={charts.contours}
-								interpolation={charts.interpolation}
-								message={charts.message}
-								onBusyChange={(busy) => charts.setCanvasBusy(busy)}
-							/>
-						{/if}
+                        {#if charts.isLoading || charts.isBusy}
+                            <div class="loading-overlay">
+                                <LoadingSpinner></LoadingSpinner>
 
-						{#if charts.isLoading || charts.isBusy}
-							<div class="loading-overlay">
-								<LoadingSpinner></LoadingSpinner>
-
-								{#if charts.isLoading}
-									<h3>{$t('chart.running')}</h3>
-								{:else}
-									<h3>{$t('chart.drawing')}</h3>
-								{/if}
-							</div>
-						{/if}
-					</div>
-				</div>
-			{/if}
-		</div>
-	</div>
+                                {#if charts.isLoading}
+                                    <h3>{$t("chart.running")}</h3>
+                                {:else}
+                                    <h3>{$t("chart.drawing")}</h3>
+                                {/if}
+                            </div>
+                        {/if}
+                    </div>
+                </div>
+            {/if}
+        </div>
+    </div>
 </div>
 
 <style lang="scss">
-	.page-wrapper {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		padding: 1rem;
-		flex-grow: 1;
-		min-height: 0;
-	}
+    .page-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        flex-grow: 1;
+        min-height: 0;
+    }
 
-	.vertical-tabs-wrapper {
-		flex-grow: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: row;
-		gap: 1rem;
+    .vertical-tabs-wrapper {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
 
-		.page-container {
-			display: flex;
-			flex-direction: column;
-			gap: 0.75rem;
-			min-height: 0;
-		}
+        .page-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 0;
+        }
 
-		.content {
-			flex-grow: 1;
-		}
-	}
+        .content {
+            flex-grow: 1;
+        }
+    }
 
-	.plot-layout {
-		flex-grow: 1;
-		min-height: 0;
-		display: flex;
-		flex-direction: row;
-		gap: 1rem;
-	}
+    .plot-layout {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+    }
 
-	.plot-area {
-		flex-grow: 1;
-		min-width: 0;
-		min-height: 0;
-		// Stack the canvas and the overlay in one cell, instead of positioning the
-		// overlay absolutely.
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		grid-template-rows: minmax(0, 1fr);
+    .plot-area {
+        flex-grow: 1;
+        min-width: 0;
+        min-height: 0;
+        // Stack the canvas and the overlay in one cell, instead of positioning the
+        // overlay absolutely.
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
 
-		// `:global` is required. Svelte scopes a bare `> *` to this component, and
-		// the root element of PlotCanvas carries that component's scope class, not
-		// this one. The rule would skip the canvas, which would then land in an
-		// implicit second row and sit below the spinner instead of behind it.
-		> :global(*) {
-			grid-column: 1;
-			grid-row: 1;
-		}
+        // `:global` is required. Svelte scopes a bare `> *` to this component, and
+        // the root element of PlotCanvas carries that component's scope class, not
+        // this one. The rule would skip the canvas, which would then land in an
+        // implicit second row and sit below the spinner instead of behind it.
+        > :global(*) {
+            grid-column: 1;
+            grid-row: 1;
+        }
 
-		.loading-overlay {
-			display: flex;
-			flex-direction: column;
-			gap: 1rem;
-			align-items: center;
-			justify-content: center;
-			background-color: rgba(255, 255, 255, 0.6);
-			border-radius: 0.5rem;
-			z-index: 2;
-		}
-	}
+        .loading-overlay {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 0.5rem;
+            z-index: 2;
+        }
+    }
 </style>

@@ -96,6 +96,17 @@ describe("buildCompletions", () => {
         expect(entries.filter((entry) => entry.kind === "column")).toHaveLength(MAX_COLUMN_ENTRIES);
     });
 
+    it("gives no write keywords for a read-only editor", () => {
+        const labels = buildCompletions({ tree: null, functions: [], columns: [], readOnly: true })
+            .filter((entry) => entry.kind === "keyword")
+            .map((entry) => entry.label);
+        expect(labels).toContain("SELECT");
+        expect(labels).toContain("VALUES");
+        expect(labels).not.toContain("INSERT INTO");
+        expect(labels).not.toContain("DROP TABLE");
+        expect(labels).not.toContain("EXPLAIN");
+    });
+
     it("always gives the keywords", () => {
         const entries = buildCompletions({ tree: null, functions: [], columns: [] });
         expect(entries.some((entry) => entry.kind === "keyword" && entry.label === "SELECT")).toBe(
