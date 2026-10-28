@@ -67,7 +67,8 @@ import {
 import { getCurrentNode, nodes, matchRef, resolveRef } from '@/services/beacon-node';
 import { openNodesSettled, whenOpenNodesSettled } from '@/services/open-nodes-import';
 import type { BeaconNode } from '@/beacon-api/types';
-import { askConfirm } from '@/stores/confirm';
+import { askChoice, askConfirm } from '@/stores/confirm';
+import { isSaved, saveQueryFrom } from '@/stores/saved-queries';
 import { addToast } from '@/stores/toasts';
 import { track } from '@/telemetry';
 import { translate, type MessageKey } from '@/i18n';
@@ -227,9 +228,9 @@ export class QueryWorkspace {
 	}
 
 	/**
-	 * The node for a new block: the node of the active block, else the node that
-	 * the sidebar selected. A new tab therefore stays on the node that the user
-	 * works on.
+	 * The node for a query that names no node, for example a share link: the node
+	 * of the active block, else the node that the sidebar selected. An empty block
+	 * gets no node. See {@link addBlock}.
 	 */
 	private defaultNodeRef(): NodeRef {
 		const active = this.activeBlock;
@@ -410,12 +411,12 @@ export class QueryWorkspace {
 		this.guessedNode = next;
 	}
 
-	/** Add an empty block and select it. It inherits the node of the active block. */
+	/** Add an empty block and select it. It has no node, so the user picks one first. */
 	addBlock(name?: string): StoredQuery {
 		const block = queryBlocks.append({
 			name: name ?? translate('workbench.untitledBlock', { number: nextBlockNumber() }),
 			draft: makeEmptyDraft(),
-			node: this.defaultNodeRef()
+			node: snapshotNode(null)
 		});
 		this.select(block.id);
 		track('workbench.block.add', { props: { origin: 'empty', blocks: this.blocks.length } });
@@ -436,6 +437,43 @@ export class QueryWorkspace {
 		this.select(block.id);
 		track('workbench.block.add', { props: { origin: source.role, blocks: this.blocks.length } });
 		return block;
+	}
+
+	/**
+	 * Open a saved query or a history entry from a list, and select its block.
+	 *
+	 * A block that holds the same query on the same node counts as open, and the
+	 * method selects it. The block is a copy with its own id, so the method
+	 * compares the content. An edit of the block makes it a different query.
+	 */
+	openStoredQuery(entry: StoredQuery): void {
+		const open = this.findBlockWithQuery(entry);
+		if (open) {
+			this.select(open.id);
+			return;
+		}
+
+		this.addFromStoredQuery(entry);
+
+		if (hasNodeRef(entry.node) && !resolveRef(entry.node)) {
+			this.warnMissingNode(entry.node.url || null);
+		}
+	}
+
+	/** The first block with the same query and node URL as the record, or null. */
+	private findBlockWithQuery(record: StoredQuery): StoredQuery | null {
+		const query = QueryWorkspace.getQuery(record);
+		if (!query) return null;
+
+		const key = JSON.stringify(query);
+
+		return (
+			this.blocks.find(
+				(block) =>
+					block.node?.url === record.node?.url &&
+					JSON.stringify(QueryWorkspace.getQuery(block)) === key
+			) ?? null
+		);
 	}
 
 	/**
@@ -493,19 +531,70 @@ export class QueryWorkspace {
 		return true;
 	}
 
-	/** Remove a block. Keep one block, and correct the active selection. */
+	/**
+	 * Save a copy of a block in the saved queries, and report the result with a
+	 * toast. Returns false when the block holds no query, or the save fails.
+	 */
+	saveBlock(id: string): boolean {
+		const block = this.blocks.find((candidate) => candidate.id === id);
+
+		if (!block || !QueryWorkspace.getQuery(block)) {
+			addToast({ key: 'saved.toast.noQuery', type: 'warning' });
+			return false;
+		}
+
+		try {
+			saveQueryFrom(block);
+			addToast({ key: 'saved.toast.saved', values: { name: block.name }, type: 'success' });
+			return true;
+		} catch (e) {
+			addToast({ key: 'saved.toast.saveFailed', message: String((e as Error)?.message ?? e), type: 'error' });
+			return false;
+		}
+	}
+
+	/**
+	 * Remove a block. Keep one block, and correct the active selection.
+	 *
+	 * A block with columns or a query asks first. The dialog tells if a saved
+	 * query holds the same query. An unsaved block offers to save before it closes.
+	 */
 	async closeBlock(id: string): Promise<void> {
 		if (this.blocks.length === 1) return;
 
 		const block = this.blocks.find((b) => b.id === id);
 		if (!block) return;
 
-		if ((block.draft?.selectedFields.length ?? 0) > 0) {
+		const hasQuery = !!QueryWorkspace.getQuery(block);
+		const hasColumns = (block.draft?.selectedFields.length ?? 0) > 0;
+
+		if (hasQuery && isSaved(block)) {
 			const goAhead = await askConfirm({
 				title: translate('workbench.closeBlock.title'),
-				message: translate('workbench.closeBlock.message'),
+				message: translate('workbench.closeBlock.savedMessage'),
+				confirmLabel: translate('workbench.closeBlock.confirm')
+			});
+
+			if (!goAhead) return;
+		} else if (hasQuery) {
+			const answer = await askChoice({
+				title: translate('workbench.closeBlock.title'),
+				message: translate('workbench.closeBlock.unsavedMessage'),
 				note: translate('workbench.closeBlock.note'),
-				confirmLabel: translate('workbench.closeBlock.confirm'),
+				alternateLabel: translate('workbench.closeBlock.discard'),
+				alternateDestructive: true,
+				confirmLabel: translate('workbench.closeBlock.saveAndClose')
+			});
+
+			if (answer === 'cancel') return;
+			if (answer === 'confirm' && !this.saveBlock(id)) return;
+		} else if (hasColumns) {
+			// An incomplete draft has no query to save.
+			const goAhead = await askConfirm({
+				title: translate('workbench.closeBlock.title'),
+				message: translate('workbench.closeBlock.unsavedMessage'),
+				note: translate('workbench.closeBlock.note'),
+				confirmLabel: translate('workbench.closeBlock.discard'),
 				destructive: true
 			});
 

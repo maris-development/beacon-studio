@@ -13,8 +13,6 @@
 -->
 <script lang="ts">
     import CircleCheck from "@lucide/svelte/icons/circle-check";
-    import GridIcon from "@lucide/svelte/icons/grid";
-    import ListIcon from "@lucide/svelte/icons/list";
     import PlusIcon from "@lucide/svelte/icons/plus";
     import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
     import * as Select from "$lib/components/ui/select/index.js";
@@ -25,14 +23,19 @@
     import BeaconNodeStatus from "../BeaconNodeStatus.svelte";
     import Button from "../buttons/Button.svelte";
     import Card from "../card/Card.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
+    import QueryBuilderViewToggle, { type ViewMode } from "./QueryBuilderViewToggle.svelte";
     import { t } from "@/i18n";
 
     let {
+        step,
         selected = null,
         missingUrl = null,
         nodesReady = true,
         onPick
     }: {
+        /** The number of this step in the builder. */
+        step: number;
         /** The node of the query now, or null while it has none. */
         selected?: BeaconNode | null;
         /** The URL of a node that the list does not hold, or null. */
@@ -42,8 +45,6 @@
         /** Called with the node the user picked. */
         onPick: (node: BeaconNode) => void;
     } = $props();
-
-    type ViewMode = "cards" | "list";
 
     let viewMode = $state<ViewMode>("cards");
     let viewModeInitialized = $state(false);
@@ -81,118 +82,98 @@
     />
 {/if}
 
-<div class="node-selector-header">
-    <h3>{$t("query.node.title")}</h3>
-
-    <div class="view-controls">
+<QueryBuilderStep {step} title={$t("query.node.title")} description={$t("query.node.description")}>
+    {#snippet actions()}
         <p class="node-count">{$t("query.node.count", { count: $nodes.length })}</p>
+        <QueryBuilderViewToggle bind:mode={viewMode} />
+    {/snippet}
 
-        <Button
-            variant={viewMode === "cards" ? "default" : "outline"}
-            onclick={() => (viewMode = "cards")}
-        >
-            {$t("query.view.cards")}
-            <GridIcon />
-        </Button>
+    <div class="node-step">
+        {#if !nodesReady && $nodes.length === 0}
+            <p class="node-loading">{$t("query.node.loading")}</p>
+        {/if}
 
-        <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            onclick={() => (viewMode = "list")}
-        >
-            {$t("query.view.list")}
-            <ListIcon />
-        </Button>
-    </div>
-</div>
+        {#if missingUrl}
+            <div class="missing-node">
+                <TriangleAlertIcon size="1rem" />
+                <p>
+                    {$t("query.node.missingBeforeUrl")}
+                    <strong>{missingUrl}</strong>{$t("query.node.missingAfterUrl")}
+                </p>
+                <Button onclick={() => (showAddModal = true)}>
+                    {$t("query.node.add")}
+                    <PlusIcon />
+                </Button>
+            </div>
+        {/if}
 
-{#if !nodesReady && $nodes.length === 0}
-    <p class="node-loading">{$t("query.node.loading")}</p>
-{/if}
-
-{#if missingUrl}
-    <div class="missing-node">
-        <TriangleAlertIcon size="1rem" />
-        <p>
-            {$t("query.node.missingBeforeUrl")}
-            <strong>{missingUrl}</strong>{$t("query.node.missingAfterUrl")}
-        </p>
-        <Button onclick={() => (showAddModal = true)}>
-            {$t("query.node.add")}
-            <PlusIcon />
-        </Button>
-    </div>
-{/if}
-
-<div class="node-views">
-    {#if viewMode === "cards"}
-        <div class="cards-view">
-            {#each $nodes as node (node.id)}
-                <Card
-                    class={selected?.id === node.id ? "selected" : ""}
-                    onclick={() => onPick(node)}
-                >
-                    <div class="node-header">
-                        <h4>{node.name}</h4>
-                        {#if selected?.id === node.id}
-                            <CircleCheck class="check" size="1rem" />
-                        {:else}
-                            <BeaconNodeStatus health={node} variant="dot" />
-                        {/if}
-                    </div>
-                    <p class="node-url">{node.url}</p>
-                </Card>
-            {/each}
-
-            <Card class="add-card" onclick={() => (showAddModal = true)}>
-                <div class="node-header">
-                    <h4>{$t("query.node.add")}</h4>
-                    <PlusIcon size="1rem" />
-                </div>
-                <p class="node-url">{$t("query.node.addDescription")}</p>
-            </Card>
-        </div>
-    {:else}
-        <Select.Root type="single" name="beaconNode" value={selectedId} onValueChange={pickById}>
-            <Select.Trigger class="node-select-trigger">
-                {selected?.name ?? $t("query.node.placeholder")}
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Group>
-                    <Select.Label>{$t("query.node.listLabel")}</Select.Label>
+        <div class="node-views">
+            {#if viewMode === "cards"}
+                <div class="cards-view">
                     {#each $nodes as node (node.id)}
-                        <Select.Item value={node.id} label={node.name}>
-                            {node.name}
-                        </Select.Item>
+                        <Card
+                            class={selected?.id === node.id ? "selected" : ""}
+                            onclick={() => onPick(node)}
+                        >
+                            <div class="node-header">
+                                <h4>{node.name}</h4>
+                                {#if selected?.id === node.id}
+                                    <CircleCheck class="check" size="1rem" />
+                                {:else}
+                                    <BeaconNodeStatus health={node} variant="dot" />
+                                {/if}
+                            </div>
+                            <p class="node-url">{node.url}</p>
+                        </Card>
                     {/each}
-                </Select.Group>
-            </Select.Content>
-        </Select.Root>
-    {/if}
-</div>
+
+                    <Card class="add-card" onclick={() => (showAddModal = true)}>
+                        <div class="node-header">
+                            <h4>{$t("query.node.add")}</h4>
+                            <PlusIcon size="1rem" />
+                        </div>
+                        <p class="node-url">{$t("query.node.addDescription")}</p>
+                    </Card>
+                </div>
+            {:else}
+                <Select.Root
+                    type="single"
+                    name="beaconNode"
+                    value={selectedId}
+                    onValueChange={pickById}
+                >
+                    <Select.Trigger class="node-select-trigger">
+                        {selected?.name ?? $t("query.node.placeholder")}
+                    </Select.Trigger>
+                    <Select.Content>
+                        <Select.Group>
+                            <Select.Label>{$t("query.node.listLabel")}</Select.Label>
+                            {#each $nodes as node (node.id)}
+                                <Select.Item value={node.id} label={node.name}>
+                                    {node.name}
+                                </Select.Item>
+                            {/each}
+                        </Select.Group>
+                    </Select.Content>
+                </Select.Root>
+            {/if}
+        </div>
+    </div>
+</QueryBuilderStep>
 
 <style lang="scss">
-    .node-selector-header {
+    p.node-count {
+        margin: 0;
+    }
+
+    .node-step {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        h3 {
-            margin: 0;
-        }
-
-        .view-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-
-            p.node-count {
-                margin: 0;
-            }
-        }
+        flex-direction: column;
+        gap: 1rem;
     }
 
     p.node-loading {
-        margin: 1rem 0 0;
+        margin: 0;
         font-size: var(--font-size-sm);
         color: var(--muted-foreground);
     }
@@ -201,7 +182,6 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        margin-top: 1rem;
         padding: 0.75rem;
         border: 1px solid var(--border);
         border-left: 3px solid IndianRed;
@@ -215,8 +195,6 @@
     }
 
     .node-views {
-        margin-top: 1rem;
-
         .cards-view {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(min(16rem, 100%), 1fr));

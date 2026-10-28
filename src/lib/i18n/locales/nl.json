@@ -42,7 +42,7 @@
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Querybouwer",
+            "queryBuilder": "Query-werkbank",
             "workspace": "Werkruimte",
             "dataBrowser": "Databrowser",
             "datasets": "Datasets",
@@ -190,8 +190,6 @@
         "untitled": "Naamloos",
         "filterCount": "{count, plural, one {# filter} other {# filters}}",
         "entry": {
-            "noColumns": "(geen kolommen)",
-            "openInBuilder": "Openen in Querybouwer",
             "table": "Tabel",
             "map": "Kaart",
             "chart": "Grafiek"
@@ -235,14 +233,10 @@
             "downloadSql": "SQL downloaden",
             "save": "Query opslaan",
             "saveTitle": "Query opslaan",
+            "saved": "Opgeslagen ({count, number})",
+            "history": "Geschiedenis",
             "resetTitle": "Queryselectie terugzetten",
             "cacheInfo": "Informatie over querycaching"
-        },
-        "share": {
-            "copyTitle": "Kopieer een link die in elke browser werkt",
-            "none": "Dit item heeft geen deelbare query.",
-            "copied": "Deellink gekopieerd naar klembord.",
-            "copyFailed": "Kan de deellink niet kopiëren."
         },
         "guard": {
             "noFilters": "Deze query heeft geen filters. Voeg minstens één filter toe, of zet \"Filter verplicht\" uit in de instellingen."
@@ -259,6 +253,8 @@
         },
         "parameters": {
             "title": "Queryparameters",
+            "description": "Voeg de kolommen toe die je nodig hebt. Voeg daarna filters toe.",
+            "needsTable": "Kies eerst een datatabel.",
             "add": "Parameter toevoegen",
             "remove": "Kolom verwijderen",
             "dialogTitle": "Queryparameter toevoegen",
@@ -267,6 +263,8 @@
             "emptyBeforeTable": "Geen kolommen gevonden voor tabel",
             "emptyAfterTable": ".",
             "available": "Beschikbare kolommen ({count, number})",
+            "selectAll": "Alles selecteren",
+            "deselectAll": "Alles deselecteren",
             "empty": "Geen parameters gekozen. Gebruik de knop \"Parameter toevoegen\" hierboven."
         },
         "view": {
@@ -275,6 +273,7 @@
         },
         "node": {
             "title": "Beacon-node kiezen",
+            "description": "Kies de node met je data.",
             "count": "{count, plural, one {# node} other {# nodes}}",
             "loading": "Beacon-nodes laden...",
             "missingBeforeUrl": "Deze query draait op",
@@ -289,6 +288,8 @@
         },
         "table": {
             "title": "Datatabel kiezen",
+            "description": "Kies de tabel voor je query.",
+            "needsNode": "Kies eerst een Beacon-node.",
             "count": "{count, plural, one {# tabel} other {# tabellen}}",
             "countLoading": "Tabellen laden",
             "noDescription": "Geen beschrijving beschikbaar",
@@ -302,7 +303,11 @@
         },
         "outputFormat": {
             "title": "Uitvoerformaat",
+            "description": "Kies het bestandsformaat van de gedownloade data.",
             "listLabel": "Tabellen"
+        },
+        "steps": {
+            "incomplete": "Voltooi eerst alle stappen."
         },
         "geoFilter": {
             "title": "Geografisch filter",
@@ -382,22 +387,35 @@
         },
         "closeBlock": {
             "title": "Deze query sluiten",
-            "message": "Deze query bevat kolommen die je hebt gekozen.",
+            "savedMessage": "Deze query is opgeslagen. Je kunt hem opnieuw openen via Opgeslagen queries.",
+            "unsavedMessage": "Deze query is niet opgeslagen.",
             "note": "Je kunt dit niet ongedaan maken.",
-            "confirm": "Query sluiten"
+            "confirm": "Query sluiten",
+            "discard": "Sluiten zonder opslaan",
+            "saveAndClose": "Opslaan en sluiten"
         },
         "header": {
             "editing": "{name} bewerken",
             "viewing": "{name} bekijken"
         },
         "panes": {
-            "builder": "Querybouwer",
+            "builder": "Query-werkbank",
             "collapseBuilder": "Bouwer inklappen",
             "expandBuilder": "Bouwer uitklappen",
-            "json": "Query-JSON",
-            "copyJson": "JSON naar klembord kopiëren",
-            "collapseJson": "JSON inklappen",
-            "expandJson": "JSON uitklappen"
+            "code": "Code",
+            "collapseCode": "Code inklappen",
+            "expandCode": "Code uitklappen"
+        },
+        "code": {
+            "tabs": "Codetaal",
+            "json": "JSON",
+            "sql": "SQL",
+            "python": "Python",
+            "copy": "Kopiëren",
+            "copyTitle": "Code naar klembord kopiëren",
+            "downloadTitle": "Code als bestand downloaden",
+            "emptyTitle": "Nog geen query",
+            "emptyText": "Kies links een tabel en ten minste één kolom."
         },
         "block": {
             "add": "Nieuwe query",
@@ -437,37 +455,38 @@
     },
     "history": {
         "title": "Querygeschiedenis",
-        "intro": "Queries die je hebt uitgevoerd. Voer ze opnieuw uit, bekijk ze of bewerk ze.",
-        "clear": "Geschiedenis wissen",
-        "empty": {
-            "title": "Nog geen queries",
-            "text": "Zodra je een query uitvoert, verschijnt die hier."
-        },
+        "empty": "Er staan geen queries in de geschiedenis.",
         "entry": {
-            "never": "nooit",
-            "duration": "{ms, number} ms",
-            "runCount": "· {count, number}× uitgevoerd",
             "remove": "Uit geschiedenis verwijderen"
+        },
+        "delete": {
+            "title": "Item uit geschiedenis verwijderen",
+            "message": "\"{name}\" uit de geschiedenis verwijderen?"
         }
     },
     "saved": {
         "title": "Opgeslagen queries",
-        "intro": "Queries die je hebt opgeslagen vanuit de querybouwer. Voer ze opnieuw uit, visualiseer ze of open ze.",
-        "clear": "Opgeslagen wissen",
-        "empty": {
-            "title": "Nog geen opgeslagen queries",
-            "beforeLink": "Bouw een query in de",
-            "beforeButton": "en klik op",
-            "afterButton": "om die hier toe te voegen."
-        },
+        "empty": "Er zijn geen opgeslagen queries.",
         "entry": {
-            "savedAgo": "opgeslagen {time}",
             "remove": "Opgeslagen query verwijderen"
+        },
+        "delete": {
+            "title": "Opgeslagen query verwijderen",
+            "message": "Opgeslagen query \"{name}\" verwijderen?"
         },
         "toast": {
             "noQuery": "Kan niet opslaan: kies een tabel en minstens één kolom.",
             "saved": "Query \"{name}\" opgeslagen.",
             "saveFailed": "Kan query niet opslaan:"
+        }
+    },
+    "queryList": {
+        "open": "Openen",
+        "column": {
+            "node": "Node",
+            "saved": "Opgeslagen",
+            "lastRun": "Laatst uitgevoerd",
+            "rows": "Rijen"
         }
     },
     "download": {
@@ -930,7 +949,7 @@
         },
         "examples": {
             "title": "Voorbeelden om snel te starten",
-            "lead": "Drie echte queries. Open er een om de query in de querybouwer te bekijken en op de kaart te plotten.",
+            "lead": "Drie echte queries. Open er een om de query in de query-werkbank te bekijken en op de kaart te plotten.",
             "imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
             "metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
             "check": "Query bekijken",
@@ -1380,8 +1399,15 @@
     "usersRoles": {
         "ruleCount": "{count, plural, =0 {Geen regels} one {# regel} other {# regels}}",
         "users": {
-            "col": { "user": "Gebruiker", "roles": "Rollen", "access": "Toegang" },
-            "badge": { "superUser": "Superuser", "anonymous": "Anoniem" },
+            "col": {
+                "user": "Gebruiker",
+                "roles": "Rollen",
+                "access": "Toegang"
+            },
+            "badge": {
+                "superUser": "Superuser",
+                "anonymous": "Anoniem"
+            },
             "line": {
                 "superUser": "Ingesteld in de nodeconfiguratie",
                 "anonymous": "Elk verzoek zonder inloggegevens",

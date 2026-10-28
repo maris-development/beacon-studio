@@ -42,7 +42,7 @@
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Query Builder",
+            "queryBuilder": "Query Workbench",
             "workspace": "Workspace",
             "dataBrowser": "Data Browser",
             "datasets": "Datasets",
@@ -190,8 +190,6 @@
         "untitled": "Untitled",
         "filterCount": "{count, plural, one {# filter} other {# filters}}",
         "entry": {
-            "noColumns": "(no columns)",
-            "openInBuilder": "Open in Query Builder",
             "table": "Table",
             "map": "Map",
             "chart": "Chart"
@@ -235,14 +233,10 @@
             "downloadSql": "Download SQL",
             "save": "Save Query",
             "saveTitle": "Save query",
+            "saved": "Saved ({count, number})",
+            "history": "History",
             "resetTitle": "Reset query selection",
             "cacheInfo": "Query caching information"
-        },
-        "share": {
-            "copyTitle": "Copy a link that works in any browser",
-            "none": "This entry has no shareable query.",
-            "copied": "Share link copied to clipboard.",
-            "copyFailed": "Could not copy the share link."
         },
         "guard": {
             "noFilters": "This query has no filters. Add at least one filter, or turn off \"Require a filter\" in the settings."
@@ -259,6 +253,8 @@
         },
         "parameters": {
             "title": "Query Parameters",
+            "description": "Add the columns that you need. Then add filters to them.",
+            "needsTable": "Select a data table first.",
             "add": "Add Parameter",
             "remove": "Remove column",
             "dialogTitle": "Add Query Parameter",
@@ -267,6 +263,8 @@
             "emptyBeforeTable": "No columns found for table",
             "emptyAfterTable": ".",
             "available": "Available Columns ({count, number})",
+            "selectAll": "Select all",
+            "deselectAll": "Deselect all",
             "empty": "No parameters selected, use the 'Add Parameter' button above."
         },
         "view": {
@@ -275,6 +273,7 @@
         },
         "node": {
             "title": "Select Beacon Node",
+            "description": "Select the node that has your data.",
             "count": "{count, plural, one {# node} other {# nodes}}",
             "loading": "Load Beacon nodes...",
             "missingBeforeUrl": "This query runs on",
@@ -289,6 +288,8 @@
         },
         "table": {
             "title": "Select Data Table",
+            "description": "Select the table to query.",
+            "needsNode": "Select a Beacon node first.",
             "count": "{count, plural, one {# table} other {# tables}}",
             "countLoading": "Loading tables",
             "noDescription": "Description not available",
@@ -302,7 +303,11 @@
         },
         "outputFormat": {
             "title": "Output Format",
+            "description": "Select the file format of the downloaded data.",
             "listLabel": "Tables"
+        },
+        "steps": {
+            "incomplete": "Complete all steps first."
         },
         "geoFilter": {
             "title": "Geospatial filter",
@@ -382,22 +387,35 @@
         },
         "closeBlock": {
             "title": "Close this query",
-            "message": "This query holds columns that you picked.",
+            "savedMessage": "This query is saved. You can open it again from Saved Queries.",
+            "unsavedMessage": "This query is not saved.",
             "note": "You cannot undo this.",
-            "confirm": "Close query"
+            "confirm": "Close query",
+            "discard": "Close without saving",
+            "saveAndClose": "Save and close"
         },
         "header": {
             "editing": "Editing {name}",
             "viewing": "Viewing {name}"
         },
         "panes": {
-            "builder": "Query builder",
+            "builder": "Query workbench",
             "collapseBuilder": "Collapse builder",
             "expandBuilder": "Expand builder",
-            "json": "Query JSON",
-            "copyJson": "Copy JSON to clipboard",
-            "collapseJson": "Collapse JSON",
-            "expandJson": "Expand JSON"
+            "code": "Code",
+            "collapseCode": "Collapse code",
+            "expandCode": "Expand code"
+        },
+        "code": {
+            "tabs": "Code language",
+            "json": "JSON",
+            "sql": "SQL",
+            "python": "Python",
+            "copy": "Copy",
+            "copyTitle": "Copy the code to the clipboard",
+            "downloadTitle": "Download the code as a file",
+            "emptyTitle": "No query yet",
+            "emptyText": "Pick a table and at least one column on the left."
         },
         "block": {
             "add": "New query",
@@ -437,37 +455,38 @@
     },
     "history": {
         "title": "Query History",
-        "intro": "Queries you've executed. Re-run, view, or edit any of them.",
-        "clear": "Clear history",
-        "empty": {
-            "title": "No queries yet",
-            "text": "Once you execute a query, it will show up here."
-        },
+        "empty": "There are no queries in the history.",
         "entry": {
-            "never": "never",
-            "duration": "{ms, number} ms",
-            "runCount": "· run {count, number}×",
             "remove": "Remove from history"
+        },
+        "delete": {
+            "title": "Delete history entry",
+            "message": "Delete \"{name}\" from the history?"
         }
     },
     "saved": {
         "title": "Saved Queries",
-        "intro": "Queries you've saved from the query builder. Re-run, visualise, or open any saved query.",
-        "clear": "Clear saved",
-        "empty": {
-            "title": "No saved queries yet",
-            "beforeLink": "Build a query in the",
-            "beforeButton": "and click",
-            "afterButton": "to add it here."
-        },
+        "empty": "There are no saved queries.",
         "entry": {
-            "savedAgo": "saved {time}",
             "remove": "Remove saved query"
+        },
+        "delete": {
+            "title": "Delete saved query",
+            "message": "Delete the saved query \"{name}\"?"
         },
         "toast": {
             "noQuery": "Can not save: please select a table and at least one column.",
             "saved": "Query \"{name}\" saved.",
             "saveFailed": "Failed to save query:"
+        }
+    },
+    "queryList": {
+        "open": "Open",
+        "column": {
+            "node": "Node",
+            "saved": "Saved",
+            "lastRun": "Last run",
+            "rows": "Rows"
         }
     },
     "download": {
@@ -930,7 +949,7 @@
         },
         "examples": {
             "title": "Quick start examples",
-            "lead": "Three real queries. Open one to review the query in the query builder and plot it on the map.",
+            "lead": "Three real queries. Open one to review the query in the query workbench and plot it on the map.",
             "imageAlt": "The result of the {title} query in the Map Viewer",
             "metricHint": "Measured on a reference run. Your run can differ.",
             "check": "Check query",
@@ -1380,8 +1399,15 @@
     "usersRoles": {
         "ruleCount": "{count, plural, =0 {No rules} one {# rule} other {# rules}}",
         "users": {
-            "col": { "user": "User", "roles": "Roles", "access": "Access" },
-            "badge": { "superUser": "Super-user", "anonymous": "Anonymous" },
+            "col": {
+                "user": "User",
+                "roles": "Roles",
+                "access": "Access"
+            },
+            "badge": {
+                "superUser": "Super-user",
+                "anonymous": "Anonymous"
+            },
             "line": {
                 "superUser": "Set in the node configuration",
                 "anonymous": "Every request with no credentials",

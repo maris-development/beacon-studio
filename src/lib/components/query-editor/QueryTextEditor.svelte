@@ -1,3 +1,7 @@
+<script module lang="ts">
+    export type CodeLanguage = "json" | "sql" | "python";
+</script>
+
 <script lang="ts">
     import { onMount } from "svelte";
     import { loader } from "@monaco-editor/react";
@@ -12,12 +16,18 @@
     let editorContainer: HTMLDivElement;
     let editorInstance: monaco.editor.IStandaloneCodeEditor;
 
-    let { sourceCode = $bindable(), width = "100%", height = "40vh", readOnly = false } = $props();
+    let {
+        sourceCode = $bindable(),
+        width = "100%",
+        height = "40vh",
+        readOnly = false,
+        language = "json" as CodeLanguage
+    } = $props();
 
     onMount(() => {
         editorInstance = monaco.editor.create(editorContainer, {
             value: sourceCode,
-            language: "json",
+            language,
             automaticLayout: true,
             overviewRulerLanes: 0,
             overviewRulerBorder: false,
@@ -37,6 +47,16 @@
     $effect(() => {
         if (editorInstance && sourceCode !== editorInstance.getValue()) {
             editorInstance.setValue(sourceCode);
+        }
+    });
+
+    $effect(() => {
+        // Read the prop first, so the effect tracks it also before the mount.
+        const nextLanguage = language;
+        const model = editorInstance?.getModel();
+
+        if (model) {
+            monaco.editor.setModelLanguage(model, nextLanguage);
         }
     });
 </script>

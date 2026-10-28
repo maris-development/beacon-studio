@@ -12,6 +12,7 @@
     import { defaultOutputFormat, type QueryDraft } from "@/query/draft";
     import type { CoordinatePair } from "@/geo/spatial-selection";
     import QueryBuilderTableSelector from "./QueryBuilderTableSelector.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
     import Button from "../buttons/Button.svelte";
     import DownloadDataButton from "../buttons/DownloadDataButton.svelte";
     import VisualiseDataButton from "../buttons/VisualiseDataButton.svelte";
@@ -142,30 +143,13 @@
 
         if (node?.url !== requestedUrl) return;
 
-        // A node can have no default table configured, so this is an offer, not a
-        // requirement. Fall back to the first table when it fails or is unusable.
-        let default_table: string | undefined;
-
-        try {
-            default_table = await client.getCachedDefaultTable();
-        } catch (error) {
-            console.warn("Could not read the default table of the Beacon node.", error);
-        }
-
-        if (node?.url !== requestedUrl) return;
-
-        if (!default_table || !tables.includes(default_table)) {
-            default_table = tables[0];
-        }
-
-        // By default, select the first table, or restore the table from the draft/seed.
+        // Restore the table of the draft or the seed. A new query selects no table.
         const seedTable = typeof pendingSeed?.from === "string" ? pendingSeed.from : null;
         const draftTable = initialDraft?.tableName || null;
-        let wanted = draftTable ?? seedTable ?? default_table;
+        let wanted = draftTable ?? seedTable ?? "";
 
-        // This node does not have the table that the query reads. Show the default
-        // table, so the builder stays usable. Without the fallback the schema
-        // request answers 404, and the builder shows no columns at all.
+        // This node does not have the table that the query reads. Select no table,
+        // and let the user pick one. A schema request for that table answers 404.
         if (wanted && !tables.includes(wanted)) {
             // Hold the seed back. Its columns belong to another schema, so the
             // hydration finds none, and the empty draft destroys the query of the
@@ -173,7 +157,7 @@
             seedBlocked = !!pendingSeed;
 
             onSeedMismatch?.(wanted, "table");
-            wanted = default_table;
+            wanted = "";
         }
 
         selected_table_name = wanted;
@@ -208,6 +192,25 @@
         return pendingSeed;
     });
 
+    /** True when the node answered with its tables. Step 2 needs this. */
+    const nodeReady = $derived(!!node && !!client && !loadError && loaded);
+    /** True when the query has a table. Step 3 needs this. */
+    const tableReady = $derived(nodeReady && !!selected_table_name);
+    /** True when the query has a column. Step 4 needs this. */
+    const columnsReady = $derived(tableReady && status.columns > 0);
+    /** True when every step is done. The run buttons need this. */
+    const queryReady = $derived(columnsReady && !!selected_output_format);
+
+    /**
+     * The table for the parameter block. It stays empty until the node is ready,
+     * so the block loads no schema and emits no draft. A stored draft or a blocked
+     * seed therefore stays as it is.
+     */
+    const activeTable = $derived.by(() => {
+        if (!nodeReady) return "";
+        return selected_table_name;
+    });
+
     $effect(() => {
         status.dataTable = selected_table_name;
         onTableChange?.(selected_table_name);
@@ -227,6 +230,7 @@
 </script>
 
 <QueryBuilderNodeSelector
+    step={1}
     selected={node}
     missingUrl={missingNodeUrl}
     {nodesReady}
@@ -240,61 +244,86 @@
 		The node gave no tables. Name the reason, and offer a retry. The picker
 		above stays, so the user can also pick another node.
 	-->
-    <div class="load-error" role="alert">
-        <p class="load-error-title">
-            {$t("query.node.tablesFailed", { node: node.name || node.url })}
-        </p>
-        <p class="load-error-reason">{loadError}</p>
-        <Button variant="secondary" onclick={() => loadTables()}>{$t("query.node.retry")}</Button>
-    </div>
-
-    <hr />
-{:else if node && client}
+    <QueryBuilderStep
+        step={2}
+        title={$t("query.table.title")}
+        description={$t("query.table.description")}
+    >
+        <div class="load-error" role="alert">
+            <p class="load-error-title">
+                {$t("query.node.tablesFailed", { node: node.name || node.url })}
+            </p>
+            <p class="load-error-reason">{loadError}</p>
+            <Button variant="secondary" onclick={() => loadTables()}
+                >{$t("query.node.retry")}</Button
+            >
+        </div>
+    </QueryBuilderStep>
+{:else}
     <QueryBuilderTableSelector
+        step={2}
+        disabled={!nodeReady}
         {table_names}
         {loaded}
         {status}
         onPick={handleTablePick}
         bind:selected_table_name
     />
-
-    <hr />
-
-    <!--
-		`pendingSeed` is null while the seed is blocked. This node does not hold the
-		table of that seed, so a hydration finds no column. See `loadTables`.
-	-->
-    <QueryBuilderParameterBlock
-        table_name={selected_table_name}
-        {client}
-        {initialDraft}
-        pendingSeed={activeSeed}
-        {coordinateColumns}
-        onDraftChange={handleDraftChange}
-        {onSeedMismatch}
-        bind:status
-        bind:actions={queryActions}
-        bind:selected_output_format
-    />
-
-    <hr />
-
-    <QueryBuilderOutputFormatSelector bind:selected_output_format />
-
-    <hr />
 {/if}
 
-<DownloadDataButton downloadData={workbenchActions.downloadData} />
+<hr />
 
-<VisualiseDataButton
-    visualiseTable={workbenchActions.visualiseTable}
-    visualiseChart={workbenchActions.visualiseChart}
-    visualiseMap={workbenchActions.visualiseMap}
+<!--
+	`pendingSeed` is null while the seed is blocked. This node does not hold the
+	table of that seed, so a hydration finds no column. See `loadTables`.
+-->
+<QueryBuilderParameterBlock
+    step={3}
+    table_name={activeTable}
+    {client}
+    {initialDraft}
+    pendingSeed={activeSeed}
+    {coordinateColumns}
+    onDraftChange={handleDraftChange}
+    {onSeedMismatch}
+    bind:status
+    bind:actions={queryActions}
+    bind:selected_output_format
 />
+
+<hr />
+
+<QueryBuilderOutputFormatSelector step={4} disabled={!columnsReady} bind:selected_output_format />
+
+<hr />
+
+<div class="builder-run">
+    <DownloadDataButton
+        downloadData={workbenchActions.downloadData}
+        disabled={!queryReady}
+        title={queryReady ? "" : $t("query.steps.incomplete")}
+    />
+
+    <VisualiseDataButton
+        visualiseTable={workbenchActions.visualiseTable}
+        visualiseChart={workbenchActions.visualiseChart}
+        visualiseMap={workbenchActions.visualiseMap}
+        disabled={!queryReady}
+        title={queryReady ? "" : $t("query.steps.incomplete")}
+    />
+</div>
 
 <style lang="scss">
     hr {
         margin: 1rem 0;
+    }
+
+    // Align the buttons with the content of the steps, past the step number.
+    .builder-run {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding-left: 2.5rem;
     }
 
     .load-error {

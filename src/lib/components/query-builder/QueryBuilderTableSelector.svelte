@@ -1,21 +1,26 @@
 <script lang="ts">
     import * as Select from "$lib/components/ui/select/index.js";
-    import Button from "../buttons/Button.svelte";
-    import ListIcon from "@lucide/svelte/icons/list";
-    import GridIcon from "@lucide/svelte/icons/grid";
     import CircleCheck from "@lucide/svelte/icons/circle-check";
     import Card from "../card/Card.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
+    import QueryBuilderViewToggle, { type ViewMode } from "./QueryBuilderViewToggle.svelte";
     import type { QuerySelectionStatus } from "@/query/selection-status";
     import { askConfirm } from "@/stores/confirm";
     import { t, translate } from "@/i18n";
 
     let {
+        step,
+        disabled = false,
         table_names = [],
         loaded = false,
         selected_table_name = $bindable(""),
         status,
         onPick
     }: {
+        /** The number of this step in the builder. */
+        step: number;
+        /** True while the query has no node. The step then shows a hint. */
+        disabled?: boolean;
         table_names?: string[];
         loaded?: boolean;
         selected_table_name?: string;
@@ -23,7 +28,6 @@
         onPick?: (table_name: string) => void;
     } = $props();
 
-    type ViewMode = "cards" | "list";
     let viewMode = $state<ViewMode>("cards");
     let viewModeInitialized = $state(false);
 
@@ -51,107 +55,80 @@
     }
 </script>
 
-<div class="table-selector-header">
-    <h3>{$t("query.table.title")}</h3>
+<QueryBuilderStep
+    {step}
+    title={$t("query.table.title")}
+    description={$t("query.table.description")}
+    hint={disabled ? $t("query.table.needsNode") : null}
+>
+    {#snippet actions()}
+        {#if !disabled}
+            <p class="table-count">
+                {#if loaded}
+                    {$t("query.table.count", { count: table_names.length })}
+                {:else}
+                    {$t("query.table.countLoading")}
+                {/if}
+            </p>
+            <QueryBuilderViewToggle bind:mode={viewMode} />
+        {/if}
+    {/snippet}
 
-    <div class="view-controls">
-        <p class="table-count">
-            {#if loaded}
-                {$t("query.table.count", { count: table_names.length })}
-            {:else}
-                {$t("query.table.countLoading")}
-            {/if}
-        </p>
-        <Button
-            variant={viewMode === "cards" ? "default" : "outline"}
-            onclick={() => (viewMode = "cards")}
-        >
-            {$t("query.view.cards")}
-            <GridIcon />
-        </Button>
-
-        <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            onclick={() => (viewMode = "list")}
-        >
-            {$t("query.view.list")}
-            <ListIcon />
-        </Button>
+    <div class="table-views">
+        {#if viewMode === "cards"}
+            <div class="cards-view">
+                {#each table_names as table_name (table_name)}
+                    <Card
+                        class={selected_table_name === table_name ? "selected" : ""}
+                        onclick={() => pickTable(table_name)}
+                    >
+                        <div class="table-header">
+                            <h4 title={table_name}>{table_name}</h4>
+                            {#if selected_table_name === table_name}
+                                <CircleCheck class="check" size="1rem" />
+                            {/if}
+                        </div>
+                        <p class="table-description">
+                            {$t("query.table.noDescription")}
+                        </p>
+                    </Card>
+                {/each}
+            </div>
+        {:else if viewMode === "list"}
+            <!--
+                The value is a prop and not a binding. Therefore `onValueChange` runs
+                for a choice of the user only, and not for a table that the loader
+                selects. `pickTable` writes the new value.
+            -->
+            <Select.Root
+                type="single"
+                name="dataCollection"
+                bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
+            >
+                <Select.Trigger class="table-select-trigger">
+                    {selected_table_name || $t("query.table.placeholder")}
+                </Select.Trigger>
+                <Select.Content>
+                    <Select.Group>
+                        <Select.Label>{$t("query.table.listLabel")}</Select.Label>
+                        {#each table_names as table_name (table_name)}
+                            <Select.Item value={table_name} label={table_name}>
+                                {table_name}
+                            </Select.Item>
+                        {/each}
+                    </Select.Group>
+                </Select.Content>
+            </Select.Root>
+        {/if}
     </div>
-</div>
-
-<div class="table-views">
-    {#if viewMode === "cards"}
-        <div class="cards-view">
-            {#each table_names as table_name (table_name)}
-                <Card
-                    class={selected_table_name === table_name ? "selected" : ""}
-                    onclick={() => pickTable(table_name)}
-                >
-                    <div class="table-header">
-                        <h4 title={table_name}>{table_name}</h4>
-                        {#if selected_table_name === table_name}
-                            <CircleCheck class="check" size="1rem" />
-                        {/if}
-                    </div>
-                    <p class="table-description">
-                        {$t("query.table.noDescription")}
-                    </p>
-                </Card>
-            {/each}
-        </div>
-    {:else if viewMode === "list"}
-        <!--
-            The value is a prop and not a binding. Therefore `onValueChange` runs
-            for a choice of the user only, and not for a table that the loader
-            selects. `pickTable` writes the new value.
-        -->
-        <Select.Root
-            type="single"
-            name="dataCollection"
-            bind:value={() => selected_table_name, (table_name) => pickTable(table_name)}
-        >
-            <Select.Trigger class="table-select-trigger">
-                {selected_table_name ?? $t("query.table.placeholder")}
-            </Select.Trigger>
-            <Select.Content>
-                <Select.Group>
-                    <Select.Label>{$t("query.table.listLabel")}</Select.Label>
-                    {#each table_names as table_name (table_name)}
-                        <Select.Item value={table_name} label={table_name}>
-                            {table_name}
-                        </Select.Item>
-                    {/each}
-                </Select.Group>
-            </Select.Content>
-        </Select.Root>
-    {/if}
-</div>
+</QueryBuilderStep>
 
 <style lang="scss">
-    .table-selector-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-
-        h3 {
-            margin: 0;
-        }
-
-        .view-controls {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-
-            p.table-count {
-                margin: 0;
-            }
-        }
+    p.table-count {
+        margin: 0;
     }
 
     .table-views {
-        margin-top: 1rem;
-
         .cards-view {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));

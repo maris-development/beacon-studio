@@ -1,39 +1,46 @@
 <script lang="ts">
-    import * as Select from '$lib/components/ui/select/index.js';
-    import { BeaconClient } from '@/beacon-api/client';
-    import { defaultOutputFormat } from '@/query/draft';
-    import { t } from '@/i18n';
+	import * as Select from '$lib/components/ui/select/index.js';
+	import { BeaconClient } from '@/beacon-api/client';
+	import { defaultOutputFormat } from '@/query/draft';
+	import QueryBuilderStep from './QueryBuilderStep.svelte';
+	import { t } from '@/i18n';
 
-    let {
-        selected_output_format = $bindable(defaultOutputFormat())
-    }: {
-        /** The output format of the query. The values match `BeaconClient.output_formats`. */
-        selected_output_format?: string;
-    } = $props();
+	let {
+		step,
+		disabled = false,
+		selected_output_format = $bindable(defaultOutputFormat())
+	}: {
+		/** The number of this step in the builder. */
+		step: number;
+		/** True while the query has no column. The select keeps its value. */
+		disabled?: boolean;
+		/** The output format of the query. The values match `BeaconClient.output_formats`. */
+		selected_output_format?: string;
+	} = $props();
 </script>
 
-<h3>{$t('query.outputFormat.title')}</h3>
-
-<Select.Root type="single" name="outputFormat" bind:value={selected_output_format}>
-    <Select.Trigger class="output-format-trigger">
-        {selected_output_format}
-    </Select.Trigger>
-    <Select.Content>
-        <Select.Group>
-            <Select.Label>{$t('query.outputFormat.listLabel')}</Select.Label>
-            {#each Object.entries(BeaconClient.output_formats) as [label, value], index (index)}
-                <Select.Item {label} {value} />
-            {/each}
-        </Select.Group>
-    </Select.Content>
-</Select.Root>
+<QueryBuilderStep
+	{step}
+	title={$t('query.outputFormat.title')}
+	description={$t('query.outputFormat.description')}
+>
+	<Select.Root type="single" name="outputFormat" {disabled} bind:value={selected_output_format}>
+		<Select.Trigger class="output-format-trigger">
+			{selected_output_format}
+		</Select.Trigger>
+		<Select.Content>
+			<Select.Group>
+				<Select.Label>{$t('query.outputFormat.listLabel')}</Select.Label>
+				{#each Object.entries(BeaconClient.output_formats) as [label, value], index (index)}
+					<Select.Item {label} {value} />
+				{/each}
+			</Select.Group>
+		</Select.Content>
+	</Select.Root>
+</QueryBuilderStep>
 
 <style lang="scss">
-    h3 {
-        margin: 0 0 1rem;
-    }
-
-    :global(.output-format-trigger) {
-        width: 180px;
-    }
+	:global(.output-format-trigger) {
+		width: 180px;
+	}
 </style>

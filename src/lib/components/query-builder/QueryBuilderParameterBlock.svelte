@@ -34,10 +34,12 @@
     } from "@/geo/spatial-selection";
     import { hydrateDraftFromQuery } from "@/query/seed-hydration";
     import GeospatialFilterModal from "./GeospatialFilterModal.svelte";
+    import QueryBuilderStep from "./QueryBuilderStep.svelte";
     import PencilLineIcon from "@lucide/svelte/icons/pencil-line";
     import { t, translate } from "@/i18n";
 
     let {
+        step,
         table_name,
         client,
         initialDraft = null,
@@ -62,8 +64,12 @@
             resetQuery: undefined
         })
     }: {
+        /** The number of this step in the builder. */
+        step: number;
+        /** The table of the query. Empty while the step before this one is not done. */
         table_name: string;
-        client: BeaconClient;
+        /** The client of the node, or null while the query has no node. */
+        client: BeaconClient | null;
         initialDraft?: QueryDraft | null;
         pendingSeed?: CompiledQuery | null;
         /** The stored coordinate pair of the block, or null to detect it. */
@@ -84,6 +90,12 @@
         status?: QuerySelectionStatus;
         actions?: QueryActions; // todo
     } = $props();
+
+    /** True while the query has no table. The step then shows a hint. */
+    const disabled = $derived(!table_name);
+
+    /** The maximum number of table columns that shows the "Select all" item. */
+    const SELECT_ALL_MAX_COLUMNS = 20;
 
     let searchInput;
     let searchQuery = $state("");
@@ -183,6 +195,16 @@
 
         return fields.find((item) => item.name.toLowerCase().includes(normalized));
     });
+
+    const allColumnsSelected = $derived(
+        fields.length > 0 &&
+            fields.every((field) => selectedFields.some((selected) => selected.name === field.name))
+    );
+
+    // A search hides columns, so "Select all" shows only with an empty search field.
+    const showSelectAll = $derived(
+        fields.length > 0 && fields.length <= SELECT_ALL_MAX_COLUMNS && searchQuery.trim() === ""
+    );
 
     // $effect(() => {
     // 	status.outputFormat = selected_output_format;
@@ -357,6 +379,25 @@
         }
     }
 
+    function toggleAllColumns() {
+        if (allColumnsSelected) {
+            selectedFields = [];
+            return;
+        }
+
+        // Keep the selected columns with their filters, and append the rest in schema order.
+        const selectedNames = new Set(selectedFields.map((field) => field.name));
+        const added = fields
+            .filter((field) => !selectedNames.has(field.name))
+            .map((field) => ({ name: field.name, type: field.type, selected_filters: [] }));
+
+        selectedFields = [...selectedFields, ...added];
+
+        track("builder.column.add", {
+            props: { selectAll: true, added: added.length, columns: selectedFields.length }
+        });
+    }
+
     function removeColumnSelection(field_name: string) {
         selectedFields = selectedFields.filter((f) => f.name !== field_name);
     }
@@ -407,7 +448,7 @@
             return;
         }
 
-        if (compiledQuery) {
+        if (compiledQuery && client) {
             await client.queryToDownload(
                 compiledQuery,
                 BeaconClient.outputFormatToExtension(compiledQuery)
@@ -464,144 +505,158 @@
     }
 </script>
 
-<div id="new-query-builder">
-    <div class="flex flex-row items-center justify-between">
-        <h3>{$t("query.parameters.title")}</h3>
-        <div class="header-actions">
-            <Button variant="outline" onclick={() => (open = true)}>
-                {$t("query.parameters.add")}
-                <PlusIcon />
-            </Button>
-            {#if !spatialFilter}
-                <Button
-                    variant="outline"
-                    title={areaBlockReason ?? $t("query.area.addTitle")}
-                    disabled={!!areaBlockReason}
-                    onclick={() => (isGeoFilterOpen = true)}
+<GeospatialFilterModal
+    bind:open={isGeoFilterOpen}
+    {selectedFields}
+    selection={spatialFilter}
+    {coordinateColumns}
+    onApply={applyGeoFilter}
+/>
+
+<Dialog.Root bind:open>
+    <Dialog.Content class="search-columns-dialog" showCloseButton={false}>
+        <Dialog.Header class="sr-only">
+            <Dialog.Title>{$t("query.parameters.dialogTitle")}</Dialog.Title>
+            <Dialog.Description>{$t("query.parameters.dialogDescription")}</Dialog.Description>
+        </Dialog.Header>
+
+        <SearchSelect.Root bind:query={searchQuery}>
+            <SearchSelect.Input
+                placeholder={$t("query.parameters.searchPlaceholder")}
+                bind:this={searchInput}
+                onKeydown={handleKeydown}
+            />
+            <SearchSelect.List>
+                <SearchSelect.Empty>
+                    {$t("query.parameters.emptyBeforeTable")}
+                    <span class="search-columns-empty-table">{table_name}</span>{$t(
+                        "query.parameters.emptyAfterTable"
+                    )}
+                </SearchSelect.Empty>
+
+                <SearchSelect.Group
+                    heading={$t("query.parameters.available", { count: fields.length })}
                 >
-                    {$t("query.area.add")}
-                    <PlusIcon />
-                </Button>
-            {/if}
-        </div>
-    </div>
-
-    <GeospatialFilterModal
-        bind:open={isGeoFilterOpen}
-        {selectedFields}
-        selection={spatialFilter}
-        {coordinateColumns}
-        onApply={applyGeoFilter}
-    />
-
-    <Dialog.Root bind:open>
-        <Dialog.Content class="search-columns-dialog" showCloseButton={false}>
-            <Dialog.Header class="sr-only">
-                <Dialog.Title>{$t("query.parameters.dialogTitle")}</Dialog.Title>
-                <Dialog.Description>{$t("query.parameters.dialogDescription")}</Dialog.Description>
-            </Dialog.Header>
-
-            <SearchSelect.Root bind:query={searchQuery}>
-                <SearchSelect.Input
-                    placeholder={$t("query.parameters.searchPlaceholder")}
-                    bind:this={searchInput}
-                    onKeydown={handleKeydown}
-                />
-                <SearchSelect.List>
-                    <SearchSelect.Empty>
-                        {$t("query.parameters.emptyBeforeTable")}
-                        <span class="search-columns-empty-table">{table_name}</span>{$t(
-                            "query.parameters.emptyAfterTable"
-                        )}
-                    </SearchSelect.Empty>
-
-                    <SearchSelect.Group
-                        heading={$t("query.parameters.available", { count: fields.length })}
-                    >
-                        {#each fields as field (field.name)}
-                            <SearchSelect.Item
-                                value={field.name}
-                                class="search-columns-item"
-                                onSelect={() => {
-                                    toggleColumnSelection(field.name);
-                                }}
-                                bind:this={field.ref}
+                    {#if showSelectAll}
+                        <SearchSelect.Item class="search-columns-item" onSelect={toggleAllColumns}>
+                            <span class="search-columns-item-name">
+                                {allColumnsSelected
+                                    ? $t("query.parameters.deselectAll")
+                                    : $t("query.parameters.selectAll")}
+                            </span>
+                        </SearchSelect.Item>
+                        <hr class="search-columns-divider" />
+                    {/if}
+                    {#each fields as field (field.name)}
+                        <SearchSelect.Item
+                            value={field.name}
+                            class="search-columns-item"
+                            onSelect={() => {
+                                toggleColumnSelection(field.name);
+                            }}
+                            bind:this={field.ref}
+                        >
+                            <span class="search-columns-item-name">{field.name}</span>
+                            <span class="search-columns-item-details"
+                                >{Utils.dataTypeToString(field.type)}</span
                             >
-                                <span class="search-columns-item-name">{field.name}</span>
-                                <span class="search-columns-item-details"
-                                    >{Utils.dataTypeToString(field.type)}</span
-                                >
-                                {#if selectedFields.find((f) => f.name === field.name)}
-                                    <CheckIcon class="search-columns-item-icon" />
-                                {/if}
-                            </SearchSelect.Item>
-                        {/each}
-                    </SearchSelect.Group>
-                </SearchSelect.List>
-            </SearchSelect.Root>
-        </Dialog.Content>
-    </Dialog.Root>
+                            {#if selectedFields.find((f) => f.name === field.name)}
+                                <CheckIcon class="search-columns-item-icon" />
+                            {/if}
+                        </SearchSelect.Item>
+                    {/each}
+                </SearchSelect.Group>
+            </SearchSelect.List>
+        </SearchSelect.Root>
+    </Dialog.Content>
+</Dialog.Root>
 
-    {#if filterWarning}
-        <p class="filter-warning">
-            <TriangleAlertIcon size={16} />
-            {$t(filterWarning)}
-        </p>
-    {/if}
-
-    {#if spatialFilter}
-        <div class="area-filter">
-            <MapPinnedIcon size={16} />
-            <span class="area-filter-label">
-                {$t("query.area.label", { area: $t(describeSelection(spatialFilter)) })}
-            </span>
-
-            {#if missingAreaColumn}
-                <span class="area-filter-hint missing">
-                    <TriangleAlertIcon size={14} />
-                    {$t("query.area.missingColumn", { column: missingAreaColumn })}
-                </span>
-            {:else if areaColumns}
-                <span class="area-filter-hint">
-                    {areaColumns.latitude} / {areaColumns.longitude}
-                </span>
-            {:else}
-                <span class="area-filter-hint missing">
-                    <TriangleAlertIcon size={14} />
-                    {$t("query.area.noColumns")}
-                </span>
-            {/if}
-
+<QueryBuilderStep
+    {step}
+    title={$t("query.parameters.title")}
+    description={$t("query.parameters.description")}
+    hint={disabled ? $t("query.parameters.needsTable") : null}
+>
+    {#snippet actions()}
+        <Button {disabled} onclick={() => (open = true)}>
+            {$t("query.parameters.add")}
+            <PlusIcon />
+        </Button>
+        {#if !spatialFilter}
             <Button
-                variant="ghost"
-                title={$t("query.area.editTitle")}
+                variant="outline"
+                title={areaBlockReason ?? $t("query.area.addTitle")}
+                disabled={disabled || !!areaBlockReason}
                 onclick={() => (isGeoFilterOpen = true)}
             >
-                <PencilLineIcon size={16} />
+                {$t("query.area.add")}
+                <PlusIcon />
             </Button>
-            <Button
-                variant="ghost"
-                title={$t("query.area.removeTitle")}
-                onclick={() => (spatialFilter = null)}
-            >
-                <XIcon size={16} />
-            </Button>
-        </div>
-    {/if}
-
-    <div class="parameters-grid">
-        {#if selectedFields.length > 0}
-            {#each Utils.range(0, selectedFields.length) as index (index)}
-                <Parameter
-                    bind:column={selectedFields[index]}
-                    remove_column={removeColumnSelection}
-                />
-            {/each}
-        {:else}
-            <h4 class="no-selection">{$t("query.parameters.empty")}</h4>
         {/if}
+    {/snippet}
+
+    <div id="new-query-builder">
+        {#if filterWarning}
+            <p class="filter-warning">
+                <TriangleAlertIcon size={16} />
+                {$t(filterWarning)}
+            </p>
+        {/if}
+
+        {#if spatialFilter}
+            <div class="area-filter">
+                <MapPinnedIcon size={16} />
+                <span class="area-filter-label">
+                    {$t("query.area.label", { area: $t(describeSelection(spatialFilter)) })}
+                </span>
+
+                {#if missingAreaColumn}
+                    <span class="area-filter-hint missing">
+                        <TriangleAlertIcon size={14} />
+                        {$t("query.area.missingColumn", { column: missingAreaColumn })}
+                    </span>
+                {:else if areaColumns}
+                    <span class="area-filter-hint">
+                        {areaColumns.latitude} / {areaColumns.longitude}
+                    </span>
+                {:else}
+                    <span class="area-filter-hint missing">
+                        <TriangleAlertIcon size={14} />
+                        {$t("query.area.noColumns")}
+                    </span>
+                {/if}
+
+                <Button
+                    variant="ghost"
+                    title={$t("query.area.editTitle")}
+                    onclick={() => (isGeoFilterOpen = true)}
+                >
+                    <PencilLineIcon size={16} />
+                </Button>
+                <Button
+                    variant="ghost"
+                    title={$t("query.area.removeTitle")}
+                    onclick={() => (spatialFilter = null)}
+                >
+                    <XIcon size={16} />
+                </Button>
+            </div>
+        {/if}
+
+        <div class="parameters-grid">
+            {#if selectedFields.length > 0}
+                {#each Utils.range(0, selectedFields.length) as index (index)}
+                    <Parameter
+                        bind:column={selectedFields[index]}
+                        remove_column={removeColumnSelection}
+                    />
+                {/each}
+            {:else}
+                <h4 class="no-selection">{$t("query.parameters.empty")}</h4>
+            {/if}
+        </div>
     </div>
-</div>
+</QueryBuilderStep>
 
 <style lang="scss">
     .filter-warning {
@@ -618,13 +673,6 @@
         :global(svg) {
             flex-shrink: 0;
         }
-    }
-
-    .header-actions {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 0.5rem;
     }
 
     .area-filter {
@@ -684,7 +732,6 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
-        margin-top: 1rem;
     }
 
     :global(.search-columns-dialog) {
@@ -698,6 +745,12 @@
 
     :global(.search-columns-item) {
         display: flex;
+    }
+
+    .search-columns-divider {
+        margin: 0.25rem 0.5rem;
+        border: 0;
+        border-top: 1px solid var(--border);
     }
 
     .search-columns-item-name {
