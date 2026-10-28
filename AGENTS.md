@@ -125,13 +125,13 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/workers/ArrowProcessingWorkerManager.ts`
 
 ## Data Flow (Important)
-1. User configures a query in the builder (`QueryBuilder.svelte`, on `/queries/workbench`) or in the raw editor (`/queries/query-editor`).
+1. User configures a query in the builder (`QueryBuilder.svelte`, on `/queries/workbench`).
 2. Query is compiled to `CompiledQuery` (`QueryBuilder` in `beacon-api/query.ts`).
-3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the `CompiledQuery`, the query name, the node URL and an optional coordinate pair. A SQL block sends its text in `sql`, with `query: null`, and the decode opens a SQL block. An app version from before SQL mode finds no `query` and refuses the link. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
+3. Query is passed between pages via a gzipped URL payload (`?query=`). That payload is a `SharedQuery` (`stores/stored-query.ts`): the query, the query name, the node URL and an optional coordinate pair. `query` is a `RunQuery`: a SQL block sends `{ sql }`, the body of `POST /api/query`, and the decode opens a SQL block. Tell the two apart with `isSqlRunQuery`. An app version from before SQL mode reads `{ sql }` as a `CompiledQuery` and opens an empty builder block. Build it with `buildShareLink(record)`. Use `encodeSharedQuery` / `decodeSharedQuery`. The decode also reads the old shapes: a bare gzipped `CompiledQuery` with its node in `?instance=`, and `instanceUrl` in the payload. The `CompiledQuery` inside it also serves as the persistent cache key.
 4. Visualizer pages call `queryStore.ensure(query)` (`stores/query-store.svelte.ts`) with `QueryWorkspace.resultQueryOf(block)`, which fetches once via `@maris-development/beacon-client` (`queryRaw()`) and caches the Arrow table in memory across navigations — switching map/table/chart reuses the result with no re-fetch.
 5. Results arrive as a native (zstd) Arrow IPC stream; the raw bytes are persisted to OPFS (`stores/opfs-arrow-cache.ts`, best-effort, LRU + 24h TTL) and decoded app-side to an Arrow table (`getArrowDecoder()` from `@maris-development/beacon-client`, no Parquet round-trip). A memory-evicted or reloaded session rehydrates from OPFS instead of re-running the query. Cache keys include the Beacon node URL.
 6. Heavy transforms (sort, dedup, min/max, map geometry) are delegated to one shared worker; the map derives its GeoArrow geometry client-side from lat/lon.
-7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. `QueryHistoryModal` in the action bar lists them, and opens each as a block on the current page. `query-editor` preloads a query from `?q=` or `?query=`.
+7. Every successful `queryStore.ensure()` records the query in the persisted query history (`stores/query-history.ts`), deduped by cache key (which includes the node URL) and snapshotting the node name, row count, duration, and timestamp. `QueryHistoryModal` in the action bar lists them, and opens each as a block on the current page.
 
 ## Query and Output Rules
 - `queryStore.ensure()` requests the default Arrow IPC stream (omits `output`) and returns an Arrow table; the server accepts the local `CompiledQuery` shape via serde aliases (`query_parameters`→`select`, `for_query_parameter`→`column`, `filters`).
@@ -338,7 +338,6 @@ message the change never reaches production.
 - Run: `npm run lint`
 - If behavior changed, smoke-test relevant route(s):
   - `/queries/workbench`
-  - `/queries/query-editor`
   - `/visualisations/map-viewer`
   - `/visualisations/table-explorer`
   - `/visualisations/chart-explorer`

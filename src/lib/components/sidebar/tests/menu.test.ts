@@ -59,7 +59,7 @@ describe("isItemActive", () => {
     });
 
     it("marks Query Workbench active on every /queries route", () => {
-        for (const path of ["/queries/workbench", "/queries/history", "/queries/query-editor"]) {
+        for (const path of ["/queries/workbench", "/queries/history"]) {
             expect(isItemActive(path, workbench)).toBe(true);
         }
     });

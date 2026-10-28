@@ -102,7 +102,12 @@ export class SqlPreview {
             rowCount = result.rows.length;
         }
 
-        queryStore.recordSqlRun(sql, node, { duration, rowCount, storedQueryId: blockId });
+        queryStore.recordSqlRun(sql, node, {
+            kind: "preview",
+            duration,
+            rowCount,
+            storedQueryId: blockId
+        });
     }
 
     private finish(own: AbortController, blockId: string, outcome: SqlOutcome): void {

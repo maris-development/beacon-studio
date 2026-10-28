@@ -364,17 +364,6 @@
             "isNotNull": "NO es NULL"
         }
     },
-    "editor": {
-        "title": "Editor de consultas",
-        "crumb": "Editor de consultas",
-        "error": {
-            "noColumn": "Cada parámetro de consulta debe incluir column o column_name."
-        },
-        "toast": {
-            "executeFailed": "Error al ejecutar la consulta:",
-            "parseFailed": "No se pudo analizar el JSON de la consulta:"
-        }
-    },
     "workbench": {
         "title": "Banco de trabajo de consultas",
         "untitledBlock": "Sin título ({number})",

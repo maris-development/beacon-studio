@@ -84,8 +84,8 @@ export interface ResolvedUrlQuery {
     /** The query to run. Null if the URL carried no usable data, and for a SQL query. */
     query: CompiledQuery | null;
     /**
-     * The trimmed SQL text of a SQL query, else null. A share link carries it in `sql`. A
-     * `?q=` record holds it in its own `sql`.
+     * The trimmed SQL text of a SQL query, else null. A share link carries it as `query: { sql }`.
+     * A `?q=` record holds it in its own `sql`.
      */
     sql: string | null;
     /**
@@ -169,10 +169,18 @@ export function resolveUrlQuery(url: URL): ResolvedUrlQuery {
             const payload = decodeSharedQuery(shared, url.searchParams.get(LEGACY_NODE_PARAM));
             const node = sharedNodeRef(payload.nodeUrl);
 
+            let query: CompiledQuery | null = null;
+            let sql: string | null = null;
+            if (isSqlRunQuery(payload.query)) {
+                sql = payload.query.sql;
+            } else {
+                query = payload.query;
+            }
+
             return {
                 entry: null,
-                query: payload.query,
-                sql: payload.sql ?? null,
+                query,
+                sql,
                 name: payload.name,
                 node,
                 missingNodeUrl: missingUrlOf(node),

@@ -364,17 +364,6 @@
             "isNotNull": "Is NOT NULL"
         }
     },
-    "editor": {
-        "title": "Query editor",
-        "crumb": "Query Editor",
-        "error": {
-            "noColumn": "Every query parameter must include column or column_name."
-        },
-        "toast": {
-            "executeFailed": "Error executing query:",
-            "parseFailed": "Failed to parse query JSON:"
-        }
-    },
     "workbench": {
         "title": "Query workbench",
         "untitledBlock": "Untitled ({number})",

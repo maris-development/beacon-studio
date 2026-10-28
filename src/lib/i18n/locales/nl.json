@@ -364,17 +364,6 @@
             "isNotNull": "Is NIET NULL"
         }
     },
-    "editor": {
-        "title": "Query-editor",
-        "crumb": "Query-editor",
-        "error": {
-            "noColumn": "Elke queryparameter moet column of column_name bevatten."
-        },
-        "toast": {
-            "executeFailed": "Fout bij uitvoeren van query:",
-            "parseFailed": "Kan de query-JSON niet parsen:"
-        }
-    },
     "workbench": {
         "title": "Query-werkbank",
         "untitledBlock": "Naamloos ({number})",

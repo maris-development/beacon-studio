@@ -261,7 +261,9 @@ export function getDefaultQueryActions(workspace: QueryWorkspace): QueryActions 
 
             saveBlob(await result.value.blob(), formatFileName(format, new Date()));
             queryStore.recordSqlRun(sql, node, {
+                kind: "download",
                 duration: performance.now() - started,
+                format,
                 storedQueryId: block.id
             });
             addToast({

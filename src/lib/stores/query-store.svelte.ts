@@ -423,14 +423,39 @@ class QueryStore {
      * through {@link ensure}, so the result cache holds nothing. The key is the one of a full
      * run, so the history keeps one row for the SQL. Pass `rowCount` only when the run read
      * every row. Best-effort, like {@link recordDownload}.
+     *
+     * A download sends `query.download`, with the `format` of the file. A preview sends
+     * `query.execute` with `preview: true`, so the dashboard keeps it apart from a viewer run.
      */
     recordSqlRun(
         sql: string,
         node: BeaconNode,
-        run: { duration: number; rowCount?: number; storedQueryId?: string }
+        run: {
+            kind: "preview" | "download";
+            duration: number;
+            rowCount?: number;
+            format?: string;
+            storedQueryId?: string;
+        }
     ): void {
+        const query: SqlRunQuery = { sql: sql.trim() };
+
+        if (run.kind === "download") {
+            track("query.download", {
+                nodeHost: node.url,
+                durationMs: run.duration,
+                props: { ...describeQuery(query), format: run.format ?? null }
+            });
+        } else {
+            track("query.execute", {
+                nodeHost: node.url,
+                rowCount: run.rowCount,
+                durationMs: run.duration,
+                props: { ...describeQuery(query), preview: true }
+            });
+        }
+
         try {
-            const query: SqlRunQuery = { sql: sql.trim() };
             const origin = resolveStoredQuery(run.storedQueryId);
             recordExecution({
                 datasetKey: this.keyFor(query, node),

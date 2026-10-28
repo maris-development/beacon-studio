@@ -22,7 +22,7 @@
 import type { BeaconNode, CompiledQuery, NodeRef } from "@/beacon-api/types";
 import type { ChartViewState } from "@/plots/plot-config";
 import type { QueryDraft } from "@/query/draft";
-import type { RunQuery } from "@/query/run-query";
+import { isSqlRunQuery, type RunQuery } from "@/query/run-query";
 import { compileDraft } from "@/query/draft";
 import { coordinateColumnsOf, type CoordinatePair } from "@/geo/spatial-selection";
 import { describeQuery, track } from "@/telemetry";
@@ -304,8 +304,11 @@ export const SHARE_LINK_PATH = "/queries/workbench";
  * credentials for a node that needs one.
  */
 export type SharedQuery = {
-    /** The runnable query. Null for a SQL link. */
-    query: CompiledQuery | null;
+    /**
+     * The runnable query: a compiled builder query, or `{ sql }` for a SQL block. `{ sql }` is
+     * the body of `POST /api/query`. Tell the two apart with `isSqlRunQuery`.
+     */
+    query: RunQuery;
     /** The name that the sender gave the query. */
     name: string;
     /** The node that runs the query. Empty when the sender named none. */
@@ -315,11 +318,6 @@ export type SharedQuery = {
      * pair of the area filter in `query`, or detects one.
      */
     coordinateColumns?: CoordinatePair | null;
-    /**
-     * The SQL text of a workbench SQL block, trimmed. A link with this field opens a SQL
-     * block, and holds no `query`. An app version from before SQL mode refuses such a link.
-     */
-    sql?: string;
 };
 
 /**
@@ -364,20 +362,18 @@ export function decodeSharedQuery(value: string, legacyNodeUrl?: string | null):
         payload = { query: raw as CompiledQuery, nodeUrl: legacyNodeUrl ?? "" };
     }
 
-    const sql = readSql(payload.sql);
-
-    if (sql === null && (!payload.query || typeof payload.query !== "object")) {
+    if (!payload.query || typeof payload.query !== "object") {
         throw new Error("This link does not hold a shared query.");
     }
 
-    let query: CompiledQuery | null = null;
-    let described: RunQuery;
+    let query = payload.query;
 
-    if (sql === null) {
-        query = payload.query as CompiledQuery;
-        described = query;
-    } else {
-        described = { sql };
+    // Keep only the trimmed text, so the block and the cache key get the same SQL.
+    if (isSqlRunQuery(query)) {
+        const sql = query.sql.trim();
+        if (sql === "") throw new Error("This link does not hold a shared query.");
+
+        query = { sql };
     }
 
     const shared: SharedQuery = {
@@ -387,30 +383,16 @@ export function decodeSharedQuery(value: string, legacyNodeUrl?: string | null):
         coordinateColumns: readCoordinatePair(payload.coordinateColumns)
     };
 
-    if (sql !== null) {
-        shared.sql = sql;
-    }
-
     // The receiver of a link, not the sender. It counts the reach of a share.
     track("query.open", {
         nodeHost: shared.nodeUrl || undefined,
         props: {
-            ...describeQuery(described),
+            ...describeQuery(query),
             legacy: isBareQuery || payload.instanceUrl !== undefined
         }
     });
 
     return shared;
-}
-
-/** The trimmed SQL of a link payload, or null when the value holds no SQL. */
-function readSql(value: unknown): string | null {
-    if (typeof value !== "string") return null;
-
-    const sql = value.trim();
-    if (sql === "") return null;
-
-    return sql;
 }
 
 /** A pair from a link payload, or null when the value is no valid pair. */
@@ -438,26 +420,21 @@ export type ShareableQuery = Pick<
  * runs on one node only, so the receiver needs that URL. It also carries the
  * coordinate pair, when the record stores one. It never carries a token.
  *
- * A SQL record sends its text in `sql`, and no `query`.
+ * A SQL record sends `{ sql }` as its `query`.
  */
 export function buildShareLink(record: ShareableQuery): string | null {
-    const nodeUrl = record.node?.url ?? "";
-    let shared: SharedQuery;
-    let described: RunQuery;
+    let query: RunQuery | null = record.compiled;
 
     if (queryModeOf(record) === "sql") {
         const sql = sqlTextOf(record).trim();
         if (sql === "") return null;
 
-        shared = { query: null, sql, name: record.name, nodeUrl };
-        described = { sql };
-    } else {
-        const query = record.compiled;
-        if (!query) return null;
-
-        shared = { query, name: record.name, nodeUrl };
-        described = query;
+        query = { sql };
     }
+
+    if (!query) return null;
+
+    const shared: SharedQuery = { query, name: record.name, nodeUrl: record.node?.url ?? "" };
 
     if (record.coordinateColumns) {
         shared.coordinateColumns = { ...record.coordinateColumns };
@@ -469,7 +446,7 @@ export function buildShareLink(record: ShareableQuery): string | null {
 
     track("query.share", {
         nodeHost: record.node?.url,
-        props: { ...describeQuery(described), linkChars: gzipped.length }
+        props: { ...describeQuery(query), linkChars: gzipped.length }
     });
 
     let origin = "http://localhost";

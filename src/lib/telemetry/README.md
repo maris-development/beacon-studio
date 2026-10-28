@@ -164,6 +164,7 @@ no `props.mode` holds a builder query.
 | `props.sqlLength` | The length of the full text. It is always complete.                |
 | `props.hasFilter` | True when the text holds a `WHERE` or a `LIMIT`.                   |
 | `props.limit`     | Always null. `props.rowLimit` holds the row cap of the cell limit. |
+| `props.format`    | The file format of a download. `query.download` only.              |
 
 ### Props per event
 
@@ -200,6 +201,7 @@ no `props.mode` holds a builder query.
 | `props.decodeMs`     | The decode of the Arrow stream. `query.execute` only.                                                                                |
 | `props.bytes`        | The size of the body, in bytes. `query.execute` only.                                                                                |
 | `props.rowLimit`     | The row cap that the cell limit gave a SQL run: the cell limit divided by the column count. `query.execute` only.                    |
+| `props.preview`      | True for the 500-row preview of a workbench SQL block. A viewer run has no `preview`. `query.execute` only.                          |
 | `props.renderMs`     | The render after the result arrived. `query.visualise` only.                                                                         |
 | `props.errorKind`    | The name of the error class. `query.error` only.                                                                                     |
 | `props.status`       | `query.error`: the HTTP status. `node.select`: the health of the node.                                                               |

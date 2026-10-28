@@ -364,17 +364,6 @@
             "isNotNull": "NON è NULL"
         }
     },
-    "editor": {
-        "title": "Editor di query",
-        "crumb": "Editor di query",
-        "error": {
-            "noColumn": "Ogni parametro della query deve includere column o column_name."
-        },
-        "toast": {
-            "executeFailed": "Errore durante l'esecuzione della query:",
-            "parseFailed": "Impossibile analizzare il JSON della query:"
-        }
-    },
     "workbench": {
         "title": "Banco di lavoro query",
         "untitledBlock": "Senza titolo ({number})",

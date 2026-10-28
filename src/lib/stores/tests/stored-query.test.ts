@@ -62,59 +62,42 @@ describe("share link payload", () => {
         expect(shared.name).toBe("Argo");
         expect(shared.nodeUrl).toBe(NODE_URL);
         expect(shared.coordinateColumns).toEqual(pair);
-        expect(shared.sql).toBeUndefined();
     });
 
     it("reads back a SQL payload", () => {
         const shared = decodeSharedQuery(
             encodeSharedQuery({
-                query: null,
-                sql: "SELECT * FROM argo LIMIT 10",
+                query: { sql: "SELECT * FROM argo LIMIT 10" },
                 name: "SQL 1",
                 nodeUrl: NODE_URL
             })
         );
 
-        expect(shared.query).toBeNull();
-        expect(shared.sql).toBe("SELECT * FROM argo LIMIT 10");
+        expect(shared.query).toEqual({ sql: "SELECT * FROM argo LIMIT 10" });
         expect(shared.name).toBe("SQL 1");
         expect(shared.nodeUrl).toBe(NODE_URL);
     });
 
     it("trims the SQL of a payload", () => {
         const shared = decodeSharedQuery(
-            Utils.objectToGzipString({ sql: "\n  SELECT 1\n", name: "", nodeUrl: "" })
+            Utils.objectToGzipString({ query: { sql: "\n  SELECT 1\n" }, name: "", nodeUrl: "" })
         );
 
-        expect(shared.sql).toBe("SELECT 1");
+        expect(shared.query).toEqual({ sql: "SELECT 1" });
     });
 
-    it("reads a blank SQL beside a query as a builder payload", () => {
-        const query = compiledQuery();
-        const shared = decodeSharedQuery(
-            Utils.objectToGzipString({ query, sql: "   ", name: "", nodeUrl: "" })
-        );
-
-        expect(shared.query).toEqual(query);
-        expect(shared.sql).toBeUndefined();
-    });
-
-    it("ignores a SQL value that is not a string", () => {
-        const query = compiledQuery();
-        const shared = decodeSharedQuery(
-            Utils.objectToGzipString({ query, sql: 42, name: "", nodeUrl: "" })
-        );
-
-        expect(shared.query).toEqual(query);
-        expect(shared.sql).toBeUndefined();
-    });
-
-    it("refuses a payload with no query and no SQL", () => {
+    it("refuses a payload with no query", () => {
         expect(() =>
             decodeSharedQuery(Utils.objectToGzipString({ name: "x", nodeUrl: "" }))
         ).toThrow();
         expect(() =>
-            decodeSharedQuery(Utils.objectToGzipString({ query: null, sql: "", nodeUrl: "" }))
+            decodeSharedQuery(Utils.objectToGzipString({ query: null, nodeUrl: "" }))
+        ).toThrow();
+    });
+
+    it("refuses a payload with a blank SQL", () => {
+        expect(() =>
+            decodeSharedQuery(Utils.objectToGzipString({ query: { sql: "  " }, nodeUrl: "" }))
         ).toThrow();
     });
 });
@@ -127,7 +110,6 @@ describe("old share link shapes", () => {
         expect(shared.query).toEqual(query);
         expect(shared.nodeUrl).toBe(NODE_URL);
         expect(shared.name).toBe("");
-        expect(shared.sql).toBeUndefined();
     });
 
     it("reads a bare compiled query as a JSON string", () => {
@@ -160,10 +142,13 @@ describe("buildShareLink", () => {
         expect(new URL(link!).pathname).toBe(SHARE_LINK_PATH);
 
         const shared = decodeSharedQuery(payloadOf(link!));
-        expect(shared.query).toBeNull();
-        expect(shared.sql).toBe("SELECT * FROM argo LIMIT 5");
+        expect(shared.query).toEqual({ sql: "SELECT * FROM argo LIMIT 5" });
         expect(shared.name).toBe("SQL 1");
         expect(shared.nodeUrl).toBe(NODE_URL);
+
+        const raw = Utils.gzipStringToObject<Record<string, unknown>>(payloadOf(link!));
+        expect(raw.query).toEqual({ sql: "SELECT * FROM argo LIMIT 5" });
+        expect(raw).not.toHaveProperty("sql");
     });
 
     it("keeps the coordinate pair of a SQL record", () => {
@@ -185,7 +170,6 @@ describe("buildShareLink", () => {
 
         const shared = decodeSharedQuery(payloadOf(link!));
         expect(shared.query).toEqual(query);
-        expect(shared.sql).toBeUndefined();
         expect(shared.nodeUrl).toBe(NODE_URL);
     });
 

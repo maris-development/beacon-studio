@@ -43,8 +43,7 @@ describe("resolveUrlQuery", () => {
     it("gives the SQL of a SQL share link", async () => {
         const { resolveUrlQuery, encodeSharedQuery } = await load();
         const payload = encodeSharedQuery({
-            query: null,
-            sql: "SELECT * FROM argo LIMIT 10",
+            query: { sql: "SELECT * FROM argo LIMIT 10" },
             name: "SQL 1",
             nodeUrl: NODE_URL
         });
