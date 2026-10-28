@@ -193,7 +193,7 @@
     });
 
     /** True when the node answered with its tables. Step 2 needs this. */
-    const nodeReady = $derived(!!node && !!client && !loadError);
+    const nodeReady = $derived(!!node && !!client && !loadError && loaded);
     /** True when the query has a table. Step 3 needs this. */
     const tableReady = $derived(nodeReady && !!selected_table_name);
     /** True when the query has a column. Step 4 needs this. */
