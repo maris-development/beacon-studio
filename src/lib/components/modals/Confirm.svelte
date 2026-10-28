@@ -1,118 +1,124 @@
 <script lang="ts">
-	/**
-	 * The one dialog that answers `askConfirm`, `askChoice` and `askAlert`.
-	 *
-	 * The layout holds a single instance. No other component renders it.
-	 */
-	import Button from '@/components/buttons/Button.svelte';
-	import Modal from '@/components/modals/Modal.svelte';
-	import { answerConfirm, confirmRequest } from '@/stores/confirm';
-	import { t } from '@/i18n';
+    /**
+     * The one dialog that answers `askConfirm`, `askChoice` and `askAlert`.
+     *
+     * The layout holds a single instance. No other component renders it.
+     */
+    import Button from "@/components/buttons/Button.svelte";
+    import Modal from "@/components/modals/Modal.svelte";
+    import { answerConfirm, confirmRequest } from "@/stores/confirm";
+    import { t } from "@/i18n";
 
-	/**
-	 * Answers the question on Escape, and stops that key there.
-	 *
-	 * A modal that asked the question listens on the document as well. Without
-	 * this guard one Escape would close both, and the user would lose the form
-	 * behind the question. The listener runs in the capture phase, so it reaches
-	 * the key first.
-	 */
-	$effect(() => {
-		if (!$confirmRequest) return;
+    /**
+     * Answers the question on Escape, and stops that key there.
+     *
+     * A modal that asked the question listens on the document as well. Without
+     * this guard one Escape would close both, and the user would lose the form
+     * behind the question. The listener runs in the capture phase, so it reaches
+     * the key first.
+     */
+    $effect(() => {
+        if (!$confirmRequest) return;
 
-		const onKeydown = (event: KeyboardEvent) => {
-			if (event.key !== 'Escape') return;
+        const onKeydown = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
 
-			event.preventDefault();
-			event.stopImmediatePropagation();
-			answerConfirm('cancel');
-		};
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            answerConfirm("cancel");
+        };
 
-		document.addEventListener('keydown', onKeydown, true);
+        document.addEventListener("keydown", onKeydown, true);
 
-		return () => document.removeEventListener('keydown', onKeydown, true);
-	});
+        return () => document.removeEventListener("keydown", onKeydown, true);
+    });
 
-	let cancelButton = $state<HTMLElement | null>(null);
-	let confirmButton = $state<HTMLElement | null>(null);
+    let cancelButton = $state<HTMLElement | null>(null);
+    let confirmButton = $state<HTMLElement | null>(null);
 
-	// Without this, Enter activates the opener again and repeats the question.
-	$effect(() => {
-		if (!$confirmRequest) return;
+    // Without this, Enter activates the opener again and repeats the question.
+    $effect(() => {
+        if (!$confirmRequest) return;
 
-		const opener = document.activeElement as HTMLElement | null;
-		const target = $confirmRequest.destructive ? (cancelButton ?? confirmButton) : confirmButton;
-		target?.focus();
+        const opener = document.activeElement as HTMLElement | null;
+        const target = $confirmRequest.destructive
+            ? (cancelButton ?? confirmButton)
+            : confirmButton;
+        target?.focus();
 
-		return () => {
-			if (opener?.isConnected) opener.focus();
-		};
-	});
+        return () => {
+            if (opener?.isConnected) opener.focus();
+        };
+    });
 </script>
 
 {#if $confirmRequest}
-	<div class="confirm-layer">
-		<Modal title={$confirmRequest.title} onClose={() => answerConfirm('cancel')} width="440px">
-			<p>{$confirmRequest.message}</p>
+    <div class="confirm-layer">
+        <Modal title={$confirmRequest.title} onClose={() => answerConfirm("cancel")} width="440px">
+            <p>{$confirmRequest.message}</p>
 
-			{#if $confirmRequest.note}
-				<p class="note">{$confirmRequest.note}</p>
-			{/if}
+            {#if $confirmRequest.note}
+                <p class="note">{$confirmRequest.note}</p>
+            {/if}
 
-			<div slot="footer" class="confirm-actions">
-				{#if $confirmRequest.cancelLabel !== null}
-					<Button bind:ref={cancelButton} variant="outline" onclick={() => answerConfirm('cancel')}>
-						{$confirmRequest.cancelLabel ?? $t('common.cancel')}
-					</Button>
-				{/if}
+            <div slot="footer" class="confirm-actions">
+                {#if $confirmRequest.cancelLabel !== null}
+                    <Button
+                        bind:ref={cancelButton}
+                        variant="outline"
+                        onclick={() => answerConfirm("cancel")}
+                    >
+                        {$confirmRequest.cancelLabel ?? $t("common.cancel")}
+                    </Button>
+                {/if}
 
-				{#if $confirmRequest.alternateLabel}
-					<Button
-						variant={$confirmRequest.alternateDestructive ? 'destructive' : 'outline'}
-						onclick={() => answerConfirm('alternate')}
-					>
-						{$confirmRequest.alternateLabel}
-					</Button>
-				{/if}
+                {#if $confirmRequest.alternateLabel}
+                    <Button
+                        variant={$confirmRequest.alternateDestructive ? "destructive" : "outline"}
+                        onclick={() => answerConfirm("alternate")}
+                    >
+                        {$confirmRequest.alternateLabel}
+                    </Button>
+                {/if}
 
-				<Button
-					bind:ref={confirmButton}
-					variant={$confirmRequest.destructive ? 'destructive' : 'default'}
-					onclick={() => answerConfirm('confirm')}
-				>
-					{$confirmRequest.confirmLabel ?? $t('common.continue')}
-				</Button>
-			</div>
-		</Modal>
-	</div>
+                <Button
+                    bind:ref={confirmButton}
+                    variant={$confirmRequest.destructive ? "destructive" : "default"}
+                    onclick={() => answerConfirm("confirm")}
+                >
+                    {$confirmRequest.confirmLabel ?? $t("common.continue")}
+                </Button>
+            </div>
+        </Modal>
+    </div>
 {/if}
 
 <style lang="scss">
-	/**
+    /**
 	 * A modal that asks a question keeps its own backdrop at z-index 49. This
 	 * layer owns a stacking context above that, so the question stays on top.
 	 */
-	.confirm-layer {
-		position: relative;
-		z-index: 60;
-	}
+    .confirm-layer {
+        position: relative;
+        z-index: 60;
+    }
 
-	p {
-		margin: 0;
+    p {
+        margin: 0;
 
-		& + .note {
-			margin-top: 0.5rem;
-		}
-	}
+        & + .note {
+            margin-top: 0.5rem;
+        }
+    }
 
-	.note {
-		color: var(--muted-foreground);
-	}
+    .note {
+        color: var(--muted-foreground);
+    }
 
-	.confirm-actions {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 0.5rem;
-	}
+    .confirm-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.5rem;
+    }
 </style>

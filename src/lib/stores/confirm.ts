@@ -15,33 +15,33 @@
  * ```
  */
 
-import { readonly, writable, type Readable } from 'svelte/store';
-import { translate } from '@/i18n';
+import { readonly, writable, type Readable } from "svelte/store";
+import { translate } from "@/i18n";
 
 export interface ConfirmOptions {
-	title: string;
-	message: string;
-	/** A second line, for the consequence of the step. */
-	note?: string;
-	/** The label of the button that goes ahead. */
-	confirmLabel?: string;
-	/** The label of the button that stops. Null hides it, which makes a message box. */
-	cancelLabel?: string | null;
-	/** Colours the button red. Use it when the step destroys something. */
-	destructive?: boolean;
-	/** The label of a third button, between cancel and confirm. Only `askChoice` reads the answer. */
-	alternateLabel?: string;
-	/** Colours the third button red. */
-	alternateDestructive?: boolean;
+    title: string;
+    message: string;
+    /** A second line, for the consequence of the step. */
+    note?: string;
+    /** The label of the button that goes ahead. */
+    confirmLabel?: string;
+    /** The label of the button that stops. Null hides it, which makes a message box. */
+    cancelLabel?: string | null;
+    /** Colours the button red. Use it when the step destroys something. */
+    destructive?: boolean;
+    /** The label of a third button, between cancel and confirm. Only `askChoice` reads the answer. */
+    alternateLabel?: string;
+    /** Colours the third button red. */
+    alternateDestructive?: boolean;
 }
 
 /** The button that the user pressed. Escape and the backdrop answer `cancel`. */
-export type ConfirmAnswer = 'confirm' | 'alternate' | 'cancel';
+export type ConfirmAnswer = "confirm" | "alternate" | "cancel";
 
 interface ConfirmRequest extends ConfirmOptions {
-	/** Rises per question. The dialog keys on it, so a second question resets it. */
-	id: number;
-	settle: (answer: ConfirmAnswer) => void;
+    /** Rises per question. The dialog keys on it, so a second question resets it. */
+    id: number;
+    settle: (answer: ConfirmAnswer) => void;
 }
 
 const request = writable<ConfirmRequest | null>(null);
@@ -58,7 +58,7 @@ let counter = 0;
  * caller must therefore treat a false as "do nothing", and never as an error.
  */
 export function askConfirm(options: ConfirmOptions): Promise<boolean> {
-	return askChoice(options).then((answer) => answer === 'confirm');
+    return askChoice(options).then((answer) => answer === "confirm");
 }
 
 /**
@@ -68,29 +68,33 @@ export function askConfirm(options: ConfirmOptions): Promise<boolean> {
  * A second question replaces the first, and the first then answers `cancel`.
  */
 export function askChoice(options: ConfirmOptions): Promise<ConfirmAnswer> {
-	return new Promise((resolve) => {
-		counter += 1;
+    return new Promise((resolve) => {
+        counter += 1;
 
-		request.update((pending) => {
-			pending?.settle('cancel');
+        request.update((pending) => {
+            pending?.settle("cancel");
 
-			return { ...options, id: counter, settle: resolve };
-		});
-	});
+            return { ...options, id: counter, settle: resolve };
+        });
+    });
 }
 
 /** Shows one message with a single button. It replaces a native `alert`. */
-export function askAlert(options: Omit<ConfirmOptions, 'cancelLabel' | 'destructive'>): Promise<void> {
-	return askConfirm({ ...options, cancelLabel: null, confirmLabel: options.confirmLabel ?? translate('common.ok') }).then(
-		() => undefined
-	);
+export function askAlert(
+    options: Omit<ConfirmOptions, "cancelLabel" | "destructive">
+): Promise<void> {
+    return askConfirm({
+        ...options,
+        cancelLabel: null,
+        confirmLabel: options.confirmLabel ?? translate("common.ok")
+    }).then(() => undefined);
 }
 
 /** Answers the open question and closes the dialog. `<Confirm />` calls this. */
 export function answerConfirm(answer: ConfirmAnswer): void {
-	request.update((pending) => {
-		pending?.settle(answer);
+    request.update((pending) => {
+        pending?.settle(answer);
 
-		return null;
-	});
+        return null;
+    });
 }
