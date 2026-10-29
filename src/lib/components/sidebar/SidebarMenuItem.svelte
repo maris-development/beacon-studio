@@ -15,8 +15,8 @@
     }: {
         title: string;
         url?: string;
-        /** Section root the item highlights on. Defaults to `url`. */
-        match?: string;
+        /** Section roots the item highlights on. Defaults to `url`. */
+        match?: string[];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         icon?: any;
         target?: string;

@@ -64,7 +64,6 @@
 
                 <div class="actions">
                     <Button
-                        variant="outline"
                         href={exampleHref(example)}
                         onclick={() =>
                             track("example.start", {

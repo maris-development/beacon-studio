@@ -35,15 +35,13 @@
         "openMenu": "Menu openen",
         "closeMenu": "Menu sluiten",
         "group": {
-            "dataAccess": "Datatoegang",
-            "explore": "Verkennen en analyseren",
+            "explore": "Data verkennen",
             "nodeManagement": "Nodebeheer",
             "studio": "{app}"
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Query-werkbank",
-            "workspace": "Werkruimte",
+            "queryBuilder": "Workbench",
             "dataBrowser": "Databrowser",
             "datasets": "Datasets",
             "dataTables": "Datatabellen",
@@ -221,8 +219,6 @@
             "shareEmptyCompileFailed": "Een lege query kan niet gedeeld worden. Kies een tabel en minstens één kolom. Fout bij compileren van query:"
         },
         "actions": {
-            "edit": "Query bewerken",
-            "editTitle": "Query bewerken",
             "share": "Delen",
             "shareUrl": "URL delen",
             "copyJson": "JSON kopiëren",
@@ -383,9 +379,12 @@
             "discard": "Sluiten zonder opslaan",
             "saveAndClose": "Opslaan en sluiten"
         },
-        "header": {
-            "editing": "{name} bewerken",
-            "viewing": "{name} bekijken"
+        "view": {
+            "label": "Weergaven van query en resultaat",
+            "query": "Query",
+            "map": "Kaart",
+            "table": "Tabel",
+            "chart": "Grafiek"
         },
         "panes": {
             "builder": "Query-werkbank",
@@ -397,7 +396,9 @@
             "sql": "SQL-query",
             "preview": "Voorbeeld",
             "collapsePreview": "Voorbeeld inklappen",
-            "expandPreview": "Voorbeeld uitklappen"
+            "expandPreview": "Voorbeeld uitklappen",
+            "collapseQueries": "Query's inklappen",
+            "expandQueries": "Query's uitklappen"
         },
         "code": {
             "tabs": "Codetaal",
@@ -544,10 +545,6 @@
             "map": "Visualiseer je data op een interactieve kaart. Gebruik de kaartviewer om geografische patronen en inzichten te verkennen.",
             "table": "Verken je data in tabelvorm. Met de tabelverkenner bekijk en filter je je dataset in detail.",
             "chart": "Verken je data met grafieken. Met de grafiekverkenner bekijk en filter je je dataset in detail."
-        },
-        "tab": {
-            "table": "Tabel",
-            "chart": "Grafiek"
         },
         "selectColumn": "Kies een kolom",
         "availableColumns": "Beschikbare kolommen",

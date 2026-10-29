@@ -16,7 +16,6 @@
     import { QueryWorkspace } from "@/components/query-builder/QueryWorkspace.svelte";
     import type { StoredQuery } from "@/stores/stored-query";
     import { getDefaultQueryActions } from "@/components/query-builder/QueryActions";
-    import VisualisationTabs from "@/components/visualisation/VisualisationTabs.svelte";
     import { Input } from "@/components/ui/input";
     import { settings } from "@/stores/settings";
     import { t } from "@/i18n";
@@ -284,11 +283,9 @@
 />
 
 <div class="page-wrapper">
-    <QuerySelectorHeader {workspace} {queryActions} mode="view" />
+    <QuerySelectorHeader {workspace} {queryActions} view="table" />
 
-    <div class="vertical-tabs-wrapper">
-        <VisualisationTabs />
-
+    <div class="view-body">
         <div class="content page-container">
             {#if !resultQuery}
                 <p>{$t("table.selectQuery")}</p>
@@ -347,7 +344,7 @@
         padding: 1rem;
     }
 
-    .vertical-tabs-wrapper {
+    .view-body {
         flex-grow: 1;
         min-height: 0;
         min-width: 0;

@@ -35,15 +35,13 @@
         "openMenu": "Apri menu",
         "closeMenu": "Chiudi menu",
         "group": {
-            "dataAccess": "Accesso ai dati",
-            "explore": "Esplora e analizza",
+            "explore": "Esplora i dati",
             "nodeManagement": "Gestione nodi",
             "studio": "{app}"
         },
         "item": {
             "queries": "Query",
-            "queryBuilder": "Banco di lavoro query",
-            "workspace": "Spazio di lavoro",
+            "queryBuilder": "Workbench",
             "dataBrowser": "Browser dati",
             "datasets": "Dataset",
             "dataTables": "Tabelle dati",
@@ -221,8 +219,6 @@
             "shareEmptyCompileFailed": "Impossibile condividere una query vuota. Seleziona una tabella e almeno una colonna. Errore durante la compilazione della query:"
         },
         "actions": {
-            "edit": "Modifica query",
-            "editTitle": "Modifica query",
             "share": "Condividi",
             "shareUrl": "Condividi URL",
             "copyJson": "Copia JSON",
@@ -383,9 +379,12 @@
             "discard": "Chiudi senza salvare",
             "saveAndClose": "Salva e chiudi"
         },
-        "header": {
-            "editing": "Modifica di {name}",
-            "viewing": "Visualizzazione di {name}"
+        "view": {
+            "label": "Viste della query e del risultato",
+            "query": "Query",
+            "map": "Mappa",
+            "table": "Tabella",
+            "chart": "Grafico"
         },
         "panes": {
             "builder": "Banco di lavoro query",
@@ -397,7 +396,9 @@
             "sql": "Query SQL",
             "preview": "Anteprima",
             "collapsePreview": "Comprimi anteprima",
-            "expandPreview": "Espandi anteprima"
+            "expandPreview": "Espandi anteprima",
+            "collapseQueries": "Comprimi query",
+            "expandQueries": "Espandi query"
         },
         "code": {
             "tabs": "Linguaggio del codice",
@@ -544,10 +545,6 @@
             "map": "Visualizza i tuoi dati su una mappa interattiva. Usa il visualizzatore mappa per esplorare schemi e informazioni geografiche.",
             "table": "Esplora i tuoi dati in formato tabellare. Esplora tabelle permette di esaminare e filtrare il dataset in dettaglio.",
             "chart": "Esplora i tuoi dati con i grafici. Esplora grafici permette di esaminare e filtrare il dataset in dettaglio."
-        },
-        "tab": {
-            "table": "Tabella",
-            "chart": "Grafico"
         },
         "selectColumn": "Seleziona una colonna",
         "availableColumns": "Colonne disponibili",

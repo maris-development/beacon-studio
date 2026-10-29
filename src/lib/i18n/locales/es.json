@@ -35,15 +35,13 @@
         "openMenu": "Abrir menú",
         "closeMenu": "Cerrar menú",
         "group": {
-            "dataAccess": "Acceso a datos",
-            "explore": "Explorar y analizar",
+            "explore": "Explorar datos",
             "nodeManagement": "Gestión de nodos",
             "studio": "{app}"
         },
         "item": {
             "queries": "Consultas",
-            "queryBuilder": "Banco de trabajo de consultas",
-            "workspace": "Espacio de trabajo",
+            "queryBuilder": "Workbench",
             "dataBrowser": "Navegador de datos",
             "datasets": "Conjuntos de datos",
             "dataTables": "Tablas de datos",
@@ -221,8 +219,6 @@
             "shareEmptyCompileFailed": "No se puede compartir una consulta vacía. Selecciona una tabla y al menos una columna. Error al compilar la consulta:"
         },
         "actions": {
-            "edit": "Editar consulta",
-            "editTitle": "Editar consulta",
             "share": "Compartir",
             "shareUrl": "Compartir URL",
             "copyJson": "Copiar JSON",
@@ -383,9 +379,12 @@
             "discard": "Cerrar sin guardar",
             "saveAndClose": "Guardar y cerrar"
         },
-        "header": {
-            "editing": "Editando {name}",
-            "viewing": "Viendo {name}"
+        "view": {
+            "label": "Vistas de la consulta y del resultado",
+            "query": "Consulta",
+            "map": "Mapa",
+            "table": "Tabla",
+            "chart": "Gráfico"
         },
         "panes": {
             "builder": "Banco de trabajo de consultas",
@@ -397,7 +396,9 @@
             "sql": "Consulta SQL",
             "preview": "Vista previa",
             "collapsePreview": "Contraer la vista previa",
-            "expandPreview": "Expandir la vista previa"
+            "expandPreview": "Expandir la vista previa",
+            "collapseQueries": "Contraer las consultas",
+            "expandQueries": "Expandir las consultas"
         },
         "code": {
             "tabs": "Lenguaje del código",
@@ -544,10 +545,6 @@
             "map": "Visualiza tus datos en un mapa interactivo. Usa el visor de mapas para explorar patrones y conclusiones geográficas.",
             "table": "Explora tus datos en formato de tabla. El explorador de tablas permite examinar y filtrar tu conjunto de datos en detalle.",
             "chart": "Explora tus datos con gráficos. El explorador de gráficos permite examinar y filtrar tu conjunto de datos en detalle."
-        },
-        "tab": {
-            "table": "Tabla",
-            "chart": "Gráfico"
         },
         "selectColumn": "Selecciona una columna",
         "availableColumns": "Columnas disponibles",
