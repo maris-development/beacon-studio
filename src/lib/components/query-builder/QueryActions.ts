@@ -31,7 +31,6 @@ export type QueryActions = {
     visualiseMap?: ActionCallback; // links to visualise data in map page
     saveQuery?: ActionCallback; // links to visualise data in map page
     resetQuery?: ActionCallback; // reset query selection
-    editQuery?: ActionCallback; // edit query selection
     /**
      * Open a saved query or a history entry on the current page. The action bar
      * shows the saved and history buttons only when this action exists.

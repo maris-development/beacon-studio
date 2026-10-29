@@ -15,7 +15,6 @@
     import { t } from "@/i18n";
 
     // Icons
-    import EyeIcon from "@lucide/svelte/icons/eye";
     import TextSearchIcon from "@lucide/svelte/icons/text-search";
     import BookOpenIcon from "@lucide/svelte/icons/book-open";
     import InfoIcon from "@lucide/svelte/icons/info";
@@ -42,24 +41,14 @@
 
     const groups: Group[] = [
         {
-            title: "nav.group.dataAccess",
+            title: "nav.group.explore",
             items: [
                 {
                     title: "nav.item.queryBuilder",
                     url: resolve("/queries/workbench"),
-                    match: resolve("/queries"),
+                    // The result views belong to the workbench. The header switch opens them.
+                    match: [resolve("/queries"), resolve("/visualisations")],
                     icon: TextSearchIcon
-                }
-            ]
-        },
-        {
-            title: "nav.group.explore",
-            items: [
-                {
-                    title: "nav.item.workspace",
-                    url: resolve("/visualisations/map-viewer"),
-                    match: resolve("/visualisations"),
-                    icon: EyeIcon
                 }
             ]
         },

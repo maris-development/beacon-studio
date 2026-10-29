@@ -5,8 +5,8 @@ export type SubItem = { title: MessageKey; url: string; adminOnly?: boolean };
 export type MenuItem = {
     title: MessageKey;
     url: string;
-    /** Section root the item highlights on. Defaults to `url`. */
-    match?: string;
+    /** Section roots the item highlights on. Defaults to `url`. */
+    match?: string[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any;
     children?: SubItem[];
@@ -44,9 +44,9 @@ export function isPathActive(pathname: string, url: string): boolean {
 /** A parent with no `match` is active on its own URL and on its children only, not on a sibling page below it. */
 export function isItemActive(
     pathname: string,
-    item: { url: string; match?: string; children?: { url: string }[] }
+    item: { url: string; match?: string[]; children?: { url: string }[] }
 ): boolean {
-    if (item.match) return isPathActive(pathname, item.match);
+    if (item.match) return item.match.some((root) => isPathActive(pathname, root));
     if (item.children) {
         return (
             pathname === item.url ||

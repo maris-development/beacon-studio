@@ -7,7 +7,6 @@
     import SavedQueriesModal from "@/components/queries/SavedQueriesModal.svelte";
     import QueryHistoryModal from "@/components/queries/QueryHistoryModal.svelte";
     import DownloadDataButton from "../buttons/DownloadDataButton.svelte";
-    import VisualiseDataButton from "../buttons/VisualiseDataButton.svelte";
     // icons
     import ShareIcon2 from "@lucide/svelte/icons/share-2";
     import SaveIcon from "@lucide/svelte/icons/save";
@@ -18,7 +17,6 @@
     import SQLIcon from "@lucide/svelte/icons/database";
     import UrlIcon from "@lucide/svelte/icons/link-2";
     import InfoIcon from "@lucide/svelte/icons/info";
-    import PencilIcon from "@lucide/svelte/icons/pencil";
     import BookmarkIcon from "@lucide/svelte/icons/bookmark";
     import HistoryIcon from "@lucide/svelte/icons/history";
     import { settings } from "@/stores/settings";
@@ -104,34 +102,20 @@
 <div class="query-action-bar">
     <div class="query-action-group">
         <DownloadDataButton
+            variant="outline"
             downloadData={queryActions.downloadData}
             disabled={!!blockReason}
-            title={blockReason ? $t(blockReason) : ""}
+            title={blockReason ? $t(blockReason) : $t("download.button")}
         />
-
-        {#if queryActions.editQuery}
-            <Button onclick={queryActions.editQuery} title={$t("query.actions.editTitle")}>
-                <PencilIcon />
-                {$t("query.actions.edit")}
-            </Button>
-        {:else}
-            <VisualiseDataButton
-                visualiseTable={queryActions.visualiseTable}
-                visualiseChart={queryActions.visualiseChart}
-                visualiseMap={queryActions.visualiseMap}
-                disabled={!!blockReason}
-                title={blockReason ? $t(blockReason) : ""}
-            />
-        {/if}
 
         <!-- dropdown for copy options -->
         {#if queryActions.compileQuery}
             <!-- Add name of active query on top of dropdown -->
             <DropdownMenu.Root>
                 <DropdownMenu.Trigger>
-                    <Button variant="outline">
+                    <Button variant="outline" title={$t("query.actions.share")}>
                         <ShareIcon2 />
-                        {$t("query.actions.share")}
+                        <span class="action-label">{$t("query.actions.share")}</span>
                     </Button>
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content class="w-48">
@@ -210,7 +194,7 @@
                 title={$t("query.actions.saveTitle")}
             >
                 <SaveIcon />
-                {$t("query.actions.save")}
+                <span class="action-label">{$t("query.actions.save")}</span>
             </Button>
         {/if}
 
@@ -221,7 +205,9 @@
                 title={$t("saved.title")}
             >
                 <BookmarkIcon />
-                {$t("query.actions.saved", { count: $savedQueries.length })}
+                <span class="action-label">
+                    {$t("query.actions.saved", { count: $savedQueries.length })}
+                </span>
             </Button>
 
             <Button
@@ -230,17 +216,18 @@
                 title={$t("history.title")}
             >
                 <HistoryIcon />
-                {$t("query.actions.history")}
+                <span class="action-label">{$t("query.actions.history")}</span>
             </Button>
         {/if}
 
         <Button
+            class="reset-action"
             onclick={queryActions.resetQuery}
-            variant="destructive"
+            variant="outline"
             title={$t("query.actions.resetTitle")}
         >
             <ResetIcon />
-            {$t("common.reset")}
+            <span class="action-label">{$t("common.reset")}</span>
         </Button>
 
         <Button
@@ -271,5 +258,16 @@
 
     .menu-hint {
         display: block;
+    }
+
+    // An outline button, red so that it still warns: a reset loses the query.
+    .query-action-bar :global(.btn.reset-action) {
+        color: var(--destructive);
+        border-color: color-mix(in srgb, var(--destructive) 40%, transparent);
+
+        &:hover {
+            color: var(--destructive);
+            background-color: color-mix(in srgb, var(--destructive) 8%, var(--background));
+        }
     }
 </style>
