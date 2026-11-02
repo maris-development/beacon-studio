@@ -107,6 +107,7 @@
 
 <QueryBuilderStep
     step={2}
+    grow
     done={sqlReady}
     title={$t("workbench.sql.stepTitle")}
     description={$t("workbench.sql.stepDescription")}
@@ -205,13 +206,14 @@
         color: var(--muted-foreground);
     }
 
-    // The tree and the editor share one height. The handle at the corner resizes both.
+    // The box fills the free height. The handle at the corner makes it taller.
     .sql-step {
         display: grid;
+        flex: 1 0 auto;
         grid-template-columns: minmax(10rem, 15rem) minmax(0, 1fr);
         gap: 0.75rem;
         height: 22rem;
-        min-height: 12rem;
+        min-height: 22rem;
         resize: vertical;
         overflow: hidden;
 

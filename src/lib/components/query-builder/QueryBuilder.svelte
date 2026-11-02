@@ -295,27 +295,34 @@
 
 <QueryBuilderOutputFormatSelector step={4} disabled={!columnsReady} bind:selected_output_format />
 
-<hr />
+<div class="builder-footer">
+    <hr />
 
-<div class="builder-run">
-    <DownloadDataButton
-        downloadData={workbenchActions.downloadData}
-        disabled={!queryReady}
-        title={queryReady ? "" : $t("query.steps.incomplete")}
-    />
+    <div class="builder-run">
+        <DownloadDataButton
+            downloadData={workbenchActions.downloadData}
+            disabled={!queryReady}
+            title={queryReady ? "" : $t("query.steps.incomplete")}
+        />
 
-    <VisualiseDataButton
-        visualiseTable={workbenchActions.visualiseTable}
-        visualiseChart={workbenchActions.visualiseChart}
-        visualiseMap={workbenchActions.visualiseMap}
-        disabled={!queryReady}
-        title={queryReady ? "" : $t("query.steps.incomplete")}
-    />
+        <VisualiseDataButton
+            visualiseTable={workbenchActions.visualiseTable}
+            visualiseChart={workbenchActions.visualiseChart}
+            visualiseMap={workbenchActions.visualiseMap}
+            disabled={!queryReady}
+            title={queryReady ? "" : $t("query.steps.incomplete")}
+        />
+    </div>
 </div>
 
 <style lang="scss">
     hr {
         margin: 1rem 0;
+    }
+
+    // The free height of the pane goes above the buttons, so they stay at the bottom.
+    .builder-footer {
+        margin-top: auto;
     }
 
     // Align the buttons with the content of the steps, past the step number.

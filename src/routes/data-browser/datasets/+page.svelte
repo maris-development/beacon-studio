@@ -96,11 +96,11 @@
         loading = true;
         error = null;
 
-        // Another node: its file list must not show under the new node.
+        // Another node: its file list and folder must not show under the new node.
         if (loadedUrl !== null && current.url !== loadedUrl) {
             entries = [];
             total = null;
-            if (requestedPage !== 1) goToPage(1);
+            resetLocation();
         }
         loadedUrl = current.url;
 
@@ -155,6 +155,18 @@
             url.searchParams.set("page", String(next));
         }
         goto(`${url.pathname}${url.search}`, { keepFocus: true, noScroll: true });
+    }
+
+    function resetLocation() {
+        const url = new URL(page.url);
+        url.searchParams.delete("folder");
+        url.searchParams.delete("page");
+        if (url.search === page.url.search) return;
+        goto(`${url.pathname}${url.search}`, {
+            keepFocus: true,
+            noScroll: true,
+            replaceState: true
+        });
     }
 
     function openFolder(path: string) {
