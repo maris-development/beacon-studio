@@ -451,9 +451,9 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        background: white;
+        background: var(--card);
         border-radius: 0.75rem;
-        border: 1px solid rgb(231, 231, 236);
+        border: 1px solid var(--card-border);
         max-width: 100%;
 
         // A collapsed pane shrinks to just its header so the other pane expands.

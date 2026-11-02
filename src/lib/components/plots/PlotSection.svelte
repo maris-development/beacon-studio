@@ -67,7 +67,7 @@
 
 <style lang="scss">
     .plot-section {
-        border: 1px solid var(--border, #e5e7eb);
+        border: 1px solid var(--border);
         border-radius: 0.5rem;
         overflow: hidden;
 
@@ -83,7 +83,7 @@
             cursor: pointer;
 
             &:hover {
-                background-color: var(--accent, #f3f4f6);
+                background-color: var(--accent);
             }
         }
 
@@ -107,8 +107,8 @@
             width: 1.375rem;
             height: 1.375rem;
             border-radius: 999px;
-            background-color: var(--muted, #eef2ff);
-            color: var(--muted-foreground, #4b5563);
+            background-color: var(--muted);
+            color: var(--muted-foreground);
             font-size: var(--font-size-xs);
             font-weight: 600;
         }
@@ -127,7 +127,7 @@
 
         .summary {
             font-size: var(--font-size-xs);
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -138,7 +138,7 @@
             flex-direction: column;
             gap: 0.875rem;
             padding: 0.25rem 0.75rem 0.875rem;
-            border-top: 1px solid var(--border, #e5e7eb);
+            border-top: 1px solid var(--border);
         }
     }
 </style>

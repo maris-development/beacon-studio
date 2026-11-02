@@ -79,9 +79,9 @@
             align-items: flex-start;
             gap: 0.25rem;
             padding: 0.75rem;
-            border: 1px solid var(--border, #e5e7eb);
+            border: 1px solid var(--border);
             border-radius: 0.5rem;
-            background-color: var(--background, #ffffff);
+            background-color: var(--background);
             text-align: left;
             cursor: pointer;
             transition:
@@ -111,7 +111,7 @@
             .description {
                 font-size: var(--font-size-xs);
                 line-height: 1.3;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
             }
         }
     }

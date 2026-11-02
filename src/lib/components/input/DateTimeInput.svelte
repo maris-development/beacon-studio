@@ -199,24 +199,26 @@
     .datetime-input {
         font: inherit;
         padding: 0.5rem 0.65rem;
-        border: 1px solid var(--dti-border, #cbd5e1);
+        border: 1px solid var(--dti-border, var(--input-border));
         border-radius: var(--dti-radius, 6px);
-        background: var(--dti-bg, #fff);
+        background: var(--dti-bg, var(--card));
         color: inherit;
         width: 100%;
         box-sizing: border-box;
     }
     .datetime-input:focus {
         outline: none;
-        border-color: var(--dti-focus, #6366f1);
-        box-shadow: 0 0 0 3px var(--dti-focus-ring, rgba(99, 102, 241, 0.2));
+        border-color: var(--dti-focus, var(--control-active));
+        box-shadow: 0 0 0 3px
+            var(--dti-focus-ring, color-mix(in srgb, var(--control-active) 20%, transparent));
     }
     /* Equal specificity to :focus (0,2,0), so this must stay after it to win
 	   while the field is focused. */
     .datetime-input.invalid,
     .datetime-input.invalid:focus {
-        border-color: var(--dti-invalid, #dc2626);
-        box-shadow: 0 0 0 3px var(--dti-invalid-ring, rgba(220, 38, 38, 0.2));
+        border-color: var(--dti-invalid, var(--destructive));
+        box-shadow: 0 0 0 3px
+            var(--dti-invalid-ring, color-mix(in srgb, var(--destructive) 20%, transparent));
     }
     .datetime-input:disabled {
         opacity: 0.6;

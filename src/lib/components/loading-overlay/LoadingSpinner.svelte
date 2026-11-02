@@ -1,6 +1,6 @@
 <script lang="ts">
     let {
-        ringColor = "black",
+        ringColor = "var(--foreground)",
         size = "32px"
     }: {
         ringColor?: string;
@@ -21,8 +21,8 @@
             width: var(--size, 32px);
             height: var(--size, 32px);
             border: 4px solid;
-            border-color: var(--ring-color, #000) transparent;
-            border-top-color: var(--ring-color, #000);
+            border-color: var(--ring-color, var(--foreground)) transparent;
+            border-top-color: var(--ring-color, var(--foreground));
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }

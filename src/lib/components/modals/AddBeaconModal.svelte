@@ -464,7 +464,7 @@
             font-size: var(--font-size-sm);
 
             &.valid {
-                color: MediumSeaGreen;
+                color: var(--status-ok);
             }
 
             &.invalid {
@@ -490,7 +490,7 @@
     }
 
     .connection-valid {
-        color: MediumSeaGreen;
+        color: var(--status-ok);
     }
 
     .connection-testing {

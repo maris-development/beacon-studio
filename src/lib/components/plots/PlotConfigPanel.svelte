@@ -1429,8 +1429,8 @@
             grid-template-columns: 1fr auto;
             gap: 0.5rem;
             padding: 0.625rem 0 0.25rem;
-            background-color: var(--card, #ffffff);
-            border-top: 1px solid var(--border, #e5e7eb);
+            background-color: var(--card);
+            border-top: 1px solid var(--border);
 
             button {
                 display: flex;
@@ -1439,8 +1439,8 @@
                 gap: 0.375rem;
                 padding: 0.5rem 0.75rem;
                 border-radius: 0.375rem;
-                border: 1px solid var(--border, #e5e7eb);
-                background-color: var(--card, #ffffff);
+                border: 1px solid var(--border);
+                background-color: var(--card);
                 font-size: var(--font-size-sm);
                 font-weight: 500;
                 cursor: pointer;
@@ -1453,13 +1453,13 @@
 
             // The Apply button only stands out while there is something to apply.
             &.dirty .apply {
-                border-color: var(--primary); // #2563eb;
-                background-color: var(--primary); // #2563eb;
+                border-color: var(--primary);
+                background-color: var(--primary);
                 color: var(--primary-foreground);
             }
 
             &.dirty .revert:hover {
-                background-color: var(--accent, #f3f4f6);
+                background-color: var(--accent);
             }
         }
 
@@ -1468,7 +1468,7 @@
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
             margin-top: 0.25rem;
 
             &:first-child {
@@ -1492,7 +1492,7 @@
 
             .fixed-value {
                 font-size: var(--font-size-sm);
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
                 padding: 0.375rem 0;
             }
         }
@@ -1502,7 +1502,7 @@
             flex-direction: column;
             gap: 0.75rem;
             padding: 0.25rem 0 1rem;
-            border-bottom: 1px solid var(--border, #e5e7eb);
+            border-bottom: 1px solid var(--border);
 
             &:last-of-type {
                 border-bottom: 0;
@@ -1511,7 +1511,7 @@
         }
 
         .property-subsection {
-            border-bottom: 1px solid var(--border, #e5e7eb);
+            border-bottom: 1px solid var(--border);
 
             &:last-child {
                 border-bottom: 0;
@@ -1522,7 +1522,7 @@
                 align-items: center;
                 justify-content: space-between;
                 padding: 0.625rem 0;
-                color: var(--foreground, #111827);
+                color: var(--foreground);
                 font-size: var(--font-size-xs);
                 font-weight: 600;
                 letter-spacing: 0.04em;
@@ -1563,7 +1563,7 @@
         }
 
         .analysis-subsection {
-            border-bottom: 1px solid var(--border, #e5e7eb);
+            border-bottom: 1px solid var(--border);
             padding-bottom: 0.125rem;
 
             &:last-child {
@@ -1576,7 +1576,7 @@
                 justify-content: space-between;
                 gap: 0.5rem;
                 padding: 0.625rem 0;
-                color: var(--foreground, #111827);
+                color: var(--foreground);
                 font-size: var(--font-size-xs);
                 font-weight: 600;
                 letter-spacing: 0.04em;
@@ -1618,13 +1618,13 @@
         }
 
         .clip-range-header span:last-child {
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
 
         .clip-range-track {
             position: relative;
             height: 1.25rem;
-            accent-color: var(--primary, #2563eb);
+            accent-color: var(--primary);
 
             &::before {
                 content: "";
@@ -1637,12 +1637,12 @@
                 border-radius: 999px;
                 background: linear-gradient(
                     to right,
-                    var(--muted, #e5e7eb) 0%,
-                    var(--muted, #e5e7eb) var(--clip-min),
-                    var(--primary, #2563eb) var(--clip-min),
-                    var(--primary, #2563eb) var(--clip-max),
-                    var(--muted, #e5e7eb) var(--clip-max),
-                    var(--muted, #e5e7eb) 100%
+                    var(--muted) 0%,
+                    var(--muted) var(--clip-min),
+                    var(--primary) var(--clip-min),
+                    var(--primary) var(--clip-max),
+                    var(--muted) var(--clip-max),
+                    var(--muted) 100%
                 );
             }
 
@@ -1674,7 +1674,7 @@
                     appearance: none;
                     border: 0;
                     border-radius: 50%;
-                    background: var(--primary, #2563eb);
+                    background: var(--primary);
                     box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
                     pointer-events: auto;
                     cursor: pointer;
@@ -1685,7 +1685,7 @@
                     height: 1rem;
                     border: 0;
                     border-radius: 50%;
-                    background: var(--primary, #2563eb);
+                    background: var(--primary);
                     box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
                     pointer-events: auto;
                     cursor: pointer;
@@ -1708,9 +1708,9 @@
                 width: 3rem;
                 height: 2.25rem;
                 padding: 0.125rem;
-                border: 1px solid var(--border, #d1d5db);
+                border: 1px solid var(--border);
                 border-radius: 0.25rem;
-                background: var(--card, #ffffff);
+                background: var(--card);
                 cursor: pointer;
             }
         }
@@ -1757,7 +1757,7 @@
             height: 1.375rem;
             padding: 0.125rem;
             border-radius: 999px;
-            background-color: var(--muted, #d1d5db);
+            background-color: var(--muted);
             transition: background-color 0.15s ease;
         }
 
@@ -1765,13 +1765,13 @@
             width: 1.125rem;
             height: 1.125rem;
             border-radius: 50%;
-            background-color: #ffffff;
+            background-color: var(--control-thumb);
             box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
             transition: transform 0.15s ease;
         }
 
         .switch-input:checked + .switch-track {
-            background-color: var(--primary, #2563eb);
+            background-color: var(--primary);
         }
 
         .switch-input:checked + .switch-track .switch-thumb {
@@ -1799,8 +1799,8 @@
             cursor: pointer;
 
             :global([data-slot="checkbox"][data-state="checked"]) {
-                border-color: #312c85;
-                background-color: #312c85;
+                border-color: var(--control-active);
+                background-color: var(--control-active);
             }
         }
 
@@ -1812,7 +1812,7 @@
 
         .hint {
             font-size: var(--font-size-xs);
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
     }
 </style>

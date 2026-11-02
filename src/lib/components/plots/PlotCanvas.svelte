@@ -591,7 +591,7 @@
         min-height: 0;
         border-radius: 0.5rem;
         overflow: hidden;
-        background-color: var(--plot-background, #ffffff);
+        background-color: var(--plot-background, var(--card));
 
         .plot-host {
             width: 100%;
@@ -613,11 +613,11 @@
             justify-content: center;
             padding: 2rem;
             text-align: center;
-            background-color: var(--plot-background, #ffffff);
+            background-color: var(--plot-background, var(--card));
 
             p {
                 max-width: 34rem;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
             }
         }
     }

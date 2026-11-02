@@ -29,7 +29,7 @@
 
         &.super {
             background: var(--admin-badge-background);
-            color: white;
+            color: var(--admin-badge-foreground);
         }
 
         &.anonymous {
@@ -38,8 +38,8 @@
         }
 
         &.local {
-            background: color-mix(in srgb, #7c3aed 14%, transparent);
-            color: #6d28d9;
+            background: color-mix(in srgb, var(--user-local) 14%, transparent);
+            color: var(--user-local-foreground);
         }
     }
 </style>

@@ -483,7 +483,7 @@
         width: fit-content;
         border-radius: 0.5rem;
         border: 1px solid var(--border);
-        background-color: white;
+        background-color: var(--card);
         padding: 0.5rem;
         margin: 0.5rem;
 

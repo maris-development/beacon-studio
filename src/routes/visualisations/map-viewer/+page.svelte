@@ -405,7 +405,7 @@
                     // largely copied from maplibregl's ctrl group
                     border-radius: 0.5rem;
                     border: 1px solid var(--border);
-                    background-color: white;
+                    background-color: var(--card);
                     padding: 0.75rem;
                     margin: 0.5rem;
 
@@ -419,7 +419,7 @@
 
                     .summary {
                         font-size: var(--font-size-sm);
-                        color: var(--muted-foreground, #6b7280);
+                        color: var(--muted-foreground);
                         margin: 0;
                     }
 
@@ -479,7 +479,7 @@
                 align-items: center;
                 justify-content: center;
 
-                background-color: rgba(255, 255, 255, 0.5);
+                background-color: color-mix(in srgb, var(--background) 50%, transparent);
                 z-index: 5; // Ensure it overlays the map
             }
         }

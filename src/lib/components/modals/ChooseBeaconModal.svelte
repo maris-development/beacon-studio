@@ -191,7 +191,11 @@
             right: 0;
             height: 0.5rem;
             pointer-events: none;
-            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, #0000 100%);
+            background: linear-gradient(
+                to bottom,
+                color-mix(in srgb, var(--overlay) 20%, transparent) 0%,
+                transparent 100%
+            );
         }
         &::after {
             content: "";
@@ -201,7 +205,11 @@
             right: 0;
             height: 0.5rem;
             pointer-events: none;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.1) 0%, #0000 100%);
+            background: linear-gradient(
+                to top,
+                color-mix(in srgb, var(--overlay) 20%, transparent) 0%,
+                transparent 100%
+            );
         }
     }
 </style>

@@ -283,7 +283,7 @@
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
-        color: #1a1a1a;
+        color: var(--foreground);
         max-height: 65vh;
         overflow-y: auto;
     }
@@ -298,21 +298,21 @@
         display: flex;
         align-items: baseline;
         gap: 0.6rem;
-        border-bottom: 1px solid #e5e5e5;
+        border-bottom: 1px solid var(--card-border);
         padding-bottom: 0.35rem;
     }
 
     .subtle {
         font-size: var(--font-size-sm);
-        color: #6b7280;
+        color: var(--muted-foreground);
     }
 
     .cache-disabled-note {
         margin: 0;
         padding: 0.5rem 0.75rem;
         border-radius: 0.375rem;
-        background: #fef3c7;
-        color: #92400e;
+        background: var(--notice-warning-background);
+        color: var(--notice-warning-foreground);
         font-size: var(--font-size-sm);
     }
 
@@ -327,16 +327,16 @@
         flex-direction: column;
         gap: 0.2rem;
         padding: 0.6rem 0.75rem;
-        border: 1px solid #e5e5e5;
+        border: 1px solid var(--card-border);
         border-radius: 0.5rem;
-        background: #fafafa;
+        background: var(--muted);
     }
 
     .stat-label {
         font-size: var(--font-size-xs);
         text-transform: uppercase;
         letter-spacing: 0.03em;
-        color: #6b7280;
+        color: var(--muted-foreground);
     }
 
     .stat-value {
@@ -347,13 +347,13 @@
     .meter {
         height: 5px;
         border-radius: 999px;
-        background: #e5e7eb;
+        background: var(--card-border);
         overflow: hidden;
         margin-top: 0.25rem;
 
         .fill {
             height: 100%;
-            background: #3b82f6;
+            background: var(--control-active);
             border-radius: 999px;
         }
     }
@@ -371,13 +371,13 @@
         td {
             text-align: left;
             padding: 0.35rem 0.5rem;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--card-border);
             white-space: nowrap;
         }
 
         th {
             font-weight: 600;
-            color: #6b7280;
+            color: var(--muted-foreground);
         }
 
         td.num,
@@ -394,7 +394,7 @@
     }
 
     td.na {
-        color: #9ca3af;
+        color: var(--muted-foreground);
         font-style: italic;
     }
 
@@ -404,14 +404,14 @@
         padding: 0.02rem 0.4rem;
         font-size: var(--font-size-xs);
         border-radius: 0.35rem;
-        background: #dbeafe;
-        color: #1d4ed8;
+        background: var(--notice-info-background);
+        color: var(--notice-info-foreground);
         vertical-align: middle;
     }
 
     .empty {
         font-size: var(--font-size-sm);
-        color: #6b7280;
+        color: var(--muted-foreground);
         margin: 0;
     }
 

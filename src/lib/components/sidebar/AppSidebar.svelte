@@ -597,7 +597,7 @@
         z-index: 40;
         border: none;
         padding: 0;
-        background: rgba(0, 0, 0, 0.4);
+        background: var(--overlay);
         cursor: pointer;
     }
 </style>
