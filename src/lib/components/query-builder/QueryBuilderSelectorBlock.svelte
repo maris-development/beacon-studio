@@ -208,6 +208,9 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
                 <Card class="query-block">
                     <div class="query-block-header">
                         <div class="query-block-name-wrapper">
+                            <span class="query-block-name-sizer" aria-hidden="true"
+                                >{block.name}</span
+                            >
                             {#if editingBlockId === block.id}
                                 <input
                                     class="query-block-name-input"
@@ -521,15 +524,31 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             justify-content: space-between;
             gap: 0.5rem;
             .query-block-name-wrapper {
-                display: flex;
+                display: grid;
+                grid-template-columns: minmax(min-content, 1fr);
                 align-items: center;
                 flex: 1 1 auto;
                 min-width: 0;
                 overflow: hidden;
                 max-width: 100%;
 
+                > * {
+                    grid-area: 1 / 1;
+                }
+
+                // Only this hidden copy widens the block: by the name, up to 24 characters.
+                span.query-block-name-sizer {
+                    max-width: 24ch;
+                    height: 0;
+                    overflow: hidden;
+                    white-space: nowrap;
+                    visibility: hidden;
+                    font-weight: 600;
+                }
+
                 span.query-block-name {
                     display: block;
+                    contain: inline-size;
                     font-weight: 600;
                     overflow: hidden;
                     text-overflow: ellipsis;
@@ -538,11 +557,9 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
 
                 input.query-block-name-input {
                     box-sizing: border-box;
-                    width: 0;
+                    contain: inline-size;
+                    width: 100%;
                     min-width: 0;
-                    max-width: 100%;
-                    flex-grow: 1;
-                    flex-shrink: 1;
                     font: inherit;
                     font-weight: 600;
                     color: inherit;
