@@ -1193,7 +1193,7 @@
             }
         },
         "tables": {
-            "intro": "Verken de tabellen van je Beacon-node.",
+            "intro": "Verken en beheer de tabellen die beschikbaar zijn in je Beacon-node.",
             "create": "Aanmaken",
             "createView": "View",
             "createMaterialized": "Gematerialiseerde view",
@@ -1270,7 +1270,7 @@
             }
         },
         "datasets": {
-            "intro": "Verken de bestanden van je Beacon-node.",
+            "intro": "Verken en beheer de datasets die beschikbaar zijn in je Beacon-node.",
             "upload": "Uploaden",
             "pickNode": "Kies een Beacon-node.",
             "search": "Zoek in alle mappen",
@@ -1289,6 +1289,7 @@
             "next": "Volgende",
             "pageOf": "Pagina {page} van {count}",
             "storage": {
+                "title": "Schijf van de datasetopslag",
                 "usedOf": "{used} gebruikt van {total}, {free} vrij",
                 "objects": "{used} in {count, plural, one {# object} other {# objecten}} ({location})"
             },

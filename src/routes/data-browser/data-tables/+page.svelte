@@ -3,15 +3,20 @@
     import { resolve } from "$app/paths";
     import { page } from "$app/state";
     import { untrack } from "svelte";
+    import type { CatalogTable } from "@maris-development/beacon-client";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+    import EyeIcon from "@lucide/svelte/icons/eye";
+    import Table2Icon from "@lucide/svelte/icons/table-2";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
     import Button from "@/components/buttons/Button.svelte";
+    import { Badge } from "@/components/ui/badge";
+    import ListCard from "@/components/data-browser/ListCard.svelte";
+    import SearchInput from "@/components/input/SearchInput.svelte";
     import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
     import NodePicker from "@/components/NodePicker.svelte";
     import AdminAction from "@/components/AdminAction.svelte";
     import CreateViewDialog from "@/components/data-browser/CreateViewDialog.svelte";
     import CreateExternalTableDialog from "@/components/data-browser/CreateExternalTableDialog.svelte";
-    import { Input } from "@/components/ui/input";
     import { makeBeaconClient } from "@/beacon-api/client";
     import { currentNode } from "@/services/beacon-node";
     import { track } from "@/telemetry";
@@ -142,6 +147,25 @@
     <title>{$t("app.pageTitle", { page: $t("nav.item.dataTables") })}</title>
 </svelte:head>
 
+{#snippet tableRow(table: CatalogTable, ref: TableRef, isDefault: boolean)}
+    <li>
+        <a href={detailHref(ref)}>
+            {#if tableKind(table.table_type) === "view"}
+                <EyeIcon class="kind-icon size-4" />
+                <span class="name">{table.name}</span>
+                <Badge variant="outline">{$t("dataBrowser.tables.kindView")}</Badge>
+            {:else}
+                <Table2Icon class="kind-icon size-4" />
+                <span class="name">{table.name}</span>
+                <Badge variant="outline">{$t("dataBrowser.tables.kindTable")}</Badge>
+            {/if}
+            {#if isDefault}
+                <Badge>{$t("dataBrowser.tables.default")}</Badge>
+            {/if}
+        </a>
+    </li>
+{/snippet}
+
 <Cookiecrumb
     crumbs={[
         { label: $t("nav.item.dataBrowser"), href: resolve("/data-browser") },
@@ -185,98 +209,84 @@
         {#if !node}
             <p>{$t("dataBrowser.common.pickNode")}</p>
         {:else}
-            <Input
-                type="search"
-                placeholder={$t("dataBrowser.tables.search")}
-                bind:value={needle}
-                onchange={onSearch}
-            />
-
-            {#if loading && !tree}
-                <p class="muted">{$t("dataBrowser.tables.loading")}</p>
-            {:else if error}
-                <p class="error">{$t(error)}</p>
-            {:else if shown}
-                {#if shown.defaultTables.length === 0}
-                    {#if searching}
-                        <p class="muted">{$t("dataBrowser.tables.noMatch")}</p>
-                    {:else}
-                        <p class="muted">{$t("dataBrowser.tables.empty")}</p>
-                    {/if}
-                {:else}
-                    <ul class="tables">
-                        {#each shown.defaultTables as table (table.name)}
-                            {@const ref = {
-                                catalog: shown.others.defaults.catalog,
-                                schema: shown.others.defaults.schema,
-                                name: table.name
-                            }}
-                            <li>
-                                <a href={detailHref(ref)}>
-                                    <span class="name">{table.name}</span>
-                                    {#if tableKind(table.table_type) === "view"}
-                                        <span class="badge"
-                                            >{$t("dataBrowser.tables.kindView")}</span
-                                        >
-                                    {:else}
-                                        <span class="badge"
-                                            >{$t("dataBrowser.tables.kindTable")}</span
-                                        >
-                                    {/if}
-                                    {#if table.name === defaultTable}
-                                        <span class="badge default"
-                                            >{$t("dataBrowser.tables.default")}</span
-                                        >
-                                    {/if}
-                                </a>
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
-
-                {#if shown.others.catalogs.length > 0}
-                    <details class="others" open={othersOpen}>
-                        <summary
-                            onclick={(event) => {
-                                event.preventDefault();
-                                othersOpen = !othersOpen;
-                            }}
+            <ListCard>
+                {#snippet head()}
+                    {#if shown}
+                        <span class="schema"
+                            >{shown.others.defaults.catalog}.{shown.others.defaults.schema}</span
                         >
-                            <ChevronRightIcon class="chevron size-4" />
-                            {$t("dataBrowser.tables.otherSchemas")}
-                        </summary>
+                    {/if}
+                {/snippet}
 
-                        {#each shown.others.catalogs as catalog (catalog.name)}
-                            {#each catalog.schemas as schema (schema.name)}
-                                <h3 class="schema-title">{catalog.name}.{schema.name}</h3>
-                                <ul class="tables">
-                                    {#each schema.tables as table (table.name)}
-                                        {@const ref = {
-                                            catalog: catalog.name,
-                                            schema: schema.name,
-                                            name: table.name
-                                        }}
-                                        <li>
-                                            <a href={detailHref(ref)}>
-                                                <span class="name">{table.name}</span>
-                                                {#if tableKind(table.table_type) === "view"}
-                                                    <span class="badge"
-                                                        >{$t("dataBrowser.tables.kindView")}</span
-                                                    >
-                                                {:else}
-                                                    <span class="badge"
-                                                        >{$t("dataBrowser.tables.kindTable")}</span
-                                                    >
-                                                {/if}
-                                            </a>
-                                        </li>
-                                    {/each}
-                                </ul>
+                {#snippet tools()}
+                    <SearchInput
+                        placeholder={$t("dataBrowser.tables.search")}
+                        bind:value={needle}
+                        onchange={onSearch}
+                    />
+                {/snippet}
+
+                {#if loading && !tree}
+                    <p class="state muted">{$t("dataBrowser.tables.loading")}</p>
+                {:else if error}
+                    <p class="state error">{$t(error)}</p>
+                {:else if shown}
+                    {#if shown.defaultTables.length === 0}
+                        {#if searching}
+                            <p class="state muted">{$t("dataBrowser.tables.noMatch")}</p>
+                        {:else}
+                            <p class="state muted">{$t("dataBrowser.tables.empty")}</p>
+                        {/if}
+                    {:else}
+                        <ul class="tables">
+                            {#each shown.defaultTables as table (table.name)}
+                                {@render tableRow(
+                                    table,
+                                    {
+                                        catalog: shown.others.defaults.catalog,
+                                        schema: shown.others.defaults.schema,
+                                        name: table.name
+                                    },
+                                    table.name === defaultTable
+                                )}
                             {/each}
-                        {/each}
-                    </details>
+                        </ul>
+                    {/if}
+
+                    {#if shown.others.catalogs.length > 0}
+                        <details class="others" open={othersOpen}>
+                            <summary
+                                onclick={(event) => {
+                                    event.preventDefault();
+                                    othersOpen = !othersOpen;
+                                }}
+                            >
+                                <ChevronRightIcon class="chevron size-4" />
+                                {$t("dataBrowser.tables.otherSchemas")}
+                            </summary>
+
+                            {#each shown.others.catalogs as catalog (catalog.name)}
+                                {#each catalog.schemas as schema (schema.name)}
+                                    <h3 class="schema-title">{catalog.name}.{schema.name}</h3>
+                                    <ul class="tables">
+                                        {#each schema.tables as table (table.name)}
+                                            {@render tableRow(
+                                                table,
+                                                {
+                                                    catalog: catalog.name,
+                                                    schema: schema.name,
+                                                    name: table.name
+                                                },
+                                                false
+                                            )}
+                                        {/each}
+                                    </ul>
+                                {/each}
+                            {/each}
+                        </details>
+                    {/if}
                 {/if}
-            {/if}
+            </ListCard>
         {/if}
     </div>
 </div>
@@ -295,23 +305,41 @@
 {/if}
 
 <style lang="scss">
+    .schema {
+        font-weight: 600;
+    }
+
+    .state {
+        margin: 0;
+        padding: 1rem;
+    }
+
     .tables {
-        margin: 0.5rem 0 0;
+        margin: 0;
         padding: 0;
         list-style: none;
+        font-size: var(--font-size-sm);
 
-        li a {
+        li + li {
+            border-top: 1px solid var(--border);
+        }
+
+        a {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 0.25rem;
-            border-bottom: 1px solid var(--border);
+            padding: 0.625rem 1rem;
             color: inherit;
             text-decoration: none;
 
             &:hover {
-                background: var(--accent);
+                background: color-mix(in srgb, var(--muted) 50%, transparent);
             }
+        }
+
+        :global(.kind-icon) {
+            flex-shrink: 0;
+            color: var(--muted-foreground);
         }
     }
 
@@ -320,26 +348,14 @@
         word-break: break-all;
     }
 
-    .badge {
-        padding: 0 0.375rem;
-        border-radius: 0.25rem;
-        background: var(--secondary);
-        color: var(--muted-foreground);
-        font-size: var(--font-size-xs);
-
-        &.default {
-            background: var(--primary);
-            color: var(--primary-foreground);
-        }
-    }
-
     .others {
-        margin-top: 1rem;
+        border-top: 1px solid var(--border);
 
         summary {
             display: flex;
             align-items: center;
             gap: 0.25rem;
+            padding: 0.625rem 1rem;
             cursor: pointer;
             font-weight: 600;
             list-style: none;
@@ -351,7 +367,8 @@
     }
 
     .schema-title {
-        margin: 0.75rem 0 0;
+        margin: 0;
+        padding: 0.75rem 1rem 0.25rem;
         color: var(--muted-foreground);
     }
 

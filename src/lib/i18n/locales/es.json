@@ -1193,7 +1193,7 @@
             }
         },
         "tables": {
-            "intro": "Explora las tablas de tu nodo Beacon.",
+            "intro": "Explora y gestiona las tablas disponibles en tu nodo Beacon.",
             "create": "Crear",
             "createView": "Vista",
             "createMaterialized": "Vista materializada",
@@ -1270,7 +1270,7 @@
             }
         },
         "datasets": {
-            "intro": "Explora los archivos de tu nodo Beacon.",
+            "intro": "Explora y gestiona los conjuntos de datos disponibles en tu nodo Beacon.",
             "upload": "Subir",
             "pickNode": "Elige un nodo Beacon.",
             "search": "Buscar en todas las carpetas",
@@ -1289,6 +1289,7 @@
             "next": "Siguiente",
             "pageOf": "Página {page} de {count}",
             "storage": {
+                "title": "Disco del almacén de datasets",
                 "usedOf": "{used} usados de {total}, {free} libres",
                 "objects": "{used} en {count, plural, one {# objeto} other {# objetos}} ({location})"
             },

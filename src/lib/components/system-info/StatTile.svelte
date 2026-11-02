@@ -1,14 +1,16 @@
 <script lang="ts">
-    import type { Component } from "svelte";
+    import type { Component, Snippet } from "svelte";
 
     type Props = {
         label: string;
         value: string;
         detail?: string;
         icon?: Component<{ size?: number }>;
+        /** Extra content between the value and the detail, for example a bar. */
+        children?: Snippet;
     };
 
-    let { label, value, detail, icon: Icon }: Props = $props();
+    let { label, value, detail, icon: Icon, children }: Props = $props();
 </script>
 
 <div class="tile">
@@ -17,6 +19,7 @@
         {label}
     </span>
     <span class="value" title={value}>{value}</span>
+    {#if children}{@render children()}{/if}
     {#if detail}<span class="detail">{detail}</span>{/if}
 </div>
 

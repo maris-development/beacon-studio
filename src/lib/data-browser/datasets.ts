@@ -50,6 +50,10 @@ export interface FolderRow {
     path: string;
     /** Files in this folder and all its sub-folders. */
     count: number;
+    /** The sum of the known sizes of those files. Null when no size is known. */
+    size: number | null;
+    /** The newest date of those files. */
+    lastModified: string | null;
 }
 
 /** The direct sub-folders and files of one folder. */
@@ -73,11 +77,20 @@ export function listFolder(
         }
 
         const name = rest.slice(0, slash);
-        const row = folders.get(name);
-        if (row) {
-            row.count += 1;
-        } else {
-            folders.set(name, { name, path: `${prefix}${name}/`, count: 1 });
+        let row = folders.get(name);
+        if (!row) {
+            row = { name, path: `${prefix}${name}/`, count: 0, size: null, lastModified: null };
+            folders.set(name, row);
+        }
+
+        row.count += 1;
+        if (entry.size !== null) row.size = (row.size ?? 0) + entry.size;
+        // The dates compare as text, as in `sortFiles`.
+        if (
+            entry.lastModified !== null &&
+            (row.lastModified === null || entry.lastModified > row.lastModified)
+        ) {
+            row.lastModified = entry.lastModified;
         }
     }
 
