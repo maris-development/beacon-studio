@@ -18,3 +18,12 @@
 <div class="page-wrapper">
     <QueryWorkbench />
 </div>
+
+<style lang="scss">
+    // The workbench fills the free height of the page and grows with its content.
+    .page-wrapper {
+        flex: 1 0 auto;
+        display: flex;
+        flex-direction: column;
+    }
+</style>

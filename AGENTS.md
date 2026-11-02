@@ -303,6 +303,7 @@ message the change never reaches production.
 - The sidebar has no Data Browser item. Datasets and Data Tables are top-level items. The `/data-browser` page stays, and the breadcrumbs link to it.
 - The builder and the three result views are one sidebar item. Its `match` holds `/queries` and `/visualisations`. `QueryViewSwitch` in `QuerySelectorHeader` is the only switch between them. From the builder, it runs the query before it opens a result view. Do not add a result view to the sidebar.
 - `QuerySelectorHeader` shows the actions as icons only when their labels leave less than `MIN_GAP_REM` beside the view switch. It measures the labels, so a language change also counts. `Button` animates all properties; keep size transitions off these buttons, or the measurement reads a width in mid-animation and the state flips. Wrap the text of a new action button in `<span class="action-label">` and give the button a `title`.
+- The workbench panes fill the free page height. Only the left pane sets the row height: on a wide viewport the right `.pane-body` has `contain: size`. A new child of the right pane must fill the body through flex or scroll inside it.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.
   Inline expressions in Svelte markup, where a statement is not possible, are exempt.

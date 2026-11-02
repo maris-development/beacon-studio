@@ -248,7 +248,7 @@
         </header>
 
         {#if showLeft && sqlMode && workspace.activeBlock}
-            <div class="pane-body">
+            <div class="pane-body pane-body--fill">
                 <QuerySqlBuilder
                     node={activeNode}
                     missingNodeUrl={workspace.missingNodeUrl}
@@ -266,7 +266,7 @@
                 />
             </div>
         {:else if showLeft}
-            <div class="pane-body">
+            <div class="pane-body pane-body--fill">
                 <!--
 					Re-mount per active block so the builder re-hydrates from its query.
 
@@ -426,6 +426,7 @@
 
 <style lang="scss">
     .query-workbench-panes {
+        flex: 1 0 auto;
         display: flex;
         gap: 1rem;
         align-items: stretch;
@@ -435,6 +436,7 @@
             align-items: flex-start;
 
             > .pane {
+                flex-grow: 0;
                 width: 100%;
             }
         }
@@ -453,7 +455,6 @@
         border-radius: 0.75rem;
         border: 1px solid rgb(231, 231, 236);
         max-width: 100%;
-        min-height: 100%;
 
         // A collapsed pane shrinks to just its header so the other pane expands.
         &.pane--collapsed {
@@ -545,9 +546,24 @@
 
         .pane-body {
             min-width: 0;
-            // height: 100%;
             flex: 1 1 auto;
             padding: 0.75rem;
+
+            &.pane-body--fill {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+
+        // The left pane sets the row height. The right pane follows it.
+        @media (min-width: 1025px) {
+            &.right .pane-body {
+                contain: size;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                overflow: auto;
+            }
         }
 
         .code-empty {

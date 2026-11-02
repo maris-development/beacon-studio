@@ -48,6 +48,7 @@
 
 <style lang="scss">
     .workbench {
+        flex: 1 0 auto;
         display: flex;
         flex-direction: column;
         gap: 1rem;
