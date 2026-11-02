@@ -271,7 +271,7 @@
 <Cookiecrumb crumbs={[{ label: $t("nav.item.sqlConsole"), href: resolve("/sql-editor") }]} />
 
 <div class="page-wrapper sql-wrapper">
-    <div class="page-container sql-page">
+    <div class="page-container plain sql-page">
         <header class="page-head">
             <h1>{$t("nav.item.sqlConsole")}</h1>
             <NodePicker />

@@ -57,7 +57,7 @@
 <Cookiecrumb crumbs={[{ label: $t("nav.item.beaconNodes"), href: resolve("/beacon-nodes") }]} />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("nav.item.beaconNodes")}</h1>
 
         <p>

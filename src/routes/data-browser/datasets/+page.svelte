@@ -201,7 +201,7 @@
 />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("nav.item.datasets")}</h1>
 
         <p>{$t("dataBrowser.datasets.intro")}</p>

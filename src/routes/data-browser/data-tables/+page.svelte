@@ -150,7 +150,7 @@
 />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("nav.item.dataTables")}</h1>
 
         <p>{$t("dataBrowser.tables.intro")}</p>

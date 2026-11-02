@@ -49,6 +49,12 @@ body {
     border-radius: 0.75rem;
     border: 1px solid var(--card-border);
     color: var(--foreground);
+
+    // No panel: the page content lies on the app background.
+    &.plain {
+        background: none;
+        border-color: transparent;
+    }
 }
 
 #svelte-body {

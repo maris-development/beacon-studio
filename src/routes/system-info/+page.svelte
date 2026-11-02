@@ -201,44 +201,44 @@
 <Cookiecrumb crumbs={[{ label: $t("nav.item.systemInfo"), href: resolve("/system-info") }]} />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("systemInfo.title")}</h1>
 
         <p class="intro">{$t("systemInfo.intro")}</p>
 
-        <div class="toolbar">
-            <NodePicker />
-
-            {#if node}
-                <div class="actions">
-                    <BeaconNodeStatus health={node} variant="compact" />
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        aria-pressed={live}
-                        title={live ? $t("systemInfo.liveStop") : $t("systemInfo.liveStart")}
-                        onclick={() => (live = !live)}
-                    >
-                        <TimerIcon />
-                        {#if live}
-                            {$t("systemInfo.live", { seconds: $formatNumber(period / 1000) })}
-                        {:else}
-                            {$t("systemInfo.paused")}
-                        {/if}
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        aria-label={$t("systemInfo.refresh")}
-                        title={$t("systemInfo.refresh")}
-                        disabled={refreshing}
-                        onclick={() => void refresh()}
-                    >
-                        <RefreshCwIcon class={refreshing ? "spin" : ""} />
-                    </Button>
-                </div>
-            {/if}
-        </div>
+        <NodePicker>
+            {#snippet actions()}
+                {#if node}
+                    <div class="actions">
+                        <BeaconNodeStatus health={node} variant="compact" />
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            aria-pressed={live}
+                            title={live ? $t("systemInfo.liveStop") : $t("systemInfo.liveStart")}
+                            onclick={() => (live = !live)}
+                        >
+                            <TimerIcon />
+                            {#if live}
+                                {$t("systemInfo.live", { seconds: $formatNumber(period / 1000) })}
+                            {:else}
+                                {$t("systemInfo.paused")}
+                            {/if}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label={$t("systemInfo.refresh")}
+                            title={$t("systemInfo.refresh")}
+                            disabled={refreshing}
+                            onclick={() => void refresh()}
+                        >
+                            <RefreshCwIcon class={refreshing ? "spin" : ""} />
+                        </Button>
+                    </div>
+                {/if}
+            {/snippet}
+        </NodePicker>
 
         {#if !node}
             <p>{$t("systemInfo.noNode")}</p>
@@ -440,14 +440,6 @@
     .intro {
         margin-top: -0.75rem;
         color: var(--muted-foreground);
-    }
-
-    .toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.75rem;
     }
 
     .actions {

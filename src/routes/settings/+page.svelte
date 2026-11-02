@@ -78,7 +78,7 @@
 <Cookiecrumb crumbs={[{ label: $t("settings.title"), href: "/settings" }]} />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("settings.title")}</h1>
 
         <p>{$t("settings.intro")}</p>

@@ -267,16 +267,14 @@
 />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("nav.item.usersRoles")}</h1>
 
         <p>{$t("usersRoles.intro")}</p>
 
-        <div class="toolbar">
-            <NodePicker />
-
-            {#if node && gate === "ready"}
-                <div class="toolbar-actions">
+        <NodePicker>
+            {#snippet actions()}
+                {#if node && gate === "ready"}
                     <Button
                         variant="outline"
                         size="icon"
@@ -299,9 +297,9 @@
                         <UserPlusIcon />
                         {$t("usersRoles.newUser")}
                     </Button>
-                </div>
-            {/if}
-        </div>
+                {/if}
+            {/snippet}
+        </NodePicker>
 
         {#if !node || gate === "pick-node"}
             <p>{$t("usersRoles.pickNode")}</p>
@@ -426,20 +424,6 @@
 {/if}
 
 <style lang="scss">
-    .toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-    }
-
-    .toolbar-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-left: auto;
-    }
-
     .tabs-row {
         display: flex;
         flex-wrap: wrap;
