@@ -1106,6 +1106,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Voer SQL uit op de node met je beheerderssessie. Maak tabellen en gematerialiseerde views, leg het queryplan uit en download het resultaat.",
         "pickNode": "Kies een Beacon-node.",
         "nodeNotFound": "De node in de link staat niet in je lijst. De editor houdt de huidige node.",
         "toolbar": {

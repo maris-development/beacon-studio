@@ -6,7 +6,7 @@
     import PlayIcon from "@lucide/svelte/icons/play";
     import SquareIcon from "@lucide/svelte/icons/square";
     import ListTreeIcon from "@lucide/svelte/icons/list-tree";
-    import PanelRightIcon from "@lucide/svelte/icons/panel-right";
+    import PanelLeftIcon from "@lucide/svelte/icons/panel-left";
     import Button from "@/components/buttons/Button.svelte";
     import NodePicker from "@/components/NodePicker.svelte";
     import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
@@ -272,8 +272,10 @@
 
 <div class="page-wrapper sql-wrapper">
     <div class="page-container plain sql-page">
-        <header class="page-head">
+        <!-- A block, so the margins collapse as on the other pages. -->
+        <header>
             <h1>{$t("nav.item.sqlConsole")}</h1>
+            <p>{$t("sqlEditor.intro")}</p>
             <NodePicker />
         </header>
 
@@ -283,74 +285,94 @@
             <AdminSessionRequired {node} />
         {:else}
             <div class="workspace">
-                <section class="main">
-                    <SqlTabs
-                        state={tabs}
-                        onSelect={(id) => (tabs = selectTab(tabs, id))}
-                        onAdd={() => (tabs = addTab(tabs, titleOf))}
-                        {onClose}
-                        onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
+                <aside class="panel catalog-panel" class:open={catalogOpen}>
+                    <CatalogTree
+                        tree={catalog.tree}
+                        loading={catalog.loading}
+                        error={catalog.error}
+                        loadColumns={async (ref) => {
+                            if (!node) return [];
+                            return catalog.loadColumns(node, ref);
+                        }}
+                        onInsert={(text) => editor?.insert(text)}
+                        onRefresh={() => loadCatalogue(true)}
                     />
+                </aside>
 
-                    <div class="toolbar">
-                        <Button
-                            class="catalog-toggle"
-                            variant="outline"
-                            onclick={() => (catalogOpen = !catalogOpen)}
-                            aria-label={$t("sqlEditor.toolbar.tables")}
-                        >
-                            <PanelRightIcon />
-                        </Button>
-
-                        {#if busy}
-                            <Button variant="destructive" onclick={stop}>
-                                <SquareIcon />
-                                {$t("sqlEditor.toolbar.stop")}
-                            </Button>
-                        {:else}
-                            <Button
-                                disabled={!node}
-                                onclick={run}
-                                title={$t("sqlEditor.toolbar.runShortcut")}
-                            >
-                                <PlayIcon />
-                                {$t("sqlEditor.toolbar.run")}
-                            </Button>
-                        {/if}
-                        <Button
-                            variant="outline"
-                            disabled={!node || busy}
-                            onclick={() => explain(false)}
-                        >
-                            <ListTreeIcon />
-                            {$t("sqlEditor.toolbar.explain")}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            disabled={!node || busy}
-                            onclick={() => explain(true)}
-                        >
-                            {$t("sqlEditor.toolbar.analyze")}
-                        </Button>
-                        <DownloadMenu disabled={!node} busy={downloading} onDownload={download} />
-                        <span class="hint">{$t("sqlEditor.toolbar.hint")}</span>
-                    </div>
-
-                    <div class="editor-area">
-                        <SqlEditor
-                            bind:this={editor}
-                            tabId={activeTab.id}
-                            value={activeTab.sql}
-                            tabIds={tabs.tabs.map((tab) => tab.id)}
-                            {completions}
-                            onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
-                            onRun={() => {
-                                if (!busy) run();
-                            }}
+                <section class="main">
+                    <div class="panel editor-panel">
+                        <SqlTabs
+                            state={tabs}
+                            onSelect={(id) => (tabs = selectTab(tabs, id))}
+                            onAdd={() => (tabs = addTab(tabs, titleOf))}
+                            {onClose}
+                            onRename={(id, title) => (tabs = renameTab(tabs, id, title))}
                         />
+
+                        <div class="toolbar">
+                            <Button
+                                class="catalog-toggle"
+                                variant="outline"
+                                onclick={() => (catalogOpen = !catalogOpen)}
+                                aria-label={$t("sqlEditor.toolbar.tables")}
+                            >
+                                <PanelLeftIcon />
+                            </Button>
+
+                            {#if busy}
+                                <Button variant="destructive" onclick={stop}>
+                                    <SquareIcon />
+                                    {$t("sqlEditor.toolbar.stop")}
+                                </Button>
+                            {:else}
+                                <Button
+                                    disabled={!node}
+                                    onclick={run}
+                                    title={$t("sqlEditor.toolbar.runShortcut")}
+                                >
+                                    <PlayIcon />
+                                    {$t("sqlEditor.toolbar.run")}
+                                </Button>
+                            {/if}
+                            <Button
+                                variant="outline"
+                                disabled={!node || busy}
+                                onclick={() => explain(false)}
+                            >
+                                <ListTreeIcon />
+                                {$t("sqlEditor.toolbar.explain")}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                disabled={!node || busy}
+                                onclick={() => explain(true)}
+                            >
+                                {$t("sqlEditor.toolbar.analyze")}
+                            </Button>
+                            <DownloadMenu
+                                disabled={!node}
+                                busy={downloading}
+                                onDownload={download}
+                            />
+                        </div>
+                        <span class="hint">{$t("sqlEditor.toolbar.hint")}</span>
+
+                        <div class="editor-area">
+                            <SqlEditor
+                                bind:this={editor}
+                                tabId={activeTab.id}
+                                value={activeTab.sql}
+                                tabIds={tabs.tabs.map((tab) => tab.id)}
+                                {completions}
+                                onChange={(id, sql) => (tabs = setTabSql(tabs, id, sql))}
+                                onRun={() => {
+                                    if (!busy) run();
+                                }}
+                            />
+                        </div>
                     </div>
 
-                    <div class="result-area">
+                    <div class="panel result-area">
                         {#if outcome?.kind === "plan"}
                             {@const root = planRoot(outcome.plan)}
                             {#if root}
@@ -391,20 +413,6 @@
                         {/if}
                     </div>
                 </section>
-
-                <aside class="catalog-panel" class:open={catalogOpen}>
-                    <CatalogTree
-                        tree={catalog.tree}
-                        loading={catalog.loading}
-                        error={catalog.error}
-                        loadColumns={async (ref) => {
-                            if (!node) return [];
-                            return catalog.loadColumns(node, ref);
-                        }}
-                        onInsert={(text) => editor?.insert(text)}
-                        onRefresh={() => loadCatalogue(true)}
-                    />
-                </aside>
             </div>
         {/if}
     </div>
@@ -422,26 +430,8 @@
     .sql-page {
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
         flex: 1;
         min-height: 0;
-    }
-
-    .page-head {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 1rem;
-
-        h1 {
-            margin: 0;
-        }
-
-        // Aligns the select with the bottom of the title.
-        :global(.node-picker) {
-            margin-bottom: 0;
-        }
     }
 
     .workspace {
@@ -451,20 +441,34 @@
         min-height: 0;
     }
 
+    // The card style of the other pages.
+    .panel {
+        padding: 0.75rem;
+        border: 1px solid var(--card-border);
+        border-radius: 0.75rem;
+        background: var(--card);
+    }
+
     .catalog-panel {
-        flex: 0 0 16rem;
+        flex: 0 0 18rem;
         min-height: 0;
-        padding-left: 1rem;
-        border-left: 1px solid var(--border);
     }
 
     .main {
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 1rem;
         flex: 1;
         min-width: 0;
         min-height: 0;
+    }
+
+    .editor-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        flex: 0 0 45%;
+        min-height: 16rem;
     }
 
     .toolbar {
@@ -484,7 +488,7 @@
     }
 
     .editor-area {
-        flex: 0 0 38%;
+        flex: 1;
         min-height: 8rem;
     }
 
@@ -528,9 +532,6 @@
             display: none;
             flex-basis: auto;
             max-height: 40vh;
-            order: -1;
-            padding-left: 0;
-            border-left: 0;
 
             &.open {
                 display: block;

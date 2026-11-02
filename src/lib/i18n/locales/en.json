@@ -1106,6 +1106,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Run SQL on the node with your admin session. Create tables and materialized views, explain the query plan, and download the result.",
         "pickNode": "Pick a Beacon node.",
         "nodeNotFound": "The node in the link is not in your list. The editor keeps the current node.",
         "toolbar": {

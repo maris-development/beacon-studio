@@ -1106,6 +1106,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Ejecuta SQL en el nodo con tu sesión de administrador. Crea tablas y vistas materializadas, explica el plan de la consulta y descarga el resultado.",
         "pickNode": "Elige un nodo Beacon.",
         "nodeNotFound": "El nodo del enlace no está en tu lista. El editor mantiene el nodo actual.",
         "toolbar": {
