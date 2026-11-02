@@ -5,12 +5,20 @@
     import { AUTO_LANGUAGE, SUPPORTED_LOCALES, t } from "@/i18n";
     import { setSetting, settings } from "@/stores/settings";
     import SidebarMenuItem from "./SidebarMenuItem.svelte";
+
+    let { compact = false, open = $bindable(false) }: { compact?: boolean; open?: boolean } =
+        $props();
 </script>
 
-<DropdownMenu.Root>
+<DropdownMenu.Root bind:open>
     <DropdownMenu.Trigger>
         {#snippet child({ props })}
-            <SidebarMenuItem title={$t("language.menu")} icon={LanguagesIcon} buttonProps={props} />
+            <SidebarMenuItem
+                title={$t("language.menu")}
+                icon={LanguagesIcon}
+                buttonProps={props}
+                {compact}
+            />
         {/snippet}
     </DropdownMenu.Trigger>
     <DropdownMenu.Content side="right" align="end" class="w-56">

@@ -137,6 +137,60 @@
         isMobile = false
     }: { collapsed?: boolean; isMobile?: boolean } = $props();
 
+    const toggleLabel = $derived.by(() => {
+        if (collapsed) return $t("nav.openMenu");
+        return $t("nav.closeMenu");
+    });
+
+    // A short wait, so a mouse that only crosses the rail does not open it.
+    const PEEK_DELAY_MS = 150;
+
+    let hovered = $state(false);
+    let keyboardFocus = $state(false);
+    let languageMenuOpen = $state(false);
+    let peekTimer: ReturnType<typeof setTimeout> | undefined;
+
+    // A collapsed sidebar opens over the page. The open language menu keeps it open,
+    // because the menu is outside the sidebar.
+    const peek = $derived(collapsed && !isMobile && (hovered || keyboardFocus || languageMenuOpen));
+    const compact = $derived(collapsed && !peek);
+
+    function onPointerEnter(event: PointerEvent): void {
+        // A touch has no hover, so a tap does not open the panel.
+        if (event.pointerType !== "mouse") return;
+
+        clearTimeout(peekTimer);
+        peekTimer = setTimeout(() => (hovered = true), PEEK_DELAY_MS);
+    }
+
+    function onPointerLeave(): void {
+        clearTimeout(peekTimer);
+        hovered = false;
+    }
+
+    // The rail hides the toggle. Keyboard focus opens the panel, so a keyboard user can reach it.
+    function onFocusIn(event: FocusEvent): void {
+        if (event.target instanceof Element && event.target.matches(":focus-visible")) {
+            keyboardFocus = true;
+        }
+    }
+
+    function onFocusOut(event: FocusEvent): void {
+        const next = event.relatedTarget;
+        if (next instanceof Node && (event.currentTarget as Element).contains(next)) return;
+
+        keyboardFocus = false;
+    }
+
+    function toggleCollapsed(): void {
+        collapsed = !collapsed;
+
+        // A collapse under the mouse closes the panel. It opens again on the next entry.
+        clearTimeout(peekTimer);
+        hovered = false;
+        keyboardFocus = false;
+    }
+
     // The sidebar shows the status of the selection on every page. Refresh a
     // stale result. `ensureFresh` skips a check that is not due.
     $effect(() => {
@@ -228,75 +282,93 @@
     ></button>
 {/if}
 
-<div class="sidebar" class:collapsed>
-    <div class="sidebar-header">
-        <div class="logo-wrapper">
-            <a class="header-link" href={resolve("/")}>
-                <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
-                <span class="app-name">{BRAND.name}</span>
-            </a>
-            <button
-                class="collapse-toggle"
-                onclick={(e) => {
-                    e.stopPropagation();
-                    collapsed = !collapsed;
-                }}
-            >
-                {#if collapsed}
-                    <PanelLeftOpenIcon class="toggle-icon" />
-                {:else}
-                    <PanelLeftCloseIcon class="toggle-icon" />
-                {/if}
-            </button>
-        </div>
-    </div>
-
-    <div class="sidebar-content">
-        {#each shownGroups as group (group.title)}
-            <div class="menu-group">
-                <span class="menu-title">{$t(group.title)}</span>
-                {#each group.items as item (item.url)}
-                    {#if item.children?.length}
-                        <SidebarCollapsibleMenu
-                            title={$t(item.title)}
-                            url={item.url}
-                            match={item.match}
-                            icon={item.icon}
-                            items={item.children.map((child) => ({
-                                title: $t(child.title),
-                                url: child.url
-                            }))}
-                        />
+<div class="sidebar-slot" class:collapsed>
+    <div
+        class="sidebar"
+        class:collapsed
+        class:compact
+        class:peek
+        onpointerenter={onPointerEnter}
+        onpointerleave={onPointerLeave}
+        onfocusin={onFocusIn}
+        onfocusout={onFocusOut}
+    >
+        <div class="sidebar-header">
+            <div class="logo-wrapper">
+                <a class="header-link" href={resolve("/")} title={compact ? BRAND.name : undefined}>
+                    <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
+                    <span class="app-name">{BRAND.name}</span>
+                </a>
+                <button
+                    class="collapse-toggle"
+                    aria-label={toggleLabel}
+                    aria-expanded={!collapsed}
+                    title={toggleLabel}
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        toggleCollapsed();
+                    }}
+                >
+                    {#if collapsed}
+                        <PanelLeftOpenIcon class="toggle-icon" />
                     {:else}
-                        <SidebarMenuItem
-                            title={$t(item.title)}
-                            url={item.url}
-                            match={item.match}
-                            icon={item.icon}
-                            lock={lockOf(item)}
-                        />
+                        <PanelLeftCloseIcon class="toggle-icon" />
                     {/if}
-                {/each}
+                </button>
             </div>
-        {/each}
-    </div>
+        </div>
 
-    <div class="sidebar-footer">
-        <div class="menu-group">
-            {#each shownFooterLinks as item (item.url)}
-                <SidebarMenuItem
-                    title={$t(item.title)}
-                    url={item.url}
-                    icon={item.icon}
-                    target={item.target}
-                />
+        <div class="sidebar-content">
+            {#each shownGroups as group (group.title)}
+                <div class="menu-group">
+                    <span class="menu-title">{$t(group.title)}</span>
+                    {#each group.items as item (item.url)}
+                        {#if item.children?.length}
+                            <SidebarCollapsibleMenu
+                                title={$t(item.title)}
+                                url={item.url}
+                                match={item.match}
+                                icon={item.icon}
+                                items={item.children.map((child) => ({
+                                    title: $t(child.title),
+                                    url: child.url
+                                }))}
+                                {compact}
+                            />
+                        {:else}
+                            <SidebarMenuItem
+                                title={$t(item.title)}
+                                url={item.url}
+                                match={item.match}
+                                icon={item.icon}
+                                lock={lockOf(item)}
+                                {compact}
+                            />
+                        {/if}
+                    {/each}
+                </div>
             {/each}
-            <LanguageMenu />
-            <SidebarMenuItem
-                title={$t("nav.item.feedback")}
-                icon={SendIcon}
-                onclick={() => openFeedback(page.route.id)}
-            />
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="menu-group">
+                {#each shownFooterLinks as item (item.url)}
+                    <SidebarMenuItem
+                        title={$t(item.title)}
+                        url={item.url}
+                        icon={item.icon}
+                        target={item.target}
+                        {compact}
+                    />
+                {/each}
+                <LanguageMenu {compact} bind:open={languageMenuOpen} />
+                <SidebarMenuItem
+                    title={$t("nav.item.feedback")}
+                    icon={SendIcon}
+                    onclick={() => openFeedback(page.route.id)}
+                    {compact}
+                />
+            </div>
         </div>
     </div>
 </div>
@@ -304,6 +376,22 @@
 <BuildVersion />
 
 <style lang="scss">
+    // Holds the place of the sidebar in the layout. The page then stays put while a collapsed sidebar opens.
+    .sidebar-slot {
+        display: flex;
+        position: relative;
+
+        &.collapsed {
+            flex-shrink: 0;
+            width: 3.25rem;
+        }
+
+        // The phone sidebar is an overlay and takes no place.
+        @media (max-width: 767px) {
+            display: contents;
+        }
+    }
+
     .sidebar {
         --sidebar-bold-font-weight: 600;
 
@@ -319,7 +407,8 @@
         overflow: hidden;
         transition:
             min-width 0.2s ease,
-            width 0.2s ease;
+            width 0.2s ease,
+            box-shadow 0.2s ease;
 
         .sidebar-header {
             flex-shrink: 0;
@@ -330,7 +419,8 @@
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-                padding: 0.5rem;
+                // No side padding: the logo then lines up with the menu icons.
+                padding: 0.5rem 0;
 
                 .header-link {
                     flex-grow: 1;
@@ -432,18 +522,48 @@
             }
         }
 
+        // Collapsed: the sidebar lies over the page, so a hover can open it without a page reflow.
+        // The labels stay on one line, so every icon keeps the place it has in the open sidebar.
         &.collapsed {
-            min-width: unset;
-            width: 2.5rem;
+            white-space: nowrap;
 
-            .sidebar-content,
-            .sidebar-footer,
-            .logo-wrapper .header-link {
-                display: none;
+            @media (min-width: 768px) {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                z-index: 30;
+                min-width: unset;
+                width: 3.25rem;
+            }
+        }
+
+        &.peek {
+            width: 250px;
+            box-shadow: 0 0 1rem rgba(0, 0, 0, 0.15);
+        }
+
+        // Compact: an icon rail. Each element keeps its height, so no icon moves.
+        &.compact {
+            .sidebar-header .logo-wrapper {
+                .header-link .app-name {
+                    opacity: 0;
+                }
+
+                .collapse-toggle {
+                    display: none;
+                }
             }
 
-            .logo-wrapper {
-                justify-content: center;
+            .sidebar-content {
+                scrollbar-width: none;
+            }
+
+            // A line replaces the group title.
+            .menu-group .menu-title {
+                color: transparent;
+                background: linear-gradient(var(--sidebar-border), var(--sidebar-border)) center /
+                    100% 1px no-repeat;
             }
         }
 
