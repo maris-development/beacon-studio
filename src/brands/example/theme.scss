@@ -16,3 +16,15 @@
     --button-letter-spacing: 0.04em;
     --button-shadow: none;
 }
+
+// The dark values of the same teal. Tokens that this block does not set take the dark values of tailwind.css.
+:root.dark {
+    --primary: #2dd4bf;
+    --primary-foreground: #042f2e;
+    --highlight: #5eead4;
+    --link: #2dd4bf;
+    --control-active: #2dd4bf;
+    --focus-ring: #2dd4bf;
+    --sidebar-accent-foreground: #2dd4bf;
+    --app-background: #0a1312;
+}
