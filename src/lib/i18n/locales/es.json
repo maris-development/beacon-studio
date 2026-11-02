@@ -1060,8 +1060,7 @@
             "noteBefore": "Las funciones de tabla (read_parquet, read_netcdf, …) no están en esta lista. Consulta la",
             "noteLink": "documentación",
             "noteAfter": "."
-        },
-        "raw": "Respuesta sin procesar"
+        }
     },
     "admin": {
         "badge": "Admin",

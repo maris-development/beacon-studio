@@ -40,7 +40,6 @@
     const SYS_INFO_FLAG = "BEACON_ENABLE_SYS_INFO=true";
 
     let info: InfoView | null = $state(null);
-    let raw: unknown = $state(null);
     let error: Message | null = $state(null);
     let functions: FnMeta[] | null = $state(null);
     let functionsError: Message | null = $state(null);
@@ -79,7 +78,6 @@
         lastUrl = url;
         if (changed) {
             info = null;
-            raw = null;
             error = null;
         }
 
@@ -93,7 +91,6 @@
             try {
                 const answer = await client.info<unknown>();
                 if (!alive) return;
-                raw = answer;
                 info = readInfo(answer);
                 error = null;
             } catch (caught) {
@@ -420,13 +417,6 @@
                     {/if}
                 </div>
             </section>
-
-            {#if raw}
-                <details class="raw">
-                    <summary>{$t("systemInfo.raw")}</summary>
-                    <pre>{JSON.stringify(raw, null, 2)}</pre>
-                </details>
-            {/if}
         {/if}
     </div>
 </div>
@@ -434,7 +424,7 @@
 <style lang="scss">
     .page-container {
         display: grid;
-        // Without the minmax, the open raw answer widens the page past the screen.
+        // Without the minmax, wide content widens the page past the screen.
         grid-template-columns: minmax(0, 1fr);
         gap: 1rem;
     }
@@ -605,17 +595,6 @@
         font-family: var(--font-family-mono);
         font-weight: 600;
         overflow-wrap: anywhere;
-    }
-
-    .raw {
-        pre {
-            max-height: 24rem;
-            padding: 0.75rem;
-            overflow: auto;
-            border-radius: 0.375rem;
-            background: var(--secondary);
-            font-size: var(--font-size-xs);
-        }
     }
 
     .muted {

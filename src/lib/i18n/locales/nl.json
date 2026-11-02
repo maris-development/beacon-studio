@@ -1060,8 +1060,7 @@
             "noteBefore": "Tabelfuncties (read_parquet, read_netcdf, …) staan niet in deze lijst. Zie de",
             "noteLink": "documentatie",
             "noteAfter": "."
-        },
-        "raw": "Ruw antwoord"
+        }
     },
     "admin": {
         "badge": "Admin",
