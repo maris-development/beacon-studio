@@ -771,6 +771,7 @@
             "textColor": "Text color",
             "gridlineColor": "Gridline color",
             "gridlineOpacity": "Gridline opacity",
+            "themeColors": "Use theme colors",
             "noContoursLine": "Contours need a value per point. A line has none, so they are off for this plot type.",
             "noContoursHistogram": "Contours need a value per point. A histogram has none, so they are off for this plot type.",
             "contoursNeedColour": "Contours read the colour axis. Bind a column to it in step 2 to switch them on.",

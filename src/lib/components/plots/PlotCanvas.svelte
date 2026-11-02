@@ -24,7 +24,13 @@
     import { onDestroy, onMount } from "svelte";
     import uPlot from "uplot";
     import "uplot/dist/uPlot.min.css";
-    import { axisTitle, usesZColumn, type PlotConfig } from "@/plots/plot-config";
+    import {
+        axisTitle,
+        resolvePlotColors,
+        usesZColumn,
+        type PlotConfig
+    } from "@/plots/plot-config";
+    import { resolvedTheme } from "@/services/theme";
     import {
         CROSS_SECTION_AXIS_LABEL,
         HISTOGRAM_AXIS_LABEL,
@@ -110,10 +116,23 @@
         chart = null;
     });
 
-    // Rebuild the chart when the plot, the data, the contours or the palette
-    // change. The reads below are the dependencies of this effect.
+    // A colour that the user did not pick follows the theme.
+    const colors = $derived(resolvePlotColors(plot.style, $resolvedTheme));
+
+    // Rebuild the chart when the plot, the data, the contours, the palette or the
+    // theme change. The reads below are the dependencies of this effect.
     $effect(() => {
-        void [plot, plot.z?.scale, series, caption, contours, interpolation, palettesLoaded, $t];
+        void [
+            plot,
+            plot.z?.scale,
+            series,
+            caption,
+            contours,
+            interpolation,
+            palettesLoaded,
+            $t,
+            colors
+        ];
         scheduleRebuild();
     });
 
@@ -386,7 +405,7 @@
     }
 
     function buildOptions(current: PlotSeries, width: number, height: number): uPlot.Options {
-        const style = plot.style;
+        const style = { ...plot.style, ...colors };
         const grid = gridColor(style.gridlineColor, style.gridlineOpacity);
 
         const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
@@ -574,7 +593,7 @@
     }
 </script>
 
-<div class="plot-canvas" style="--plot-background: {plot.style.backgroundColor};">
+<div class="plot-canvas" style="--plot-background: {colors.backgroundColor};">
     <div class="plot-host" bind:this={container} aria-label={plot.title || plot.name}></div>
 
     {#if message}

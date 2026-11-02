@@ -771,6 +771,7 @@
             "textColor": "Colore del testo",
             "gridlineColor": "Colore della griglia",
             "gridlineOpacity": "Opacità della griglia",
+            "themeColors": "Usa i colori del tema",
             "noContoursLine": "I contorni richiedono un valore per punto. Una linea non ne ha, quindi sono disattivati per questo tipo di grafico.",
             "noContoursHistogram": "I contorni richiedono un valore per punto. Un istogramma non ne ha, quindi sono disattivati per questo tipo di grafico.",
             "contoursNeedColour": "I contorni leggono l'asse colore. Associa una colonna a questo asse nel passo 2 per attivarli.",

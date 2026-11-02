@@ -32,10 +32,14 @@
     import PalettePicker from "@/components/palette/PalettePicker.svelte";
     import { addToast } from "@/stores/toasts";
     import type { ChartExplorerController } from "./ChartExplorerController.svelte";
+    import Button from "@/components/buttons/Button.svelte";
+    import { resolvedTheme } from "@/services/theme";
     import {
         axisTitle,
+        DEFAULT_STYLE,
         makeAxisConfig,
         PLOT_TYPES,
+        resolvePlotColors,
         usesXColumn,
         usesYColumn,
         usesZColumn,
@@ -131,6 +135,15 @@
         userEdited = true;
         draft = { ...draft, ...patch };
     }
+
+    // A colour input needs a hex value, so a colour that follows the theme shows the colour of the theme.
+    const shownColors = $derived(resolvePlotColors(draft?.style ?? DEFAULT_STYLE, $resolvedTheme));
+    const hasCustomColors = $derived(
+        !!draft &&
+            (!!draft.style.backgroundColor ||
+                !!draft.style.textColor ||
+                !!draft.style.gridlineColor)
+    );
 
     function patchStyle(patch: Partial<PlotStyleConfig>) {
         if (!draft) return;
@@ -1029,7 +1042,7 @@
                         <span>{$t("plot.panel.backgroundColor")}</span><input
                             id="plotBackgroundColour"
                             type="color"
-                            value={draft.style.backgroundColor}
+                            value={shownColors.backgroundColor}
                             aria-label={$t("plot.panel.backgroundColor")}
                             onchange={(event) =>
                                 patchStyle({ backgroundColor: event.currentTarget.value })}
@@ -1039,7 +1052,7 @@
                         <span>{$t("plot.panel.textColor")}</span><input
                             id="plotTextColour"
                             type="color"
-                            value={draft.style.textColor}
+                            value={shownColors.textColor}
                             aria-label={$t("plot.panel.textColor")}
                             onchange={(event) =>
                                 patchStyle({ textColor: event.currentTarget.value })}
@@ -1049,12 +1062,26 @@
                         <span>{$t("plot.panel.gridlineColor")}</span><input
                             id="plotGridlineColour"
                             type="color"
-                            value={draft.style.gridlineColor}
+                            value={shownColors.gridlineColor}
                             aria-label={$t("plot.panel.gridlineColor")}
                             onchange={(event) =>
                                 patchStyle({ gridlineColor: event.currentTarget.value })}
                         />
                     </div>
+                    {#if hasCustomColors}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onclick={() =>
+                                patchStyle({
+                                    backgroundColor: "",
+                                    textColor: "",
+                                    gridlineColor: ""
+                                })}
+                        >
+                            {$t("plot.panel.themeColors")}
+                        </Button>
+                    {/if}
                     <PlotSlider
                         id="plotGridlineOpacity"
                         label={$t("plot.panel.gridlineOpacity")}

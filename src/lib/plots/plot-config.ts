@@ -25,6 +25,7 @@
 import { Utils } from "@/utils";
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from "@/colors/palettes";
 import type { MessageKey } from "@/i18n";
+import type { ResolvedTheme } from "@/stores/settings";
 
 export type PlotType = "scatter" | "cross-section" | "line" | "histogram";
 export type ColorScale = "linear" | "logarithmic" | "exponential";
@@ -171,13 +172,13 @@ export interface PlotStyleConfig {
     titleFontSize: number;
     /** Draw the counts of the data at the foot of the plot. */
     showCaption: boolean;
-    /** CSS colour. The renderer paints it behind the plot, and into the export. */
+    /** CSS colour. The renderer paints it behind the plot, and into the export. Empty follows the theme. */
     backgroundColor: string;
-    /** CSS colour of the gridlines and axis ticks. */
+    /** CSS colour of the gridlines and axis ticks. Empty follows the theme. */
     gridlineColor: string;
     /** 0 to 1. Controls the opacity of the gridlines and axis ticks. */
     gridlineOpacity: number;
-    /** CSS colour of the title, the axis titles and the tick labels. */
+    /** CSS colour of the title, the axis titles and the tick labels. Empty follows the theme. */
     textColor: string;
 }
 
@@ -255,11 +256,36 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
     tickFontSize: 11,
     titleFontSize: 16,
     showCaption: true,
-    backgroundColor: "#ffffff",
-    gridlineColor: "#1f2937",
+    backgroundColor: "",
+    gridlineColor: "",
     gridlineOpacity: 0.15,
-    textColor: "#1f2937"
+    textColor: ""
 };
+
+/** The colours of a plot that follows the theme. */
+export type PlotThemeColors = Pick<
+    PlotStyleConfig,
+    "backgroundColor" | "gridlineColor" | "textColor"
+>;
+
+/**
+ * The plot colours of each theme. The renderer parses only hex and `rgb()`, so
+ * these are hex. The dark values match the dark `--card` and text tokens.
+ */
+export const PLOT_THEME_COLORS: Record<ResolvedTheme, PlotThemeColors> = {
+    light: { backgroundColor: "#ffffff", gridlineColor: "#1f2937", textColor: "#1f2937" },
+    dark: { backgroundColor: "#17171b", gridlineColor: "#e4e4e7", textColor: "#e4e4e7" }
+};
+
+/** The colours to paint: a colour that the user picked, else the colour of the theme. */
+export function resolvePlotColors(style: PlotThemeColors, theme: ResolvedTheme): PlotThemeColors {
+    const themed = PLOT_THEME_COLORS[theme];
+    return {
+        backgroundColor: style.backgroundColor || themed.backgroundColor,
+        gridlineColor: style.gridlineColor || themed.gridlineColor,
+        textColor: style.textColor || themed.textColor
+    };
+}
 
 /**
  * Solid blue, the colour of a point when the plot has no Z axis. It matches the
@@ -428,6 +454,13 @@ function asNullableNumber(value: unknown): number | null {
 function asBoolean(value: unknown, fallback: boolean): boolean {
     if (typeof value === "boolean") return value;
     return fallback;
+}
+
+/** A plot stored before the theme setting holds the light default, and follows the theme as well. */
+function asThemeColor(value: unknown, lightDefault: string): string {
+    const color = asString(value, "");
+    if (color.toLowerCase() === lightDefault) return "";
+    return color;
 }
 
 function asColorScale(value: unknown): ColorScale {
@@ -614,14 +647,17 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
         // A plot stored before the caption existed has no key here, and takes the
         // default. Therefore an old plot draws its caption too.
         showCaption: asBoolean(record.showCaption, DEFAULT_STYLE.showCaption),
-        backgroundColor: asString(record.backgroundColor, DEFAULT_STYLE.backgroundColor),
-        gridlineColor: asString(record.gridlineColor, DEFAULT_STYLE.gridlineColor),
+        backgroundColor: asThemeColor(
+            record.backgroundColor,
+            PLOT_THEME_COLORS.light.backgroundColor
+        ),
+        gridlineColor: asThemeColor(record.gridlineColor, PLOT_THEME_COLORS.light.gridlineColor),
         gridlineOpacity: clamp(
             asNumber(record.gridlineOpacity, DEFAULT_STYLE.gridlineOpacity),
             0,
             1
         ),
-        textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
+        textColor: asThemeColor(record.textColor, PLOT_THEME_COLORS.light.textColor)
     };
 }
 
