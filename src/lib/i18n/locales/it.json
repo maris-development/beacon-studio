@@ -1060,8 +1060,7 @@
             "noteBefore": "Le funzioni di tabella (read_parquet, read_netcdf, …) non sono in questo elenco. Vedi la",
             "noteLink": "documentazione",
             "noteAfter": "."
-        },
-        "raw": "Risposta grezza"
+        }
     },
     "admin": {
         "badge": "Admin",
@@ -1106,6 +1105,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Esegui SQL sul nodo con la tua sessione da amministratore. Crea tabelle e viste materializzate, spiega il piano della query e scarica il risultato.",
         "pickNode": "Scegli un nodo Beacon.",
         "nodeNotFound": "Il nodo del link non è nella tua lista. L'editor mantiene il nodo attuale.",
         "toolbar": {
@@ -1192,7 +1192,7 @@
             }
         },
         "tables": {
-            "intro": "Esplora le tabelle del tuo nodo Beacon.",
+            "intro": "Esplora e gestisci le tabelle disponibili nel tuo nodo Beacon.",
             "create": "Crea",
             "createView": "Vista",
             "createMaterialized": "Vista materializzata",
@@ -1269,7 +1269,7 @@
             }
         },
         "datasets": {
-            "intro": "Esplora i file del tuo nodo Beacon.",
+            "intro": "Esplora e gestisci i dataset disponibili nel tuo nodo Beacon.",
             "upload": "Carica",
             "pickNode": "Scegli un nodo Beacon.",
             "search": "Cerca in tutte le cartelle",
@@ -1288,6 +1288,7 @@
             "next": "Successiva",
             "pageOf": "Pagina {page} di {count}",
             "storage": {
+                "title": "Disco dell'archivio dei dataset",
                 "usedOf": "{used} usati di {total}, {free} liberi",
                 "objects": "{used} in {count, plural, one {# oggetto} other {# oggetti}} ({location})"
             },

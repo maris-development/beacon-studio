@@ -49,6 +49,18 @@ body {
     border-radius: 0.75rem;
     border: 1px solid var(--card-border);
     color: var(--foreground);
+
+    // No panel: the page content lies on the app background.
+    &.plain {
+        background: none;
+        border-color: transparent;
+    }
+}
+
+// The description below the page title. The top margin collapses with the h1 margin to 0.25rem.
+.page-intro {
+    margin: -0.25rem 0 1rem;
+    color: var(--muted-foreground);
 }
 
 #svelte-body {

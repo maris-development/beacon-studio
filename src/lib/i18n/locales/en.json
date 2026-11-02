@@ -1060,8 +1060,7 @@
             "noteBefore": "Table functions (read_parquet, read_netcdf, …) are not in this list. See the",
             "noteLink": "documentation",
             "noteAfter": "."
-        },
-        "raw": "Raw answer"
+        }
     },
     "admin": {
         "badge": "Admin",
@@ -1106,6 +1105,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Run SQL on the node with your admin session. Create tables and materialized views, explain the query plan, and download the result.",
         "pickNode": "Pick a Beacon node.",
         "nodeNotFound": "The node in the link is not in your list. The editor keeps the current node.",
         "toolbar": {
@@ -1192,7 +1192,7 @@
             }
         },
         "tables": {
-            "intro": "Explore the tables of your Beacon node.",
+            "intro": "Explore and manage the tables that are available in your Beacon node.",
             "create": "Create",
             "createView": "View",
             "createMaterialized": "Materialized view",
@@ -1269,7 +1269,7 @@
             }
         },
         "datasets": {
-            "intro": "Explore the files of your Beacon node.",
+            "intro": "Explore and manage the datasets that are available in your Beacon node.",
             "upload": "Upload",
             "pickNode": "Pick a Beacon node.",
             "search": "Search all folders",
@@ -1288,6 +1288,7 @@
             "next": "Next",
             "pageOf": "Page {page} of {count}",
             "storage": {
+                "title": "Disk of the datasets store",
                 "usedOf": "{used} used of {total}, {free} free",
                 "objects": "{used} in {count, plural, one {# object} other {# objects}} ({location})"
             },

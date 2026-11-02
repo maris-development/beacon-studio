@@ -1060,8 +1060,7 @@
             "noteBefore": "Tabelfuncties (read_parquet, read_netcdf, …) staan niet in deze lijst. Zie de",
             "noteLink": "documentatie",
             "noteAfter": "."
-        },
-        "raw": "Ruw antwoord"
+        }
     },
     "admin": {
         "badge": "Admin",
@@ -1106,6 +1105,7 @@
         }
     },
     "sqlEditor": {
+        "intro": "Voer SQL uit op de node met je beheerderssessie. Maak tabellen en gematerialiseerde views, leg het queryplan uit en download het resultaat.",
         "pickNode": "Kies een Beacon-node.",
         "nodeNotFound": "De node in de link staat niet in je lijst. De editor houdt de huidige node.",
         "toolbar": {
@@ -1192,7 +1192,7 @@
             }
         },
         "tables": {
-            "intro": "Verken de tabellen van je Beacon-node.",
+            "intro": "Verken en beheer de tabellen die beschikbaar zijn in je Beacon-node.",
             "create": "Aanmaken",
             "createView": "View",
             "createMaterialized": "Gematerialiseerde view",
@@ -1269,7 +1269,7 @@
             }
         },
         "datasets": {
-            "intro": "Verken de bestanden van je Beacon-node.",
+            "intro": "Verken en beheer de datasets die beschikbaar zijn in je Beacon-node.",
             "upload": "Uploaden",
             "pickNode": "Kies een Beacon-node.",
             "search": "Zoek in alle mappen",
@@ -1288,6 +1288,7 @@
             "next": "Volgende",
             "pageOf": "Pagina {page} van {count}",
             "storage": {
+                "title": "Schijf van de datasetopslag",
                 "usedOf": "{used} gebruikt van {total}, {free} vrij",
                 "objects": "{used} in {count, plural, one {# object} other {# objecten}} ({location})"
             },

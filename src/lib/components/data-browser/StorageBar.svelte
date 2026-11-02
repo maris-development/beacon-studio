@@ -1,7 +1,9 @@
-<!-- Disk use of the datasets store. Only with a session: it never asks for a sign-in. -->
+<!-- Disk use of the datasets store, as a card. Only with a session: it never asks for a sign-in. -->
 <script lang="ts">
     import { untrack } from "svelte";
     import type { DatasetStorage } from "@maris-development/beacon-client";
+    import HardDriveIcon from "@lucide/svelte/icons/hard-drive";
+    import StatTile from "@/components/system-info/StatTile.svelte";
     import type { BeaconNode } from "@/beacon-api/types";
     import { signedInNodeIds, withAdminSession } from "@/services/admin-session";
     import { settings } from "@/stores/settings";
@@ -42,39 +44,44 @@
 {#if storage}
     <div class="storage">
         {#if storage.used_percent !== null}
-            <div class="bar"><span style="width: {storage.used_percent}%"></span></div>
-            <span>
-                {$t("dataBrowser.datasets.storage.usedOf", {
+            <StatTile
+                label={$t("dataBrowser.datasets.storage.title")}
+                icon={HardDriveIcon}
+                value={$formatNumber(storage.used_percent / 100, {
+                    style: "percent",
+                    maximumFractionDigits: 0
+                })}
+                detail={$t("dataBrowser.datasets.storage.usedOf", {
                     used: formatSize(storage.used_space, $formatNumber),
                     total: formatSize(storage.total_space, $formatNumber),
                     free: formatSize(storage.free_space, $formatNumber)
                 })}
-            </span>
+            >
+                <div class="bar"><span style="width: {storage.used_percent}%"></span></div>
+            </StatTile>
         {:else}
-            <span>
-                {$t("dataBrowser.datasets.storage.objects", {
+            <StatTile
+                label={$t("dataBrowser.datasets.storage.title")}
+                icon={HardDriveIcon}
+                value={formatSize(storage.used_space, $formatNumber)}
+                detail={$t("dataBrowser.datasets.storage.objects", {
                     used: formatSize(storage.used_space, $formatNumber),
                     count: storage.object_count ?? 0,
                     location: storage.location
                 })}
-            </span>
+            />
         {/if}
     </div>
 {/if}
 
 <style lang="scss">
     .storage {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.75rem;
-        color: var(--muted-foreground);
-        font-size: var(--font-size-sm);
+        width: min(100%, 20rem);
+        margin-bottom: 1rem;
     }
 
     .bar {
-        width: 10rem;
-        height: 0.5rem;
+        height: 0.375rem;
         overflow: hidden;
         border-radius: 0.25rem;
         background: var(--secondary);

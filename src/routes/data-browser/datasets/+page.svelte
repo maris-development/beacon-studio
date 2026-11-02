@@ -5,13 +5,19 @@
     import { untrack } from "svelte";
     import FolderIcon from "@lucide/svelte/icons/folder";
     import FileIcon from "@lucide/svelte/icons/file";
+    import HouseIcon from "@lucide/svelte/icons/house";
+    import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
+    import ArrowUpIcon from "@lucide/svelte/icons/arrow-up";
+    import ArrowDownIcon from "@lucide/svelte/icons/arrow-down";
     import Button from "@/components/buttons/Button.svelte";
+    import { Badge } from "@/components/ui/badge";
     import Cookiecrumb from "@/components/cookiecrumb/CookieCrumb.svelte";
     import NodePicker from "@/components/NodePicker.svelte";
     import AdminAction from "@/components/AdminAction.svelte";
     import UploadDialog from "@/components/data-browser/UploadDialog.svelte";
     import StorageBar from "@/components/data-browser/StorageBar.svelte";
-    import { Input } from "@/components/ui/input";
+    import ListCard from "@/components/data-browser/ListCard.svelte";
+    import SearchInput from "@/components/input/SearchInput.svelte";
     import { makeBeaconClient } from "@/beacon-api/client";
     import { currentNode } from "@/services/beacon-node";
     import { track } from "@/telemetry";
@@ -35,11 +41,11 @@
     import { formatDate, formatNumber, t, type Message } from "@/i18n";
 
     const PAGE_SIZE = 100;
+    const DATE_TIME: Intl.DateTimeFormatOptions = { dateStyle: "medium", timeStyle: "short" };
 
     let loadedUrl: string | null = null;
 
     let entries: DatasetEntry[] = $state([]);
-    let total: number | null = $state(null);
     let loading = $state(false);
     let error: Message | null = $state(null);
     let uploadOpen = $state(false);
@@ -99,20 +105,15 @@
         // Another node: its file list and folder must not show under the new node.
         if (loadedUrl !== null && current.url !== loadedUrl) {
             entries = [];
-            total = null;
             resetLocation();
         }
         loadedUrl = current.url;
 
         try {
-            const [raw, count] = await Promise.all([
-                client.datasets({ limit: DATASET_LIST_LIMIT }),
-                client.totalDatasets().catch(() => null)
-            ]);
+            const raw = await client.datasets({ limit: DATASET_LIST_LIMIT });
             if (current.url !== nodeUrl) return;
 
             entries = parseEntries(raw);
-            total = count;
         } catch (caught) {
             if (current.url === nodeUrl) {
                 entries = [];
@@ -187,6 +188,12 @@
         }
     }
 
+    function ariaSort(key: FileSort): "ascending" | "descending" | "none" {
+        if (sortKey !== key) return "none";
+        if (sortDirection === "asc") return "ascending";
+        return "descending";
+    }
+
     function onSearch() {
         if (requestedPage !== 1) goToPage(1);
         if (searching) {
@@ -205,6 +212,16 @@
     <title>{$t("app.pageTitle", { page: $t("nav.item.datasets") })}</title>
 </svelte:head>
 
+{#snippet sortMark(key: FileSort)}
+    {#if sortKey === key}
+        {#if sortDirection === "asc"}
+            <ArrowUpIcon size={12} aria-hidden="true" />
+        {:else}
+            <ArrowDownIcon size={12} aria-hidden="true" />
+        {/if}
+    {/if}
+{/snippet}
+
 <Cookiecrumb
     crumbs={[
         { label: $t("nav.item.dataBrowser"), href: resolve("/data-browser") },
@@ -213,10 +230,10 @@
 />
 
 <div class="page-wrapper">
-    <div class="page-container">
+    <div class="page-container plain">
         <h1>{$t("nav.item.datasets")}</h1>
 
-        <p>{$t("dataBrowser.datasets.intro")}</p>
+        <p class="page-intro">{$t("dataBrowser.datasets.intro")}</p>
 
         <NodePicker>
             {#snippet actions()}
@@ -239,129 +256,160 @@
         {:else}
             <StorageBar {node} />
 
-            <div class="toolbar">
-                <Input
-                    type="search"
-                    placeholder={$t("dataBrowser.datasets.search")}
-                    bind:value={needle}
-                    onchange={onSearch}
-                />
-                {#if total !== null}
-                    <span class="muted"
-                        >{$t("dataBrowser.datasets.fileCount", { count: total })}</span
-                    >
-                {/if}
-            </div>
-
             {#if cut}
                 <p class="warning">
                     {$t("dataBrowser.datasets.listCut", { limit: DATASET_LIST_LIMIT })}
                 </p>
             {/if}
 
-            {#if !searching}
-                <nav class="path" aria-label={$t("dataBrowser.datasets.folderNav")}>
-                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
-                    <a href={listHref("")}>{$t("dataBrowser.datasets.all")}</a>
-                    {#each folderParts(folder) as part (part.path)}
-                        <span>/</span>
-                        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
-                        <a href={listHref(part.path)}>{part.name}</a>
-                    {/each}
-                </nav>
-            {/if}
+            <ListCard>
+                {#snippet head()}
+                    {#if !searching}
+                        <nav class="path" aria-label={$t("dataBrowser.datasets.folderNav")}>
+                            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
+                            <a
+                                href={listHref("")}
+                                aria-label={$t("dataBrowser.datasets.all")}
+                                title={$t("dataBrowser.datasets.all")}
+                            >
+                                <HouseIcon size={16} />
+                            </a>
+                            {#each folderParts(folder) as part (part.path)}
+                                <ChevronRightIcon size={14} class="separator" aria-hidden="true" />
+                                <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- listHref resolves the path -->
+                                <a href={listHref(part.path)}>{part.name}</a>
+                            {/each}
+                        </nav>
+                    {/if}
+                {/snippet}
 
-            {#if loading && entries.length === 0}
-                <p class="muted">{$t("dataBrowser.datasets.loading")}</p>
-            {:else if error}
-                <p class="error">{$t(error)}</p>
-            {:else if rowCount === 0}
-                <p class="muted">{$t("dataBrowser.datasets.empty")}</p>
-            {:else}
-                <table class="files">
-                    <thead>
-                        <tr>
-                            <th>
-                                <button type="button" onclick={() => setSort("name")}
-                                    >{$t("common.name")}</button
-                                >
-                            </th>
-                            <th>{$t("dataBrowser.datasets.column.format")}</th>
-                            <th>
-                                <button type="button" onclick={() => setSort("size")}>
-                                    {$t("dataBrowser.datasets.column.size")}
-                                </button>
-                            </th>
-                            <th>
-                                <button type="button" onclick={() => setSort("date")}>
-                                    {$t("dataBrowser.datasets.column.modified")}
-                                </button>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each pageFolders as row (row.path)}
-                            <tr>
-                                <td colspan="4">
-                                    <button
-                                        type="button"
-                                        class="link"
-                                        onclick={() => openFolder(row.path)}
-                                    >
-                                        <FolderIcon class="size-4" />
-                                        {row.name}
-                                        <span class="muted">({$formatNumber(row.count)})</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        {/each}
-                        {#each pageFiles as entry (entry.path)}
-                            {@const modified = parseDate(entry.lastModified)}
-                            <tr>
-                                <td>
-                                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- detailHref resolves the path -->
-                                    <a class="link" href={detailHref(entry)}>
-                                        <FileIcon class="size-4" />
-                                        {#if searching}{entry.path}{:else}{fileName(
-                                                entry.path
-                                            )}{/if}
-                                    </a>
-                                </td>
-                                <td>{entry.format}</td>
-                                <td>{formatSize(entry.size, $formatNumber)}</td>
-                                <td
-                                    >{#if modified}{$formatDate(modified)}{/if}</td
-                                >
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
+                {#snippet tools()}
+                    <SearchInput
+                        placeholder={$t("dataBrowser.datasets.search")}
+                        bind:value={needle}
+                        onchange={onSearch}
+                    />
+                {/snippet}
 
-                {#if pageCount > 1}
-                    <div class="pager">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={pageIndex <= 1}
-                            onclick={() => goToPage(pageIndex - 1)}
-                            >{$t("dataBrowser.datasets.previous")}</Button
-                        >
-                        <span class="muted">
-                            {$t("dataBrowser.datasets.pageOf", {
-                                page: pageIndex,
-                                count: pageCount
-                            })}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={pageIndex >= pageCount}
-                            onclick={() => goToPage(pageIndex + 1)}
-                            >{$t("dataBrowser.datasets.next")}</Button
-                        >
+                {#if loading && entries.length === 0}
+                    <p class="state muted">{$t("dataBrowser.datasets.loading")}</p>
+                {:else if error}
+                    <p class="state error">{$t(error)}</p>
+                {:else if rowCount === 0}
+                    <p class="state muted">{$t("dataBrowser.datasets.empty")}</p>
+                {:else}
+                    <div class="table-scroll">
+                        <table class="files">
+                            <thead>
+                                <tr>
+                                    <th aria-sort={ariaSort("name")}>
+                                        <button type="button" onclick={() => setSort("name")}>
+                                            {$t("common.name")}
+                                            {@render sortMark("name")}
+                                        </button>
+                                    </th>
+                                    <th>{$t("dataBrowser.datasets.column.format")}</th>
+                                    <th class="number" aria-sort={ariaSort("size")}>
+                                        <button type="button" onclick={() => setSort("size")}>
+                                            {$t("dataBrowser.datasets.column.size")}
+                                            {@render sortMark("size")}
+                                        </button>
+                                    </th>
+                                    <th aria-sort={ariaSort("date")}>
+                                        <button type="button" onclick={() => setSort("date")}>
+                                            {$t("dataBrowser.datasets.column.modified")}
+                                            {@render sortMark("date")}
+                                        </button>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {#each pageFolders as row (row.path)}
+                                    {@const modified = parseDate(row.lastModified)}
+                                    <tr>
+                                        <td>
+                                            <button
+                                                type="button"
+                                                class="link"
+                                                onclick={() => openFolder(row.path)}
+                                            >
+                                                <FolderIcon class="folder-icon size-4" />
+                                                {row.name}
+                                            </button>
+                                        </td>
+                                        <td class="muted">
+                                            {$t("dataBrowser.datasets.fileCount", {
+                                                count: row.count
+                                            })}
+                                        </td>
+                                        <td class="number">{formatSize(row.size, $formatNumber)}</td
+                                        >
+                                        <td class="muted"
+                                            >{#if modified}{$formatDate(
+                                                    modified,
+                                                    DATE_TIME
+                                                )}{/if}</td
+                                        >
+                                    </tr>
+                                {/each}
+                                {#each pageFiles as entry (entry.path)}
+                                    {@const modified = parseDate(entry.lastModified)}
+                                    <tr>
+                                        <td>
+                                            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- detailHref resolves the path -->
+                                            <a class="link" href={detailHref(entry)}>
+                                                <FileIcon class="file-icon size-4" />
+                                                {#if searching}{entry.path}{:else}{fileName(
+                                                        entry.path
+                                                    )}{/if}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {#if entry.format}
+                                                <Badge variant="outline">{entry.format}</Badge>
+                                            {/if}
+                                        </td>
+                                        <td class="number"
+                                            >{formatSize(entry.size, $formatNumber)}</td
+                                        >
+                                        <td class="muted"
+                                            >{#if modified}{$formatDate(
+                                                    modified,
+                                                    DATE_TIME
+                                                )}{/if}</td
+                                        >
+                                    </tr>
+                                {/each}
+                            </tbody>
+                        </table>
                     </div>
+
+                    {#if pageCount > 1}
+                        <div class="pager">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pageIndex <= 1}
+                                onclick={() => goToPage(pageIndex - 1)}
+                                >{$t("dataBrowser.datasets.previous")}</Button
+                            >
+                            <span class="muted">
+                                {$t("dataBrowser.datasets.pageOf", {
+                                    page: pageIndex,
+                                    count: pageCount
+                                })}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pageIndex >= pageCount}
+                                onclick={() => goToPage(pageIndex + 1)}
+                                >{$t("dataBrowser.datasets.next")}</Button
+                            >
+                        </div>
+                    {/if}
                 {/if}
-            {/if}
+            </ListCard>
         {/if}
     </div>
 </div>
@@ -371,19 +419,42 @@
 {/if}
 
 <style lang="scss">
-    .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-
     .path {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.25rem;
-        margin-bottom: 0.5rem;
-        font-family: var(--font-family-mono);
+        align-items: center;
+        gap: 0.375rem;
+        min-width: 0;
+
+        a {
+            display: inline-flex;
+            color: var(--muted-foreground);
+            text-decoration: none;
+
+            &:hover {
+                color: var(--foreground);
+            }
+
+            // The open folder.
+            &:last-child {
+                color: var(--foreground);
+                font-weight: 600;
+            }
+        }
+
+        :global(.separator) {
+            color: var(--muted-foreground);
+        }
+    }
+
+    .state {
+        margin: 0;
+        padding: 1rem;
+    }
+
+    // A narrow screen scrolls the table, not the page.
+    .table-scroll {
+        overflow-x: auto;
     }
 
     .files {
@@ -393,17 +464,51 @@
 
         th,
         td {
-            padding: 0.375rem 0.5rem;
+            padding: 0.625rem 1rem;
             border-bottom: 1px solid var(--border);
             text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--muted-foreground);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+            text-transform: uppercase;
         }
 
         th button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
             padding: 0;
             border: 0;
             background: none;
-            font-weight: 600;
+            color: inherit;
+            font: inherit;
+            text-transform: inherit;
             cursor: pointer;
+        }
+
+        .number {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: color-mix(in srgb, var(--muted) 50%, transparent);
+        }
+
+        :global(.folder-icon) {
+            color: var(--primary);
+        }
+
+        :global(.file-icon) {
+            color: var(--muted-foreground);
         }
     }
 
@@ -429,7 +534,8 @@
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        margin-top: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-top: 1px solid var(--border);
     }
 
     .muted {

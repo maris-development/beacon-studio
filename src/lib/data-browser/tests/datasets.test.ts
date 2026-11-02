@@ -61,17 +61,38 @@ describe("parseEntries", () => {
 describe("listFolder", () => {
     it("lists the root", () => {
         const { folders, files } = listFolder(entries, "");
-        expect(folders).toEqual([{ name: "argo", path: "argo/", count: 4 }]);
+        expect(folders).toEqual([
+            { name: "argo", path: "argo/", count: 4, size: null, lastModified: null }
+        ]);
         expect(files.map((f) => f.path)).toEqual(["top.parquet"]);
     });
 
     it("lists a folder with sub-folders and files", () => {
         const { folders, files } = listFolder(entries, "argo");
         expect(folders).toEqual([
-            { name: "2023", path: "argo/2023/", count: 1 },
-            { name: "2024", path: "argo/2024/", count: 2 }
+            { name: "2023", path: "argo/2023/", count: 1, size: null, lastModified: null },
+            { name: "2024", path: "argo/2024/", count: 2, size: null, lastModified: null }
         ]);
         expect(files.map((f) => f.path)).toEqual(["argo/index.csv"]);
+    });
+
+    it("sums the known sizes and keeps the newest date of a folder", () => {
+        const dated = [
+            entry("data/a.nc", { size: 10, lastModified: "2026-01-02T00:00:00Z" }),
+            entry("data/sub/b.nc", { size: 5, lastModified: "2026-03-01T00:00:00Z" }),
+            entry("data/c.nc")
+        ];
+
+        const { folders } = listFolder(dated, "");
+        expect(folders).toEqual([
+            {
+                name: "data",
+                path: "data/",
+                count: 3,
+                size: 15,
+                lastModified: "2026-03-01T00:00:00Z"
+            }
+        ]);
     });
 
     it("gives nothing for an unknown folder", () => {

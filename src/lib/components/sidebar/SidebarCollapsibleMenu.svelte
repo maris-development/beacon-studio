@@ -11,7 +11,8 @@
         url,
         match = undefined,
         icon: Icon,
-        items
+        items,
+        compact = false
     }: {
         title: string;
         url: string;
@@ -20,6 +21,8 @@
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         icon: any;
         items: { title: string; url: string }[];
+        /** Show the header icon only. The child items have no icon, so they hide. They keep their space. */
+        compact?: boolean;
     } = $props();
 
     const isHeaderActive = $derived(
@@ -42,15 +45,22 @@
     }
 </script>
 
-<div class="collapsible-menu" class:open>
+<div class="collapsible-menu" class:open class:compact>
     <div class="collapsible-menu-header">
-        <a class:active={isHeaderActive} href={url}>
+        <a
+            class:active={isHeaderActive}
+            href={url}
+            title={compact ? title : undefined}
+            aria-label={compact ? title : undefined}
+        >
             <span class="menu-icon"><Icon /></span>
             <span class="submenu-title">{title}</span>
         </a>
-        <Button variant="ghost" size="xs" onclick={toggleOpen}>
-            <span class="chevron"><ChevronDownIcon /></span>
-        </Button>
+        <span class="chevron-toggle">
+            <Button variant="ghost" size="xs" onclick={toggleOpen}>
+                <span class="chevron"><ChevronDownIcon /></span>
+            </Button>
+        </span>
     </div>
 
     {#if open}
@@ -129,6 +139,20 @@
             display: flex;
             flex-direction: column;
             gap: 0.25rem;
+        }
+
+        // Hide, but keep the space, so the next icons keep the place of the open sidebar.
+        &.compact {
+            .collapsible-menu-header a .submenu-title {
+                min-width: 0;
+                overflow: hidden;
+                opacity: 0;
+            }
+
+            .chevron-toggle,
+            .collapsible-menu-items {
+                visibility: hidden;
+            }
         }
     }
 </style>
