@@ -395,6 +395,7 @@
         padding: 0.75rem;
         border: 1px solid var(--border);
         border-radius: 0.5rem;
+        background: var(--card);
     }
 
     .card-head {
