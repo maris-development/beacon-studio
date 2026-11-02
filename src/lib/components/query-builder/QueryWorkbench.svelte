@@ -8,18 +8,18 @@
 -->
 
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import QuerySelectorHeader from './QuerySelectorHeader.svelte';
-    import QueryWorkbenchPanes from './QueryWorkbenchPanes.svelte';
-    import { page } from '$app/state';
-    import { QueryWorkspace } from './QueryWorkspace.svelte';
-    import { resolveUrlQuery } from '@/stores/query-library';
-    import { getDefaultQueryActions } from './QueryActions';
-    import { replaceState } from '$app/navigation';
-    import { resolve } from '$app/paths';
-    import { SHARE_LINK_PATH } from '@/stores/stored-query';
+    import { onMount } from "svelte";
+    import QuerySelectorHeader from "./QuerySelectorHeader.svelte";
+    import QueryWorkbenchPanes from "./QueryWorkbenchPanes.svelte";
+    import { page } from "$app/state";
+    import { QueryWorkspace } from "./QueryWorkspace.svelte";
+    import { resolveUrlQuery } from "@/stores/query-library";
+    import { getDefaultQueryActions } from "./QueryActions";
+    import { replaceState } from "$app/navigation";
+    import { resolve } from "$app/paths";
+    import { SHARE_LINK_PATH } from "@/stores/stored-query";
 
-	const workspace = $state(new QueryWorkspace());
+    const workspace = $state(new QueryWorkspace());
 
     onMount(() => {
         const resolved = resolveUrlQuery(page.url);
@@ -38,20 +38,18 @@
     // const status = $derived(workspace.statusFor(workspace.activeBlock));
 
     const queryActions = $derived(getDefaultQueryActions(workspace));
-
 </script>
 
 <div class="workbench">
     <QuerySelectorHeader {workspace} {queryActions} />
 
     <QueryWorkbenchPanes {workspace} {queryActions} />
-
 </div>
 
 <style lang="scss">
-	.workbench {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
+    .workbench {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
 </style>
