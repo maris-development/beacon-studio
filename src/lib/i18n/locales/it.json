@@ -158,7 +158,7 @@
             },
             "mapStyleUrl": {
                 "label": "URL dello stile della mappa di base",
-                "description": "L'URL dello stile MapLibre della mappa di base. Una modifica vale per la prossima mappa."
+                "description": "L'URL dello stile MapLibre della mappa di base. Una modifica vale per la prossima mappa. In modalità scura, la mappa predefinita usa la sua versione scura."
             },
             "mapGroupByDecimals": {
                 "label": "Decimali di raggruppamento mappa",

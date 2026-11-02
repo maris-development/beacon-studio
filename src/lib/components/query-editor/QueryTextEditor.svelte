@@ -8,6 +8,7 @@
 
     import * as monaco from "monaco-editor";
     import "@/monaco/environment";
+    import { monacoTheme } from "@/monaco/theme";
 
     loader.config({ monaco });
 
@@ -31,7 +32,7 @@
             automaticLayout: true,
             overviewRulerLanes: 0,
             overviewRulerBorder: false,
-            theme: "vs-light",
+            theme: monacoTheme(),
             scrollBeyondLastLine: false,
             readOnly
         });

@@ -31,6 +31,9 @@ import type { BeaconNode, Select as QuerySelect } from "@/beacon-api/types";
 import { isSqlRunQuery, type RunQuery } from "@/query/run-query";
 import { ApacheArrowUtils } from "@/arrow-utils";
 import { getSettings } from "@/stores/settings";
+import { resolvedTheme } from "@/services/theme";
+import { basemapUrl, followBasemapTheme } from "@/geo/basemap";
+import { get } from "svelte/store";
 import { addToast } from "@/stores/toasts";
 import { describeQuery, track } from "@/telemetry";
 import { Utils } from "@/utils";
@@ -78,6 +81,7 @@ export class MapViewController {
     private layer: GeoArrowScatterplotLayer | null = null;
     private popup: maplibregl.Popup | null = null;
     private popupContent: Rendered = null;
+    private stopBasemapTheme: (() => void) | null = null;
     /** The display table: the result grouped by latitude and longitude. */
     private table: ApacheArrow.Table | null = null;
     /** The column that the current deck.gl layer paints. */
@@ -236,9 +240,10 @@ export class MapViewController {
     // ---------------------------------------------------------------- map setup
 
     init(container: HTMLDivElement): void {
+        const styleUrl = getSettings().mapStyleUrl;
         const map = new maplibregl.Map({
             container,
-            style: getSettings().mapStyleUrl,
+            style: basemapUrl(styleUrl, get(resolvedTheme)),
             center: [0.45, 51.47],
             zoom: 1,
             bearing: 0,
@@ -247,6 +252,7 @@ export class MapViewController {
         });
 
         map.addControl(new NavigationControl());
+        this.stopBasemapTheme = followBasemapTheme(map, styleUrl, resolvedTheme);
 
         // Follow the camera, so the page can persist it. `moveend` fires one time
         // at the end of a pan, a zoom or a `fitBounds`, and not on every frame.
@@ -281,6 +287,8 @@ export class MapViewController {
     }
 
     destroy(): void {
+        this.stopBasemapTheme?.();
+        this.stopBasemapTheme = null;
         this.destroyPopupContent();
         this.map?.remove();
         this.map = null;

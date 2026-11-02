@@ -158,7 +158,7 @@
             },
             "mapStyleUrl": {
                 "label": "Stijl-URL basiskaart",
-                "description": "De MapLibre-stijl-URL van de basiskaart. Een wijziging geldt voor de volgende kaart."
+                "description": "De MapLibre-stijl-URL van de basiskaart. Een wijziging geldt voor de volgende kaart. In de donkere modus gebruikt de standaardkaart de donkere versie."
             },
             "mapGroupByDecimals": {
                 "label": "Groeperingsdecimalen kaart",

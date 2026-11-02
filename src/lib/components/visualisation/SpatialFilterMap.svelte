@@ -13,7 +13,10 @@
     // Required. See the note in MapViewController.
     import "maplibre-gl/dist/maplibre-gl.css";
     import { onDestroy } from "svelte";
+    import { get } from "svelte/store";
     import { getSettings } from "@/stores/settings";
+    import { resolvedTheme } from "@/services/theme";
+    import { basemapUrl, followBasemapTheme } from "@/geo/basemap";
     import type { Bounds } from "@/geo/spatial-selection";
     import { mapLibreLocale } from "@/geo/map-locale";
 
@@ -40,14 +43,16 @@
      */
     let instance: maplibregl.Map | null = null;
     let observer: ResizeObserver | null = null;
+    let stopBasemapTheme: (() => void) | null = null;
 
     $effect(() => {
         const target = container;
         if (!target || instance) return;
 
+        const styleUrl = getSettings().mapStyleUrl;
         const created = new maplibregl.Map({
             container: target,
-            style: getSettings().mapStyleUrl,
+            style: basemapUrl(styleUrl, get(resolvedTheme)),
             center: [0.45, 51.47],
             zoom: 1,
             attributionControl: false,
@@ -55,6 +60,7 @@
         });
 
         created.addControl(new NavigationControl());
+        stopBasemapTheme = followBasemapTheme(created, styleUrl, resolvedTheme);
 
         if (bounds) {
             created.fitBounds(
@@ -77,6 +83,8 @@
     });
 
     onDestroy(() => {
+        stopBasemapTheme?.();
+        stopBasemapTheme = null;
         observer?.disconnect();
         observer = null;
         instance?.remove();

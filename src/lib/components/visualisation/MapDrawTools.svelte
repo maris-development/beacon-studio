@@ -46,6 +46,7 @@
         type SpatialSelection,
         type SpatialSelectionMode
     } from "@/geo/spatial-selection";
+    import { SELECTION_PREVIEW_SOURCE } from "@/geo/basemap";
     import { t } from "@/i18n";
 
     let {
@@ -94,7 +95,8 @@
      */
     const IDLE_MODE = "idle";
 
-    const PREVIEW_SOURCE = "spatial-selection-preview";
+    // A theme switch keeps this source only through its id prefix (`geo/basemap.ts`).
+    const PREVIEW_SOURCE = SELECTION_PREVIEW_SOURCE;
     const PREVIEW_FILL_LAYER = `${PREVIEW_SOURCE}-fill`;
     const PREVIEW_LINE_LAYER = `${PREVIEW_SOURCE}-line`;
     const PREVIEW_CENTRE_LAYER = `${PREVIEW_SOURCE}-centre`;

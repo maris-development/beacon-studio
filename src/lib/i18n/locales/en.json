@@ -158,7 +158,7 @@
             },
             "mapStyleUrl": {
                 "label": "Base map style URL",
-                "description": "The MapLibre style URL of the base map. A change applies to the next map."
+                "description": "The MapLibre style URL of the base map. A change applies to the next map. In dark mode, the default map uses its dark version."
             },
             "mapGroupByDecimals": {
                 "label": "Map group decimals",
