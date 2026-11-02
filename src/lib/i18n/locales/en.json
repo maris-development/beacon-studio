@@ -35,15 +35,13 @@
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
         "group": {
-            "dataAccess": "Data Access",
-            "explore": "Explore and Analyze",
+            "explore": "Explore data",
             "nodeManagement": "Node Management",
             "studio": "{app}"
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Query Workbench",
-            "workspace": "Workspace",
+            "queryBuilder": "Workbench",
             "dataBrowser": "Data Browser",
             "datasets": "Datasets",
             "dataTables": "Data Tables",
@@ -221,8 +219,6 @@
             "shareEmptyCompileFailed": "Cannot share an empty query. Please select a table and atleast one column. Error compiling query:"
         },
         "actions": {
-            "edit": "Edit Query",
-            "editTitle": "Edit query",
             "share": "Share",
             "shareUrl": "Share URL",
             "copyJson": "Copy JSON",
@@ -383,9 +379,12 @@
             "discard": "Close without saving",
             "saveAndClose": "Save and close"
         },
-        "header": {
-            "editing": "Editing {name}",
-            "viewing": "Viewing {name}"
+        "view": {
+            "label": "Query and result views",
+            "query": "Query",
+            "map": "Map",
+            "table": "Table",
+            "chart": "Chart"
         },
         "panes": {
             "builder": "Query workbench",
@@ -397,7 +396,9 @@
             "sql": "SQL query",
             "preview": "Preview",
             "collapsePreview": "Collapse preview",
-            "expandPreview": "Expand preview"
+            "expandPreview": "Expand preview",
+            "collapseQueries": "Collapse queries",
+            "expandQueries": "Expand queries"
         },
         "code": {
             "tabs": "Code language",
@@ -525,7 +526,7 @@
         }
     },
     "download": {
-        "button": "Download Data",
+        "button": "Download",
         "loading": "Downloading...",
         "toast": {
             "started": "Downloading dataset...",
@@ -544,10 +545,6 @@
             "map": "Visualise your data on an interactive map. Use the map viewer to explore geographical patterns and insights.",
             "table": "Explore your data in a tabular format. The table explorer allows for detailed examination and filtering of your dataset.",
             "chart": "Explore your data using charts. The chart explorer allows for detailed examination and filtering of your dataset."
-        },
-        "tab": {
-            "table": "Table",
-            "chart": "Chart"
         },
         "selectColumn": "Select a column",
         "availableColumns": "Available columns",

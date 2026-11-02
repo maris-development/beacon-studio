@@ -7,7 +7,6 @@
     import QuerySelectorHeader from "@/components/query-builder/QuerySelectorHeader.svelte";
     import { QueryWorkspace } from "@/components/query-builder/QueryWorkspace.svelte";
     import { getDefaultQueryActions } from "@/components/query-builder/QueryActions";
-    import VisualisationTabs from "@/components/visualisation/VisualisationTabs.svelte";
     import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
     import PlotCanvas from "@/components/plots/PlotCanvas.svelte";
     import PlotConfigPanel from "@/components/plots/PlotConfigPanel.svelte";
@@ -227,11 +226,9 @@
 />
 
 <div class="page-wrapper">
-    <QuerySelectorHeader {workspace} {queryActions} mode="view" />
+    <QuerySelectorHeader {workspace} {queryActions} view="chart" />
 
-    <div class="vertical-tabs-wrapper">
-        <VisualisationTabs />
-
+    <div class="view-body">
         <div class="content page-container">
             {#if !resultQuery}
                 <p>{$t("chart.selectQuery")}</p>
@@ -283,7 +280,7 @@
         min-height: 0;
     }
 
-    .vertical-tabs-wrapper {
+    .view-body {
         flex-grow: 1;
         min-height: 0;
         display: flex;

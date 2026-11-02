@@ -15,11 +15,11 @@
     import { t } from "@/i18n";
 
     // Icons
-    import EyeIcon from "@lucide/svelte/icons/eye";
     import TextSearchIcon from "@lucide/svelte/icons/text-search";
     import BookOpenIcon from "@lucide/svelte/icons/book-open";
     import InfoIcon from "@lucide/svelte/icons/info";
     import Table2Icon from "@lucide/svelte/icons/table-2";
+    import FilesIcon from "@lucide/svelte/icons/files";
     import LinkIcon from "@lucide/svelte/icons/link-2";
     import CpuIcon from "@lucide/svelte/icons/cpu";
     import ShieldIcon from "@lucide/svelte/icons/shield";
@@ -42,24 +42,14 @@
 
     const groups: Group[] = [
         {
-            title: "nav.group.dataAccess",
+            title: "nav.group.explore",
             items: [
                 {
                     title: "nav.item.queryBuilder",
                     url: resolve("/queries/workbench"),
-                    match: resolve("/queries"),
+                    // The result views belong to the workbench. The header switch opens them.
+                    match: [resolve("/queries"), resolve("/visualisations")],
                     icon: TextSearchIcon
-                }
-            ]
-        },
-        {
-            title: "nav.group.explore",
-            items: [
-                {
-                    title: "nav.item.workspace",
-                    url: resolve("/visualisations/map-viewer"),
-                    match: resolve("/visualisations"),
-                    icon: EyeIcon
                 }
             ]
         },
@@ -67,13 +57,14 @@
             title: "nav.group.nodeManagement",
             items: [
                 {
-                    title: "nav.item.dataBrowser",
-                    url: resolve("/data-browser"),
-                    icon: Table2Icon,
-                    children: [
-                        { title: "nav.item.datasets", url: resolve("/data-browser/datasets") },
-                        { title: "nav.item.dataTables", url: resolve("/data-browser/data-tables") }
-                    ]
+                    title: "nav.item.datasets",
+                    url: resolve("/data-browser/datasets"),
+                    icon: FilesIcon
+                },
+                {
+                    title: "nav.item.dataTables",
+                    url: resolve("/data-browser/data-tables"),
+                    icon: Table2Icon
                 },
                 {
                     title: "nav.item.sqlConsole",

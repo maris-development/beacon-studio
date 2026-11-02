@@ -45,8 +45,7 @@ describe("isItemActive", () => {
         children: [{ url: "/data-browser/datasets" }, { url: "/data-browser/data-tables" }]
     };
     const crawlers = { url: "/data-browser/crawlers" };
-    const workbench = { url: "/queries/workbench", match: "/queries" };
-    const workspace = { url: "/visualisations/map-viewer", match: "/visualisations" };
+    const workbench = { url: "/queries/workbench", match: ["/queries", "/visualisations"] };
 
     it("keeps Data Browser inactive on the Crawlers page", () => {
         expect(isItemActive("/data-browser/crawlers", dataBrowser)).toBe(false);
@@ -64,14 +63,18 @@ describe("isItemActive", () => {
         }
     });
 
-    it("marks Workspace active on all three viewers", () => {
+    it("marks Query Workbench active on all three result views", () => {
         for (const path of [
             "/visualisations/map-viewer",
             "/visualisations/table-explorer",
             "/visualisations/chart-explorer"
         ]) {
-            expect(isItemActive(path, workspace)).toBe(true);
+            expect(isItemActive(path, workbench)).toBe(true);
         }
+    });
+
+    it("keeps Query Workbench inactive outside its roots", () => {
+        expect(isItemActive("/data-browser", workbench)).toBe(false);
     });
 
     it("does not match a path that only shares a prefix", () => {
