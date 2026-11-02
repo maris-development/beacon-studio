@@ -31,6 +31,12 @@
         "menu": "Taal",
         "auto": "Automatisch (browsertaal)"
     },
+    "theme": {
+        "menu": "Thema: {theme}",
+        "system": "Systeem",
+        "light": "Licht",
+        "dark": "Donker"
+    },
     "nav": {
         "openMenu": "Menu openen",
         "closeMenu": "Menu sluiten",
@@ -109,6 +115,10 @@
             "language": {
                 "label": "Taal",
                 "description": "De taal van {app}. Automatisch volgt de taal van de browser."
+            },
+            "theme": {
+                "label": "Thema",
+                "description": "De kleuren van {app}. Systeem volgt de lichte of donkere instelling van het besturingssysteem."
             },
             "defaultOutputFormat": {
                 "label": "Standaard uitvoerformaat",

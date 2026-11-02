@@ -12,6 +12,7 @@
     import { syncOpenNodes } from "@/services/open-nodes-import";
     import { initTelemetry, setRoute, track } from "@/telemetry";
     import { setLanguage, t } from "@/i18n";
+    import { startTheme } from "@/services/theme";
     import LoadingSpinner from "@/components/loading-overlay/LoadingSpinner.svelte";
     import { getSettings, settings } from "@/stores/settings";
     import { afterNavigate } from "$app/navigation";
@@ -36,6 +37,8 @@
 
     // The script runs before any page script, so the first paint has the right language.
     setLanguage(getSettings().language);
+    // The layout lives as long as the app, so the theme subscription never stops.
+    startTheme();
 
     // A page renders only after the restore, so it never sees a session arrive late.
     // The timeout keeps a blocked IndexedDB from blocking the app.

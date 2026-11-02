@@ -31,6 +31,12 @@
         "menu": "Lingua",
         "auto": "Automatica (lingua del browser)"
     },
+    "theme": {
+        "menu": "Tema: {theme}",
+        "system": "Sistema",
+        "light": "Chiaro",
+        "dark": "Scuro"
+    },
     "nav": {
         "openMenu": "Apri menu",
         "closeMenu": "Chiudi menu",
@@ -109,6 +115,10 @@
             "language": {
                 "label": "Lingua",
                 "description": "La lingua di {app}. Automatica segue la lingua del browser."
+            },
+            "theme": {
+                "label": "Tema",
+                "description": "I colori di {app}. Sistema segue l'impostazione chiara o scura del sistema operativo."
             },
             "defaultOutputFormat": {
                 "label": "Formato di output predefinito",
