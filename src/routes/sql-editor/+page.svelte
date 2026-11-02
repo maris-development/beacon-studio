@@ -275,7 +275,7 @@
         <!-- A block, so the margins collapse as on the other pages. -->
         <header>
             <h1>{$t("nav.item.sqlConsole")}</h1>
-            <p>{$t("sqlEditor.intro")}</p>
+            <p class="page-intro">{$t("sqlEditor.intro")}</p>
             <NodePicker />
         </header>
 

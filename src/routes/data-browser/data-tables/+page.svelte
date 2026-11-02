@@ -177,7 +177,7 @@
     <div class="page-container plain">
         <h1>{$t("nav.item.dataTables")}</h1>
 
-        <p>{$t("dataBrowser.tables.intro")}</p>
+        <p class="page-intro">{$t("dataBrowser.tables.intro")}</p>
 
         <NodePicker>
             {#snippet actions()}

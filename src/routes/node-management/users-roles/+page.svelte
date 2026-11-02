@@ -270,7 +270,7 @@
     <div class="page-container plain">
         <h1>{$t("nav.item.usersRoles")}</h1>
 
-        <p>{$t("usersRoles.intro")}</p>
+        <p class="page-intro">{$t("usersRoles.intro")}</p>
 
         <NodePicker>
             {#snippet actions()}

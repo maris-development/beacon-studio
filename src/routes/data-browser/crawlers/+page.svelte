@@ -216,7 +216,7 @@
     <div class="page-container plain">
         <h1>{$t("nav.item.crawlers")}</h1>
 
-        <p>{$t("dataBrowser.crawlers.intro")}</p>
+        <p class="page-intro">{$t("dataBrowser.crawlers.intro")}</p>
 
         <NodePicker>
             {#snippet actions()}

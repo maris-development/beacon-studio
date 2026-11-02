@@ -233,7 +233,7 @@
     <div class="page-container plain">
         <h1>{$t("nav.item.datasets")}</h1>
 
-        <p>{$t("dataBrowser.datasets.intro")}</p>
+        <p class="page-intro">{$t("dataBrowser.datasets.intro")}</p>
 
         <NodePicker>
             {#snippet actions()}

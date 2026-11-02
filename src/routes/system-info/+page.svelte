@@ -202,43 +202,50 @@
 
 <div class="page-wrapper">
     <div class="page-container plain">
-        <h1>{$t("systemInfo.title")}</h1>
+        <!-- A block, so the margins collapse as on the other pages. -->
+        <header>
+            <h1>{$t("systemInfo.title")}</h1>
 
-        <p class="intro">{$t("systemInfo.intro")}</p>
+            <p class="page-intro">{$t("systemInfo.intro")}</p>
 
-        <NodePicker>
-            {#snippet actions()}
-                {#if node}
-                    <div class="actions">
-                        <BeaconNodeStatus health={node} variant="compact" />
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            aria-pressed={live}
-                            title={live ? $t("systemInfo.liveStop") : $t("systemInfo.liveStart")}
-                            onclick={() => (live = !live)}
-                        >
-                            <TimerIcon />
-                            {#if live}
-                                {$t("systemInfo.live", { seconds: $formatNumber(period / 1000) })}
-                            {:else}
-                                {$t("systemInfo.paused")}
-                            {/if}
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            aria-label={$t("systemInfo.refresh")}
-                            title={$t("systemInfo.refresh")}
-                            disabled={refreshing}
-                            onclick={() => void refresh()}
-                        >
-                            <RefreshCwIcon class={refreshing ? "spin" : ""} />
-                        </Button>
-                    </div>
-                {/if}
-            {/snippet}
-        </NodePicker>
+            <NodePicker>
+                {#snippet actions()}
+                    {#if node}
+                        <div class="actions">
+                            <BeaconNodeStatus health={node} variant="compact" />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                aria-pressed={live}
+                                title={live
+                                    ? $t("systemInfo.liveStop")
+                                    : $t("systemInfo.liveStart")}
+                                onclick={() => (live = !live)}
+                            >
+                                <TimerIcon />
+                                {#if live}
+                                    {$t("systemInfo.live", {
+                                        seconds: $formatNumber(period / 1000)
+                                    })}
+                                {:else}
+                                    {$t("systemInfo.paused")}
+                                {/if}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                aria-label={$t("systemInfo.refresh")}
+                                title={$t("systemInfo.refresh")}
+                                disabled={refreshing}
+                                onclick={() => void refresh()}
+                            >
+                                <RefreshCwIcon class={refreshing ? "spin" : ""} />
+                            </Button>
+                        </div>
+                    {/if}
+                {/snippet}
+            </NodePicker>
+        </header>
 
         {#if !node}
             <p>{$t("systemInfo.noNode")}</p>
@@ -430,16 +437,6 @@
         // Without the minmax, the open raw answer widens the page past the screen.
         grid-template-columns: minmax(0, 1fr);
         gap: 1rem;
-    }
-
-    h1,
-    .intro {
-        margin: 0;
-    }
-
-    .intro {
-        margin-top: -0.75rem;
-        color: var(--muted-foreground);
     }
 
     .actions {
