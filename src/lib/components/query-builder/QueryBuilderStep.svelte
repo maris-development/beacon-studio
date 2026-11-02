@@ -15,6 +15,7 @@
         description,
         hint = null,
         done = false,
+        grow = false,
         actions,
         children
     }: {
@@ -26,13 +27,15 @@
         description: string;
         /** The text that replaces the content while the step is disabled, or null. */
         hint?: string | null;
+        /** True when the step fills the free height of a flex parent. */
+        grow?: boolean;
         /** The controls on the right of the header. */
         actions?: Snippet;
         children?: Snippet;
     } = $props();
 </script>
 
-<section class="builder-step">
+<section class="builder-step" class:grow>
     <header class="step-header">
         <span class="step-number" class:done aria-hidden="true">
             {#if done}
@@ -68,6 +71,16 @@
         display: flex;
         flex-direction: column;
         gap: 1rem;
+
+        &.grow {
+            flex: 1 0 auto;
+
+            .step-body {
+                display: flex;
+                flex-direction: column;
+                flex: 1 0 auto;
+            }
+        }
 
         .step-header {
             display: flex;
