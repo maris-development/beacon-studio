@@ -31,6 +31,8 @@ import { DEFAULT_POINT_COLOR, type PlotConfig } from "./plot-config";
 import { translate } from "@/i18n";
 import type { ContourResult } from "./contour";
 import type { InterpolationResult } from "./interpolation";
+import { isCutEdge, type Geography, type Land } from "@/geo/land";
+import type { ContourRing } from "./grid";
 
 const TAU = Math.PI * 2;
 
@@ -93,6 +95,147 @@ export function drawBackground(u: uPlot, color: string): void {
     ctx.fillStyle = color;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.restore();
+}
+
+// -- basemap -----------------------------------------------------------------
+
+/** The colours of the basemap. They suit a light plot background. */
+const BASEMAP_COLORS = { land: "#e9e7e1", coast: "#8d8a82", border: "#b9b6ae" };
+
+/** A point closer than this to the last drawn point, in CSS pixels, drops out of a basemap path. */
+const BASEMAP_MIN_STEP = 0.6;
+
+/** Fill the land of a map plot. This runs below the surface and the points. */
+export function drawLand(u: uPlot, geography: Geography): void {
+    const mapper = pixelMapper(u);
+    if (!mapper) return;
+
+    const { ctx } = u;
+    ctx.save();
+    clipToPlot(u);
+    ctx.fillStyle = BASEMAP_COLORS.land;
+    ctx.beginPath();
+    traceRings(u, mapper, geography.land, true);
+    // The rings of lakes are holes in the land.
+    ctx.fill("evenodd");
+    ctx.restore();
+}
+
+/**
+ * Stroke the coastlines, and the country borders when asked. This runs above the surface and the
+ * points.
+ */
+export function drawCoastlines(u: uPlot, geography: Geography, borders: boolean): void {
+    const mapper = pixelMapper(u);
+    if (!mapper) return;
+
+    const { ctx } = u;
+    const dpr = dprOf(u);
+    ctx.save();
+    clipToPlot(u);
+    ctx.lineJoin = "round";
+
+    if (borders && geography.borders.length > 0) {
+        ctx.strokeStyle = BASEMAP_COLORS.border;
+        ctx.lineWidth = 0.8 * dpr;
+        ctx.beginPath();
+        traceRings(u, mapper, geography.borders, false);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = BASEMAP_COLORS.coast;
+    ctx.lineWidth = dpr;
+    ctx.beginPath();
+    traceRings(u, mapper, geography.land, false);
+    ctx.stroke();
+    ctx.restore();
+}
+
+/**
+ * Clip the canvas to the domain of a field: the land for `land`, and the plot area without the land
+ * for `sea`. Lakes count as sea. The clip follows the coastline, not the grid cells.
+ */
+export function clipToDomain(u: uPlot, land: Land, domain: "sea" | "land"): void {
+    const mapper = pixelMapper(u);
+    if (!mapper) return;
+
+    const { ctx } = u;
+    const { left, top, width, height } = u.bbox;
+    ctx.beginPath();
+    if (domain === "sea") ctx.rect(left, top, width, height);
+    traceRings(u, mapper, land, true);
+    ctx.clip("evenodd");
+}
+
+/** Clip the canvas to rings in data units, such as the hull of the points. Holes use even-odd. */
+export function clipToRings(u: uPlot, rings: ReadonlyArray<ContourRing>): void {
+    const mapper = pixelMapper(u);
+    if (!mapper) return;
+
+    const { ctx } = u;
+    ctx.beginPath();
+
+    for (const ring of rings) {
+        if (ring.length < 3) continue;
+        ctx.moveTo(mapper.pixelX(ring[0][0]), mapper.pixelY(ring[0][1]));
+
+        for (let i = 1; i < ring.length; i++) {
+            ctx.lineTo(mapper.pixelX(ring[i][0]), mapper.pixelY(ring[i][1]));
+        }
+
+        ctx.closePath();
+    }
+
+    ctx.clip("evenodd");
+}
+
+/**
+ * Add the rings that reach the view to the current path, also one turn east and west. A fill
+ * closes each ring. A stroke leaves out the cut edges along 180° and along a pole.
+ */
+function traceRings(u: uPlot, mapper: PixelMapper, rings: Land, fill: boolean): void {
+    const sx = u.scales.x;
+    const sy = u.scales.y;
+    if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return;
+
+    const { ctx } = u;
+    const minStep = BASEMAP_MIN_STEP * dprOf(u);
+    const x0 = Math.min(sx.min, sx.max);
+    const x1 = Math.max(sx.min, sx.max);
+    const y0 = Math.min(sy.min, sy.max);
+    const y1 = Math.max(sy.min, sy.max);
+
+    for (const ring of rings) {
+        if (ring.maxY < y0 || ring.minY > y1) continue;
+
+        for (const shift of [-360, 0, 360]) {
+            if (ring.maxX + shift < x0 || ring.minX + shift > x1) continue;
+
+            const points = ring.points;
+            let lastX = mapper.pixelX(points[0] + shift);
+            let lastY = mapper.pixelY(points[1]);
+            ctx.moveTo(lastX, lastY);
+
+            for (let i = 2; i < points.length; i += 2) {
+                const x = mapper.pixelX(points[i] + shift);
+                const y = mapper.pixelY(points[i + 1]);
+                const last = i === points.length - 2;
+
+                if (!fill && isCutEdge(points[i - 2], points[i - 1], points[i], points[i + 1])) {
+                    ctx.moveTo(x, y);
+                } else if (Math.abs(x - lastX) + Math.abs(y - lastY) < minStep && !last) {
+                    continue;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                lastX = x;
+                lastY = y;
+            }
+
+            if (fill) ctx.closePath();
+        }
+    }
 }
 
 // -- coordinates -------------------------------------------------------------
@@ -615,24 +758,24 @@ export interface ContourDrawOptions {
     /** The plot background. A label clears a gap in the line with it. */
     backgroundColor: string;
     textColor: string;
+    /** Clips the canvas to the land or sea domain. Null for everywhere. */
+    clip: (() => void) | null;
 }
 
-/** A ring shorter than this, in pixels, gets no label. The text would not fit. */
+/** A line shorter than this, in pixels, gets no label. The text would not fit. */
 const MIN_LABELLED_RING = 80;
 
 /**
  * Draw the contour lines over the points.
  *
- * The lines arrive in data coordinates, so this converts them with the scales.
- * Everything is clipped to the convex hull of the points, because the gridding
- * invents a value for a cell far from any row.
+ * The lines arrive in data coordinates, so this converts them with the scales. They stop at the
+ * plot area, the domain, the hull of the points and the outline of the cells with a value.
  */
 export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     const { ctx } = u;
-    const { left, top, width, height } = u.bbox;
     const dpr = dprOf(u);
 
-    const { levels, hull, range } = options.result;
+    const { levels, hull, valid, range } = options.result;
     const colorOf = makePaletteScale(
         options.palette,
         range.min,
@@ -645,24 +788,10 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     const toPixelY = (y: number): number => u.valToPos(y, "y", true);
 
     ctx.save();
-
-    // Clip twice: to the plot area, so a line cannot run over the axes, and to
-    // the hull, so it cannot run past the data.
-    ctx.beginPath();
-    ctx.rect(left, top, width, height);
-    ctx.clip();
-
-    if (hull.length >= 3) {
-        ctx.beginPath();
-        ctx.moveTo(toPixelX(hull[0][0]), toPixelY(hull[0][1]));
-
-        for (let i = 1; i < hull.length; i++) {
-            ctx.lineTo(toPixelX(hull[i][0]), toPixelY(hull[i][1]));
-        }
-
-        ctx.closePath();
-        ctx.clip();
-    }
+    clipToPlot(u);
+    options.clip?.();
+    if (hull.length >= 3) clipToRings(u, [hull]);
+    if (valid) clipToRings(u, valid);
 
     ctx.lineWidth = options.lineWidth * dpr;
     ctx.lineJoin = "round";
@@ -671,12 +800,15 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
         ctx.strokeStyle = colorOf(level.value);
         ctx.beginPath();
 
-        for (const ring of level.rings) {
-            ctx.moveTo(toPixelX(ring[0][0]), toPixelY(ring[0][1]));
+        for (const line of level.lines) {
+            const points = line.points;
+            ctx.moveTo(toPixelX(points[0][0]), toPixelY(points[0][1]));
 
-            for (let i = 1; i < ring.length; i++) {
-                ctx.lineTo(toPixelX(ring[i][0]), toPixelY(ring[i][1]));
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(toPixelX(points[i][0]), toPixelY(points[i][1]));
             }
+
+            if (line.closed) ctx.closePath();
         }
 
         ctx.stroke();
@@ -694,13 +826,22 @@ export interface InterpolationDrawOptions {
     palette: string;
     reverse: boolean;
     scale: ColorScale;
+    /** Clips the canvas to the domain, the hull and the valid cells. Null when nothing clips. */
+    clip: (() => void) | null;
+    /**
+     * Give a pixel next to an empty cell the mean of the corners with a value. The clip then cuts
+     * the edge along the coastline or the outline, and not along the grid cells.
+     */
+    fillEdges: boolean;
+    /** Draw nothing past the edge of the grid. Without it the edge cells stretch to the plot edge. */
+    bounded: boolean;
 }
 
 export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOptions): void {
     const { ctx } = u;
     const { left, top, width, height } = u.bbox;
     const { result } = options;
-    const { values, xResolution, yResolution, xRange, yRange, range, bandCount } = result;
+    const { range, bandCount } = result;
     const colorOf = makePaletteScale(
         options.palette,
         range.min,
@@ -732,19 +873,11 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
             if (xReverse) xPosition = 1 - xPosition;
             const xValue = sx.min + xPosition * xSpan;
 
-            const value = sampleGrid(
-                values,
-                xResolution,
-                yResolution,
-                xRange,
-                yRange,
-                xValue,
-                yValue
-            );
-            let position = colorScalePosition(value, range.min, range.max, options.scale);
-            if (!Number.isFinite(position)) continue;
+            const value = sampleGrid(result, xValue, yValue, options);
+            // colorScalePosition gives 0 for NaN, which would paint an empty cell in the lowest colour.
+            if (!Number.isFinite(value)) continue;
 
-            position = Math.min(Math.max(position, 0), 1);
+            const position = colorScalePosition(value, range.min, range.max, options.scale);
             const band = Math.min(Math.floor(position * colourCount), colourCount - 1);
             const colour = colours[band];
             const offset = (pixelRow * imageWidth + pixelColumn) * 4;
@@ -756,11 +889,17 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
         }
     }
 
+    // putImageData replaces the canvas pixels and ignores a clip. drawImage blends the image over
+    // the background and the gridlines, inside the clip.
+    const layer = document.createElement("canvas");
+    layer.width = imageWidth;
+    layer.height = imageHeight;
+    layer.getContext("2d")?.putImageData(image, 0, 0);
+
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(left, top, width, height);
-    ctx.clip();
-    ctx.putImageData(image, Math.round(left), Math.round(top));
+    clipToPlot(u);
+    options.clip?.();
+    ctx.drawImage(layer, Math.round(left), Math.round(top));
     ctx.restore();
 }
 
@@ -782,26 +921,20 @@ function interpolationColours(
     return colours;
 }
 
+/** The value of the field at a point: bilinear between the four cell centres around it. */
 function sampleGrid(
-    values: Float64Array,
-    xResolution: number,
-    yResolution: number,
-    xRange: { min: number; max: number },
-    yRange: { min: number; max: number },
+    field: InterpolationResult,
     xValue: number,
-    yValue: number
+    yValue: number,
+    options: { fillEdges: boolean; bounded: boolean }
 ): number {
-    const gridX = clampNumber(
-        ((xValue - xRange.min) / (xRange.max - xRange.min || 1)) * xResolution - 0.5,
-        0,
-        xResolution - 1
-    );
-    const gridY = clampNumber(
-        ((yValue - yRange.min) / (yRange.max - yRange.min || 1)) * yResolution - 0.5,
-        0,
-        yResolution - 1
-    );
+    const { values, xResolution, yResolution, xRange, yRange } = field;
+    const u = (xValue - xRange.min) / (xRange.max - xRange.min || 1);
+    const v = (yValue - yRange.min) / (yRange.max - yRange.min || 1);
+    if (options.bounded && !(u >= 0 && u <= 1 && v >= 0 && v <= 1)) return Number.NaN;
 
+    const gridX = clampNumber(u * xResolution - 0.5, 0, xResolution - 1);
+    const gridY = clampNumber(v * yResolution - 0.5, 0, yResolution - 1);
     const leftColumn = Math.floor(gridX);
     const rightColumn = Math.min(leftColumn + 1, xResolution - 1);
     const topRow = Math.floor(gridY);
@@ -809,23 +942,31 @@ function sampleGrid(
     const xWeight = gridX - leftColumn;
     const yWeight = gridY - topRow;
 
-    const topLeft = values[topRow * xResolution + leftColumn];
-    const topRight = values[topRow * xResolution + rightColumn];
-    const bottomLeft = values[bottomRow * xResolution + leftColumn];
-    const bottomRight = values[bottomRow * xResolution + rightColumn];
-    if (
-        !Number.isFinite(topLeft) ||
-        !Number.isFinite(topRight) ||
-        !Number.isFinite(bottomLeft) ||
-        !Number.isFinite(bottomRight)
-    ) {
-        return Number.NaN;
+    const a = values[topRow * xResolution + leftColumn];
+    const b = values[topRow * xResolution + rightColumn];
+    const c = values[bottomRow * xResolution + leftColumn];
+    const d = values[bottomRow * xResolution + rightColumn];
+
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && Number.isFinite(d)) {
+        return (
+            (a * (1 - xWeight) + b * xWeight) * (1 - yWeight) +
+            (c * (1 - xWeight) + d * xWeight) * yWeight
+        );
     }
 
-    const topValue = topLeft * (1 - xWeight) + topRight * xWeight;
-    const bottomValue = bottomLeft * (1 - xWeight) + bottomRight * xWeight;
+    if (!options.fillEdges) return Number.NaN;
 
-    return topValue * (1 - yWeight) + bottomValue * yWeight;
+    // At the edge of the domain the corners with a value give the value, and the clip cuts the edge.
+    let total = 0;
+    let count = 0;
+    for (const corner of [a, b, c, d]) {
+        if (!Number.isFinite(corner)) continue;
+        total += corner;
+        count++;
+    }
+
+    if (count === 0) return Number.NaN;
+    return total / count;
 }
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -851,17 +992,18 @@ function drawContourLabels(
         const label = formatValue(level.value);
         const textWidth = ctx.measureText(label).width;
 
-        for (const ring of level.rings) {
-            if (ring.length < 8) continue;
+        for (const line of level.lines) {
+            const points = line.points;
+            if (points.length < 8) continue;
 
-            // The label sits at the middle vertex of the ring. That is far from both
+            // The label sits at the middle vertex of the line. That is far from both
             // ends, so it rarely lands on a corner.
-            const middle = Math.floor(ring.length / 2);
-            const x = toPixelX(ring[middle][0]);
-            const y = toPixelY(ring[middle][1]);
+            const middle = Math.floor(points.length / 2);
+            const x = toPixelX(points[middle][0]);
+            const y = toPixelY(points[middle][1]);
 
-            const start = toPixelX(ring[0][0]);
-            const startY = toPixelY(ring[0][1]);
+            const start = toPixelX(points[0][0]);
+            const startY = toPixelY(points[0][1]);
 
             // A rough size test: the span from the first to the middle vertex.
             if (Math.hypot(x - start, y - startY) < MIN_LABELLED_RING * dpr) continue;

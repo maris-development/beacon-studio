@@ -198,6 +198,13 @@
 
     onDestroy(() => charts.cancelPrepare());
 
+    // Load the land of a map apart from the rebuild, so a basemap switch does not
+    // walk the rows again.
+    $effect(() => {
+        const request = charts.geographyRequest;
+        untrack(() => void charts.applyGeography(request));
+    });
+
     // -- export --------------------------------------------------------------
 
     let plotCanvas: ReturnType<typeof PlotCanvas> | null = $state(null);
@@ -247,6 +254,8 @@
                                 caption={charts.caption}
                                 contours={charts.contours}
                                 interpolation={charts.interpolation}
+                                geography={charts.geography}
+                                map={charts.mapPlot}
                                 message={charts.message}
                                 onBusyChange={(busy) => charts.setCanvasBusy(busy)}
                             />

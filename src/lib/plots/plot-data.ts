@@ -128,6 +128,29 @@ export interface PlotDataContext {
     coordinateColumns?: CoordinatePair | null;
 }
 
+/**
+ * True when a scatter plot puts the longitude on X and the latitude on Y. Only such a plot is a map,
+ * where land and sea mean something.
+ *
+ * With a series, the values must also fit the globe. A longitude can run from 0 to 360, as in ERA5.
+ */
+export function isMapPlot(
+    plot: PlotConfig,
+    coordinateColumns: CoordinatePair | null | undefined,
+    columnNames: string[],
+    series: PlotSeries | null = null
+): boolean {
+    if (plot.type !== "scatter") return false;
+
+    const pair = resolveCoordinateColumns(coordinateColumns, columnNames);
+    if (!pair) return false;
+    if (plot.x.column !== pair.longitude || plot.y.column !== pair.latitude) return false;
+    if (!series) return true;
+
+    const { xRange, yRange } = series;
+    return xRange.min >= -360 && xRange.max <= 360 && yRange.min >= -90 && yRange.max <= 90;
+}
+
 // -- columns -----------------------------------------------------------------
 
 function kindOfType(type: ApacheArrow.DataType): PlotColumnKind | null {

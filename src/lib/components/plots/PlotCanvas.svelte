@@ -24,7 +24,7 @@
     import { onDestroy, onMount } from "svelte";
     import uPlot from "uplot";
     import "uplot/dist/uPlot.min.css";
-    import { axisTitle, usesZColumn, type PlotConfig } from "@/plots/plot-config";
+    import { axisTitle, basemapLayerOf, usesZColumn, type PlotConfig } from "@/plots/plot-config";
     import {
         CROSS_SECTION_AXIS_LABEL,
         HISTOGRAM_AXIS_LABEL,
@@ -34,6 +34,8 @@
     import { colormapsReady, loadColormaps } from "@/colors/palettes";
     import { t, type Message } from "@/i18n";
     import {
+        clipToDomain,
+        clipToRings,
         colorBarPadding,
         drawBackground,
         drawBars,
@@ -43,13 +45,22 @@
         drawLines,
         drawPoints,
         drawCaption,
+        drawCoastlines,
         drawInterpolationSurface,
+        drawLand,
         drawTitle,
         gridColor,
         groupColors
     } from "@/plots/uplot-render";
     import type { ContourResult } from "@/plots/contour";
     import type { InterpolationResult } from "@/plots/interpolation";
+    import {
+        LAND_DETAILS,
+        landDetailForSpan,
+        loadGeography,
+        readyGeography,
+        type Geography
+    } from "@/geo/land";
 
     let {
         plot,
@@ -57,6 +68,8 @@
         caption = null,
         contours = null,
         interpolation = null,
+        geography = null,
+        map = false,
         message = null,
         onBusyChange = undefined
     }: {
@@ -72,6 +85,13 @@
         contours?: ContourResult | null;
         /** The interpolated field, in data coordinates. Null while the plot draws none. */
         interpolation?: InterpolationResult | null;
+        /**
+         * The land and borders of a map plot, in degrees. The basemap draws from it,
+         * and the surface clips to the land or sea domain with it. Null for none.
+         */
+        geography?: Geography | null;
+        /** True when X is the longitude and Y the latitude. */
+        map?: boolean;
         /** Why the plot cannot draw. Shown in place of the canvas. */
         message?: Message | null;
         /**
@@ -113,7 +133,18 @@
     // Rebuild the chart when the plot, the data, the contours or the palette
     // change. The reads below are the dependencies of this effect.
     $effect(() => {
-        void [plot, plot.z?.scale, series, caption, contours, interpolation, palettesLoaded, $t];
+        void [
+            plot,
+            plot.z?.scale,
+            series,
+            caption,
+            contours,
+            interpolation,
+            geography,
+            map,
+            palettesLoaded,
+            $t
+        ];
         scheduleRebuild();
     });
 
@@ -160,6 +191,7 @@
 
         chart = new uPlot(buildOptions(series, width, height), alignedData(series), container);
         attachWheelZoom(chart);
+        if (fixesMapShape()) attachMapReset(chart, series);
 
         // uPlot computes the plot rectangle during construction, before its deferred
         // initial range runs. At that point the scales have no min/max, so the axes
@@ -248,6 +280,153 @@
         );
     }
 
+    // -- map ------------------------------------------------------------------
+
+    /** True when the plot keeps the shape of the map: one km as long on both axes. */
+    function fixesMapShape(): boolean {
+        return map && plot.basemap.fixAspect;
+    }
+
+    /**
+     * The view that keeps the shape of the map: the ranges, `pad` times wider, and then
+     * grown on one axis to fit the plot box. One degree of longitude is cos(latitude)
+     * times as long as one degree of latitude.
+     */
+    function mapView(
+        xRange: { min: number; max: number },
+        yRange: { min: number; max: number },
+        box: { width: number; height: number },
+        pad = 1
+    ): { x: { min: number; max: number }; y: { min: number; max: number } } {
+        const middle = (((yRange.min + yRange.max) / 2) * Math.PI) / 180;
+        const k = Math.max(Math.cos(middle), 0.05);
+        const cx = (xRange.min + xRange.max) / 2;
+        const cy = (yRange.min + yRange.max) / 2;
+        let xs = (xRange.max - xRange.min) * pad || 1;
+        let ys = (yRange.max - yRange.min) * pad || 1;
+
+        if ((xs * k) / ys > box.width / box.height) {
+            ys = (xs * k * box.height) / box.width;
+        } else {
+            xs = (ys * box.width) / (box.height * k);
+        }
+
+        return {
+            x: { min: cx - xs / 2, max: cx + xs / 2 },
+            y: { min: cy - ys / 2, max: cy + ys / 2 }
+        };
+    }
+
+    /** The first view of a map: the data, 4% wider, in the shape of the plot box. */
+    function homeMapView(u: uPlot, current: PlotSeries) {
+        return mapView(
+            resolveRange(current.xRange, plot.x.min, plot.x.max),
+            resolveRange(current.yRange, plot.y.min, plot.y.max),
+            u.bbox,
+            1.04
+        );
+    }
+
+    let fitting = false;
+
+    /** Grow the view of a map on one axis, so it keeps its shape after a zoom or a resize. */
+    function fitMapShape(u: uPlot, view?: ReturnType<typeof mapView>) {
+        const sx = u.scales.x;
+        const sy = u.scales.y;
+        if (fitting || sx.min == null || sx.max == null || sy.min == null || sy.max == null) {
+            return;
+        }
+        if (!(u.bbox.width > 0 && u.bbox.height > 0)) return;
+
+        const next =
+            view ?? mapView({ min: sx.min, max: sx.max }, { min: sy.min, max: sy.max }, u.bbox);
+        const unchanged =
+            Math.abs(next.x.max - next.x.min - (sx.max - sx.min)) < 1e-9 * (sx.max - sx.min) &&
+            Math.abs(next.y.max - next.y.min - (sy.max - sy.min)) < 1e-9 * (sy.max - sy.min);
+        if (unchanged && !view) return;
+
+        fitting = true;
+        u.batch(() => {
+            u.setScale("x", next.x);
+            u.setScale("y", next.y);
+        });
+        fitting = false;
+    }
+
+    /** A double click, and Reset view, go back to the first view of the map. */
+    function attachMapReset(instance: uPlot, current: PlotSeries) {
+        instance.over.addEventListener("dblclick", () => {
+            fitMapShape(instance, homeMapView(instance, current));
+        });
+    }
+
+    /**
+     * The geography to draw for the view. With the automatic detail, a zoom in loads a
+     * finer level in the background and draws again. The analysis keeps its own level.
+     */
+    function viewGeography(u: uPlot): Geography | null {
+        if (!geography || plot.basemap.detail !== "auto") return geography;
+
+        const sx = u.scales.x;
+        const sy = u.scales.y;
+        if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return geography;
+
+        const want = landDetailForSpan(Math.max(sx.max - sx.min, sy.max - sy.min));
+        if (LAND_DETAILS.indexOf(want) <= LAND_DETAILS.indexOf(geography.detail)) {
+            return geography;
+        }
+
+        const borders = geography.borders.length > 0;
+        const finer = readyGeography(want, borders);
+        if (finer) return finer;
+
+        loadGeography(want, borders)
+            .then(() => {
+                if (chart === u) u.redraw(false, false);
+            })
+            // A failed load keeps the coarser detail on screen.
+            .catch(() => {});
+        return geography;
+    }
+
+    /** The basemap layer that this plot draws: none without a map or a geography. */
+    function mapLayer(geo: Geography | null) {
+        if (!map || !geo) return "none";
+        return basemapLayerOf(plot);
+    }
+
+    /** The clip to the land or sea domain of a field, along the coastline. Null for none. */
+    function domainClip(
+        u: uPlot,
+        geo: Geography | null,
+        domain: "sea" | "land" | null
+    ): (() => void) | null {
+        if (!map || !geo || !domain) return null;
+        return () => clipToDomain(u, geo.land, domain);
+    }
+
+    /**
+     * The clips of the surface: the domain, the hull of the points without extrapolation,
+     * and the outline of the cells with a value. Null when none applies.
+     */
+    function surfaceClip(
+        u: uPlot,
+        geo: Geography | null,
+        field: InterpolationResult
+    ): (() => void) | null {
+        const clips: Array<() => void> = [];
+
+        const domain = domainClip(u, geo, field.domain);
+        if (domain) clips.push(domain);
+        if (field.outline.length >= 3) clips.push(() => clipToRings(u, [field.outline]));
+
+        const valid = field.valid;
+        if (valid) clips.push(() => clipToRings(u, valid));
+
+        if (clips.length === 0) return null;
+        return () => clips.forEach((clip) => clip());
+    }
+
     function onResize() {
         const { width, height } = size();
         if (width === 0 || height === 0) return;
@@ -303,6 +482,9 @@
     function scaleFor(axis: "x" | "y", time: boolean): uPlot.Scale {
         const config = plot[axis];
         const scale: uPlot.Scale = { time, dir: config.reverse ? -1 : 1 };
+
+        // A map sets its own view in its hooks, and the pinned ends go into the first view.
+        if (fixesMapShape()) return scale;
 
         // A bar grows from zero, so the count axis must reach it. uPlot would
         // otherwise fit the range to the counts and cut the foot off every bar.
@@ -440,6 +622,22 @@
             ],
             series: [{}, { scale: "y", paths: () => null, points: { show: false } }],
             hooks: {
+                // A map keeps its shape: from the first view, and after each zoom and resize.
+                ready: [
+                    (u) => {
+                        if (fixesMapShape()) fitMapShape(u, homeMapView(u, current));
+                    }
+                ],
+                setScale: [
+                    (u) => {
+                        if (fixesMapShape()) fitMapShape(u);
+                    }
+                ],
+                setSize: [
+                    (u) => {
+                        if (fixesMapShape()) fitMapShape(u);
+                    }
+                ],
                 drawClear: [(u) => drawBackground(u, style.backgroundColor)],
                 draw: [
                     (u) => {
@@ -467,20 +665,33 @@
                                 });
                             }
                         } else {
+                            // A map draws the land below the surface, and the coastlines
+                            // above the surface and the points.
+                            const geo = viewGeography(u);
+                            const layer = mapLayer(geo);
+                            if (geo && (layer === "land" || layer === "borders")) drawLand(u, geo);
+
                             if (
                                 interpolation &&
                                 plot.interpolation.enabled &&
                                 usesZColumn(plot.type)
                             ) {
+                                const clip = surfaceClip(u, geo, interpolation);
                                 drawInterpolationSurface(u, {
                                     result: interpolation,
                                     palette: style.palette,
                                     reverse: plot.z?.reverse ?? false,
-                                    scale: plot.z?.scale ?? "linear"
+                                    scale: plot.z?.scale ?? "linear",
+                                    clip,
+                                    fillEdges: clip !== null,
+                                    bounded: map || interpolation.outline.length >= 3
                                 });
                             }
 
                             if (style.showPoints) drawPoints(u, current, plot);
+                            if (geo && layer !== "none") {
+                                drawCoastlines(u, geo, layer === "borders");
+                            }
                         }
 
                         if (contours && plot.contour.enabled && usesZColumn(plot.type)) {
@@ -493,7 +704,8 @@
                                 showLabels: plot.contour.showLabels,
                                 labelFontSize: plot.contour.labelFontSize,
                                 backgroundColor: style.backgroundColor,
-                                textColor: style.textColor
+                                textColor: style.textColor,
+                                clip: domainClip(u, viewGeography(u), contours.domain)
                             });
                         }
 

@@ -8,19 +8,26 @@
 -->
 <script lang="ts">
     import { Label } from "$lib/components/ui/label/index.js";
+    import OptionLabel from "./OptionLabel.svelte";
 
     let {
         id,
         label,
+        info = "",
         value,
         min,
         max,
         step,
         onCommit,
-        suffix = ""
+        suffix = "",
+        display = null,
+        minLabel = "",
+        maxLabel = ""
     }: {
         id: string;
         label: string;
+        /** The description in the info button beside the label. */
+        info?: string;
         value: number;
         min: number;
         max: number;
@@ -28,6 +35,11 @@
         onCommit: (value: number) => void;
         /** Shown after the number, for example "px" or "%". */
         suffix?: string;
+        /** Shown in place of the number, when the number alone means nothing to a user. */
+        display?: string | null;
+        /** The meaning of the two ends, shown under the slider. */
+        minLabel?: string;
+        maxLabel?: string;
     } = $props();
 
     function onInput(event: Event & { currentTarget: HTMLInputElement }) {
@@ -44,10 +56,14 @@
 </script>
 
 <div class="field">
-    <Label for={id}>
-        <span>{label}</span>
-        <em>{value}{suffix}</em>
-    </Label>
+    <div class="head">
+        {#if info}
+            <OptionLabel for={id} text={label} {info} />
+        {:else}
+            <Label for={id}>{label}</Label>
+        {/if}
+        <em>{display ?? `${value}${suffix}`}</em>
+    </div>
 
     <input
         {id}
@@ -59,6 +75,13 @@
         style={`--slider-fill: ${fillPercent}%;`}
         oninput={onInput}
     />
+
+    {#if minLabel || maxLabel}
+        <div class="ends">
+            <span>{minLabel}</span>
+            <span>{maxLabel}</span>
+        </div>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -67,9 +90,9 @@
         flex-direction: column;
         gap: 0.3125rem;
 
-        // The Label component renders the element, so the rule reaches through it.
-        :global([data-slot="label"]) {
+        .head {
             display: flex;
+            align-items: center;
             justify-content: space-between;
             gap: 0.5rem;
             font-size: var(--font-size-sm);
@@ -77,6 +100,14 @@
 
         em {
             font-style: normal;
+            color: var(--muted-foreground, #6b7280);
+        }
+
+        .ends {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.5rem;
+            font-size: var(--font-size-xs);
             color: var(--muted-foreground, #6b7280);
         }
 
