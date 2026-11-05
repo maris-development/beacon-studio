@@ -134,8 +134,8 @@
             }
 
             // The same plot changed under the panel. Follow it, unless the user has
-            // edits of their own: theirs win. The figure size changes on the canvas
-            // with no Apply, so the draft takes it in both cases.
+            // edits of their own: theirs win. The figure size and the hidden groups
+            // change on the canvas with no Apply, so the draft takes them in both cases.
             if (!userEdited) {
                 draft = Utils.cloneObject(plot);
                 return;
@@ -149,7 +149,8 @@
                     ...edited.style,
                     figureWidth: plot.style.figureWidth,
                     figureHeight: plot.style.figureHeight
-                }
+                },
+                categories: { hidden: [...plot.categories.hidden] }
             };
         });
     });
@@ -521,6 +522,9 @@
         return summary;
     });
 
+    /** True when the colour column holds text: one colour per group, and no colour scale. */
+    const zIsText = $derived(controller.isTextColumn(draft?.z?.column));
+
     /**
      * The palette the points take with no colour column: the stored one while it
      * is a single colour, and solid blue otherwise. A gradient stays stored, so
@@ -538,6 +542,7 @@
 
         let palette = draft.style.palette;
         if (usesZColumn(draft.type) && !draft.z?.column) palette = solidPalette;
+        if (usesZColumn(draft.type) && zIsText) palette = $t("plot.panel.groupColours");
 
         return `${palette} · ${$t("plot.panel.pixels", { size: draft.style.pointRadius })}`;
     });
@@ -545,6 +550,7 @@
     const advancedAnalysisSummary = $derived.by(() => {
         if (draft && !usesZColumn(draft.type)) return $t("plot.summary.notForType");
         if (!draft?.z?.column) return $t("plot.summary.needsColour");
+        if (zIsText) return $t("plot.summary.needsNumbers");
         if (!draft.interpolation.enabled && !draft.contour.enabled) return $t("common.off");
 
         const parts: string[] = [];
@@ -818,12 +824,25 @@
                                     <Select.Item value={NO_COLUMN} label={$t("common.none")}
                                         >{$t("common.none")}</Select.Item
                                     >
+                                </Select.Group>
+                                <Select.Group>
+                                    <Select.Label>{$t("plot.panel.numberColumns")}</Select.Label>
                                     {#each controller.columns as column (column.name)}
                                         <Select.Item value={column.name} label={column.name}>
                                             {column.name}
                                         </Select.Item>
                                     {/each}
                                 </Select.Group>
+                                {#if controller.textColumns.length > 0}
+                                    <Select.Group>
+                                        <Select.Label>{$t("plot.panel.textColumns")}</Select.Label>
+                                        {#each controller.textColumns as name (name)}
+                                            <Select.Item value={name} label={name}>
+                                                {name}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                {/if}
                             </Select.Content>
                         </Select.Root>
                     </div>
@@ -1080,7 +1099,9 @@
             <details class="property-subsection">
                 <summary>{$t("plot.panel.dataAndColor")}</summary>
                 <div class="subsection-body">
-                    {#if draft.type === "line" || draft.type === "histogram" || draft.z?.column}
+                    {#if usesZColumn(draft.type) && zIsText}
+                        <p class="hint">{$t("plot.panel.groupColoursHint")}</p>
+                    {:else if draft.type === "line" || draft.type === "histogram" || draft.z?.column}
                         <div class="field">
                             <OptionLabel
                                 for="plotPalette"
@@ -1105,7 +1126,7 @@
                                 onSelect={(id) => patchStyle({ palette: id })}
                             />
                         </div>{/if}
-                    {#if draft.z?.column}
+                    {#if draft.z?.column && !zIsText}
                         <div class="option-row">
                             <label class="checkbox-field"
                                 ><Checkbox
@@ -1517,6 +1538,8 @@
                 </p>
             {:else if !draft.z?.column}
                 <p class="hint">{$t("plot.panel.contoursNeedColour")}</p>
+            {:else if zIsText}
+                <p class="hint">{$t("plot.panel.contoursNeedNumbers")}</p>
             {:else}
                 <details class="analysis-subsection">
                     <summary class="analysis-header">

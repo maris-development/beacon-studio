@@ -648,7 +648,8 @@
         },
         "fileName": "grafico",
         "legend": {
-            "moreGroups": "+{count} más"
+            "moreGroups": "+{count} más",
+            "otherGroups": "Otros ({count, plural, one {# grupo} other {# grupos}})"
         },
         "tabs": {
             "emptyName": "El nombre del gráfico no puede estar vacío.",
@@ -701,7 +702,8 @@
             "notForType": "No disponible para este tipo de gráfico",
             "needsColour": "Necesita una columna de color",
             "methodBands": "{method} · {count, plural, one {# banda} other {# bandas}}",
-            "contourLines": "{count, plural, one {# línea} other {# líneas}}"
+            "contourLines": "{count, plural, one {# línea} other {# líneas}}",
+            "needsNumbers": "Necesita una columna de color con números"
         },
         "panel": {
             "step": {
@@ -892,7 +894,12 @@
             "fillPanel": "Llenar el panel",
             "fitFigure": "Ajustar la figura a los datos",
             "fitFigureTitle": "Da a la figura la forma de los datos, para que el mapa no tenga lados vacíos",
-            "fitFigureNeedsMap": "Primero aplica un mapa con \"Mantener la forma del mapa (sin estirar)\" activado."
+            "fitFigureNeedsMap": "Primero aplica un mapa con \"Mantener la forma del mapa (sin estirar)\" activado.",
+            "numberColumns": "Números: una escala de color",
+            "textColumns": "Texto: un color por grupo",
+            "groupColours": "Colores de grupo",
+            "groupColoursHint": "Un color por grupo, en el orden fijo de los colores de serie. Los grupos más grandes reciben un color, el resto es el gris \"Otros\". Haz clic en un grupo de la leyenda para ocultarlo.",
+            "contoursNeedNumbers": "La interpolación y las líneas de contorno necesitan una columna de color con números. Una columna de texto da grupos, no valores."
         },
         "controls": {
             "title": "Controles del ratón",
@@ -934,7 +941,10 @@
         "tip": {
             "dataPoint": "Punto de datos",
             "surface": "Superficie interpolada",
-            "approx": "≈ {value}"
+            "approx": "≈ {value}",
+            "pointsHere": "{count, plural, one {# punto} other {# puntos}} en este lugar",
+            "pointsHereSample": "{count, plural, one {# punto} other {# puntos}} en este lugar (muestra)",
+            "moreGroups": "y {count, plural, one {# grupo más} other {# grupos más}}"
         }
     },
     "palette": {

@@ -21,7 +21,13 @@ import {
     type CoordinatePair,
     type SpatialSelection
 } from "@/geo/spatial-selection";
-import { MAX_LINE_GROUPS, usesZColumn, type PlotConfig } from "./plot-config";
+import {
+    CATEGORY_SLOTS,
+    MAX_LINE_GROUPS,
+    OTHER_GROUP,
+    usesZColumn,
+    type PlotConfig
+} from "./plot-config";
 import { message, type Message } from "@/i18n";
 
 /** How the values of a column are read, and how a tick label is formatted. */
@@ -83,6 +89,33 @@ export interface PlotSeries {
      * whose points are bins.
      */
     rowIndex: Uint32Array | null;
+    /** The groups of a text colour column. Null when the colour column holds numbers, or is absent. */
+    categories: PlotCategories | null;
+}
+
+export interface PlotCategoryGroup {
+    /** The value of the colour column, as text. */
+    name: string;
+    /** The points of the group in the full series. */
+    rows: number;
+}
+
+/**
+ * The groups of a text colour column. The largest {@link CATEGORY_SLOTS} groups
+ * get a series colour each. The rest share the grey "Other" group.
+ */
+export interface PlotCategories {
+    /** Every group, in the order of first sight. */
+    list: PlotCategoryGroup[];
+    /** The group of every point, as an index into {@link list}. */
+    index: Uint32Array;
+    /** The colour slot of every group. -1 puts the group in "Other". */
+    slotOf: Int16Array;
+    /** The groups with a colour, in legend order. */
+    legend: number[];
+    /** The groups in "Other", and their points. */
+    otherGroups: number;
+    otherRows: number;
 }
 
 /** One cell of a table row, for the hover tooltip. */
@@ -245,6 +278,87 @@ function isTextType(type: ApacheArrow.DataType): boolean {
         default:
             return false;
     }
+}
+
+/**
+ * The columns of text that can colour a scatter, one colour per value. A text
+ * column cannot give a position, so it is not in {@link plottableColumns}.
+ */
+export function textColumns(table: ApacheArrow.Table | null | undefined): string[] {
+    if (!table) return [];
+    return table.schema.fields.filter((field) => isTextType(field.type)).map((field) => field.name);
+}
+
+/** The text of every row in one text column. A null stays null. */
+function readTextKeys(table: ApacheArrow.Table, name: string): Array<string | null> | null {
+    const vector = table.getChild(name);
+    if (!vector || !isTextType(vector.type)) return null;
+
+    const rows = table.numRows;
+    const keys = new Array<string | null>(rows);
+
+    for (let i = 0; i < rows; i++) {
+        const value = vector.get(i);
+        if (value === null || value === undefined) keys[i] = null;
+        else keys[i] = String(value);
+    }
+
+    return keys;
+}
+
+/** The text of a group of a text colour column, or {@link OTHER_GROUP} for a group without a colour. */
+export function categoryKeyOf(categories: PlotCategories, group: number): string {
+    if (categories.slotOf[group] < 0) return OTHER_GROUP;
+    return categories.list[group].name;
+}
+
+/** A natural sort of text, so "Station 2" comes before "Station 10". */
+const naturalCompare = new Intl.Collator("en", { numeric: true, sensitivity: "base" }).compare;
+
+/**
+ * Sort the points of a text colour column into groups. The largest groups get a
+ * colour, in the order of their size. A tie sorts by name.
+ */
+function buildCategories(keys: ReadonlyArray<string | null>, rows: Uint32Array): PlotCategories {
+    const ids = new Map<string, number>();
+    const list: PlotCategoryGroup[] = [];
+    const index = new Uint32Array(rows.length);
+
+    for (let point = 0; point < rows.length; point++) {
+        const key = keys[rows[point]] as string;
+        let group = ids.get(key);
+
+        if (group === undefined) {
+            group = list.length;
+            ids.set(key, group);
+            list.push({ name: key, rows: 0 });
+        }
+
+        list[group].rows++;
+        index[point] = group;
+    }
+
+    const bySize = list
+        .map((_, group) => group)
+        .sort((a, b) => list[b].rows - list[a].rows || naturalCompare(list[a].name, list[b].name));
+    const legend = bySize.slice(0, CATEGORY_SLOTS);
+
+    const slotOf = new Int16Array(list.length).fill(-1);
+    legend.forEach((group, slot) => {
+        slotOf[group] = slot;
+    });
+
+    let colouredRows = 0;
+    for (const group of legend) colouredRows += list[group].rows;
+
+    return {
+        list,
+        index,
+        slotOf,
+        legend,
+        otherGroups: list.length - legend.length,
+        otherRows: rows.length - colouredRows
+    };
 }
 
 /**
@@ -536,7 +650,8 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
             droppedGroups: 0,
             binWidth,
             sampledFrom: null,
-            rowIndex: null
+            rowIndex: null,
+            categories: null
         }
     };
 }
@@ -690,20 +805,26 @@ export function buildPlotSeries(
 
     let zValues: Float64Array | null = null;
     let zKind: PlotColumnKind | null = null;
+    let zKeys: Array<string | null> | null = null;
 
     // A line takes its colour from the group, so it must not drop a row because
-    // the colour column of an earlier scatter is null there.
+    // the colour column of an earlier scatter is null there. A text column gives
+    // one colour per value instead of a colour scale.
     if (plot.z?.column && usesZColumn(plot.type)) {
         const z = readNumericColumn(table, plot.z.column);
-        if (!z) {
-            return {
-                ok: false,
-                message: message("plot.error.noNumericColumn", { column: plot.z.column })
-            };
+        if (z) {
+            zValues = z.values;
+            zKind = z.kind;
+        } else {
+            zKeys = readTextKeys(table, plot.z.column);
         }
 
-        zValues = z.values;
-        zKind = z.kind;
+        if (!z && !zKeys) {
+            return {
+                ok: false,
+                message: message("plot.error.noColumn", { column: plot.z.column })
+            };
+        }
     }
 
     // The group column of a line plot. It is read as text, so it also accepts a
@@ -755,6 +876,8 @@ export function buildPlotSeries(
             if (!Number.isFinite(zValue)) continue;
         }
 
+        if (zKeys && zKeys[i] === null) continue;
+
         outX[kept] = xValue;
         outY[kept] = yValue;
         outRows[kept] = i;
@@ -801,6 +924,9 @@ export function buildPlotSeries(
 
     const rowIndex = outRows.subarray(0, kept);
 
+    let categories: PlotCategories | null = null;
+    if (zKeys) categories = buildCategories(zKeys, rowIndex);
+
     const series: PlotSeries = {
         x: outX.subarray(0, kept),
         y: outY.subarray(0, kept),
@@ -816,7 +942,8 @@ export function buildPlotSeries(
         droppedGroups: 0,
         binWidth: null,
         sampledFrom: null,
-        rowIndex
+        rowIndex,
+        categories
     };
 
     if (plot.type !== "line") return { ok: true, series };

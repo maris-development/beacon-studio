@@ -221,6 +221,15 @@ export interface PlotStyleConfig {
     figureHeight: number | null;
 }
 
+/**
+ * The groups of a text colour column. Every group gets one series colour, up to
+ * {@link CATEGORY_SLOTS}. The smaller groups share the grey "Other" group.
+ */
+export interface PlotCategoriesConfig {
+    /** The groups that the plot does not draw. "Other" has the key {@link OTHER_GROUP}. */
+    hidden: string[];
+}
+
 /** The basemap of a map plot: longitude on X and latitude on Y. Other plots do not read it. */
 export interface PlotBasemapConfig {
     layer: PlotBasemapLayer;
@@ -247,6 +256,7 @@ export interface PlotConfig {
     line: PlotLineConfig;
     histogram: PlotHistogramConfig;
     style: PlotStyleConfig;
+    categories: PlotCategoriesConfig;
 }
 
 /** The display state of the chart explorer for one query. */
@@ -367,6 +377,12 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
     figureHeight: null
 };
 
+/** The groups of a text colour column that get a colour of their own. */
+export const CATEGORY_SLOTS = 8;
+
+/** The key of the grey group that holds the groups without a colour of their own. */
+export const OTHER_GROUP = "__other__";
+
 /**
  * Solid blue, the colour of a point when the plot has no Z axis. It matches the
  * `solid_blue` palette, and it stands in for it before the colormaps load.
@@ -400,6 +416,7 @@ export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig 
         line: { ...DEFAULT_LINE },
         histogram: { ...DEFAULT_HISTOGRAM },
         style: { ...DEFAULT_STYLE },
+        categories: { hidden: [] },
         ...overrides
     };
 }
@@ -431,6 +448,7 @@ export function clonePlotConfig(
         line: { ...source.line },
         histogram: { ...source.histogram },
         style: { ...source.style },
+        categories: { hidden: [...source.categories.hidden] },
         ...overrides
     };
 }
@@ -480,8 +498,8 @@ export function isPlotRenderable(plot: PlotConfig | null | undefined): boolean {
  * It returns the same object when nothing changed. Therefore a caller can use
  * the identity of the result to decide whether to write to storage.
  *
- * `groupColumns` is the wider list that the group column of a line plot draws
- * from: that one may hold text, so it is not in `columns`.
+ * `groupColumns` is the wider list that the group column of a line plot and the
+ * colour column draw from: those may hold text, so they are not in `columns`.
  */
 export function pruneMissingColumns(
     plot: PlotConfig,
@@ -492,7 +510,7 @@ export function pruneMissingColumns(
 
     const keepX = !usesXColumn(plot.type) || exists(plot.x.column);
     const keepY = !usesYColumn(plot.type) || exists(plot.y.column);
-    const keepZ = !plot.z || exists(plot.z.column);
+    const keepZ = !plot.z || (!!plot.z.column && groupColumns.includes(plot.z.column));
 
     const group = plot.line.groupColumn;
     const keepGroup = !group || groupColumns.includes(group);
@@ -767,6 +785,14 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
     };
 }
 
+function normaliseCategories(raw: unknown): PlotCategoriesConfig {
+    const record = asRecord(raw);
+    if (!record || !Array.isArray(record.hidden)) return { hidden: [] };
+
+    const hidden = record.hidden.filter((key): key is string => typeof key === "string");
+    return { hidden: [...new Set(hidden)] };
+}
+
 /** Repair one stored plot. Returns null when the value is not an object at all. */
 export function normalisePlotConfig(raw: unknown): PlotConfig | null {
     const record = asRecord(raw);
@@ -793,7 +819,8 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
         basemap: normaliseBasemap(record.basemap),
         line: normaliseLine(record.line),
         histogram: normaliseHistogram(record.histogram),
-        style: normaliseStyle(record.style)
+        style: normaliseStyle(record.style),
+        categories: normaliseCategories(record.categories)
     };
 }
 

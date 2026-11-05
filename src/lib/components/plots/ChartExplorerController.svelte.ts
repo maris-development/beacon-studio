@@ -50,6 +50,7 @@ import {
     plottableColumns,
     readRowCells,
     resolveRange,
+    textColumns,
     type PlotDataResult,
     type PlotRange,
     type PlotRowCell,
@@ -112,6 +113,14 @@ export class ChartExplorerController {
      * {@link columns}: a station name is text, and it still labels a stroke.
      */
     readonly groupColumns = $derived(groupableColumns(this.table));
+
+    /** The columns of text that can colour a scatter, one colour per value. */
+    readonly textColumns = $derived(textColumns(this.table));
+
+    /** True when the column holds text, so it colours by group and not by a colour scale. */
+    isTextColumn(name: string | null | undefined): boolean {
+        return !!name && this.textColumns.includes(name);
+    }
 
     /**
      * The cells of one row of the result, for the hover tooltip. `skip` holds the
@@ -513,7 +522,8 @@ export class ChartExplorerController {
         const needsField =
             usesZColumn(plot.type) && (plot.interpolation.enabled || plot.contour.enabled);
 
-        if (series && needsField) {
+        // A text colour column has groups, not values, so nothing can grid it.
+        if (series && !series.categories && needsField) {
             const xRange = resolveRange(series.xRange, plot.x.min, plot.x.max);
             const yRange = resolveRange(series.yRange, plot.y.min, plot.y.max);
             const map = this.isMapPlot(plot, series);

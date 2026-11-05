@@ -26,8 +26,8 @@ import {
 } from "@/colors/palettes";
 import { colorScalePosition, colorScaleValue } from "@/colors/color-scale";
 import type { ColorScale } from "./plot-config";
-import type { PlotRange, PlotSeries } from "./plot-data";
-import { DEFAULT_POINT_COLOR, type PlotConfig } from "./plot-config";
+import { categoryKeyOf, type PlotCategories, type PlotRange, type PlotSeries } from "./plot-data";
+import { DEFAULT_POINT_COLOR, OTHER_GROUP, type PlotConfig } from "./plot-config";
 import { translate } from "@/i18n";
 import type { ContourResult } from "./contour";
 import type { InterpolationResult } from "./interpolation";
@@ -367,7 +367,8 @@ export function drawPoints(
     u: uPlot,
     series: PlotSeries,
     plot: PlotConfig,
-    range: PlotRange | null
+    range: PlotRange | null,
+    seriesColors: SeriesColors = DEFAULT_SERIES_COLORS
 ): void {
     const { ctx } = u;
     const dpr = dprOf(u);
@@ -381,6 +382,12 @@ export function drawPoints(
     ctx.save();
     clipToPlot(u);
     ctx.globalAlpha = plot.style.pointOpacity;
+
+    if (series.categories) {
+        drawCategoryPoints(ctx, series, series.categories, plot, mapper, radius, seriesColors);
+        ctx.restore();
+        return;
+    }
 
     if (!series.z || !range) {
         ctx.fillStyle = pointColor(plot.style.palette);
@@ -416,6 +423,240 @@ export function drawPoints(
     }
 
     ctx.restore();
+}
+
+// -- groups of a text colour column ------------------------------------------
+
+/** The colours of the groups of a text colour column: one per slot, and grey for "Other". */
+export interface SeriesColors {
+    slots: string[];
+    other: string;
+}
+
+/** The colours that the canvas uses when the page gives none. See `--plot-series-*` in `tailwind.css`. */
+export const DEFAULT_SERIES_COLORS: SeriesColors = {
+    slots: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"],
+    other: "#a3a3a3"
+};
+
+/** The colour of one group. */
+export function categoryColor(
+    categories: PlotCategories,
+    group: number,
+    colors: SeriesColors
+): string {
+    const slot = categories.slotOf[group];
+    if (slot < 0) return colors.other;
+    return colors.slots[slot % colors.slots.length];
+}
+
+/**
+ * Draw the points of a text colour column, one colour per group. "Other" lies
+ * below. The largest group comes next, so a small group stays on top. A hidden
+ * group draws nothing.
+ */
+function drawCategoryPoints(
+    ctx: CanvasRenderingContext2D,
+    series: PlotSeries,
+    categories: PlotCategories,
+    plot: PlotConfig,
+    mapper: PixelMapper,
+    radius: number,
+    colors: SeriesColors
+): void {
+    const hidden = new Set(plot.categories.hidden);
+    const slots = categories.legend.length;
+    const buckets: number[][] = Array.from({ length: slots + 1 }, () => []);
+
+    for (let i = 0; i < series.x.length; i++) {
+        const group = categories.index[i];
+        if (hidden.has(categoryKeyOf(categories, group))) continue;
+
+        const slot = categories.slotOf[group];
+        if (slot < 0) buckets[slots].push(i);
+        else buckets[slot].push(i);
+    }
+
+    // The legend lists the groups by size, so slot 0 is the largest.
+    const order = [slots];
+    for (let slot = 0; slot < slots; slot++) order.push(slot);
+
+    for (const slot of order) {
+        const bucket = buckets[slot];
+        if (bucket.length === 0) continue;
+
+        if (slot === slots) ctx.fillStyle = colors.other;
+        else ctx.fillStyle = colors.slots[slot % colors.slots.length];
+
+        fillPointChunks(ctx, series, mapper, radius, bucket.length, bucket);
+    }
+}
+
+/** One row of the legend of a text colour column. */
+export interface CategoryLegendEntry {
+    /** The hidden key of the group: its text, or {@link OTHER_GROUP}. */
+    key: string;
+    label: string;
+    rows: number;
+    color: string;
+}
+
+/** The rows of the legend: the groups with a colour, then "Other". */
+export function categoryLegendEntries(
+    categories: PlotCategories,
+    colors: SeriesColors,
+    otherLabel: string
+): CategoryLegendEntry[] {
+    const entries = categories.legend.map((group) => ({
+        key: categories.list[group].name,
+        label: categories.list[group].name,
+        rows: categories.list[group].rows,
+        color: categoryColor(categories, group, colors)
+    }));
+
+    if (categories.otherGroups > 0) {
+        entries.push({
+            key: OTHER_GROUP,
+            label: otherLabel,
+            rows: categories.otherRows,
+            color: colors.other
+        });
+    }
+
+    return entries;
+}
+
+/** A clickable row of the legend, in CSS pixels of the canvas. */
+export interface LegendHit {
+    key: string;
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+}
+
+export interface CategoryLegendOptions {
+    entries: ReadonlyArray<CategoryLegendEntry>;
+    hidden: ReadonlySet<string>;
+    title: string;
+    textColor: string;
+    fontSize: number;
+    titleFontSize: number;
+    /** The width of the right margin that holds the legend, in CSS pixels. */
+    width: number;
+    formatCount: (count: number) => string;
+}
+
+/** The space between the plot and the legend, and the size of one swatch, in CSS pixels. */
+const CATEGORY_LEGEND_GAP = 14;
+const CATEGORY_SWATCH = 9;
+
+let measureContext: CanvasRenderingContext2D | null = null;
+
+/** The width of a text in CSS pixels. */
+function textWidth(text: string, font: string): number {
+    measureContext ??= document.createElement("canvas").getContext("2d");
+    if (!measureContext) return text.length * 7;
+
+    measureContext.font = font;
+    return measureContext.measureText(text).width;
+}
+
+/** The width of the right margin for a legend: its longest row, from 130 to 240 CSS pixels. */
+export function categoryLegendWidth(
+    entries: ReadonlyArray<CategoryLegendEntry>,
+    title: string,
+    fontSize: number,
+    titleFontSize: number,
+    formatCount: (count: number) => string
+): number {
+    let widest = textWidth(title, `bold ${titleFontSize}px sans-serif`) + 24;
+
+    for (const entry of entries) {
+        const text = `${entry.label} ${formatCount(entry.rows)}`;
+        widest = Math.max(widest, textWidth(text, `${fontSize}px sans-serif`) + 40);
+    }
+
+    return Math.min(240, Math.max(130, widest));
+}
+
+/**
+ * Draw the legend of a text colour column in the right margin. A hidden group
+ * shows faded. Returns the row boxes, so a click on a row can hide its group.
+ */
+export function drawCategoryLegend(u: uPlot, options: CategoryLegendOptions): LegendHit[] {
+    const { ctx } = u;
+    const dpr = dprOf(u);
+    const { left, top, width, height } = u.bbox;
+
+    const fontSize = options.fontSize * dpr;
+    const rowHeight = fontSize * 1.75;
+    const swatch = CATEGORY_SWATCH * dpr;
+    const x0 = left + width + CATEGORY_LEGEND_GAP * dpr;
+    const x1 = x0 + (options.width - CATEGORY_LEGEND_GAP - 4) * dpr;
+    const hits: LegendHit[] = [];
+
+    const fit = (text: string, room: number): string => {
+        if (ctx.measureText(text).width <= room) return text;
+
+        let cut = text;
+        while (cut.length > 1 && ctx.measureText(`${cut}…`).width > room) cut = cut.slice(0, -1);
+        return `${cut}…`;
+    };
+
+    ctx.save();
+    ctx.textBaseline = "middle";
+
+    let y = top + fontSize * 0.7;
+
+    if (options.title) {
+        ctx.font = `bold ${options.titleFontSize * dpr}px sans-serif`;
+        ctx.fillStyle = options.textColor;
+        ctx.textAlign = "left";
+        ctx.fillText(fit(options.title, x1 - x0), x0, y);
+        y += options.titleFontSize * dpr * 1.7;
+    }
+
+    ctx.font = `${fontSize}px sans-serif`;
+
+    for (const entry of options.entries) {
+        if (y + rowHeight / 2 > top + height) break;
+
+        const off = options.hidden.has(entry.key);
+        const count = options.formatCount(entry.rows);
+        const countWidth = ctx.measureText(count).width;
+
+        ctx.globalAlpha = off ? 0.3 : 1;
+        ctx.fillStyle = entry.color;
+        ctx.beginPath();
+        ctx.arc(x0 + swatch / 2, y, swatch / 2, 0, TAU);
+        ctx.fill();
+
+        ctx.fillStyle = options.textColor;
+        ctx.textAlign = "left";
+        ctx.fillText(
+            fit(entry.label, x1 - x0 - swatch - countWidth - 14 * dpr),
+            x0 + swatch + 6 * dpr,
+            y
+        );
+
+        ctx.globalAlpha = off ? 0.25 : 0.6;
+        ctx.textAlign = "right";
+        ctx.fillText(count, x1, y);
+
+        hits.push({
+            key: entry.key,
+            left: x0 / dpr,
+            right: x1 / dpr,
+            top: (y - rowHeight / 2) / dpr,
+            bottom: (y + rowHeight / 2) / dpr
+        });
+
+        y += rowHeight;
+    }
+
+    ctx.restore();
+    return hits;
 }
 
 // -- lines -------------------------------------------------------------------

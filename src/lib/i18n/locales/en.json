@@ -648,7 +648,8 @@
         },
         "fileName": "plot",
         "legend": {
-            "moreGroups": "+{count} more"
+            "moreGroups": "+{count} more",
+            "otherGroups": "Other ({count, plural, one {# group} other {# groups}})"
         },
         "tabs": {
             "emptyName": "Plot name cannot be empty.",
@@ -701,7 +702,8 @@
             "notForType": "Not for this plot type",
             "needsColour": "Needs a colour column",
             "methodBands": "{method} · {count, plural, one {# band} other {# bands}}",
-            "contourLines": "{count, plural, one {# line} other {# lines}}"
+            "contourLines": "{count, plural, one {# line} other {# lines}}",
+            "needsNumbers": "Needs a colour column with numbers"
         },
         "panel": {
             "step": {
@@ -892,7 +894,12 @@
             "fillPanel": "Fill the panel",
             "fitFigure": "Fit the figure to the data",
             "fitFigureTitle": "Give the figure the shape of the data, so the map has no empty sides",
-            "fitFigureNeedsMap": "Apply a map with \"Keep the map shape (no stretch)\" on first."
+            "fitFigureNeedsMap": "Apply a map with \"Keep the map shape (no stretch)\" on first.",
+            "numberColumns": "Numbers: a colour scale",
+            "textColumns": "Text: one colour per group",
+            "groupColours": "Group colours",
+            "groupColoursHint": "One colour per group, in the fixed order of the series colours. The largest groups get a colour, the rest is grey \"Other\". Click a group in the legend to hide it.",
+            "contoursNeedNumbers": "Interpolation and contour lines need a colour column with numbers. A text column gives groups, not values."
         },
         "controls": {
             "title": "Mouse controls",
@@ -934,7 +941,10 @@
         "tip": {
             "dataPoint": "Data point",
             "surface": "Interpolated surface",
-            "approx": "≈ {value}"
+            "approx": "≈ {value}",
+            "pointsHere": "{count, plural, one {# point} other {# points}} at this place",
+            "pointsHereSample": "{count, plural, one {# point} other {# points}} at this place (sample)",
+            "moreGroups": "and {count, plural, one {# more group} other {# more groups}}"
         }
     },
     "palette": {

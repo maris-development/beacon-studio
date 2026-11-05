@@ -648,7 +648,8 @@
         },
         "fileName": "plot",
         "legend": {
-            "moreGroups": "+{count} meer"
+            "moreGroups": "+{count} meer",
+            "otherGroups": "Overig ({count, plural, one {# groep} other {# groepen}})"
         },
         "tabs": {
             "emptyName": "De plotnaam mag niet leeg zijn.",
@@ -701,7 +702,8 @@
             "notForType": "Niet voor dit plottype",
             "needsColour": "Heeft een kleurkolom nodig",
             "methodBands": "{method} · {count, plural, one {# band} other {# banden}}",
-            "contourLines": "{count, plural, one {# lijn} other {# lijnen}}"
+            "contourLines": "{count, plural, one {# lijn} other {# lijnen}}",
+            "needsNumbers": "Heeft een kleurkolom met getallen nodig"
         },
         "panel": {
             "step": {
@@ -892,7 +894,12 @@
             "fillPanel": "Paneel vullen",
             "fitFigure": "Figuur passend maken op de data",
             "fitFigureTitle": "Geeft de figuur de vorm van de data, zodat de kaart geen lege kanten heeft",
-            "fitFigureNeedsMap": "Pas eerst een kaart toe met \"Vorm van de kaart behouden (niet uitrekken)\" aan."
+            "fitFigureNeedsMap": "Pas eerst een kaart toe met \"Vorm van de kaart behouden (niet uitrekken)\" aan.",
+            "numberColumns": "Getallen: een kleurschaal",
+            "textColumns": "Tekst: één kleur per groep",
+            "groupColours": "Groepskleuren",
+            "groupColoursHint": "Eén kleur per groep, in de vaste volgorde van de reekskleuren. De grootste groepen krijgen een kleur, de rest is het grijze \"Overig\". Klik op een groep in de legenda om hem te verbergen.",
+            "contoursNeedNumbers": "Interpolatie en contourlijnen hebben een kleurkolom met getallen nodig. Een tekstkolom geeft groepen, geen waarden."
         },
         "controls": {
             "title": "Muisbediening",
@@ -934,7 +941,10 @@
         "tip": {
             "dataPoint": "Datapunt",
             "surface": "Geïnterpoleerd oppervlak",
-            "approx": "≈ {value}"
+            "approx": "≈ {value}",
+            "pointsHere": "{count, plural, one {# punt} other {# punten}} op deze plek",
+            "pointsHereSample": "{count, plural, one {# punt} other {# punten}} op deze plek (steekproef)",
+            "moreGroups": "en {count, plural, one {# andere groep} other {# andere groepen}}"
         }
     },
     "palette": {

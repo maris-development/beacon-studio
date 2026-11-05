@@ -16,7 +16,7 @@
  * The cap comes from the `sampleAfterRows` setting. The caller reads it, so
  * these functions stay pure.
  */
-import type { PlotSeries } from "./plot-data";
+import type { PlotCategories, PlotSeries } from "./plot-data";
 
 /** The seed of the shuffle. One constant, so a plot never changes under the user. */
 const SAMPLE_SEED = 1;
@@ -79,6 +79,7 @@ export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSer
     if (!Number.isFinite(maxPoints) || total <= maxPoints) return series;
 
     const keep = Math.max(1, Math.floor(maxPoints));
+    if (series.categories) return sampleByGroup(series, series.categories, keep);
 
     const order = new Uint32Array(total);
     for (let i = 0; i < total; i++) order[i] = i;
@@ -120,6 +121,49 @@ export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSer
     return pickRows(series, order.slice(0, keep).sort());
 }
 
+/**
+ * Sample a series with a text colour column. Every group keeps its share of the
+ * sample, and a small group keeps at least `keep / (2 × groups)` points, so a rare
+ * group does not disappear from the plot. The extreme rows stay as well.
+ */
+function sampleByGroup(series: PlotSeries, categories: PlotCategories, keep: number): PlotSeries {
+    const total = series.x.length;
+    const members: number[][] = categories.list.map(() => []);
+    for (let i = 0; i < total; i++) members[categories.index[i]].push(i);
+
+    const taken = new Uint8Array(total);
+    const picked: number[] = [];
+
+    for (const row of extremeRows(series)) {
+        taken[row] = 1;
+        picked.push(row);
+    }
+
+    const floor = Math.floor(keep / (2 * categories.list.length));
+    const random = makeRandom(SAMPLE_SEED);
+
+    for (const rows of members) {
+        const quota = Math.min(
+            rows.length,
+            Math.max(Math.floor((keep * rows.length) / total), floor)
+        );
+
+        // Partial Fisher-Yates inside the group, as in the plain sample.
+        for (let i = 0; i < quota; i++) {
+            const j = i + Math.floor(random() * (rows.length - i));
+            const swap = rows[i];
+            rows[i] = rows[j];
+            rows[j] = swap;
+
+            if (taken[rows[i]]) continue;
+            taken[rows[i]] = 1;
+            picked.push(rows[i]);
+        }
+    }
+
+    return pickRows(series, Uint32Array.from(picked).sort());
+}
+
 /** A copy of the series with only the rows in `picked`, in that order. */
 function pickRows(series: PlotSeries, picked: Uint32Array): PlotSeries {
     const keep = picked.length;
@@ -132,13 +176,17 @@ function pickRows(series: PlotSeries, picked: Uint32Array): PlotSeries {
     let rowIndex: Uint32Array | null = null;
     if (series.rowIndex) rowIndex = new Uint32Array(keep);
 
+    let categories: PlotCategories | null = null;
+    if (series.categories) categories = { ...series.categories, index: new Uint32Array(keep) };
+
     for (let i = 0; i < keep; i++) {
         const source = picked[i];
         x[i] = series.x[source];
         y[i] = series.y[source];
         if (z && series.z) z[i] = series.z[source];
         if (rowIndex && series.rowIndex) rowIndex[i] = series.rowIndex[source];
+        if (categories && series.categories) categories.index[i] = series.categories.index[source];
     }
 
-    return { ...series, x, y, z, rowIndex, sampledFrom: series.x.length };
+    return { ...series, x, y, z, rowIndex, categories, sampledFrom: series.x.length };
 }

@@ -14,8 +14,9 @@
 	Many uPlot options are read once at construction (the axis type, the reverse
 	direction, the fonts, the padding), so a partial update cannot reach them. A
 	rebuild is cheap: uPlot draws a chart of many points in a few milliseconds, and
-	the panel commits its edits once, on Apply, not on every keystroke. One edit
-	needs no rebuild: the figure size only resizes the chart.
+	the panel commits its edits once, on Apply, not on every keystroke. Two edits
+	need no rebuild: the figure size only resizes the chart, and a hidden group of
+	the legend only draws again.
 
 	The rebuild runs after the browser has painted. Drawing the points walks every
 	row, so at several hundred thousand rows it must not run inside the render pass
@@ -47,6 +48,7 @@
     import CheckIcon from "@lucide/svelte/icons/check";
     import { axisTitle, basemapLayerOf, usesZColumn, type PlotConfig } from "@/plots/plot-config";
     import {
+        categoryKeyOf,
         CROSS_SECTION_AXIS_LABEL,
         HISTOGRAM_AXIS_LABEL,
         resolveRange,
@@ -57,11 +59,16 @@
     import { formatNumber, t, type Message } from "@/i18n";
     import { addToast } from "@/stores/toasts";
     import {
+        categoryColor,
+        categoryLegendEntries,
+        categoryLegendWidth,
         clipToDomain,
         clipToRings,
         colorBarPadding,
+        DEFAULT_SERIES_COLORS,
         drawBackground,
         drawBars,
+        drawCategoryLegend,
         drawColorBar,
         drawContours,
         drawGroupLegend,
@@ -74,7 +81,10 @@
         drawTitle,
         gridColor,
         groupColors,
-        sampleGrid
+        sampleGrid,
+        type CategoryLegendEntry,
+        type LegendHit,
+        type SeriesColors
     } from "@/plots/uplot-render";
     import {
         fitMapShape,
@@ -89,6 +99,7 @@
     } from "@/plots/plot-view";
     import {
         buildPointIndex,
+        forEachPointNear,
         insideRing,
         nearestPoint,
         type PixelTransform,
@@ -147,8 +158,8 @@
             | ((row: number, skip: ReadonlyArray<string>, limit: number) => PlotRowCell[])
             | null;
         /**
-         * Stores an edit that the mouse makes on the canvas: the figure size. It
-         * has no Apply step.
+         * Stores an edit that the mouse makes on the canvas: the figure size and
+         * the hidden groups. These have no Apply step.
          */
         onPlotChange?: ((plot: PlotConfig) => void) | null;
         /**
@@ -198,13 +209,15 @@
     });
 
     /**
-     * The plot without the edit that needs no rebuild: the figure size. The rebuild
-     * effect reads this string, so a new figure size does not build the chart again.
+     * The plot without the two edits that need no rebuild: the figure size and the
+     * hidden groups. The rebuild effect reads this string, so those two edits do not
+     * build the chart again.
      */
     const rebuildKey = $derived(
         JSON.stringify({
             ...plot,
-            style: { ...plot.style, figureWidth: null, figureHeight: null }
+            style: { ...plot.style, figureWidth: null, figureHeight: null },
+            categories: null
         })
     );
 
@@ -223,6 +236,12 @@
             $t
         ];
         scheduleRebuild();
+    });
+
+    // A hidden group only draws again. The draw reads the hidden groups of the plot.
+    $effect(() => {
+        void plot.categories.hidden.join("\u0000");
+        untrack(() => chart?.redraw(false, false));
     });
 
     // The figure size goes to the host. The resize observer then resizes the chart.
@@ -284,6 +303,7 @@
             return;
         }
 
+        seriesColors = readSeriesColors();
         viewKey = viewKeyOf(series);
 
         chart = new uPlot(buildOptions(series, width, height), alignedData(series), container);
@@ -612,10 +632,63 @@
                 resizeFigure,
                 commitFigure,
                 restoreFigure,
-                openAxisEditor
+                openAxisEditor,
+                legendAt,
+                toggleGroup
             },
             { x: $t("plot.mouse.xAxisTitle"), y: $t("plot.mouse.yAxisTitle") }
         );
+    }
+
+    // -- groups of a text colour column ---------------------------------------
+
+    /** The colours of the groups, from the theme tokens. Read on each rebuild. */
+    let seriesColors: SeriesColors = DEFAULT_SERIES_COLORS;
+    /** The rows of the legend of the current chart. */
+    let legendEntries: CategoryLegendEntry[] = [];
+    /** The clickable rows of the legend, from the last draw. */
+    let legendHits: LegendHit[] = [];
+
+    function readSeriesColors(): SeriesColors {
+        if (!container) return DEFAULT_SERIES_COLORS;
+
+        const css = getComputedStyle(container);
+        const read = (name: string, fallback: string) =>
+            css.getPropertyValue(name).trim() || fallback;
+
+        return {
+            slots: DEFAULT_SERIES_COLORS.slots.map((color, i) =>
+                read(`--plot-series-${i + 1}`, color)
+            ),
+            other: read("--plot-series-other", DEFAULT_SERIES_COLORS.other)
+        };
+    }
+
+    function legendAt(x: number, y: number): string | null {
+        const hit = legendHits.find(
+            (entry) => x >= entry.left && x <= entry.right && y >= entry.top && y <= entry.bottom
+        );
+        return hit?.key ?? null;
+    }
+
+    /** A click hides or shows a group. A double click shows the group alone, a second one shows all. */
+    function toggleGroup(key: string, alone: boolean) {
+        const keys = legendEntries.map((entry) => entry.key);
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a copy that goes to the plot as an array
+        let hidden = new Set(plot.categories.hidden);
+
+        if (alone) {
+            const rest = keys.filter((other) => other !== key);
+            const isAlone = !hidden.has(key) && rest.every((other) => hidden.has(other));
+            if (isAlone) hidden = new Set();
+            else hidden = new Set(rest);
+        } else if (hidden.has(key)) {
+            hidden.delete(key);
+        } else {
+            hidden.add(key);
+        }
+
+        onPlotChange?.({ ...plot, categories: { hidden: [...hidden] } });
     }
 
     // -- the tooltip ----------------------------------------------------------
@@ -727,10 +800,18 @@
             );
         }
 
+        // A hidden group has no hover.
+        const categories = current.categories;
+        const hidden = new Set(plot.categories.hidden);
+        const shown = (point: number): boolean => {
+            if (!categories) return true;
+            return !hidden.has(categoryKeyOf(categories, categories.index[point]));
+        };
+
         let best = -1;
         if (plot.style.showPoints) {
             const radius = Math.max(8, plot.style.pointRadius + 5);
-            best = nearestPoint(indexOf(current), transform, left, top, radius);
+            best = nearestPoint(indexOf(current), transform, left, top, radius, shown);
         }
 
         if (best >= 0) {
@@ -759,6 +840,15 @@
                 });
             }
 
+            if (categories) {
+                const group = categories.index[best];
+                point.rows.push({
+                    label: zTitle,
+                    value: categories.list[group].name,
+                    color: categoryColor(categories, group, seriesColors)
+                });
+            }
+
             const sections = [point];
 
             const row = current.rowIndex?.[best];
@@ -782,6 +872,50 @@
 
             const px = transform.ax * current.x[best] + transform.bx;
             const py = transform.ay * current.y[best] + transform.by;
+
+            // A station often holds many groups at one place. Count the points under this point, per group.
+            if (categories) {
+                // eslint-disable-next-line svelte/prefer-svelte-reactivity -- a count inside one hover
+                const here = new Map<number, number>();
+                let total = 0;
+
+                forEachPointNear(
+                    indexOf(current),
+                    transform,
+                    px,
+                    py,
+                    1.5,
+                    (other) => {
+                        const group = categories.index[other];
+                        here.set(group, (here.get(group) ?? 0) + 1);
+                        total++;
+                    },
+                    shown
+                );
+
+                if (here.size > 1) {
+                    const top5 = [...here.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+                    let head = $t("plot.tip.pointsHere", { count: total });
+                    if (current.sampledFrom !== null)
+                        head = $t("plot.tip.pointsHereSample", { count: total });
+
+                    const rows = top5.map(([group, count]) => ({
+                        label: categories.list[group].name,
+                        value: $formatNumber(count),
+                        color: categoryColor(categories, group, seriesColors)
+                    }));
+
+                    if (here.size > 5) {
+                        rows.push({
+                            label: $t("plot.tip.moreGroups", { count: here.size - 5 }),
+                            value: "",
+                            color: null
+                        });
+                    }
+
+                    sections.push({ head, rows });
+                }
+            }
 
             ring = { left: u.over.offsetLeft + px, top: u.over.offsetTop + py };
             placeTip(u, sections, left, top);
@@ -1032,9 +1166,33 @@
         const grid = gridColor(style.gridlineColor, style.gridlineOpacity);
 
         const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
+        const categories = current.categories;
+        const formatCount = (count: number) => $formatNumber(count);
+
+        legendEntries = [];
+        legendHits = [];
+        if (categories) {
+            legendEntries = categoryLegendEntries(
+                categories,
+                seriesColors,
+                $t("plot.legend.otherGroups", { count: categories.otherGroups })
+            );
+        }
+
+        const categoryTitle = legendTitle(axisTitle(plot.z));
 
         let rightPad = 8;
-        if (showColorBar) rightPad = colorBarPadding(style.tickFontSize, style.legendTitleFontSize);
+        if (showColorBar) {
+            rightPad = colorBarPadding(style.tickFontSize, style.legendTitleFontSize);
+        } else if (categories) {
+            rightPad = categoryLegendWidth(
+                legendEntries,
+                categoryTitle,
+                style.tickFontSize,
+                style.legendTitleFontSize,
+                formatCount
+            );
+        }
 
         let topPad = 6;
         if (plot.title) topPad = style.titleFontSize + 10;
@@ -1157,7 +1315,9 @@
                                 });
                             }
 
-                            if (style.showPoints) drawPoints(u, current, plot, colourRange);
+                            if (style.showPoints) {
+                                drawPoints(u, current, plot, colourRange, seriesColors);
+                            }
                             if (geo && layer !== "none") {
                                 drawCoastlines(u, geo, layer === "borders");
                             }
@@ -1189,6 +1349,19 @@
                                 textColor: style.textColor,
                                 fontSize: style.tickFontSize,
                                 titleFontSize: style.legendTitleFontSize
+                            });
+                        }
+
+                        if (categories) {
+                            legendHits = drawCategoryLegend(u, {
+                                entries: legendEntries,
+                                hidden: new Set(plot.categories.hidden),
+                                title: categoryTitle,
+                                textColor: style.textColor,
+                                fontSize: style.tickFontSize,
+                                titleFontSize: style.legendTitleFontSize,
+                                width: rightPad,
+                                formatCount
                             });
                         }
 

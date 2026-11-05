@@ -64,6 +64,10 @@ export interface PlotMouseHost {
     /** Undo an edge drag. */
     restoreFigure(): void;
     openAxisEditor(axis: ViewAxis, element: HTMLElement): void;
+    /** The legend group at a pixel of the chart, or null. */
+    legendAt(x: number, y: number): string | null;
+    /** Hide or show a group. `alone` shows the group alone, or all groups again. */
+    toggleGroup(key: string, alone: boolean): void;
 }
 
 interface Drag {
@@ -536,10 +540,23 @@ export class PlotMouse {
             if (zoneAt(at(event))?.kind === "plot") event.preventDefault();
         };
 
+        const onClick = (event: MouseEvent) => {
+            const point = at(event);
+            const key = host.legendAt(point.x, point.y);
+            if (key !== null) host.toggleGroup(key, false);
+        };
+
         const onHover = (event: MouseEvent) => {
             if (drag) return;
 
-            showHover(zoneAt(at(event)), event.shiftKey);
+            const point = at(event);
+            if (host.legendAt(point.x, point.y) !== null) {
+                this.hover = null;
+                setCursor("pointer");
+                return;
+            }
+
+            showHover(zoneAt(point), event.shiftKey);
         };
 
         const onLeave = () => {
@@ -574,6 +591,15 @@ export class PlotMouse {
         // A double click resets the view of the zone. On an edge, that side fills the panel again.
         const onDoubleClick = (event: MouseEvent) => {
             const point = at(event);
+            const key = host.legendAt(point.x, point.y);
+
+            if (key !== null) {
+                event.preventDefault();
+                event.stopPropagation();
+                host.toggleGroup(key, true);
+                return;
+            }
+
             const zone = zoneAt(point);
             if (!zone) return;
 
@@ -595,6 +621,7 @@ export class PlotMouse {
 
         wrap.addEventListener("mousedown", onDown, true);
         wrap.addEventListener("contextmenu", onContextMenu);
+        wrap.addEventListener("click", onClick);
         wrap.addEventListener("mousemove", onHover);
         wrap.addEventListener("mouseleave", onLeave);
         wrap.addEventListener("wheel", onWheel, { passive: false });
@@ -608,6 +635,7 @@ export class PlotMouse {
             document.removeEventListener("keydown", onKey, true);
             wrap.removeEventListener("mousedown", onDown, true);
             wrap.removeEventListener("contextmenu", onContextMenu);
+            wrap.removeEventListener("click", onClick);
             wrap.removeEventListener("mousemove", onHover);
             wrap.removeEventListener("mouseleave", onLeave);
             wrap.removeEventListener("wheel", onWheel);
