@@ -60,6 +60,7 @@ import {
     dataSpacing,
     scaleLengthsOf,
     buildInterpolationSurface,
+    colourRangeOf,
     type AxisLengths,
     type InterpolationResult
 } from "@/plots/interpolation";
@@ -534,7 +535,11 @@ export class ChartExplorerController {
             if (field && plot.interpolation.enabled) {
                 interpolation = buildInterpolationSurface(field, series, plot);
             }
-            if (field && plot.contour.enabled) contours = buildContours(field, series, plot);
+
+            const colours = colourRangeOf(series, plot, interpolation);
+            if (field && colours && plot.contour.enabled) {
+                contours = buildContours(field, series, plot, colours);
+            }
         }
 
         this.data = data;

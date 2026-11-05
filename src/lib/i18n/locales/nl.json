@@ -746,7 +746,7 @@
             "domainAllHint": "Land en zee vormen één domein. De waarden lopen over de kustlijn heen.",
             "colourModeHint": "Doorlopende kleuren veranderen geleidelijk met de waarde. Banden delen de waarden in stappen van één kleur. Automatisch gebruikt banden voor Gewogen gemiddelde en doorlopende kleuren voor Lineair.",
             "colourBandsHint": "Het aantal kleurstappen in het oppervlak.",
-            "clipLimitsHint": "De kleuren van het oppervlak dekken alleen de waarden tussen deze twee percentielen, zodat een paar extreme waarden de schaal niet uitrekken. Een kleurbereik in Eigenschappen zet in plaats daarvan de uiteinden.",
+            "clipLimitsHint": "De kleurschaal dekt alleen de waarden tussen deze twee percentielen, zodat een paar extreme waarden de schaal niet uitrekken. Het oppervlak, de punten en de contourlijnen gebruiken allemaal deze schaal. Een kleurbereik in Eigenschappen zet in plaats daarvan de uiteinden.",
             "exactRadiusHint": "Zet de straal van het gemiddelde direct, in plaats van de schuif Gladheid. Een leeg veld gebruikt de schuif.",
             "gridResolutionHint": "Het aantal rastercellen langs X en Y. Meer cellen tonen meer detail, maar duren langer. Een leeg veld gebruikt de automatische waarde die het toont.",
             "levelsHint": "Het aantal contourlijnen. De lijnen liggen gelijk verdeeld over het kleurbereik.",

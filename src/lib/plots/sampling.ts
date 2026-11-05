@@ -71,7 +71,8 @@ function extremeRows(series: PlotSeries): number[] {
  * identity of the result to know whether a sample happened.
  *
  * The X, Y and Z ranges of the source carry over untouched. They come from the
- * full data, and the colour bar reads `zRange`, so the palette does not move.
+ * full data, and the colours read `zRange` through `colourRangeOf`, so the
+ * palette does not move.
  */
 export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSeries {
     const total = series.x.length;

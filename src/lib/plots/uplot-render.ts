@@ -26,7 +26,7 @@ import {
 } from "@/colors/palettes";
 import { colorScalePosition, colorScaleValue } from "@/colors/color-scale";
 import type { ColorScale } from "./plot-config";
-import { resolveRange, type PlotSeries } from "./plot-data";
+import type { PlotRange, PlotSeries } from "./plot-data";
 import { DEFAULT_POINT_COLOR, type PlotConfig } from "./plot-config";
 import { translate } from "@/i18n";
 import type { ContourResult } from "./contour";
@@ -359,8 +359,16 @@ function fillPointChunks(
  *
  * The opacity is one value for the set, so it is a single `globalAlpha` and the
  * palette strings stay opaque.
+ *
+ * `range` is the colour range of the plot (`colourRangeOf`), so a point has the
+ * colour of the surface and of the colour bar at its value.
  */
-export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void {
+export function drawPoints(
+    u: uPlot,
+    series: PlotSeries,
+    plot: PlotConfig,
+    range: PlotRange | null
+): void {
     const { ctx } = u;
     const dpr = dprOf(u);
     const radius = Math.max(plot.style.pointRadius * dpr, 0.5);
@@ -374,14 +382,13 @@ export function drawPoints(u: uPlot, series: PlotSeries, plot: PlotConfig): void
     clipToPlot(u);
     ctx.globalAlpha = plot.style.pointOpacity;
 
-    if (!series.z || !series.zRange) {
+    if (!series.z || !range) {
         ctx.fillStyle = pointColor(plot.style.palette);
         fillPointChunks(ctx, series, mapper, radius, count, null);
         ctx.restore();
         return;
     }
 
-    const range = resolveRange(series.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
     const reverse = plot.z?.reverse ?? false;
     const scale = plot.z?.scale ?? "linear";
     const table = getColorTable(plot.style.palette);

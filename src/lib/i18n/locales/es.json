@@ -746,7 +746,7 @@
             "domainAllHint": "Tierra y mar forman un solo dominio. Los valores se extienden a través de la costa.",
             "colourModeHint": "Los colores continuos cambian de forma suave con el valor. Las bandas agrupan los valores en pasos de un color cada uno. Automático usa bandas para Media ponderada y colores continuos para Lineal.",
             "colourBandsHint": "El número de pasos de color en la superficie.",
-            "clipLimitsHint": "Los colores de la superficie cubren solo los valores entre estos dos percentiles, para que unos pocos valores extremos no estiren la escala. Un rango de color en Propiedades fija los extremos en su lugar.",
+            "clipLimitsHint": "La escala de color cubre solo los valores entre estos dos percentiles, para que unos pocos valores extremos no la estiren. La superficie, los puntos y las líneas de contorno usan todos esta escala. Un rango de color en Propiedades fija los extremos en su lugar.",
             "exactRadiusHint": "Fija el radio de la media de forma directa, en lugar del control Suavidad. Un campo vacío usa el control.",
             "gridResolutionHint": "El número de celdas de la cuadrícula en X y en Y. Más celdas muestran más detalle, pero tardan más. Un campo vacío usa el valor automático que muestra.",
             "levelsHint": "El número de líneas de contorno. Las líneas se reparten por igual sobre el rango de color.",

@@ -13,7 +13,7 @@ import { colorScaleValue } from "@/colors/color-scale";
 import { fillGridGaps, hullOf, type ContourRing } from "./grid";
 import type { InterpolationField } from "./interpolation";
 import type { PlotConfig } from "./plot-config";
-import { resolveRange, type PlotRange, type PlotSeries } from "./plot-data";
+import type { PlotRange, PlotSeries } from "./plot-data";
 
 /** One isoline. A ring that ran on the edge of the grid splits there into open lines. */
 export interface ContourLine {
@@ -39,15 +39,17 @@ export interface ContourResult {
     range: PlotRange;
 }
 
-/** The contour lines of a field. Returns null when there is no level to draw. */
+/**
+ * The contour lines of a field. The levels span `range`, the colour range of the plot
+ * (`colourRangeOf`), so each line has the colour of the surface below it. Returns null when there
+ * is no level to draw.
+ */
 export function buildContours(
     field: InterpolationField,
     series: PlotSeries,
-    plot: PlotConfig
+    plot: PlotConfig,
+    range: PlotRange
 ): ContourResult | null {
-    if (!series.zRange) return null;
-
-    const range = resolveRange(series.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
     if (!(range.max > range.min)) return null;
 
     const { xResolution: nx, yResolution: ny } = field;

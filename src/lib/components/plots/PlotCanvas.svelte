@@ -53,7 +53,7 @@
         groupColors
     } from "@/plots/uplot-render";
     import type { ContourResult } from "@/plots/contour";
-    import type { InterpolationResult } from "@/plots/interpolation";
+    import { colourRangeOf, type InterpolationResult } from "@/plots/interpolation";
     import {
         LAND_DETAILS,
         landDetailForSpan,
@@ -598,10 +598,8 @@
 
         const captionInset = 6 + captionBand / 2;
 
-        let colorBarRange = { min: 0, max: 1 };
-        if (current.zRange) {
-            colorBarRange = resolveRange(current.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
-        }
+        const colourRange = colourRangeOf(current, plot, interpolation);
+        const colorBarRange = colourRange ?? { min: 0, max: 1 };
 
         return {
             width,
@@ -688,7 +686,7 @@
                                 });
                             }
 
-                            if (style.showPoints) drawPoints(u, current, plot);
+                            if (style.showPoints) drawPoints(u, current, plot, colourRange);
                             if (geo && layer !== "none") {
                                 drawCoastlines(u, geo, layer === "borders");
                             }

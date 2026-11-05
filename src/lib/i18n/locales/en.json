@@ -746,7 +746,7 @@
             "domainAllHint": "Land and sea are one domain. The values spread across the coastline.",
             "colourModeHint": "Continuous colours change smoothly with the value. Bands put the values into steps of one colour each. Automatic uses bands for Weighted average and continuous colours for Linear.",
             "colourBandsHint": "The number of colour steps in the surface.",
-            "clipLimitsHint": "The colours of the surface cover only the values between these two percentiles, so a few extreme values do not stretch the scale. A colour range in Properties sets the ends instead.",
+            "clipLimitsHint": "The colour scale covers only the values between these two percentiles, so a few extreme values do not stretch it. The surface, the points and the contour lines all use this scale. A colour range in Properties sets the ends instead.",
             "exactRadiusHint": "Sets the radius of the average directly, in place of the Smoothness slider. An empty field uses the slider.",
             "gridResolutionHint": "The number of grid cells along X and Y. More cells show more detail, but take longer. An empty field uses the automatic value that it shows.",
             "levelsHint": "The number of contour lines. The lines are spread evenly over the colour range.",

@@ -24,6 +24,7 @@ import {
     extentOf,
     MAX_GRID_CELLS,
     usesColourBands,
+    usesZColumn,
     type PlotConfig,
     type PlotInterpolationConfig
 } from "./plot-config";
@@ -339,6 +340,24 @@ export function buildInterpolationSurface(
         bandCount: Math.min(Math.max(Math.round(plot.interpolation.bandCount), 2), 100),
         renderMode
     };
+}
+
+/**
+ * The Z range that maps a value to a colour. The points, the surface, the contour lines, the
+ * colour bar and the tooltip all use it, so each colour on the plot reads off the colour bar.
+ *
+ * While the surface draws, its range holds, with the clip percentiles. Else the range of the data
+ * holds. A colour range in Properties sets either end. Returns null for a series with no Z values.
+ */
+export function colourRangeOf(
+    series: PlotSeries,
+    plot: PlotConfig,
+    surface: InterpolationResult | null
+): PlotRange | null {
+    if (surface && plot.interpolation.enabled && usesZColumn(plot.type)) return surface.range;
+    if (!series.zRange) return null;
+
+    return resolveRange(series.zRange, plot.z?.min ?? null, plot.z?.max ?? null);
 }
 
 /** The centres of the bins with a point, as interleaved 0..1 coordinates. */

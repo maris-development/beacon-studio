@@ -746,7 +746,7 @@
             "domainAllHint": "Terra e mare formano un solo dominio. I valori si diffondono attraverso la costa.",
             "colourModeHint": "I colori continui cambiano in modo graduale con il valore. Le fasce raggruppano i valori in passi di un solo colore. Automatico usa fasce per Media pesata e colori continui per Lineare.",
             "colourBandsHint": "Il numero di passi di colore nella superficie.",
-            "clipLimitsHint": "I colori della superficie coprono solo i valori tra questi due percentili, così pochi valori estremi non allungano la scala. Un intervallo colori in Proprietà fissa invece gli estremi.",
+            "clipLimitsHint": "La scala colori copre solo i valori tra questi due percentili, così pochi valori estremi non la allungano. La superficie, i punti e le linee di contorno usano tutti questa scala. Un intervallo colori in Proprietà fissa invece gli estremi.",
             "exactRadiusHint": "Fissa direttamente il raggio della media, al posto del cursore Levigatezza. Un campo vuoto usa il cursore.",
             "gridResolutionHint": "Il numero di celle della griglia lungo X e Y. Più celle mostrano più dettaglio, ma richiedono più tempo. Un campo vuoto usa il valore automatico che mostra.",
             "levelsHint": "Il numero di linee di contorno. Le linee sono distribuite in modo uniforme sull'intervallo dei colori.",
