@@ -929,7 +929,7 @@ function interpolationColours(
 }
 
 /** The value of the field at a point: bilinear between the four cell centres around it. */
-function sampleGrid(
+export function sampleGrid(
     field: InterpolationResult,
     xValue: number,
     yValue: number,

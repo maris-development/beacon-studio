@@ -262,6 +262,7 @@
                                 geography={charts.geography}
                                 map={charts.mapPlot}
                                 message={charts.message}
+                                rowCells={(row, skip, limit) => charts.rowCells(row, skip, limit)}
                                 onPlotChange={(next) => charts.updatePlot(next)}
                                 onBusyChange={(busy) => charts.setCanvasBusy(busy)}
                             />

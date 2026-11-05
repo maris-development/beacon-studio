@@ -910,6 +910,8 @@
             "axisDragText": "Right or up stretches the axis (zoom in). Left or down squeezes it (zoom out). Shift+drag moves it.",
             "axisClick": "Click an axis",
             "axisClickText": "Type the From and To limits.",
+            "hover": "Hover",
+            "hoverText": "Show the values of the nearest point and of its row. Away from the points, show the value of the surface.",
             "doubleClick": "Double-click",
             "doubleClickText": "Reset the view. On an axis, reset that axis only.",
             "hint": "The view stays with the plot when you apply other changes. Reset view goes back to the data."
@@ -928,6 +930,11 @@
             "apply": "Apply",
             "invalidNumbers": "Type two different numbers.",
             "invalidTimes": "Type two different times, for example 2024-07-15 12:00."
+        },
+        "tip": {
+            "dataPoint": "Data point",
+            "surface": "Interpolated surface",
+            "approx": "≈ {value}"
         }
     },
     "palette": {

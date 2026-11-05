@@ -48,9 +48,11 @@ import {
     groupableColumns,
     isMapPlot,
     plottableColumns,
+    readRowCells,
     resolveRange,
     type PlotDataResult,
     type PlotRange,
+    type PlotRowCell,
     type PlotSeries
 } from "@/plots/plot-data";
 import { buildContours, type ContourResult } from "@/plots/contour";
@@ -110,6 +112,16 @@ export class ChartExplorerController {
      * {@link columns}: a station name is text, and it still labels a stroke.
      */
     readonly groupColumns = $derived(groupableColumns(this.table));
+
+    /**
+     * The cells of one row of the result, for the hover tooltip. `skip` holds the
+     * columns that the tooltip shows already.
+     */
+    rowCells(row: number, skip: ReadonlyArray<string>, limit: number): PlotRowCell[] {
+        const table = this.table;
+        if (!table) return [];
+        return readRowCells(table, row, skip, limit);
+    }
 
     readonly plots = $derived<ReadonlyArray<PlotConfig>>(this.view?.plots ?? []);
 

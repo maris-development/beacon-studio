@@ -50,10 +50,11 @@
         CROSS_SECTION_AXIS_LABEL,
         HISTOGRAM_AXIS_LABEL,
         resolveRange,
+        type PlotRowCell,
         type PlotSeries
     } from "@/plots/plot-data";
-    import { colormapsReady, loadColormaps } from "@/colors/palettes";
-    import { t, type Message } from "@/i18n";
+    import { colormapsReady, loadColormaps, makePaletteScale } from "@/colors/palettes";
+    import { formatNumber, t, type Message } from "@/i18n";
     import { addToast } from "@/stores/toasts";
     import {
         clipToDomain,
@@ -72,7 +73,8 @@
         drawLand,
         drawTitle,
         gridColor,
-        groupColors
+        groupColors,
+        sampleGrid
     } from "@/plots/uplot-render";
     import {
         fitMapShape,
@@ -85,6 +87,13 @@
         type ViewAxis,
         type ViewKeep
     } from "@/plots/plot-view";
+    import {
+        buildPointIndex,
+        insideRing,
+        nearestPoint,
+        type PixelTransform,
+        type PointIndex
+    } from "@/plots/plot-hover";
     import type { ContourResult } from "@/plots/contour";
     import { colourRangeOf, type InterpolationResult } from "@/plots/interpolation";
     import {
@@ -105,6 +114,7 @@
         geography = null,
         map = false,
         message = null,
+        rowCells = null,
         onPlotChange = null,
         onBusyChange = undefined
     }: {
@@ -130,6 +140,13 @@
         /** Why the plot cannot draw. Shown in place of the canvas. */
         message?: Message | null;
         /**
+         * The cells of a row of the result, for the hover tooltip. Without it the
+         * tooltip shows the plotted values only.
+         */
+        rowCells?:
+            | ((row: number, skip: ReadonlyArray<string>, limit: number) => PlotRowCell[])
+            | null;
+        /**
          * Stores an edit that the mouse makes on the canvas: the figure size. It
          * has no Apply step.
          */
@@ -141,6 +158,13 @@
         onBusyChange?: (busy: boolean) => void;
     } = $props();
 
+    /** The most extra columns of a row that the tooltip shows. */
+    const TIP_EXTRA_COLUMNS = 8;
+
+    /** Text cells in the tooltip stop at this length. */
+    const TIP_TEXT_LENGTH = 40;
+
+    let room: HTMLDivElement | null = null;
     let container: HTMLDivElement | null = null;
     let chart: uPlot | null = null;
 
@@ -240,6 +264,7 @@
         mouse.destroy();
         chart?.destroy();
         chart = null;
+        hideTip();
         editor = null;
 
         // A new chart starts at the range of its data. The ready hook then puts the
@@ -593,6 +618,216 @@
         );
     }
 
+    // -- the tooltip ----------------------------------------------------------
+
+    interface TipRow {
+        label: string;
+        value: string;
+        color: string | null;
+    }
+
+    interface TipSection {
+        head: string | null;
+        rows: TipRow[];
+    }
+
+    let tip = $state<{
+        sections: TipSection[];
+        x: number;
+        y: number;
+        flipX: boolean;
+        flipY: boolean;
+    } | null>(null);
+
+    /** The ring around the point under the mouse, in pixels of the figure. */
+    let ring = $state<{ left: number; top: number } | null>(null);
+
+    let pointIndex: { source: PlotSeries; index: PointIndex } | null = null;
+
+    function hideTip() {
+        tip = null;
+        ring = null;
+    }
+
+    function indexOf(current: PlotSeries): PointIndex {
+        if (pointIndex && pointIndex.source === current) return pointIndex.index;
+
+        pointIndex = { source: current, index: buildPointIndex(current.x, current.y) };
+        return pointIndex.index;
+    }
+
+    function formatValue(value: number, kind: PlotRowCell["kind"] | null): string {
+        if (!Number.isFinite(value)) return String(value);
+        if (kind === "timestamp")
+            return new Date(value).toISOString().slice(0, 19).replace("T", " ");
+        return $formatNumber(value, { maximumSignificantDigits: 6 });
+    }
+
+    function formatCell(cell: PlotRowCell): string {
+        if (typeof cell.value === "number") return formatValue(cell.value, cell.kind);
+        if (cell.value.length <= TIP_TEXT_LENGTH) return cell.value;
+        return `${cell.value.slice(0, TIP_TEXT_LENGTH - 1)}…`;
+    }
+
+    /** Value to pixel of the plot area, per axis. The scales are linear, so two numbers per axis do it. */
+    function pixelTransform(u: uPlot): PixelTransform | null {
+        const sx = u.scales.x;
+        const sy = u.scales.y;
+        if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return null;
+
+        const x0 = u.valToPos(sx.min, "x");
+        const ax = (u.valToPos(sx.max, "x") - x0) / (sx.max - sx.min || 1);
+        const y0 = u.valToPos(sy.min, "y");
+        const ay = (u.valToPos(sy.max, "y") - y0) / (sy.max - sy.min || 1);
+
+        return { ax, bx: x0 - ax * sx.min, ay, by: y0 - ay * sy.min };
+    }
+
+    /** Put the tooltip next to the cursor, on the side with room. */
+    function placeTip(u: uPlot, sections: TipSection[], left: number, top: number) {
+        if (!room) return;
+
+        const box = room.getBoundingClientRect();
+        const plotArea = u.over.getBoundingClientRect();
+        const x = plotArea.left - box.left + left;
+        const y = plotArea.top - box.top + top;
+
+        tip = { sections, x, y, flipX: x > box.width * 0.6, flipY: y > box.height * 0.6 };
+    }
+
+    /** The values under the mouse: the nearest point and its row, else the value of the surface. */
+    function updateTip(u: uPlot, current: PlotSeries) {
+        const { left, top } = u.cursor;
+        if (!usesZColumn(plot.type) || mouse.dragging) {
+            hideTip();
+            return;
+        }
+        if (left == null || top == null || left < 0 || top < 0) {
+            hideTip();
+            return;
+        }
+
+        const transform = pixelTransform(u);
+        if (!transform) {
+            hideTip();
+            return;
+        }
+
+        const zTitle = axisTitle(plot.z);
+        const zRange = colourRangeOf(current, plot, interpolation);
+
+        let colorOf: ((value: number) => string) | null = null;
+        if (zRange) {
+            colorOf = makePaletteScale(
+                plot.style.palette,
+                zRange.min,
+                zRange.max,
+                plot.z?.reverse ?? false,
+                plot.z?.scale ?? "linear"
+            );
+        }
+
+        let best = -1;
+        if (plot.style.showPoints) {
+            const radius = Math.max(8, plot.style.pointRadius + 5);
+            best = nearestPoint(indexOf(current), transform, left, top, radius);
+        }
+
+        if (best >= 0) {
+            const point: TipSection = {
+                head: $t("plot.tip.dataPoint"),
+                rows: [
+                    {
+                        label: xTitle(),
+                        value: formatValue(current.x[best], current.xKind),
+                        color: null
+                    },
+                    {
+                        label: yTitle(),
+                        value: formatValue(current.y[best], current.yKind),
+                        color: null
+                    }
+                ]
+            };
+
+            if (current.z) {
+                const value = current.z[best];
+                point.rows.push({
+                    label: zTitle,
+                    value: formatValue(value, current.zKind),
+                    color: colorOf?.(value) ?? null
+                });
+            }
+
+            const sections = [point];
+
+            const row = current.rowIndex?.[best];
+            if (rowCells && row !== undefined) {
+                const skip = [plot.x.column, plot.y.column, plot.z?.column].filter(
+                    (name): name is string => !!name
+                );
+                const cells = rowCells(row, skip, TIP_EXTRA_COLUMNS);
+
+                if (cells.length > 0) {
+                    sections.push({
+                        head: null,
+                        rows: cells.map((cell) => ({
+                            label: cell.name,
+                            value: formatCell(cell),
+                            color: null
+                        }))
+                    });
+                }
+            }
+
+            const px = transform.ax * current.x[best] + transform.bx;
+            const py = transform.ay * current.y[best] + transform.by;
+
+            ring = { left: u.over.offsetLeft + px, top: u.over.offsetTop + py };
+            placeTip(u, sections, left, top);
+            return;
+        }
+
+        ring = null;
+
+        const field = interpolation;
+        if (!field || !plot.interpolation.enabled) {
+            tip = null;
+            return;
+        }
+
+        const xValue = u.posToVal(left, "x");
+        const yValue = u.posToVal(top, "y");
+        let value = sampleGrid(field, xValue, yValue, { fillEdges: false, bounded: true });
+        if (field.outline.length >= 3 && !insideRing(field.outline, xValue, yValue))
+            value = Number.NaN;
+
+        if (!Number.isFinite(value)) {
+            tip = null;
+            return;
+        }
+
+        placeTip(
+            u,
+            [
+                {
+                    head: $t("plot.tip.surface"),
+                    rows: [
+                        { label: xTitle(), value: formatValue(xValue, current.xKind), color: null },
+                        { label: yTitle(), value: formatValue(yValue, current.yKind), color: null },
+                        {
+                            label: zTitle,
+                            value: $t("plot.tip.approx", { value: formatValue(value, null) }),
+                            color: colorOf?.(value) ?? null
+                        }
+                    ]
+                }
+            ],
+            left,
+            top
+        );
+    }
+
     // -- the axis editor ------------------------------------------------------
 
     /** The open axis editor: the axis and the element it hangs from. */
@@ -871,6 +1106,7 @@
                         if (fixesMapShape()) refitMap(u, current);
                     }
                 ],
+                setCursor: [(u) => updateTip(u, current)],
                 drawClear: [(u) => drawBackground(u, style.backgroundColor)],
                 draw: [
                     (u) => {
@@ -1052,6 +1288,7 @@
 <div
     class="plot-canvas"
     class:figure-sized={figureSized}
+    bind:this={room}
     style="--plot-background: {plot.style.backgroundColor};"
 >
     <div class="plot-host" bind:this={container} aria-label={plot.title || plot.name}>
@@ -1086,8 +1323,34 @@
                     })}
                 </div>
             {/if}
+            {#if ring}
+                <div class="point-ring" style:left="{ring.left}px" style:top="{ring.top}px"></div>
+            {/if}
         </div>
     </div>
+
+    {#if tip}
+        <div
+            class="plot-tip"
+            class:flip-x={tip.flipX}
+            class:flip-y={tip.flipY}
+            style:left="{tip.x}px"
+            style:top="{tip.y}px"
+        >
+            {#each tip.sections as section, sectionIndex (sectionIndex)}
+                {#if sectionIndex > 0}<div class="tip-separator"></div>{/if}
+                {#if section.head}<div class="tip-head">{section.head}</div>{/if}
+                {#each section.rows as row, rowIndex (rowIndex)}
+                    <div class="tip-row">
+                        {#if row.color}<span class="swatch" style:background-color={row.color}
+                            ></span>{/if}
+                        <span class="tip-label">{row.label}</span>
+                        <b>{row.value}</b>
+                    </div>
+                {/each}
+            {/each}
+        </div>
+    {/if}
 
     {#if message}
         <div class="plot-message">
@@ -1227,6 +1490,79 @@
                 font-size: var(--font-size-xs);
                 font-weight: 600;
                 white-space: nowrap;
+            }
+
+            .point-ring {
+                width: 14px;
+                height: 14px;
+                margin: -7px 0 0 -7px;
+                border: 2px solid var(--foreground, #111827);
+                border-radius: 50%;
+                box-shadow: 0 0 0 2px var(--background, #ffffff);
+            }
+        }
+
+        .plot-tip {
+            position: absolute;
+            z-index: 4;
+            max-width: 22rem;
+            padding: 0.375rem 0.5rem;
+            margin: 14px 0 0 14px;
+            border: 1px solid var(--border, #e5e7eb);
+            border-radius: 0.375rem;
+            background-color: var(--popover, #ffffff);
+            color: var(--popover-foreground, #111827);
+            box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+            font-size: var(--font-size-xs);
+            pointer-events: none;
+
+            &.flip-x {
+                margin-left: -14px;
+                transform: translateX(-100%);
+            }
+
+            &.flip-y {
+                margin-top: -14px;
+                translate: 0 -100%;
+            }
+
+            .tip-head {
+                font-weight: 600;
+                margin-bottom: 0.125rem;
+            }
+
+            .tip-row {
+                display: flex;
+                align-items: center;
+                gap: 0.375rem;
+                line-height: 1.5;
+
+                .tip-label {
+                    flex-grow: 1;
+                    min-width: 0;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    color: var(--muted-foreground, #6b7280);
+                }
+
+                b {
+                    font-weight: 600;
+                    white-space: nowrap;
+                }
+            }
+
+            .swatch {
+                flex-shrink: 0;
+                width: 0.5625rem;
+                height: 0.5625rem;
+                border-radius: 50%;
+            }
+
+            .tip-separator {
+                height: 1px;
+                margin: 0.25rem 0;
+                background-color: var(--border, #e5e7eb);
             }
         }
 

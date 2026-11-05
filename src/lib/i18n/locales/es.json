@@ -910,6 +910,8 @@
             "axisDragText": "Hacia la derecha o hacia arriba estira el eje (acerca). Hacia la izquierda o hacia abajo lo comprime (aleja). Mayús + arrastrar lo mueve.",
             "axisClick": "Clic en un eje",
             "axisClickText": "Escribe los límites Desde y Hasta.",
+            "hover": "Pasar el ratón",
+            "hoverText": "Muestra los valores del punto más cercano y de su fila. Lejos de los puntos, muestra el valor de la superficie.",
             "doubleClick": "Doble clic",
             "doubleClickText": "Restablece la vista. Sobre un eje, restablece solo ese eje.",
             "hint": "La vista se queda en el gráfico cuando aplicas otros cambios. Restablecer vista vuelve a los datos."
@@ -928,6 +930,11 @@
             "apply": "Aplicar",
             "invalidNumbers": "Escribe dos números diferentes.",
             "invalidTimes": "Escribe dos horas diferentes, por ejemplo 2024-07-15 12:00."
+        },
+        "tip": {
+            "dataPoint": "Punto de datos",
+            "surface": "Superficie interpolada",
+            "approx": "≈ {value}"
         }
     },
     "palette": {

@@ -94,7 +94,7 @@ export class PlotMouse {
     zoomBox = $state<PixelRect | null>(null);
     /** The figure size during an edge drag, and where to show it. */
     figureLabel = $state<{ width: number; height: number; x: number; y: number } | null>(null);
-    /** True while a drag runs. */
+    /** True while a drag runs. The tooltip stays hidden. */
     dragging = $state(false);
 
     private detach: (() => void) | null = null;

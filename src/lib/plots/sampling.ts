@@ -117,20 +117,28 @@ export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSer
 
     // Ascending order keeps the draw order of the plot stable, and it reads the
     // source arrays forward instead of jumping over them.
-    const picked = order.slice(0, keep).sort();
+    return pickRows(series, order.slice(0, keep).sort());
+}
 
+/** A copy of the series with only the rows in `picked`, in that order. */
+function pickRows(series: PlotSeries, picked: Uint32Array): PlotSeries {
+    const keep = picked.length;
     const x = new Float64Array(keep);
     const y = new Float64Array(keep);
 
     let z: Float64Array | null = null;
     if (series.z) z = new Float64Array(keep);
 
+    let rowIndex: Uint32Array | null = null;
+    if (series.rowIndex) rowIndex = new Uint32Array(keep);
+
     for (let i = 0; i < keep; i++) {
         const source = picked[i];
         x[i] = series.x[source];
         y[i] = series.y[source];
         if (z && series.z) z[i] = series.z[source];
+        if (rowIndex && series.rowIndex) rowIndex[i] = series.rowIndex[source];
     }
 
-    return { ...series, x, y, z, sampledFrom: total };
+    return { ...series, x, y, z, rowIndex, sampledFrom: series.x.length };
 }

@@ -910,6 +910,8 @@
             "axisDragText": "Naar rechts of omhoog rekt de as uit (inzoomen). Naar links of omlaag drukt hem samen (uitzoomen). Shift + slepen verplaatst hem.",
             "axisClick": "Klik op een as",
             "axisClickText": "Typ de grenzen Van en Tot.",
+            "hover": "Aanwijzen",
+            "hoverText": "Toont de waarden van het dichtstbijzijnde punt en van zijn rij. Weg van de punten toont het de waarde van het oppervlak.",
             "doubleClick": "Dubbelklik",
             "doubleClickText": "Zet de weergave terug. Op een as zet het alleen die as terug.",
             "hint": "De weergave blijft bij de plot als je andere wijzigingen toepast. Weergave terugzetten gaat terug naar de data."
@@ -928,6 +930,11 @@
             "apply": "Toepassen",
             "invalidNumbers": "Typ twee verschillende getallen.",
             "invalidTimes": "Typ twee verschillende tijden, bijvoorbeeld 2024-07-15 12:00."
+        },
+        "tip": {
+            "dataPoint": "Datapunt",
+            "surface": "Geïnterpoleerd oppervlak",
+            "approx": "≈ {value}"
         }
     },
     "palette": {

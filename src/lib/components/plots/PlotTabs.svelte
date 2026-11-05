@@ -44,6 +44,7 @@
         ["plot.controls.edgeDoubleClick", "plot.controls.edgeDoubleClickText"],
         ["plot.controls.axisDrag", "plot.controls.axisDragText"],
         ["plot.controls.axisClick", "plot.controls.axisClickText"],
+        ["plot.controls.hover", "plot.controls.hoverText"],
         ["plot.controls.doubleClick", "plot.controls.doubleClickText"]
     ] as const;
     let editingPlotId = $state<string | null>(null);

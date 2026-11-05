@@ -910,6 +910,8 @@
             "axisDragText": "A destra o in alto allunga l'asse (zoom avanti). A sinistra o in basso lo comprime (zoom indietro). Maiusc + trascinare lo sposta.",
             "axisClick": "Clic su un asse",
             "axisClickText": "Scrivi i limiti Da e A.",
+            "hover": "Passaggio del mouse",
+            "hoverText": "Mostra i valori del punto più vicino e della sua riga. Lontano dai punti, mostra il valore della superficie.",
             "doubleClick": "Doppio clic",
             "doubleClickText": "Ripristina la vista. Su un asse, ripristina solo quell'asse.",
             "hint": "La vista resta sul grafico quando applichi altre modifiche. Ripristina vista torna ai dati."
@@ -928,6 +930,11 @@
             "apply": "Applica",
             "invalidNumbers": "Scrivi due numeri diversi.",
             "invalidTimes": "Scrivi due orari diversi, per esempio 2024-07-15 12:00."
+        },
+        "tip": {
+            "dataPoint": "Punto dati",
+            "surface": "Superficie interpolata",
+            "approx": "≈ {value}"
         }
     },
     "palette": {

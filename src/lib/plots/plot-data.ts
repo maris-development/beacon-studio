@@ -78,6 +78,18 @@ export interface PlotSeries {
      * See `sampling.ts`.
      */
     sampledFrom: number | null;
+    /**
+     * The table row of every point, for the hover tooltip. Null for a histogram,
+     * whose points are bins.
+     */
+    rowIndex: Uint32Array | null;
+}
+
+/** One cell of a table row, for the hover tooltip. */
+export interface PlotRowCell {
+    name: string;
+    kind: PlotColumnKind | "text";
+    value: number | string;
 }
 
 export type PlotDataResult =
@@ -220,6 +232,54 @@ export function groupableColumns(table: ApacheArrow.Table | null | undefined): P
     }
 
     return columns;
+}
+
+function isTextType(type: ApacheArrow.DataType): boolean {
+    switch (type.typeId) {
+        case ApacheArrow.Type.Utf8:
+        case ApacheArrow.Type.LargeUtf8:
+        case ApacheArrow.Type.Bool:
+        case ApacheArrow.Type.Dictionary:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+/**
+ * The cells of one table row, for the hover tooltip: at most `limit` columns,
+ * without the columns in `skip`. A null cell and a nested column are left out.
+ */
+export function readRowCells(
+    table: ApacheArrow.Table,
+    row: number,
+    skip: ReadonlyArray<string>,
+    limit: number
+): PlotRowCell[] {
+    const cells: PlotRowCell[] = [];
+    if (row < 0 || row >= table.numRows) return cells;
+
+    for (const field of table.schema.fields) {
+        if (cells.length >= limit) break;
+        if (skip.includes(field.name)) continue;
+
+        const kind = kindOfType(field.type);
+        if (!kind && !isTextType(field.type)) continue;
+
+        const value = table.getChild(field.name)?.get(row);
+        if (value === null || value === undefined) continue;
+
+        if (!kind) {
+            cells.push({ name: field.name, kind: "text", value: String(value) });
+            continue;
+        }
+
+        const number = Number(value);
+        if (Number.isFinite(number)) cells.push({ name: field.name, kind, value: number });
+    }
+
+    return cells;
 }
 
 /** The label of every row in one column. A null becomes {@link NO_GROUP_KEY}. */
@@ -475,7 +535,8 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
             groups: null,
             droppedGroups: 0,
             binWidth,
-            sampledFrom: null
+            sampledFrom: null,
+            rowIndex: null
         }
     };
 }
@@ -528,11 +589,15 @@ function orderLineSeries(
     let z: Float64Array | null = null;
     if (series.z) z = new Float64Array(total);
 
+    let rowIndex: Uint32Array | null = null;
+    if (series.rowIndex) rowIndex = new Uint32Array(total);
+
     for (let i = 0; i < total; i++) {
         const source = kept[i];
         x[i] = series.x[source];
         y[i] = series.y[source];
         if (z && series.z) z[i] = series.z[source];
+        if (rowIndex && series.rowIndex) rowIndex[i] = series.rowIndex[source];
     }
 
     let groups: PlotGroup[] | null = null;
@@ -558,6 +623,7 @@ function orderLineSeries(
         x,
         y,
         z,
+        rowIndex,
         skippedRows: series.skippedRows + (count - total),
         groups,
         droppedGroups
@@ -666,6 +732,8 @@ export function buildPlotSeries(
     let outGroups: Int32Array | null = null;
     if (groupKeys) outGroups = new Int32Array(rows);
 
+    const outRows = new Uint32Array(rows);
+
     const groupNames: string[] = [];
     const groupIds = new Map<string, number>();
 
@@ -689,6 +757,7 @@ export function buildPlotSeries(
 
         outX[kept] = xValue;
         outY[kept] = yValue;
+        outRows[kept] = i;
 
         if (groupKeys && outGroups) {
             const key = groupKeys[i];
@@ -730,6 +799,8 @@ export function buildPlotSeries(
     let settledZRange: PlotRange | null = null;
     if (outZ) settledZRange = settleRange(zRange);
 
+    const rowIndex = outRows.subarray(0, kept);
+
     const series: PlotSeries = {
         x: outX.subarray(0, kept),
         y: outY.subarray(0, kept),
@@ -744,7 +815,8 @@ export function buildPlotSeries(
         groups: null,
         droppedGroups: 0,
         binWidth: null,
-        sampledFrom: null
+        sampledFrom: null,
+        rowIndex
     };
 
     if (plot.type !== "line") return { ok: true, series };
