@@ -818,7 +818,7 @@
             open={openSection === 3}
             onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
         >
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.titlesAndLabels")}</summary>
                 <div class="subsection-body">
                     <div class="property-row">
@@ -1044,7 +1044,7 @@
                 </div>
             </details>
 
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.dataAndColor")}</summary>
                 <div class="subsection-body">
                     {#if draft.type === "line" || draft.type === "histogram" || draft.z?.column}
@@ -1146,7 +1146,7 @@
                 </div>
             </details>
 
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.markers")}</summary>
                 <div class="subsection-body">
                     {#if draft.type === "line"}
@@ -1244,7 +1244,7 @@
             </details>
 
             {#if draft.type === "scatter"}
-                <details class="property-subsection" open>
+                <details class="property-subsection">
                     <summary>{$t("plot.panel.basemap")}</summary>
                     <div class="subsection-body">
                         {#if controller.isMapPlot(draft)}
@@ -1329,7 +1329,7 @@
                 </details>
             {/if}
 
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.canvas")}</summary>
                 <div class="subsection-body">
                     <div class="option-row">
