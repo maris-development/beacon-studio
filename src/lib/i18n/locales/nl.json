@@ -663,7 +663,9 @@
             "resetView": "Weergave terugzetten",
             "resetViewTitle": "De plotweergave terugzetten",
             "export": "PNG exporteren",
-            "exportTitle": "Deze plot als PNG exporteren"
+            "exportTitle": "Deze plot als PNG exporteren",
+            "controls": "Bediening",
+            "controlsTitle": "De muisbediening van de plot tonen: zoomen, verplaatsen, randen en assen"
         },
         "axis": {
             "crossSectionDistance": "Afstand langs doorsnede (km)",
@@ -881,7 +883,51 @@
             "colourModeBands": "In banden",
             "advanced": "Geavanceerd",
             "radiusExactKm": "Exacte straal (km)",
-            "radiusExactAxes": "Exacte straal"
+            "radiusExactAxes": "Exacte straal",
+            "figureSize": "Grootte van de figuur (px)",
+            "figureSizeHint": "Leeg vult het paneel. Je kunt ook een rand of een hoek van de plot slepen. PNG exporteren gebruikt deze grootte.",
+            "figureWidth": "Breedte",
+            "figureHeight": "Hoogte",
+            "figureFill": "vullen",
+            "fillPanel": "Paneel vullen",
+            "fitFigure": "Figuur passend maken op de data",
+            "fitFigureTitle": "Geeft de figuur de vorm van de data, zodat de kaart geen lege kanten heeft",
+            "fitFigureNeedsMap": "Pas eerst een kaart toe met \"Vorm van de kaart behouden (niet uitrekken)\" aan."
+        },
+        "controls": {
+            "title": "Muisbediening",
+            "plotDrag": "Links slepen in de plot",
+            "plotDragText": "Verplaatst de weergave.",
+            "boxDrag": "Rechts slepen in de plot",
+            "boxDragText": "Zoomt in op het kader. Een plat kader zoomt op één as. Esc annuleert.",
+            "wheel": "Wieltje",
+            "wheelText": "Zoomt bij de aanwijzer. Op een as zoomt het alleen die as.",
+            "edgeDrag": "Een rand van de plot slepen",
+            "edgeDragText": "Verandert de grootte van de figuur. Een hoek verandert de breedte en de hoogte. Een kaart behoudt haar vorm. Esc annuleert.",
+            "edgeDoubleClick": "Dubbelklik op een rand",
+            "edgeDoubleClickText": "Die kant vult het paneel weer.",
+            "axisDrag": "Een as slepen",
+            "axisDragText": "Naar rechts of omhoog rekt de as uit (inzoomen). Naar links of omlaag drukt hem samen (uitzoomen). Shift + slepen verplaatst hem.",
+            "axisClick": "Klik op een as",
+            "axisClickText": "Typ de grenzen Van en Tot.",
+            "doubleClick": "Dubbelklik",
+            "doubleClickText": "Zet de weergave terug. Op een as zet het alleen die as terug.",
+            "hint": "De weergave blijft bij de plot als je andere wijzigingen toepast. Weergave terugzetten gaat terug naar de data."
+        },
+        "mouse": {
+            "xAxisTitle": "X-as: sleep om uit te rekken of samen te drukken, Shift + slepen om te verplaatsen, wieltje om te zoomen. Klik om de grenzen te typen. Dubbelklik om terug te zetten.",
+            "yAxisTitle": "Y-as: sleep om uit te rekken of samen te drukken, Shift + slepen om te verplaatsen, wieltje om te zoomen. Klik om de grenzen te typen. Dubbelklik om terug te zetten.",
+            "figureSize": "{width, number} × {height, number} px"
+        },
+        "axisEditor": {
+            "title": "{axis}-as",
+            "from": "Van",
+            "to": "Tot",
+            "timesUtc": "Tijden zijn in UTC.",
+            "timePlaceholder": "JJJJ-MM-DD uu:mm",
+            "apply": "Toepassen",
+            "invalidNumbers": "Typ twee verschillende getallen.",
+            "invalidTimes": "Typ twee verschillende tijden, bijvoorbeeld 2024-07-15 12:00."
         }
     },
     "palette": {

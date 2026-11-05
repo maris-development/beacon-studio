@@ -25,6 +25,7 @@
 import { Utils } from "@/utils";
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from "@/colors/palettes";
 import type { MessageKey } from "@/i18n";
+import { MIN_FIGURE } from "./plot-view";
 
 export type PlotType = "scatter" | "cross-section" | "line" | "histogram";
 export type ColorScale = "linear" | "logarithmic" | "exponential";
@@ -214,6 +215,10 @@ export interface PlotStyleConfig {
     gridlineOpacity: number;
     /** CSS colour of the title, the axis titles and the tick labels. */
     textColor: string;
+    /** The width of the figure in CSS pixels. Null fills the panel. Export PNG uses this size. */
+    figureWidth: number | null;
+    /** The height of the figure in CSS pixels. Null fills the panel. */
+    figureHeight: number | null;
 }
 
 /** The basemap of a map plot: longitude on X and latitude on Y. Other plots do not read it. */
@@ -357,7 +362,9 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
     backgroundColor: "#ffffff",
     gridlineColor: "#1f2937",
     gridlineOpacity: 0.15,
-    textColor: "#1f2937"
+    textColor: "#1f2937",
+    figureWidth: null,
+    figureHeight: null
 };
 
 /**
@@ -550,6 +557,13 @@ function asInterpolationDomain(value: unknown): PlotInterpolationDomain {
 function asPositiveOrNull(value: unknown): number | null {
     if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
     return null;
+}
+
+/** A figure side in whole pixels, at least `min`, or null to fill the panel. */
+function asFigureSide(value: unknown, min: number): number | null {
+    const side = asPositiveOrNull(value);
+    if (side === null) return null;
+    return Math.max(Math.round(side), min);
 }
 
 /** A grid size inside its limits, or null for automatic. */
@@ -747,7 +761,9 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
             0,
             1
         ),
-        textColor: asString(record.textColor, DEFAULT_STYLE.textColor)
+        textColor: asString(record.textColor, DEFAULT_STYLE.textColor),
+        figureWidth: asFigureSide(record.figureWidth, MIN_FIGURE.width),
+        figureHeight: asFigureSide(record.figureHeight, MIN_FIGURE.height)
     };
 }
 

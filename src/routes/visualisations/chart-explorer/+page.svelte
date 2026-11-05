@@ -219,6 +219,11 @@
     function resetView() {
         plotCanvas?.resetView();
     }
+
+    function fitFigure() {
+        if (plotCanvas?.fitFigureToData()) return;
+        addToast({ type: "warning", key: "plot.panel.fitFigureNeedsMap" });
+    }
 </script>
 
 <svelte:head>
@@ -243,7 +248,7 @@
                 <PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
 
                 <div class="plot-layout">
-                    <PlotConfigPanel controller={charts} />
+                    <PlotConfigPanel controller={charts} onFitFigure={fitFigure} />
 
                     <div class="plot-area">
                         {#if charts.activePlot}
@@ -257,6 +262,7 @@
                                 geography={charts.geography}
                                 map={charts.mapPlot}
                                 message={charts.message}
+                                onPlotChange={(next) => charts.updatePlot(next)}
                                 onBusyChange={(busy) => charts.setCanvasBusy(busy)}
                             />
                         {/if}

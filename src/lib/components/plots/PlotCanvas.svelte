@@ -14,16 +14,37 @@
 	Many uPlot options are read once at construction (the axis type, the reverse
 	direction, the fonts, the padding), so a partial update cannot reach them. A
 	rebuild is cheap: uPlot draws a chart of many points in a few milliseconds, and
-	the panel commits its edits once, on Apply, not on every keystroke.
+	the panel commits its edits once, on Apply, not on every keystroke. One edit
+	needs no rebuild: the figure size only resizes the chart.
 
 	The rebuild runs after the browser has painted. Drawing the points walks every
 	row, so at several hundred thousand rows it must not run inside the render pass
 	that a navigation is waiting on: the caller wants its spinner on screen first.
+
+	The mouse works as in a desktop plot window: on the plot, on its axes and on
+	its edges. See `PlotMouse.svelte.ts`. The view that the user sets stays with
+	the plot after a rebuild, until the columns, the axis limits or the data change.
 -->
+<script module lang="ts">
+    import type { PlotView } from "@/plots/plot-view";
+
+    /**
+     * The view that the user left on each plot, by plot id. It lives for the
+     * session, so a rebuild, a plot switch and a page switch keep it. The key holds
+     * what makes a view stale: the columns, the axis limits and the data range.
+     */
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- the views are not view state
+    const SAVED_VIEWS = new Map<string, { key: string; view: PlotView }>();
+</script>
+
 <script lang="ts">
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, untrack } from "svelte";
     import uPlot from "uplot";
     import "uplot/dist/uPlot.min.css";
+    import * as Popover from "$lib/components/ui/popover/index.js";
+    import { Input } from "$lib/components/ui/input/index.js";
+    import Button from "@/components/buttons/Button.svelte";
+    import CheckIcon from "@lucide/svelte/icons/check";
     import { axisTitle, basemapLayerOf, usesZColumn, type PlotConfig } from "@/plots/plot-config";
     import {
         CROSS_SECTION_AXIS_LABEL,
@@ -33,6 +54,7 @@
     } from "@/plots/plot-data";
     import { colormapsReady, loadColormaps } from "@/colors/palettes";
     import { t, type Message } from "@/i18n";
+    import { addToast } from "@/stores/toasts";
     import {
         clipToDomain,
         clipToRings,
@@ -52,6 +74,17 @@
         gridColor,
         groupColors
     } from "@/plots/uplot-render";
+    import {
+        fitMapShape,
+        figureForAspect,
+        formatAxisLimit,
+        isUsableView,
+        mapDataAspect,
+        mapShapeView,
+        parseAxisLimit,
+        type ViewAxis,
+        type ViewKeep
+    } from "@/plots/plot-view";
     import type { ContourResult } from "@/plots/contour";
     import { colourRangeOf, type InterpolationResult } from "@/plots/interpolation";
     import {
@@ -61,6 +94,7 @@
         readyGeography,
         type Geography
     } from "@/geo/land";
+    import { PlotMouse } from "./PlotMouse.svelte";
 
     let {
         plot,
@@ -71,6 +105,7 @@
         geography = null,
         map = false,
         message = null,
+        onPlotChange = null,
         onBusyChange = undefined
     }: {
         plot: PlotConfig;
@@ -95,6 +130,11 @@
         /** Why the plot cannot draw. Shown in place of the canvas. */
         message?: Message | null;
         /**
+         * Stores an edit that the mouse makes on the canvas: the figure size. It
+         * has no Apply step.
+         */
+        onPlotChange?: ((plot: PlotConfig) => void) | null;
+        /**
          * Reports the drawing state. Building the points and painting them is the
          * slowest step of the page, so the caller shows a spinner over it.
          */
@@ -103,6 +143,8 @@
 
     let container: HTMLDivElement | null = null;
     let chart: uPlot | null = null;
+
+    const mouse = new PlotMouse();
 
     /**
      * Flips once the colormap file has loaded. The colours are read
@@ -126,16 +168,27 @@
 
     onDestroy(() => {
         if (rebuildHandle !== null) cancelAnimationFrame(rebuildHandle);
+        mouse.destroy();
         chart?.destroy();
         chart = null;
     });
+
+    /**
+     * The plot without the edit that needs no rebuild: the figure size. The rebuild
+     * effect reads this string, so a new figure size does not build the chart again.
+     */
+    const rebuildKey = $derived(
+        JSON.stringify({
+            ...plot,
+            style: { ...plot.style, figureWidth: null, figureHeight: null }
+        })
+    );
 
     // Rebuild the chart when the plot, the data, the contours or the palette
     // change. The reads below are the dependencies of this effect.
     $effect(() => {
         void [
-            plot,
-            plot.z?.scale,
+            rebuildKey,
             series,
             caption,
             contours,
@@ -147,6 +200,16 @@
         ];
         scheduleRebuild();
     });
+
+    // The figure size goes to the host. The resize observer then resizes the chart.
+    $effect(() => {
+        void [plot.style.figureWidth, plot.style.figureHeight, container];
+        untrack(() => applyFigure());
+    });
+
+    const figureSized = $derived(
+        plot.style.figureWidth !== null || plot.style.figureHeight !== null
+    );
 
     let rebuildHandle: number | null = null;
 
@@ -174,8 +237,15 @@
     }
 
     function rebuild() {
+        mouse.destroy();
         chart?.destroy();
         chart = null;
+        editor = null;
+
+        // A new chart starts at the range of its data. The ready hook then puts the
+        // view of the user back.
+        view = null;
+        home = null;
 
         if (!container || !series) {
             onBusyChange?.(false);
@@ -189,9 +259,10 @@
             return;
         }
 
+        viewKey = viewKeyOf(series);
+
         chart = new uPlot(buildOptions(series, width, height), alignedData(series), container);
-        attachWheelZoom(chart);
-        if (fixesMapShape()) attachMapReset(chart, series);
+        attachMouse(chart);
 
         // uPlot computes the plot rectangle during construction, before its deferred
         // initial range runs. At that point the scales have no min/max, so the axes
@@ -241,43 +312,113 @@
         return sortedData.data;
     }
 
+    // -- the view -------------------------------------------------------------
+
+    /** The view that the user set on this chart. Null follows the data. */
+    let view: PlotView | null = null;
+    /** The view of the data, from the first layout. Reset view goes back to it. */
+    let home: PlotView | null = null;
+    /** True while {@link setView} sets the scales. The range functions then pass the values through. */
+    let explicit = false;
+    /** The key of the saved view of the current chart. See {@link SAVED_VIEWS}. */
+    let viewKey = "";
+
+    function viewKeyOf(current: PlotSeries): string {
+        return JSON.stringify([
+            plot.type,
+            plot.x.column,
+            plot.y.column,
+            plot.x.min,
+            plot.x.max,
+            plot.y.min,
+            plot.y.max,
+            fixesMapShape(),
+            current.xRange,
+            current.yRange
+        ]);
+    }
+
     /**
-     * Zoom on the mouse wheel, around the pointer.
-     *
-     * uPlot draws no buttons and adds no wheel handler: its only built-in zoom is
-     * a drag to zoom in, and a double click to reset. A wheel that zooms both ways
-     * is the missing half, so this adds it. A scale set here is explicit, so uPlot
-     * applies it straight and the drag zoom and the reset keep working beside it.
+     * Set the view. Both scales change in one batch, else uPlot fits the other
+     * axis to the data again. A map keeps its shape around the axis in `keep`.
      */
-    function attachWheelZoom(instance: uPlot) {
-        instance.over.addEventListener(
-            "wheel",
-            (event) => {
-                event.preventDefault();
+    function setView(
+        u: uPlot,
+        next: Partial<PlotView>,
+        keep: ViewKeep,
+        remember = true
+    ): PlotView | null {
+        const sx = u.scales.x;
+        const sy = u.scales.y;
+        if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return null;
 
-                const sx = instance.scales.x;
-                const sy = instance.scales.y;
-                if (sx.min == null || sx.max == null || sy.min == null || sy.max == null) return;
+        let candidate: PlotView = {
+            x: next.x ?? { min: sx.min, max: sx.max },
+            y: next.y ?? { min: sy.min, max: sy.max }
+        };
+        if (!isUsableView(candidate)) return null;
 
-                // A notch up zooms in, a notch down zooms out, around the pointer.
-                const factor = event.deltaY < 0 ? 0.85 : 1 / 0.85;
+        if (fixesMapShape() && u.bbox.width > 0 && u.bbox.height > 0) {
+            candidate = fitMapShape(candidate, keep, u.bbox.width / u.bbox.height);
+        }
 
-                const atX = instance.posToVal(event.offsetX, "x");
-                const atY = instance.posToVal(event.offsetY, "y");
+        explicit = true;
+        try {
+            u.batch(() => {
+                u.setScale("x", { ...candidate.x });
+                u.setScale("y", { ...candidate.y });
+            });
+        } finally {
+            explicit = false;
+        }
 
-                instance.batch(() => {
-                    instance.setScale("x", {
-                        min: atX - (atX - sx.min) * factor,
-                        max: atX + (sx.max - atX) * factor
-                    });
-                    instance.setScale("y", {
-                        min: atY - (atY - sy.min) * factor,
-                        max: atY + (sy.max - atY) * factor
-                    });
-                });
-            },
-            { passive: false }
-        );
+        view = candidate;
+        if (remember) SAVED_VIEWS.set(plot.id, { key: viewKey, view: candidate });
+        syncEditor();
+        return candidate;
+    }
+
+    /** Back to the view of the data. With an axis, only that axis goes back. */
+    function resetToHome(axis: ViewAxis | null) {
+        const u = chart;
+        if (!u || !home) return;
+
+        if (axis) {
+            setView(u, { [axis]: home[axis] }, axis);
+            return;
+        }
+
+        SAVED_VIEWS.delete(plot.id);
+        setView(u, home, "both", false);
+    }
+
+    /** The view that the user left on this plot, while the data still fits it. */
+    function savedView(): PlotView | null {
+        const saved = SAVED_VIEWS.get(plot.id);
+        if (!saved || saved.key !== viewKey) return null;
+        return saved.view;
+    }
+
+    /**
+     * The range of one scale: the values of {@link setView} pass through, then the
+     * view of the user, then `base`, then the default of uPlot. uPlot calls this on
+     * every auto range, so a resize and a redraw keep the view.
+     */
+    function rangeFor(
+        axis: ViewAxis,
+        time: boolean,
+        base: ((u: uPlot, min: number, max: number) => uPlot.Range.MinMax) | null
+    ): uPlot.Range.Function {
+        return (u, dataMin, dataMax) => {
+            if (explicit) return [dataMin, dataMax];
+
+            const current = view?.[axis];
+            if (current) return [current.min, current.max];
+            if (base) return base(u, dataMin, dataMax);
+            if (dataMin == null || dataMax == null) return [dataMin, dataMax];
+            if (axis === "x" || time) return [dataMin, dataMax];
+            return uPlot.rangeNum(dataMin, dataMax, 0.1, true);
+        };
     }
 
     // -- map ------------------------------------------------------------------
@@ -287,39 +428,9 @@
         return map && plot.basemap.fixAspect;
     }
 
-    /**
-     * The view that keeps the shape of the map: the ranges, `pad` times wider, and then
-     * grown on one axis to fit the plot box. One degree of longitude is cos(latitude)
-     * times as long as one degree of latitude.
-     */
-    function mapView(
-        xRange: { min: number; max: number },
-        yRange: { min: number; max: number },
-        box: { width: number; height: number },
-        pad = 1
-    ): { x: { min: number; max: number }; y: { min: number; max: number } } {
-        const middle = (((yRange.min + yRange.max) / 2) * Math.PI) / 180;
-        const k = Math.max(Math.cos(middle), 0.05);
-        const cx = (xRange.min + xRange.max) / 2;
-        const cy = (yRange.min + yRange.max) / 2;
-        let xs = (xRange.max - xRange.min) * pad || 1;
-        let ys = (yRange.max - yRange.min) * pad || 1;
-
-        if ((xs * k) / ys > box.width / box.height) {
-            ys = (xs * k * box.height) / box.width;
-        } else {
-            xs = (ys * box.width) / (box.height * k);
-        }
-
-        return {
-            x: { min: cx - xs / 2, max: cx + xs / 2 },
-            y: { min: cy - ys / 2, max: cy + ys / 2 }
-        };
-    }
-
     /** The first view of a map: the data, 4% wider, in the shape of the plot box. */
-    function homeMapView(u: uPlot, current: PlotSeries) {
-        return mapView(
+    function homeMapView(u: uPlot, current: PlotSeries): PlotView {
+        return mapShapeView(
             resolveRange(current.xRange, plot.x.min, plot.x.max),
             resolveRange(current.yRange, plot.y.min, plot.y.max),
             u.bbox,
@@ -327,37 +438,20 @@
         );
     }
 
-    let fitting = false;
+    let refitting = false;
 
-    /** Grow the view of a map on one axis, so it keeps its shape after a zoom or a resize. */
-    function fitMapShape(u: uPlot, view?: ReturnType<typeof mapView>) {
-        const sx = u.scales.x;
-        const sy = u.scales.y;
-        if (fitting || sx.min == null || sx.max == null || sy.min == null || sy.max == null) {
-            return;
+    /** A new size keeps the map shape: the saved view or the home view fits the new box. */
+    function refitMap(u: uPlot, current: PlotSeries) {
+        // The batch inside fires the setSize hook again, before uPlot clears its flag.
+        if (refitting || !(u.bbox.width > 0 && u.bbox.height > 0)) return;
+
+        refitting = true;
+        try {
+            home = homeMapView(u, current);
+            setView(u, savedView() ?? home, "both", false);
+        } finally {
+            refitting = false;
         }
-        if (!(u.bbox.width > 0 && u.bbox.height > 0)) return;
-
-        const next =
-            view ?? mapView({ min: sx.min, max: sx.max }, { min: sy.min, max: sy.max }, u.bbox);
-        const unchanged =
-            Math.abs(next.x.max - next.x.min - (sx.max - sx.min)) < 1e-9 * (sx.max - sx.min) &&
-            Math.abs(next.y.max - next.y.min - (sy.max - sy.min)) < 1e-9 * (sy.max - sy.min);
-        if (unchanged && !view) return;
-
-        fitting = true;
-        u.batch(() => {
-            u.setScale("x", next.x);
-            u.setScale("y", next.y);
-        });
-        fitting = false;
-    }
-
-    /** A double click, and Reset view, go back to the first view of the map. */
-    function attachMapReset(instance: uPlot, current: PlotSeries) {
-        instance.over.addEventListener("dblclick", () => {
-            fitMapShape(instance, homeMapView(instance, current));
-        });
     }
 
     /**
@@ -440,6 +534,131 @@
         if (series) scheduleRebuild();
     }
 
+    // -- figure size ----------------------------------------------------------
+
+    /** Give the host the figure size of the plot. A figure larger than the panel shrinks to fit it. */
+    function applyFigure() {
+        if (!container) return;
+
+        const { figureWidth, figureHeight } = plot.style;
+
+        container.style.width = "";
+        if (figureWidth) container.style.width = `min(${figureWidth}px, 100%)`;
+
+        container.style.height = "";
+        if (figureHeight) container.style.height = `min(${figureHeight}px, 100%)`;
+    }
+
+    /** Resize the host and the chart during an edge drag. The plot keeps its stored size. */
+    function resizeFigure(width: number, height: number) {
+        if (!container) return;
+
+        container.style.width = `${Math.round(width)}px`;
+        container.style.height = `${Math.round(height)}px`;
+        chart?.setSize({ width: Math.round(width), height: Math.round(height) });
+    }
+
+    /** Store a figure size. A side that the call leaves out keeps its value. */
+    function commitFigure(next: { width?: number | null; height?: number | null }) {
+        const style = { ...plot.style };
+        if (next.width !== undefined) style.figureWidth = next.width;
+        if (next.height !== undefined) style.figureHeight = next.height;
+
+        onPlotChange?.({ ...plot, style });
+        applyFigure();
+    }
+
+    function restoreFigure() {
+        applyFigure();
+        onResize();
+    }
+
+    // -- the mouse ------------------------------------------------------------
+
+    function attachMouse(u: uPlot) {
+        if (!container) return;
+
+        mouse.attach(
+            u,
+            {
+                figure: container,
+                setView: (next, keep) => void setView(u, next, keep),
+                resetView: (axis) => resetToHome(axis),
+                resizeFigure,
+                commitFigure,
+                restoreFigure,
+                openAxisEditor
+            },
+            { x: $t("plot.mouse.xAxisTitle"), y: $t("plot.mouse.yAxisTitle") }
+        );
+    }
+
+    // -- the axis editor ------------------------------------------------------
+
+    /** The open axis editor: the axis and the element it hangs from. */
+    let editor = $state<{ axis: ViewAxis; anchor: HTMLElement; time: boolean } | null>(null);
+
+    // The texts stay apart from `editor`: a new `editor` object makes the popover focus and select the field again.
+    let fromText = $state("");
+    let toText = $state("");
+
+    let fromInput = $state<HTMLInputElement | null>(null);
+
+    function openAxisEditor(axis: ViewAxis, anchor: HTMLElement) {
+        const u = chart;
+        if (!u || !anchor.isConnected) return;
+
+        const scale = u.scales[axis];
+        const time = !!scale.time;
+
+        fromText = formatAxisLimit(scale.min ?? 0, time);
+        toText = formatAxisLimit(scale.max ?? 1, time);
+        editor = { axis, anchor, time };
+    }
+
+    /** The fields follow the view while the editor is open, for example after Apply on a map. */
+    function syncEditor() {
+        const u = chart;
+        if (!u || !editor) return;
+
+        const scale = u.scales[editor.axis];
+        fromText = formatAxisLimit(scale.min ?? 0, editor.time);
+        toText = formatAxisLimit(scale.max ?? 1, editor.time);
+    }
+
+    function applyEditor() {
+        const u = chart;
+        if (!u || !editor) return;
+
+        const a = parseAxisLimit(fromText, editor.time);
+        const b = parseAxisLimit(toText, editor.time);
+
+        if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) {
+            let key: "plot.axisEditor.invalidNumbers" | "plot.axisEditor.invalidTimes" =
+                "plot.axisEditor.invalidNumbers";
+            if (editor.time) key = "plot.axisEditor.invalidTimes";
+            addToast({ key, type: "warning" });
+            return;
+        }
+
+        const axis = editor.axis;
+        setView(u, { [axis]: { min: Math.min(a, b), max: Math.max(a, b) } }, axis);
+    }
+
+    function onEditorKey(event: KeyboardEvent) {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        applyEditor();
+    }
+
+    /** The title of the axis in the editor: the axis title of the plot. */
+    function editorTitle(axis: ViewAxis): string {
+        if (axis === "x") return xTitle();
+        return yTitle();
+    }
+
+    // -- titles ---------------------------------------------------------------
+
     /** The title of the X axis. A cross section names its distance itself. */
     function xTitle(): string {
         if (plot.type === "cross-section") {
@@ -470,34 +689,40 @@
     /**
      * Build the scale of one axis.
      *
-     * uPlot auto-ranges the data and rounds the ends to readable tick values. That
-     * default also drives the drag-to-zoom: a zoom sets the scale min and max, and
-     * the next redraw reads them. A `range` that returned fixed ends would undo the
-     * zoom on every frame and leave the ticks at raw, unrounded values.
-     *
-     * Therefore a `range` function is attached only when the user pinned an end.
-     * It honours that end and leaves the other to the incoming value, which is the
-     * data extent at first draw and the zoom window after a drag.
+     * uPlot auto-ranges the data and rounds the ends to readable tick values. The
+     * range function of {@link rangeFor} keeps the view of the user over that
+     * default. Its `base` holds the ends that the user pinned, which set the first
+     * view: the pinned end, and the data extent for the other end.
      */
-    function scaleFor(axis: "x" | "y", time: boolean): uPlot.Scale {
+    function scaleFor(axis: "x" | "y", time: boolean, current: PlotSeries): uPlot.Scale {
         const config = plot[axis];
         const scale: uPlot.Scale = { time, dir: config.reverse ? -1 : 1 };
 
-        // A map sets its own view in its hooks, and the pinned ends go into the first view.
-        if (fixesMapShape()) return scale;
+        // A map starts at the data, in the shape of the plot box. Before the first
+        // layout the box has no size, and the ready hook sets the view.
+        if (fixesMapShape()) {
+            scale.range = rangeFor(axis, time, (u, dataMin, dataMax) => {
+                if (!(u.bbox.width > 0 && u.bbox.height > 0)) return [dataMin, dataMax];
+                const range = homeMapView(u, current)[axis];
+                return [range.min, range.max];
+            });
+            return scale;
+        }
 
         // A bar grows from zero, so the count axis must reach it. uPlot would
         // otherwise fit the range to the counts and cut the foot off every bar.
         const floorAtZero = plot.type === "histogram" && axis === "y";
 
+        let base: ((u: uPlot, min: number, max: number) => uPlot.Range.MinMax) | null = null;
         if (config.min !== null || config.max !== null || floorAtZero) {
-            scale.range = (_u, dataMin, dataMax) => {
+            base = (_u, dataMin, dataMax) => {
                 let min = config.min ?? dataMin;
                 if (floorAtZero && config.min === null) min = 0;
                 return [min, config.max ?? dataMax];
             };
         }
 
+        scale.range = rangeFor(axis, time, base);
         return scale;
     }
 
@@ -607,12 +832,12 @@
             ms: 1,
             padding: [topPad, rightPad, bottomPad, 6],
             legend: { show: false },
-            // Default uPlot interaction: drag a box to zoom, click to reset. The
-            // crosshair helps read a position off the axes. There is no tooltip.
-            cursor: { drag: { x: true, y: true } },
+            // The mouse layer handles every drag, so uPlot draws no selection. The
+            // crosshair helps read a position off the axes.
+            cursor: { drag: { x: false, y: false, setScale: false } },
             scales: {
-                x: scaleFor("x", current.xKind === "timestamp"),
-                y: scaleFor("y", current.yKind === "timestamp")
+                x: scaleFor("x", current.xKind === "timestamp", current),
+                y: scaleFor("y", current.yKind === "timestamp", current)
             },
             axes: [
                 axisOptions("x", xTitle(), style, grid),
@@ -620,20 +845,30 @@
             ],
             series: [{}, { scale: "y", paths: () => null, points: { show: false } }],
             hooks: {
-                // A map keeps its shape: from the first view, and after each zoom and resize.
+                // The first layout gives the true plot size, so the home view follows it.
+                // Then the view that the user left on this plot comes back.
                 ready: [
                     (u) => {
-                        if (fixesMapShape()) fitMapShape(u, homeMapView(u, current));
+                        if (fixesMapShape()) {
+                            home = homeMapView(u, current);
+                        } else {
+                            const sx = u.scales.x;
+                            const sy = u.scales.y;
+                            home = {
+                                x: { min: sx.min ?? 0, max: sx.max ?? 1 },
+                                y: { min: sy.min ?? 0, max: sy.max ?? 1 }
+                            };
+                        }
+
+                        const saved = savedView();
+                        if (saved) setView(u, saved, "both", false);
+                        else if (fixesMapShape()) setView(u, home, "both", false);
                     }
                 ],
-                setScale: [
-                    (u) => {
-                        if (fixesMapShape()) fitMapShape(u);
-                    }
-                ],
+                // A map keeps its shape after a resize.
                 setSize: [
                     (u) => {
-                        if (fixesMapShape()) fitMapShape(u);
+                        if (fixesMapShape()) refitMap(u, current);
                     }
                 ],
                 drawClear: [(u) => drawBackground(u, style.backgroundColor)],
@@ -742,7 +977,8 @@
      *
      * The canvas is the whole picture: the background, the contours and the colour
      * bar are all drawn on it, and not in the DOM beside it. Therefore the export
-     * is the canvas itself, and it matches the screen exactly.
+     * is the canvas itself, and it matches the screen exactly. A figure size sets
+     * the size of the canvas, so it sets the size of the file too.
      *
      * uPlot renders at the device pixel ratio, so the file comes out at the
      * resolution of the screen, not at CSS size.
@@ -762,18 +998,47 @@
         return true;
     }
 
-    /**
-     * Reset the view to show all data.
-     *
-     * uPlot's own dblclick handler already does this (autoScaleX, then the y scale
-     * auto-ranges from it) but isn't exposed as a method, so this dispatches the same
-     * event its native double-click binding listens for.
-     */
+    /** Reset the view to show all data. Returns false while the chart is not ready. */
     export function resetView(): boolean {
         if (!chart) return false;
 
-        chart.over.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, button: 0 }));
+        resetToHome(null);
+        return true;
+    }
 
+    /**
+     * Give the figure the shape of the data on a map, as large as the panel allows,
+     * so the map has no empty sides. The view goes back to the data.
+     *
+     * Returns false when the chart is no map that keeps its shape.
+     */
+    export function fitFigureToData(): boolean {
+        const u = chart;
+        const room = container?.parentElement;
+        if (!u || !series || !container || !room || !fixesMapShape()) return false;
+
+        const aspect = mapDataAspect(
+            resolveRange(series.xRange, plot.x.min, plot.x.max),
+            resolveRange(series.yRange, plot.y.min, plot.y.max)
+        );
+        const margin = {
+            width: container.offsetWidth - u.over.offsetWidth,
+            height: container.offsetHeight - u.over.offsetHeight
+        };
+        const space = { width: room.clientWidth, height: room.clientHeight };
+        const figure = figureForAspect(aspect, space, margin);
+
+        SAVED_VIEWS.delete(plot.id);
+        view = null;
+
+        let width: number | null = Math.round(figure.width);
+        if (figure.width >= space.width - 1) width = null;
+
+        let height: number | null = Math.round(figure.height);
+        if (figure.height >= space.height - 1) height = null;
+
+        commitFigure({ width, height });
+        resetToHome(null);
         return true;
     }
 
@@ -784,8 +1049,45 @@
     }
 </script>
 
-<div class="plot-canvas" style="--plot-background: {plot.style.backgroundColor};">
-    <div class="plot-host" bind:this={container} aria-label={plot.title || plot.name}></div>
+<div
+    class="plot-canvas"
+    class:figure-sized={figureSized}
+    style="--plot-background: {plot.style.backgroundColor};"
+>
+    <div class="plot-host" bind:this={container} aria-label={plot.title || plot.name}>
+        <div class="mouse-layer" aria-hidden="true">
+            {#if mouse.hover}
+                <div
+                    class="zone-hover {mouse.hover.kind}"
+                    style:left="{mouse.hover.rect.left}px"
+                    style:top="{mouse.hover.rect.top}px"
+                    style:width="{mouse.hover.rect.width}px"
+                    style:height="{mouse.hover.rect.height}px"
+                ></div>
+            {/if}
+            {#if mouse.zoomBox}
+                <div
+                    class="zoom-box"
+                    style:left="{mouse.zoomBox.left}px"
+                    style:top="{mouse.zoomBox.top}px"
+                    style:width="{mouse.zoomBox.width}px"
+                    style:height="{mouse.zoomBox.height}px"
+                ></div>
+            {/if}
+            {#if mouse.figureLabel}
+                <div
+                    class="figure-label"
+                    style:left="{mouse.figureLabel.x}px"
+                    style:top="{mouse.figureLabel.y}px"
+                >
+                    {$t("plot.mouse.figureSize", {
+                        width: mouse.figureLabel.width,
+                        height: mouse.figureLabel.height
+                    })}
+                </div>
+            {/if}
+        </div>
+    </div>
 
     {#if message}
         <div class="plot-message">
@@ -793,6 +1095,63 @@
         </div>
     {/if}
 </div>
+
+<Popover.Root
+    open={editor !== null}
+    onOpenChange={(open) => {
+        if (!open) editor = null;
+    }}
+>
+    {#if editor}
+        <Popover.Content
+            customAnchor={editor.anchor}
+            side={editor.axis === "x" ? "bottom" : "right"}
+            class="axis-editor"
+            onOpenAutoFocus={(event) => {
+                event.preventDefault();
+                fromInput?.focus();
+                fromInput?.select();
+            }}
+        >
+            <div class="axis-editor-head">
+                <b>{$t("plot.axisEditor.title", { axis: editor.axis.toUpperCase() })}</b>
+                {#if editorTitle(editor.axis)}<span>{editorTitle(editor.axis)}</span>{/if}
+            </div>
+
+            <div class="pair">
+                <label class="range-field">
+                    <span>{$t("plot.axisEditor.from")}</span>
+                    <Input
+                        bind:ref={fromInput}
+                        bind:value={fromText}
+                        placeholder={editor.time ? $t("plot.axisEditor.timePlaceholder") : ""}
+                        inputmode={editor.time ? "text" : "decimal"}
+                        spellcheck={false}
+                        onkeydown={onEditorKey}
+                    />
+                </label>
+                <label class="range-field">
+                    <span>{$t("plot.axisEditor.to")}</span>
+                    <Input
+                        bind:value={toText}
+                        placeholder={editor.time ? $t("plot.axisEditor.timePlaceholder") : ""}
+                        inputmode={editor.time ? "text" : "decimal"}
+                        spellcheck={false}
+                        onkeydown={onEditorKey}
+                    />
+                </label>
+            </div>
+
+            {#if editor.time}<p class="hint">{$t("plot.axisEditor.timesUtc")}</p>{/if}
+
+            <div class="axis-editor-foot">
+                <Button size="sm" onclick={applyEditor}>
+                    <CheckIcon size={14} />{$t("plot.axisEditor.apply")}
+                </Button>
+            </div>
+        </Popover.Content>
+    {/if}
+</Popover.Root>
 
 <style lang="scss">
     .plot-canvas {
@@ -802,16 +1161,72 @@
         border-radius: 0.5rem;
         overflow: hidden;
         background-color: var(--plot-background, #ffffff);
+        // A figure with a size of its own sits in the centre of the panel.
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+        place-items: center;
+
+        &.figure-sized {
+            background-color: var(--secondary, #f4f4f5);
+
+            .plot-host {
+                background-color: var(--plot-background, #ffffff);
+                box-shadow: 0 0 0 1px var(--border, #e5e7eb);
+            }
+        }
 
         .plot-host {
+            position: relative;
             width: 100%;
             height: 100%;
+            min-width: 0;
+            min-height: 0;
 
             // uPlot sizes its own canvas to the host. Let it fill the box.
             :global(.uplot),
             :global(.u-wrap) {
                 width: 100%;
                 height: 100%;
+            }
+        }
+
+        .mouse-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+
+            > div {
+                position: absolute;
+            }
+
+            .zone-hover {
+                &.axis {
+                    border-radius: 0.25rem;
+                    background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+                }
+
+                &.edge {
+                    border-radius: 0.125rem;
+                    background-color: var(--primary);
+                }
+            }
+
+            .zoom-box {
+                border: 1.5px dashed var(--primary);
+                background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+            }
+
+            .figure-label {
+                transform: translate(-50%, -50%);
+                padding: 0.125rem 0.4375rem;
+                border-radius: 0.25rem;
+                background-color: var(--primary);
+                color: var(--primary-foreground, #ffffff);
+                font-size: var(--font-size-xs);
+                font-weight: 600;
+                white-space: nowrap;
             }
         }
 
@@ -829,6 +1244,56 @@
                 max-width: 34rem;
                 color: var(--muted-foreground, #6b7280);
             }
+        }
+    }
+
+    :global(.axis-editor) {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 18rem;
+
+        .axis-editor-head {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            min-width: 0;
+
+            span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: var(--muted-foreground, #6b7280);
+                font-size: var(--font-size-xs);
+            }
+        }
+
+        .pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .range-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+
+            > span {
+                font-size: var(--font-size-xs);
+                color: var(--muted-foreground, #6b7280);
+            }
+        }
+
+        .axis-editor-foot {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .hint {
+            margin: 0;
+            font-size: var(--font-size-xs);
+            color: var(--muted-foreground, #6b7280);
         }
     }
 </style>

@@ -663,7 +663,9 @@
             "resetView": "Restablecer vista",
             "resetViewTitle": "Restablecer la vista del gráfico",
             "export": "Exportar PNG",
-            "exportTitle": "Exportar este gráfico como PNG"
+            "exportTitle": "Exportar este gráfico como PNG",
+            "controls": "Controles",
+            "controlsTitle": "Mostrar los controles del ratón del gráfico: zoom, mover, bordes y ejes"
         },
         "axis": {
             "crossSectionDistance": "Distancia a lo largo de la sección (km)",
@@ -881,7 +883,51 @@
             "colourModeBands": "En bandas",
             "advanced": "Avanzado",
             "radiusExactKm": "Radio exacto (km)",
-            "radiusExactAxes": "Radio exacto"
+            "radiusExactAxes": "Radio exacto",
+            "figureSize": "Tamaño de la figura (px)",
+            "figureSizeHint": "Vacío llena el panel. También puedes arrastrar un borde o una esquina del gráfico. Exportar PNG usa este tamaño.",
+            "figureWidth": "Ancho",
+            "figureHeight": "Alto",
+            "figureFill": "llenar",
+            "fillPanel": "Llenar el panel",
+            "fitFigure": "Ajustar la figura a los datos",
+            "fitFigureTitle": "Da a la figura la forma de los datos, para que el mapa no tenga lados vacíos",
+            "fitFigureNeedsMap": "Primero aplica un mapa con \"Mantener la forma del mapa (sin estirar)\" activado."
+        },
+        "controls": {
+            "title": "Controles del ratón",
+            "plotDrag": "Arrastrar con el botón izquierdo en el gráfico",
+            "plotDragText": "Mueve la vista.",
+            "boxDrag": "Arrastrar con el botón derecho en el gráfico",
+            "boxDragText": "Hace zoom al recuadro. Un recuadro plano hace zoom en un solo eje. Esc cancela.",
+            "wheel": "Rueda",
+            "wheelText": "Hace zoom en el puntero. Sobre un eje, hace zoom solo en ese eje.",
+            "edgeDrag": "Arrastrar un borde del gráfico",
+            "edgeDragText": "Cambia el tamaño de la figura. Una esquina cambia el ancho y el alto. Un mapa mantiene su forma. Esc cancela.",
+            "edgeDoubleClick": "Doble clic en un borde",
+            "edgeDoubleClickText": "Ese lado vuelve a llenar el panel.",
+            "axisDrag": "Arrastrar un eje",
+            "axisDragText": "Hacia la derecha o hacia arriba estira el eje (acerca). Hacia la izquierda o hacia abajo lo comprime (aleja). Mayús + arrastrar lo mueve.",
+            "axisClick": "Clic en un eje",
+            "axisClickText": "Escribe los límites Desde y Hasta.",
+            "doubleClick": "Doble clic",
+            "doubleClickText": "Restablece la vista. Sobre un eje, restablece solo ese eje.",
+            "hint": "La vista se queda en el gráfico cuando aplicas otros cambios. Restablecer vista vuelve a los datos."
+        },
+        "mouse": {
+            "xAxisTitle": "Eje X: arrastra para estirar o comprimir, Mayús + arrastrar para mover, rueda para zoom. Clic para escribir los límites. Doble clic para restablecer.",
+            "yAxisTitle": "Eje Y: arrastra para estirar o comprimir, Mayús + arrastrar para mover, rueda para zoom. Clic para escribir los límites. Doble clic para restablecer.",
+            "figureSize": "{width, number} × {height, number} px"
+        },
+        "axisEditor": {
+            "title": "Eje {axis}",
+            "from": "Desde",
+            "to": "Hasta",
+            "timesUtc": "Las horas están en UTC.",
+            "timePlaceholder": "AAAA-MM-DD hh:mm",
+            "apply": "Aplicar",
+            "invalidNumbers": "Escribe dos números diferentes.",
+            "invalidTimes": "Escribe dos horas diferentes, por ejemplo 2024-07-15 12:00."
         }
     },
     "palette": {

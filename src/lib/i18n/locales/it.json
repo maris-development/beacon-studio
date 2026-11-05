@@ -663,7 +663,9 @@
             "resetView": "Ripristina vista",
             "resetViewTitle": "Ripristina la vista del grafico",
             "export": "Esporta PNG",
-            "exportTitle": "Esporta questo grafico come PNG"
+            "exportTitle": "Esporta questo grafico come PNG",
+            "controls": "Controlli",
+            "controlsTitle": "Mostra i controlli del mouse del grafico: zoom, spostamento, bordi e assi"
         },
         "axis": {
             "crossSectionDistance": "Distanza lungo la sezione (km)",
@@ -881,7 +883,51 @@
             "colourModeBands": "A fasce",
             "advanced": "Avanzate",
             "radiusExactKm": "Raggio esatto (km)",
-            "radiusExactAxes": "Raggio esatto"
+            "radiusExactAxes": "Raggio esatto",
+            "figureSize": "Dimensione della figura (px)",
+            "figureSizeHint": "Vuoto riempie il pannello. Puoi anche trascinare un bordo o un angolo del grafico. Esporta PNG usa questa dimensione.",
+            "figureWidth": "Larghezza",
+            "figureHeight": "Altezza",
+            "figureFill": "riempi",
+            "fillPanel": "Riempi il pannello",
+            "fitFigure": "Adatta la figura ai dati",
+            "fitFigureTitle": "Dà alla figura la forma dei dati, così la mappa non ha lati vuoti",
+            "fitFigureNeedsMap": "Prima applica una mappa con \"Mantieni la forma della mappa (senza stiramento)\" attivo."
+        },
+        "controls": {
+            "title": "Controlli del mouse",
+            "plotDrag": "Trascinare con il tasto sinistro nel grafico",
+            "plotDragText": "Sposta la vista.",
+            "boxDrag": "Trascinare con il tasto destro nel grafico",
+            "boxDragText": "Zoom sul riquadro. Un riquadro piatto fa lo zoom su un solo asse. Esc annulla.",
+            "wheel": "Rotella",
+            "wheelText": "Zoom sul puntatore. Su un asse, zoom solo su quell'asse.",
+            "edgeDrag": "Trascinare un bordo del grafico",
+            "edgeDragText": "Ridimensiona la figura. Un angolo cambia la larghezza e l'altezza. Una mappa mantiene la sua forma. Esc annulla.",
+            "edgeDoubleClick": "Doppio clic su un bordo",
+            "edgeDoubleClickText": "Quel lato riempie di nuovo il pannello.",
+            "axisDrag": "Trascinare un asse",
+            "axisDragText": "A destra o in alto allunga l'asse (zoom avanti). A sinistra o in basso lo comprime (zoom indietro). Maiusc + trascinare lo sposta.",
+            "axisClick": "Clic su un asse",
+            "axisClickText": "Scrivi i limiti Da e A.",
+            "doubleClick": "Doppio clic",
+            "doubleClickText": "Ripristina la vista. Su un asse, ripristina solo quell'asse.",
+            "hint": "La vista resta sul grafico quando applichi altre modifiche. Ripristina vista torna ai dati."
+        },
+        "mouse": {
+            "xAxisTitle": "Asse X: trascina per allungare o comprimere, Maiusc + trascina per spostare, rotella per lo zoom. Clic per scrivere i limiti. Doppio clic per ripristinare.",
+            "yAxisTitle": "Asse Y: trascina per allungare o comprimere, Maiusc + trascina per spostare, rotella per lo zoom. Clic per scrivere i limiti. Doppio clic per ripristinare.",
+            "figureSize": "{width, number} × {height, number} px"
+        },
+        "axisEditor": {
+            "title": "Asse {axis}",
+            "from": "Da",
+            "to": "A",
+            "timesUtc": "Gli orari sono in UTC.",
+            "timePlaceholder": "AAAA-MM-GG hh:mm",
+            "apply": "Applica",
+            "invalidNumbers": "Scrivi due numeri diversi.",
+            "invalidTimes": "Scrivi due orari diversi, per esempio 2024-07-15 12:00."
         }
     },
     "palette": {

@@ -26,6 +26,9 @@
     import { InfoTip } from "$lib/components/ui/info-tip/index.js";
     import CheckIcon from "@lucide/svelte/icons/check";
     import Undo2Icon from "@lucide/svelte/icons/undo-2";
+    import MaximizeIcon from "@lucide/svelte/icons/maximize";
+    import ScanIcon from "@lucide/svelte/icons/scan";
+    import Button from "@/components/buttons/Button.svelte";
     import OptionLabel from "./OptionLabel.svelte";
     import PlotSection from "./PlotSection.svelte";
     import PlotSlider from "./PlotSlider.svelte";
@@ -67,13 +70,21 @@
         type PlotType,
         type ColorScale
     } from "@/plots/plot-config";
+    import { MIN_FIGURE } from "@/plots/plot-view";
     import { CROSS_SECTION_AXIS_LABEL, HISTOGRAM_AXIS_LABEL } from "@/plots/plot-data";
     import { scaleLengthsOf } from "@/plots/interpolation";
     import { DEFAULT_SOLID_PALETTE_ID, getColormap } from "@/colors/palettes";
     import { Utils } from "@/utils";
     import { t, type MessageKey } from "@/i18n";
 
-    let { controller }: { controller: ChartExplorerController } = $props();
+    let {
+        controller,
+        onFitFigure = null
+    }: {
+        controller: ChartExplorerController;
+        /** Give the figure the shape of the data on a map. Absent while the canvas is not ready. */
+        onFitFigure?: (() => void) | null;
+    } = $props();
 
     /** Which axis a control edits. */
     type AxisName = "x" | "y" | "z";
@@ -123,8 +134,23 @@
             }
 
             // The same plot changed under the panel. Follow it, unless the user has
-            // edits of their own: theirs win.
-            if (!userEdited) draft = Utils.cloneObject(plot);
+            // edits of their own: theirs win. The figure size changes on the canvas
+            // with no Apply, so the draft takes it in both cases.
+            if (!userEdited) {
+                draft = Utils.cloneObject(plot);
+                return;
+            }
+
+            const edited = draft;
+            if (!edited) return;
+            draft = {
+                ...edited,
+                style: {
+                    ...edited.style,
+                    figureWidth: plot.style.figureWidth,
+                    figureHeight: plot.style.figureHeight
+                }
+            };
         });
     });
 
@@ -438,6 +464,13 @@
         }
 
         return Math.round(parsed);
+    }
+
+    /** A figure side from a field: whole pixels, at least `min`. An empty field fills the panel. */
+    function figureSide(value: string, min: number): number | null {
+        const parsed = numberOrNull(value);
+        if (parsed === null || parsed <= 0) return null;
+        return Math.max(Math.round(parsed), min);
     }
 
     /** An empty field means "use the column name", which the model stores as null. */
@@ -1322,6 +1355,18 @@
                                     text={$t("plot.panel.keepMapShapeHint")}
                                 />
                             </div>
+                            {#if draft.basemap.fixAspect && onFitFigure}
+                                <div class="button-row">
+                                    <Button
+                                        variant="outline"
+                                        size="xs"
+                                        title={$t("plot.panel.fitFigureTitle")}
+                                        onclick={onFitFigure}
+                                    >
+                                        <ScanIcon size={13} />{$t("plot.panel.fitFigure")}
+                                    </Button>
+                                </div>
+                            {/if}
                         {:else}
                             <p class="hint">{$t("plot.panel.basemapNeedsMap")}</p>
                         {/if}
@@ -1332,6 +1377,61 @@
             <details class="property-subsection">
                 <summary>{$t("plot.panel.canvas")}</summary>
                 <div class="subsection-body">
+                    <div class="field">
+                        <OptionLabel
+                            id="figureSizeLabel"
+                            text={$t("plot.panel.figureSize")}
+                            info={$t("plot.panel.figureSizeHint")}
+                        />
+                        <div class="pair" role="group" aria-labelledby="figureSizeLabel">
+                            <label class="range-field">
+                                <span>{$t("plot.panel.figureWidth")}</span>
+                                <Input
+                                    type="number"
+                                    min={MIN_FIGURE.width}
+                                    step={10}
+                                    value={draft.style.figureWidth ?? ""}
+                                    placeholder={$t("plot.panel.figureFill")}
+                                    oninput={(event) =>
+                                        patchStyle({
+                                            figureWidth: figureSide(
+                                                event.currentTarget.value,
+                                                MIN_FIGURE.width
+                                            )
+                                        })}
+                                />
+                            </label>
+                            <label class="range-field">
+                                <span>{$t("plot.panel.figureHeight")}</span>
+                                <Input
+                                    type="number"
+                                    min={MIN_FIGURE.height}
+                                    step={10}
+                                    value={draft.style.figureHeight ?? ""}
+                                    placeholder={$t("plot.panel.figureFill")}
+                                    oninput={(event) =>
+                                        patchStyle({
+                                            figureHeight: figureSide(
+                                                event.currentTarget.value,
+                                                MIN_FIGURE.height
+                                            )
+                                        })}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                    {#if draft.style.figureWidth !== null || draft.style.figureHeight !== null}
+                        <div class="button-row">
+                            <Button
+                                variant="outline"
+                                size="xs"
+                                onclick={() =>
+                                    patchStyle({ figureWidth: null, figureHeight: null })}
+                            >
+                                <MaximizeIcon size={13} />{$t("plot.panel.fillPanel")}
+                            </Button>
+                        </div>
+                    {/if}
                     <div class="option-row">
                         <label class="checkbox-field"
                             ><Checkbox
@@ -2466,6 +2566,12 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.5rem;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
         }
 
         .hint {

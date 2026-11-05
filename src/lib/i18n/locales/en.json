@@ -663,7 +663,9 @@
             "resetView": "Reset view",
             "resetViewTitle": "Reset the plot view",
             "export": "Export PNG",
-            "exportTitle": "Export this plot as PNG"
+            "exportTitle": "Export this plot as PNG",
+            "controls": "Controls",
+            "controlsTitle": "Show the mouse controls of the plot: zoom, move, plot edges and axes"
         },
         "axis": {
             "crossSectionDistance": "Distance along section (km)",
@@ -881,7 +883,51 @@
             "colourModeBands": "In bands",
             "advanced": "Advanced",
             "radiusExactKm": "Exact radius (km)",
-            "radiusExactAxes": "Exact radius"
+            "radiusExactAxes": "Exact radius",
+            "figureSize": "Figure size (px)",
+            "figureSizeHint": "Empty fills the panel. You can also drag an edge or a corner of the plot. Export PNG uses this size.",
+            "figureWidth": "Width",
+            "figureHeight": "Height",
+            "figureFill": "fill",
+            "fillPanel": "Fill the panel",
+            "fitFigure": "Fit the figure to the data",
+            "fitFigureTitle": "Give the figure the shape of the data, so the map has no empty sides",
+            "fitFigureNeedsMap": "Apply a map with \"Keep the map shape (no stretch)\" on first."
+        },
+        "controls": {
+            "title": "Mouse controls",
+            "plotDrag": "Left-drag in the plot",
+            "plotDragText": "Move the view.",
+            "boxDrag": "Right-drag in the plot",
+            "boxDragText": "Zoom to the box. A flat box zooms one axis. Esc cancels.",
+            "wheel": "Wheel",
+            "wheelText": "Zoom at the pointer. On an axis, zoom that axis only.",
+            "edgeDrag": "Drag a plot edge",
+            "edgeDragText": "Resize the figure. A corner changes the width and the height. A map keeps its shape. Esc cancels.",
+            "edgeDoubleClick": "Double-click an edge",
+            "edgeDoubleClickText": "That side fills the panel again.",
+            "axisDrag": "Drag an axis",
+            "axisDragText": "Right or up stretches the axis (zoom in). Left or down squeezes it (zoom out). Shift+drag moves it.",
+            "axisClick": "Click an axis",
+            "axisClickText": "Type the From and To limits.",
+            "doubleClick": "Double-click",
+            "doubleClickText": "Reset the view. On an axis, reset that axis only.",
+            "hint": "The view stays with the plot when you apply other changes. Reset view goes back to the data."
+        },
+        "mouse": {
+            "xAxisTitle": "X axis: drag to stretch or squeeze, Shift+drag to move, wheel to zoom. Click to type the limits. Double-click to reset.",
+            "yAxisTitle": "Y axis: drag to stretch or squeeze, Shift+drag to move, wheel to zoom. Click to type the limits. Double-click to reset.",
+            "figureSize": "{width, number} × {height, number} px"
+        },
+        "axisEditor": {
+            "title": "{axis} axis",
+            "from": "From",
+            "to": "To",
+            "timesUtc": "Times are UTC.",
+            "timePlaceholder": "YYYY-MM-DD hh:mm",
+            "apply": "Apply",
+            "invalidNumbers": "Type two different numbers.",
+            "invalidTimes": "Type two different times, for example 2024-07-15 12:00."
         }
     },
     "palette": {
