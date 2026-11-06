@@ -98,7 +98,7 @@ The build takes these arguments:
 | `BASE_PATH` | empty | Serves the app from a subdirectory, for example `/studio`. |
 | `STUDIO_TELEMETRY` | `off` | `on` sends usage events to beacon-datalake.org. |
 | `STUDIO_BRAND` | `default` | The brand folder in `src/brands/`. |
-| `GIT_COMMIT`, `GIT_BRANCH` | empty | The commit link in the app. The image has no `.git` folder. |
+| `GIT_COMMIT`, `GIT_BRANCH` | from `.git` | The commit link in the app. Set them only when the build folder has no `.git`, for example a zip download. |
 
 Example for `https://example.org/studio`:
 

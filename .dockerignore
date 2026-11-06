@@ -1,4 +1,3 @@
-.git
 node_modules
 build
 .svelte-kit
@@ -10,5 +9,3 @@ src-tauri/target
 .superpowers
 *.parquet
 *.geoparquet
-Dockerfile
-.dockerignore

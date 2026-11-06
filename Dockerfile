@@ -5,6 +5,10 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
+# Vite reads the commit and branch from .git. A Windows checkout has CRLF files, and autocrlf keeps them clean.
+RUN apk add --no-cache git \
+    && git config --global core.autocrlf input
+
 COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
@@ -14,7 +18,7 @@ COPY . .
 ARG BASE_PATH=""
 ARG STUDIO_TELEMETRY=off
 ARG STUDIO_BRAND=""
-# The build context has no .git folder. CI can pass the commit for the About page.
+# These override the values from .git, for a build context without .git.
 ARG GIT_COMMIT=""
 ARG GIT_BRANCH=""
 
