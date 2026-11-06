@@ -15,6 +15,8 @@
     import ResetIcon from "@lucide/svelte/icons/refresh-ccw";
     import PencilLineIcon from "@lucide/svelte/icons/pencil-line";
     import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+    import MouseIcon from "@lucide/svelte/icons/mouse";
+    import * as Popover from "$lib/components/ui/popover/index.js";
     import { addToast } from "@/stores/toasts";
     import { t } from "@/i18n";
     import type { ChartExplorerController } from "./ChartExplorerController.svelte";
@@ -32,6 +34,19 @@
     } = $props();
 
     const canClose = $derived(controller.plots.length > 1);
+
+    /** The mouse controls of the canvas, in the order of the help list. See `PlotMouse.svelte.ts`. */
+    const CONTROLS = [
+        ["plot.controls.plotDrag", "plot.controls.plotDragText"],
+        ["plot.controls.boxDrag", "plot.controls.boxDragText"],
+        ["plot.controls.wheel", "plot.controls.wheelText"],
+        ["plot.controls.edgeDrag", "plot.controls.edgeDragText"],
+        ["plot.controls.edgeDoubleClick", "plot.controls.edgeDoubleClickText"],
+        ["plot.controls.axisDrag", "plot.controls.axisDragText"],
+        ["plot.controls.axisClick", "plot.controls.axisClickText"],
+        ["plot.controls.hover", "plot.controls.hoverText"],
+        ["plot.controls.doubleClick", "plot.controls.doubleClickText"]
+    ] as const;
     let editingPlotId = $state<string | null>(null);
     let editingName = $state("");
     let isCommittingFromKeyboard = $state(false);
@@ -182,6 +197,23 @@
         </button>
     </div>
 
+    <Popover.Root>
+        <Popover.Trigger class="action" title={$t("plot.tabs.controlsTitle")}>
+            <MouseIcon size={14} />
+            <span>{$t("plot.tabs.controls")}</span>
+        </Popover.Trigger>
+        <Popover.Content align="end" class="plot-controls-help">
+            <h4>{$t("plot.controls.title")}</h4>
+            <dl>
+                {#each CONTROLS as [term, text] (term)}
+                    <dt>{$t(term)}</dt>
+                    <dd>{$t(text)}</dd>
+                {/each}
+            </dl>
+            <p class="hint">{$t("plot.controls.hint")}</p>
+        </Popover.Content>
+    </Popover.Root>
+
     {#if onResetView}
         <button
             type="button"
@@ -301,7 +333,8 @@
             }
         }
 
-        .action {
+        .action,
+        :global(.action[data-slot="popover-trigger"]) {
             display: flex;
             align-items: center;
             gap: 0.3125rem;
@@ -321,6 +354,38 @@
             &.export {
                 margin-bottom: 0.25rem;
             }
+        }
+    }
+
+    :global(.plot-controls-help) {
+        width: 24rem;
+        max-height: min(32rem, 80vh);
+        overflow-y: auto;
+
+        h4 {
+            margin-bottom: 0.5rem;
+        }
+
+        dl {
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            gap: 0.375rem 0.75rem;
+            font-size: var(--font-size-xs);
+        }
+
+        dt {
+            font-weight: 600;
+        }
+
+        dd {
+            margin: 0;
+            color: var(--muted-foreground);
+        }
+
+        .hint {
+            margin-top: 0.625rem;
+            font-size: var(--font-size-xs);
+            color: var(--muted-foreground);
         }
     }
 </style>

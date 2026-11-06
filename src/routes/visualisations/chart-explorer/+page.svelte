@@ -198,6 +198,13 @@
 
     onDestroy(() => charts.cancelPrepare());
 
+    // Load the land of a map apart from the rebuild, so a basemap switch does not
+    // walk the rows again.
+    $effect(() => {
+        const request = charts.geographyRequest;
+        untrack(() => void charts.applyGeography(request));
+    });
+
     // -- export --------------------------------------------------------------
 
     let plotCanvas: ReturnType<typeof PlotCanvas> | null = $state(null);
@@ -211,6 +218,11 @@
 
     function resetView() {
         plotCanvas?.resetView();
+    }
+
+    function fitFigure() {
+        if (plotCanvas?.fitFigureToData()) return;
+        addToast({ type: "warning", key: "plot.panel.fitFigureNeedsMap" });
     }
 </script>
 
@@ -236,7 +248,7 @@
                 <PlotTabs controller={charts} onExport={exportPng} onResetView={resetView} />
 
                 <div class="plot-layout">
-                    <PlotConfigPanel controller={charts} />
+                    <PlotConfigPanel controller={charts} onFitFigure={fitFigure} />
 
                     <div class="plot-area">
                         {#if charts.activePlot}
@@ -247,7 +259,11 @@
                                 caption={charts.caption}
                                 contours={charts.contours}
                                 interpolation={charts.interpolation}
+                                geography={charts.geography}
+                                map={charts.mapPlot}
                                 message={charts.message}
+                                rowCells={(row, skip, limit) => charts.rowCells(row, skip, limit)}
+                                onPlotChange={(next) => charts.updatePlot(next)}
                                 onBusyChange={(busy) => charts.setCanvasBusy(busy)}
                             />
                         {/if}

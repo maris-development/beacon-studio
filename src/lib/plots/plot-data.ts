@@ -13,28 +13,34 @@
  * These functions are pure. They take a table and a config, and they return
  * data. No svelte, no canvas.
  */
-import * as ApacheArrow from 'apache-arrow';
-import { ApacheArrowUtils } from '@/arrow-utils';
-import { makeAlongLineProjection } from '@/geo/along-line';
+import * as ApacheArrow from "apache-arrow";
+import { ApacheArrowUtils } from "@/arrow-utils";
+import { makeAlongLineProjection } from "@/geo/along-line";
 import {
-	resolveCoordinateColumns,
-	type CoordinatePair,
-	type SpatialSelection
-} from '@/geo/spatial-selection';
-import { MAX_LINE_GROUPS, usesZColumn, type PlotConfig } from './plot-config';
-import { message, type Message } from '@/i18n';
+    resolveCoordinateColumns,
+    type CoordinatePair,
+    type SpatialSelection
+} from "@/geo/spatial-selection";
+import {
+    CATEGORY_SLOTS,
+    MAX_LINE_GROUPS,
+    OTHER_GROUP,
+    usesZColumn,
+    type PlotConfig
+} from "./plot-config";
+import { message, type Message } from "@/i18n";
 
 /** How the values of a column are read, and how a tick label is formatted. */
-export type PlotColumnKind = 'number' | 'timestamp';
+export type PlotColumnKind = "number" | "timestamp";
 
 export interface PlotColumn {
-	name: string;
-	kind: PlotColumnKind;
+    name: string;
+    kind: PlotColumnKind;
 }
 
 export interface PlotRange {
-	min: number;
-	max: number;
+    min: number;
+    max: number;
 }
 
 /**
@@ -43,47 +49,86 @@ export interface PlotRange {
  * in the order that the stroke runs.
  */
 export interface PlotGroup {
-	/** The value of the group column, as text. This is the legend entry. */
-	key: string;
-	start: number;
-	end: number;
+    /** The value of the group column, as text. This is the legend entry. */
+    key: string;
+    start: number;
+    end: number;
 }
 
 export interface PlotSeries {
-	/** One entry per kept row. The three arrays share their indices. */
-	x: Float64Array;
-	y: Float64Array;
-	/** Null when the plot has no Z axis. */
-	z: Float64Array | null;
-	xRange: PlotRange;
-	yRange: PlotRange;
-	/** Null when the plot has no Z axis. */
-	zRange: PlotRange | null;
-	xKind: PlotColumnKind;
-	yKind: PlotColumnKind;
-	zKind: PlotColumnKind | null;
-	/** Rows that had no usable value on one of the used axes. */
-	skippedRows: number;
-	/**
-	 * The strokes of a line plot, in draw order. Null for every other type, and
-	 * for a line plot that joins all its rows into one stroke.
-	 */
-	groups: PlotGroup[] | null;
-	/** Groups past {@link MAX_LINE_GROUPS} that the plot does not draw. */
-	droppedGroups: number;
-	/** The width of one bar of a histogram, in X units. Null for every other type. */
-	binWidth: number | null;
-	/**
-	 * The row count before sampling. Null when the plot draws every row.
-	 * See `sampling.ts`.
-	 */
-	sampledFrom: number | null;
+    /** One entry per kept row. The three arrays share their indices. */
+    x: Float64Array;
+    y: Float64Array;
+    /** Null when the plot has no Z axis. */
+    z: Float64Array | null;
+    xRange: PlotRange;
+    yRange: PlotRange;
+    /** Null when the plot has no Z axis. */
+    zRange: PlotRange | null;
+    xKind: PlotColumnKind;
+    yKind: PlotColumnKind;
+    zKind: PlotColumnKind | null;
+    /** Rows that had no usable value on one of the used axes. */
+    skippedRows: number;
+    /**
+     * The strokes of a line plot, in draw order. Null for every other type, and
+     * for a line plot that joins all its rows into one stroke.
+     */
+    groups: PlotGroup[] | null;
+    /** Groups past {@link MAX_LINE_GROUPS} that the plot does not draw. */
+    droppedGroups: number;
+    /** The width of one bar of a histogram, in X units. Null for every other type. */
+    binWidth: number | null;
+    /**
+     * The row count before sampling. Null when the plot draws every row.
+     * See `sampling.ts`.
+     */
+    sampledFrom: number | null;
+    /**
+     * The table row of every point, for the hover tooltip. Null for a histogram,
+     * whose points are bins.
+     */
+    rowIndex: Uint32Array | null;
+    /** The groups of a text colour column. Null when the colour column holds numbers, or is absent. */
+    categories: PlotCategories | null;
+}
+
+export interface PlotCategoryGroup {
+    /** The value of the colour column, as text. */
+    name: string;
+    /** The points of the group in the full series. */
+    rows: number;
+}
+
+/**
+ * The groups of a text colour column. The largest {@link CATEGORY_SLOTS} groups
+ * get a series colour each. The rest share the grey "Other" group.
+ */
+export interface PlotCategories {
+    /** Every group, in the order of first sight. */
+    list: PlotCategoryGroup[];
+    /** The group of every point, as an index into {@link list}. */
+    index: Uint32Array;
+    /** The colour slot of every group. -1 puts the group in "Other". */
+    slotOf: Int16Array;
+    /** The groups with a colour, in legend order. */
+    legend: number[];
+    /** The groups in "Other", and their points. */
+    otherGroups: number;
+    otherRows: number;
+}
+
+/** One cell of a table row, for the hover tooltip. */
+export interface PlotRowCell {
+    name: string;
+    kind: PlotColumnKind | "text";
+    value: number | string;
 }
 
 export type PlotDataResult =
-	| { ok: true; series: PlotSeries }
-	/** The plot cannot draw. `message` is the reason for the user. */
-	| { ok: false; message: Message };
+    | { ok: true; series: PlotSeries }
+    /** The plot cannot draw. `message` is the reason for the user. */
+    | { ok: false; message: Message };
 
 /**
  * The counts that the plot puts in its caption.
@@ -102,47 +147,70 @@ export type PlotDataResult =
  * the same object while the plot draws every point.
  */
 export function formatSeriesCaption(
-	rowCount: number,
-	series: PlotSeries,
-	display: PlotSeries
+    rowCount: number,
+    series: PlotSeries,
+    display: PlotSeries
 ): Message {
-	const total = Math.max(0, rowCount - series.skippedRows);
-	if (display.sampledFrom === null) return message('plot.caption.total', { total });
+    const total = Math.max(0, rowCount - series.skippedRows);
+    if (display.sampledFrom === null) return message("plot.caption.total", { total });
 
-	const shown = display.x.length;
-	const percent = (shown / display.sampledFrom) * 100;
+    const shown = display.x.length;
+    const percent = (shown / display.sampledFrom) * 100;
 
-	// A whole number reads better, but a hard sample of a huge result lands below
-	// one percent, where rounding would show `0%`.
-	let rounded = Math.round(percent);
-	if (percent < 1) rounded = Number(percent.toFixed(1));
+    // A whole number reads better, but a hard sample of a huge result lands below
+    // one percent, where rounding would show `0%`.
+    let rounded = Math.round(percent);
+    if (percent < 1) rounded = Number(percent.toFixed(1));
 
-	return message('plot.caption.sampled', { total, shown, percent: rounded });
+    return message("plot.caption.sampled", { total, shown, percent: rounded });
 }
 
 /** What a cross section plot needs beyond the table: the line that the user drew. */
 export interface PlotDataContext {
-	/** The spatial filter of the query. A cross section plot reads its line. */
-	selection?: SpatialSelection | null;
-	/** The stored coordinate pair of the block, or null to detect it. */
-	coordinateColumns?: CoordinatePair | null;
+    /** The spatial filter of the query. A cross section plot reads its line. */
+    selection?: SpatialSelection | null;
+    /** The stored coordinate pair of the block, or null to detect it. */
+    coordinateColumns?: CoordinatePair | null;
+}
+
+/**
+ * True when a scatter plot puts the longitude on X and the latitude on Y. Only such a plot is a map,
+ * where land and sea mean something.
+ *
+ * With a series, the values must also fit the globe. A longitude can run from 0 to 360, as in ERA5.
+ */
+export function isMapPlot(
+    plot: PlotConfig,
+    coordinateColumns: CoordinatePair | null | undefined,
+    columnNames: string[],
+    series: PlotSeries | null = null
+): boolean {
+    if (plot.type !== "scatter") return false;
+
+    const pair = resolveCoordinateColumns(coordinateColumns, columnNames);
+    if (!pair) return false;
+    if (plot.x.column !== pair.longitude || plot.y.column !== pair.latitude) return false;
+    if (!series) return true;
+
+    const { xRange, yRange } = series;
+    return xRange.min >= -360 && xRange.max <= 360 && yRange.min >= -90 && yRange.max <= 90;
 }
 
 // -- columns -----------------------------------------------------------------
 
 function kindOfType(type: ApacheArrow.DataType): PlotColumnKind | null {
-	switch (type.typeId) {
-		case ApacheArrow.Type.Int:
-		case ApacheArrow.Type.Float:
-			return 'number';
+    switch (type.typeId) {
+        case ApacheArrow.Type.Int:
+        case ApacheArrow.Type.Float:
+            return "number";
 
-		case ApacheArrow.Type.Timestamp:
-		case ApacheArrow.Type.Date:
-			return 'timestamp';
+        case ApacheArrow.Type.Timestamp:
+        case ApacheArrow.Type.Date:
+            return "timestamp";
 
-		default:
-			return null;
-	}
+        default:
+            return null;
+    }
 }
 
 /**
@@ -154,16 +222,16 @@ function kindOfType(type: ApacheArrow.DataType): PlotColumnKind | null {
  * well: arrow returns it as a big number object, which has no place on a canvas.
  */
 export function plottableColumns(table: ApacheArrow.Table | null | undefined): PlotColumn[] {
-	if (!table) return [];
+    if (!table) return [];
 
-	const columns: PlotColumn[] = [];
+    const columns: PlotColumn[] = [];
 
-	for (const field of table.schema.fields) {
-		const kind = kindOfType(field.type);
-		if (kind) columns.push({ name: field.name, kind });
-	}
+    for (const field of table.schema.fields) {
+        const kind = kindOfType(field.type);
+        if (kind) columns.push({ name: field.name, kind });
+    }
 
-	return columns;
+    return columns;
 }
 
 /**
@@ -174,53 +242,182 @@ export function plottableColumns(table: ApacheArrow.Table | null | undefined): P
  * type is still out: the geometry column has no readable label.
  */
 export function groupableColumns(table: ApacheArrow.Table | null | undefined): PlotColumn[] {
-	if (!table) return [];
+    if (!table) return [];
 
-	const columns: PlotColumn[] = [];
+    const columns: PlotColumn[] = [];
 
-	for (const field of table.schema.fields) {
-		const kind = kindOfType(field.type);
+    for (const field of table.schema.fields) {
+        const kind = kindOfType(field.type);
 
-		if (kind) {
-			columns.push({ name: field.name, kind });
-			continue;
-		}
+        if (kind) {
+            columns.push({ name: field.name, kind });
+            continue;
+        }
 
-		switch (field.type.typeId) {
-			case ApacheArrow.Type.Utf8:
-			case ApacheArrow.Type.LargeUtf8:
-			case ApacheArrow.Type.Bool:
-			case ApacheArrow.Type.Dictionary:
-				columns.push({ name: field.name, kind: 'number' });
-				break;
-		}
-	}
+        switch (field.type.typeId) {
+            case ApacheArrow.Type.Utf8:
+            case ApacheArrow.Type.LargeUtf8:
+            case ApacheArrow.Type.Bool:
+            case ApacheArrow.Type.Dictionary:
+                columns.push({ name: field.name, kind: "number" });
+                break;
+        }
+    }
 
-	return columns;
+    return columns;
+}
+
+function isTextType(type: ApacheArrow.DataType): boolean {
+    switch (type.typeId) {
+        case ApacheArrow.Type.Utf8:
+        case ApacheArrow.Type.LargeUtf8:
+        case ApacheArrow.Type.Bool:
+        case ApacheArrow.Type.Dictionary:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
+/**
+ * The columns of text that can colour a scatter, one colour per value. A text
+ * column cannot give a position, so it is not in {@link plottableColumns}.
+ */
+export function textColumns(table: ApacheArrow.Table | null | undefined): string[] {
+    if (!table) return [];
+    return table.schema.fields.filter((field) => isTextType(field.type)).map((field) => field.name);
+}
+
+/** The text of every row in one text column. A null stays null. */
+function readTextKeys(table: ApacheArrow.Table, name: string): Array<string | null> | null {
+    const vector = table.getChild(name);
+    if (!vector || !isTextType(vector.type)) return null;
+
+    const rows = table.numRows;
+    const keys = new Array<string | null>(rows);
+
+    for (let i = 0; i < rows; i++) {
+        const value = vector.get(i);
+        if (value === null || value === undefined) keys[i] = null;
+        else keys[i] = String(value);
+    }
+
+    return keys;
+}
+
+/** The text of a group of a text colour column, or {@link OTHER_GROUP} for a group without a colour. */
+export function categoryKeyOf(categories: PlotCategories, group: number): string {
+    if (categories.slotOf[group] < 0) return OTHER_GROUP;
+    return categories.list[group].name;
+}
+
+/** A natural sort of text, so "Station 2" comes before "Station 10". */
+const naturalCompare = new Intl.Collator("en", { numeric: true, sensitivity: "base" }).compare;
+
+/**
+ * Sort the points of a text colour column into groups. The largest groups get a
+ * colour, in the order of their size. A tie sorts by name.
+ */
+function buildCategories(keys: ReadonlyArray<string | null>, rows: Uint32Array): PlotCategories {
+    const ids = new Map<string, number>();
+    const list: PlotCategoryGroup[] = [];
+    const index = new Uint32Array(rows.length);
+
+    for (let point = 0; point < rows.length; point++) {
+        const key = keys[rows[point]] as string;
+        let group = ids.get(key);
+
+        if (group === undefined) {
+            group = list.length;
+            ids.set(key, group);
+            list.push({ name: key, rows: 0 });
+        }
+
+        list[group].rows++;
+        index[point] = group;
+    }
+
+    const bySize = list
+        .map((_, group) => group)
+        .sort((a, b) => list[b].rows - list[a].rows || naturalCompare(list[a].name, list[b].name));
+    const legend = bySize.slice(0, CATEGORY_SLOTS);
+
+    const slotOf = new Int16Array(list.length).fill(-1);
+    legend.forEach((group, slot) => {
+        slotOf[group] = slot;
+    });
+
+    let colouredRows = 0;
+    for (const group of legend) colouredRows += list[group].rows;
+
+    return {
+        list,
+        index,
+        slotOf,
+        legend,
+        otherGroups: list.length - legend.length,
+        otherRows: rows.length - colouredRows
+    };
+}
+
+/**
+ * The cells of one table row, for the hover tooltip: at most `limit` columns,
+ * without the columns in `skip`. A null cell and a nested column are left out.
+ */
+export function readRowCells(
+    table: ApacheArrow.Table,
+    row: number,
+    skip: ReadonlyArray<string>,
+    limit: number
+): PlotRowCell[] {
+    const cells: PlotRowCell[] = [];
+    if (row < 0 || row >= table.numRows) return cells;
+
+    for (const field of table.schema.fields) {
+        if (cells.length >= limit) break;
+        if (skip.includes(field.name)) continue;
+
+        const kind = kindOfType(field.type);
+        if (!kind && !isTextType(field.type)) continue;
+
+        const value = table.getChild(field.name)?.get(row);
+        if (value === null || value === undefined) continue;
+
+        if (!kind) {
+            cells.push({ name: field.name, kind: "text", value: String(value) });
+            continue;
+        }
+
+        const number = Number(value);
+        if (Number.isFinite(number)) cells.push({ name: field.name, kind, value: number });
+    }
+
+    return cells;
 }
 
 /** The label of every row in one column. A null becomes {@link NO_GROUP_KEY}. */
-export const NO_GROUP_KEY = '(no value)';
+export const NO_GROUP_KEY = "(no value)";
 
 export function readGroupKeys(table: ApacheArrow.Table, name: string): string[] | null {
-	const vector = table.getChild(name);
-	if (!vector) return null;
+    const vector = table.getChild(name);
+    if (!vector) return null;
 
-	const rows = table.numRows;
-	const keys = new Array<string>(rows);
+    const rows = table.numRows;
+    const keys = new Array<string>(rows);
 
-	for (let i = 0; i < rows; i++) {
-		const value = vector.get(i);
+    for (let i = 0; i < rows; i++) {
+        const value = vector.get(i);
 
-		if (value === null || value === undefined) {
-			keys[i] = NO_GROUP_KEY;
-			continue;
-		}
+        if (value === null || value === undefined) {
+            keys[i] = NO_GROUP_KEY;
+            continue;
+        }
 
-		keys[i] = String(value);
-	}
+        keys[i] = String(value);
+    }
 
-	return keys;
+    return keys;
 }
 
 /**
@@ -233,46 +430,46 @@ export function readGroupKeys(table: ApacheArrow.Table, name: string): string[] 
  * Returns null when the table has no such column.
  */
 export function readNumericColumn(
-	table: ApacheArrow.Table,
-	name: string
+    table: ApacheArrow.Table,
+    name: string
 ): { values: Float64Array; kind: PlotColumnKind } | null {
-	const vector = table.getChild(name);
-	if (!vector) return null;
+    const vector = table.getChild(name);
+    if (!vector) return null;
 
-	const kind = kindOfType(vector.type);
-	if (!kind) return null;
+    const kind = kindOfType(vector.type);
+    if (!kind) return null;
 
-	const rows = table.numRows;
-	const values = new Float64Array(rows);
+    const rows = table.numRows;
+    const values = new Float64Array(rows);
 
-	// A column with no nulls can go through the typed array in one step. That is
-	// the common case, and it avoids one `get()` call per row.
-	if (
-		ApacheArrowUtils.rawValuesAreDecoded(vector.type) &&
-		vector.nullCount === 0 &&
-		vector.data.length === 1
-	) {
-		const raw = vector.toArray();
+    // A column with no nulls can go through the typed array in one step. That is
+    // the common case, and it avoids one `get()` call per row.
+    if (
+        ApacheArrowUtils.rawValuesAreDecoded(vector.type) &&
+        vector.nullCount === 0 &&
+        vector.data.length === 1
+    ) {
+        const raw = vector.toArray();
 
-		for (let i = 0; i < rows; i++) {
-			values[i] = Number(raw[i]);
-		}
+        for (let i = 0; i < rows; i++) {
+            values[i] = Number(raw[i]);
+        }
 
-		return { values, kind };
-	}
+        return { values, kind };
+    }
 
-	for (let i = 0; i < rows; i++) {
-		const value = vector.get(i);
+    for (let i = 0; i < rows; i++) {
+        const value = vector.get(i);
 
-		if (value === null || value === undefined) {
-			values[i] = NaN;
-			continue;
-		}
+        if (value === null || value === undefined) {
+            values[i] = NaN;
+            continue;
+        }
 
-		values[i] = Number(value);
-	}
+        values[i] = Number(value);
+    }
 
-	return { values, kind };
+    return { values, kind };
 }
 
 // -- cross section -----------------------------------------------------------
@@ -289,69 +486,69 @@ export function readNumericColumn(
  * map, in the query, or in the source data.
  */
 function crossSectionDistances(
-	table: ApacheArrow.Table,
-	selection: SpatialSelection | null | undefined,
-	coordinateColumns: CoordinatePair | null | undefined
+    table: ApacheArrow.Table,
+    selection: SpatialSelection | null | undefined,
+    coordinateColumns: CoordinatePair | null | undefined
 ): { values: Float64Array } | { message: Message } {
-	if (!selection || selection.mode !== 'cross-section' || !selection.line) {
-		return { message: message('plot.error.needsCrossSection') };
-	}
+    if (!selection || selection.mode !== "cross-section" || !selection.line) {
+        return { message: message("plot.error.needsCrossSection") };
+    }
 
-	const projection = makeAlongLineProjection(selection.line);
-	if (!projection) {
-		return { message: message('plot.error.lineTooShort') };
-	}
+    const projection = makeAlongLineProjection(selection.line);
+    if (!projection) {
+        return { message: message("plot.error.lineTooShort") };
+    }
 
-	const names = table.schema.fields.map((field) => field.name);
-	const columns = resolveCoordinateColumns(coordinateColumns, names);
+    const names = table.schema.fields.map((field) => field.name);
+    const columns = resolveCoordinateColumns(coordinateColumns, names);
 
-	if (!columns) {
-		return { message: message('plot.error.noCoordinateColumns') };
-	}
+    if (!columns) {
+        return { message: message("plot.error.noCoordinateColumns") };
+    }
 
-	const latitude = readNumericColumn(table, columns.latitude);
-	const longitude = readNumericColumn(table, columns.longitude);
+    const latitude = readNumericColumn(table, columns.latitude);
+    const longitude = readNumericColumn(table, columns.longitude);
 
-	if (!latitude || !longitude) {
-		return { message: message('plot.error.coordinatesNotNumeric') };
-	}
+    if (!latitude || !longitude) {
+        return { message: message("plot.error.coordinatesNotNumeric") };
+    }
 
-	const rows = table.numRows;
-	const values = new Float64Array(rows);
+    const rows = table.numRows;
+    const values = new Float64Array(rows);
 
-	for (let i = 0; i < rows; i++) {
-		values[i] = projection.distanceKm(longitude.values[i], latitude.values[i]);
-	}
+    for (let i = 0; i < rows; i++) {
+        values[i] = projection.distanceKm(longitude.values[i], latitude.values[i]);
+    }
 
-	return { values };
+    return { values };
 }
 
 /** The axis title of the distance axis of a cross section. */
-export const CROSS_SECTION_AXIS_LABEL: Message = message('plot.axis.crossSectionDistance');
+export const CROSS_SECTION_AXIS_LABEL: Message = message("plot.axis.crossSectionDistance");
 
 // -- series ------------------------------------------------------------------
 
 function emptyRange(): PlotRange {
-	return { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY };
+    return { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY };
 }
 
 /** A range that no value reached is not usable. Give it a width of one. */
 function settleRange(range: PlotRange): PlotRange {
-	if (!Number.isFinite(range.min) || !Number.isFinite(range.max)) {
-		return { min: 0, max: 1 };
-	}
+    if (!Number.isFinite(range.min) || !Number.isFinite(range.max)) {
+        return { min: 0, max: 1 };
+    }
 
-	if (range.min === range.max) {
-		return { min: range.min - 0.5, max: range.max + 0.5 };
-	}
+    if (range.min === range.max) {
+        return { min: range.min - 0.5, max: range.max + 0.5 };
+    }
 
-	return range;
+    return range;
 }
 
 // -- histogram ---------------------------------------------------------------
 
 /** The Y axis title of a histogram. The Y axis holds no column. */
-export const HISTOGRAM_AXIS_LABEL: Message = message('plot.axis.histogramCount');
+export const HISTOGRAM_AXIS_LABEL: Message = message("plot.axis.histogramCount");
 
 /**
  * Count the rows of one column into bins.
@@ -366,92 +563,97 @@ export const HISTOGRAM_AXIS_LABEL: Message = message('plot.axis.histogramCount')
  * wide to draw a bar.
  */
 function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotDataResult {
-	if (!plot.x.column) {
-		return { ok: false, message: message('plot.error.selectCountColumn') };
-	}
+    if (!plot.x.column) {
+        return { ok: false, message: message("plot.error.selectCountColumn") };
+    }
 
-	const column = readNumericColumn(table, plot.x.column);
-	if (!column) {
-		return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.x.column }) };
-	}
+    const column = readNumericColumn(table, plot.x.column);
+    if (!column) {
+        return {
+            ok: false,
+            message: message("plot.error.noNumericColumn", { column: plot.x.column })
+        };
+    }
 
-	const rows = table.numRows;
-	const values = column.values;
+    const rows = table.numRows;
+    const values = column.values;
 
-	const dataRange = emptyRange();
-	let usable = 0;
+    const dataRange = emptyRange();
+    let usable = 0;
 
-	for (let i = 0; i < rows; i++) {
-		const value = values[i];
-		if (!Number.isFinite(value)) continue;
+    for (let i = 0; i < rows; i++) {
+        const value = values[i];
+        if (!Number.isFinite(value)) continue;
 
-		if (value < dataRange.min) dataRange.min = value;
-		if (value > dataRange.max) dataRange.max = value;
-		usable++;
-	}
+        if (value < dataRange.min) dataRange.min = value;
+        if (value > dataRange.max) dataRange.max = value;
+        usable++;
+    }
 
-	if (usable === 0) {
-		return { ok: false, message: message('plot.error.noNumbersToCount') };
-	}
+    if (usable === 0) {
+        return { ok: false, message: message("plot.error.noNumbersToCount") };
+    }
 
-	const settled = settleRange(dataRange);
-	const low = plot.x.min ?? settled.min;
-	const high = plot.x.max ?? settled.max;
+    const settled = settleRange(dataRange);
+    const low = plot.x.min ?? settled.min;
+    const high = plot.x.max ?? settled.max;
 
-	if (!(high > low)) {
-		return { ok: false, message: message('plot.error.emptyXRange') };
-	}
+    if (!(high > low)) {
+        return { ok: false, message: message("plot.error.emptyXRange") };
+    }
 
-	const binCount = Math.max(2, Math.round(plot.histogram.binCount));
-	const binWidth = (high - low) / binCount;
+    const binCount = Math.max(2, Math.round(plot.histogram.binCount));
+    const binWidth = (high - low) / binCount;
 
-	const centres = new Float64Array(binCount);
-	const counts = new Float64Array(binCount);
+    const centres = new Float64Array(binCount);
+    const counts = new Float64Array(binCount);
 
-	for (let bin = 0; bin < binCount; bin++) {
-		centres[bin] = low + binWidth * (bin + 0.5);
-	}
+    for (let bin = 0; bin < binCount; bin++) {
+        centres[bin] = low + binWidth * (bin + 0.5);
+    }
 
-	let counted = 0;
+    let counted = 0;
 
-	for (let i = 0; i < rows; i++) {
-		const value = values[i];
-		if (!Number.isFinite(value) || value < low || value > high) continue;
+    for (let i = 0; i < rows; i++) {
+        const value = values[i];
+        if (!Number.isFinite(value) || value < low || value > high) continue;
 
-		// The top edge belongs to the last bin. Without this the maximum value
-		// alone would land in a bin past the end of the array.
-		let bin = Math.floor((value - low) / binWidth);
-		if (bin >= binCount) bin = binCount - 1;
+        // The top edge belongs to the last bin. Without this the maximum value
+        // alone would land in a bin past the end of the array.
+        let bin = Math.floor((value - low) / binWidth);
+        if (bin >= binCount) bin = binCount - 1;
 
-		counts[bin]++;
-		counted++;
-	}
+        counts[bin]++;
+        counted++;
+    }
 
-	let tallest = 0;
-	for (let bin = 0; bin < binCount; bin++) {
-		if (counts[bin] > tallest) tallest = counts[bin];
-	}
+    let tallest = 0;
+    for (let bin = 0; bin < binCount; bin++) {
+        if (counts[bin] > tallest) tallest = counts[bin];
+    }
 
-	return {
-		ok: true,
-		series: {
-			x: centres,
-			y: counts,
-			z: null,
-			xRange: { min: low, max: high },
-			// A bar grows from zero. An auto-ranged floor would cut every bar off.
-			yRange: { min: 0, max: tallest || 1 },
-			zRange: null,
-			xKind: column.kind,
-			yKind: 'number',
-			zKind: null,
-			skippedRows: rows - counted,
-			groups: null,
-			droppedGroups: 0,
-			binWidth,
-			sampledFrom: null
-		}
-	};
+    return {
+        ok: true,
+        series: {
+            x: centres,
+            y: counts,
+            z: null,
+            xRange: { min: low, max: high },
+            // A bar grows from zero. An auto-ranged floor would cut every bar off.
+            yRange: { min: 0, max: tallest || 1 },
+            zRange: null,
+            xKind: column.kind,
+            yKind: "number",
+            zKind: null,
+            skippedRows: rows - counted,
+            groups: null,
+            droppedGroups: 0,
+            binWidth,
+            sampledFrom: null,
+            rowIndex: null,
+            categories: null
+        }
+    };
 }
 
 // -- line ordering -----------------------------------------------------------
@@ -469,73 +671,78 @@ function buildHistogramSeries(table: ApacheArrow.Table, plot: PlotConfig): PlotD
  * value per row would otherwise draw a stroke per row.
  */
 function orderLineSeries(
-	series: PlotSeries,
-	groupIndex: Int32Array | null,
-	groupNames: string[],
-	sortBy: 'x' | 'y'
+    series: PlotSeries,
+    groupIndex: Int32Array | null,
+    groupNames: string[],
+    sortBy: "x" | "y"
 ): PlotSeries {
-	const count = series.x.length;
+    const count = series.x.length;
 
-	let primary = series.x;
-	if (sortBy === 'y') primary = series.y;
+    let primary = series.x;
+    if (sortBy === "y") primary = series.y;
 
-	const kept: number[] = [];
+    const kept: number[] = [];
 
-	for (let i = 0; i < count; i++) {
-		if (groupIndex && groupIndex[i] >= MAX_LINE_GROUPS) continue;
-		kept.push(i);
-	}
+    for (let i = 0; i < count; i++) {
+        if (groupIndex && groupIndex[i] >= MAX_LINE_GROUPS) continue;
+        kept.push(i);
+    }
 
-	kept.sort((a, b) => {
-		if (groupIndex) {
-			const byGroup = groupIndex[a] - groupIndex[b];
-			if (byGroup !== 0) return byGroup;
-		}
+    kept.sort((a, b) => {
+        if (groupIndex) {
+            const byGroup = groupIndex[a] - groupIndex[b];
+            if (byGroup !== 0) return byGroup;
+        }
 
-		return primary[a] - primary[b];
-	});
+        return primary[a] - primary[b];
+    });
 
-	const total = kept.length;
-	const x = new Float64Array(total);
-	const y = new Float64Array(total);
+    const total = kept.length;
+    const x = new Float64Array(total);
+    const y = new Float64Array(total);
 
-	let z: Float64Array | null = null;
-	if (series.z) z = new Float64Array(total);
+    let z: Float64Array | null = null;
+    if (series.z) z = new Float64Array(total);
 
-	for (let i = 0; i < total; i++) {
-		const source = kept[i];
-		x[i] = series.x[source];
-		y[i] = series.y[source];
-		if (z && series.z) z[i] = series.z[source];
-	}
+    let rowIndex: Uint32Array | null = null;
+    if (series.rowIndex) rowIndex = new Uint32Array(total);
 
-	let groups: PlotGroup[] | null = null;
+    for (let i = 0; i < total; i++) {
+        const source = kept[i];
+        x[i] = series.x[source];
+        y[i] = series.y[source];
+        if (z && series.z) z[i] = series.z[source];
+        if (rowIndex && series.rowIndex) rowIndex[i] = series.rowIndex[source];
+    }
 
-	if (groupIndex) {
-		groups = [];
-		let start = 0;
+    let groups: PlotGroup[] | null = null;
 
-		for (let i = 1; i <= total; i++) {
-			const ended = i === total || groupIndex[kept[i]] !== groupIndex[kept[start]];
-			if (!ended) continue;
+    if (groupIndex) {
+        groups = [];
+        let start = 0;
 
-			groups.push({ key: groupNames[groupIndex[kept[start]]], start, end: i });
-			start = i;
-		}
-	}
+        for (let i = 1; i <= total; i++) {
+            const ended = i === total || groupIndex[kept[i]] !== groupIndex[kept[start]];
+            if (!ended) continue;
 
-	let droppedGroups = 0;
-	if (groupNames.length > MAX_LINE_GROUPS) droppedGroups = groupNames.length - MAX_LINE_GROUPS;
+            groups.push({ key: groupNames[groupIndex[kept[start]]], start, end: i });
+            start = i;
+        }
+    }
 
-	return {
-		...series,
-		x,
-		y,
-		z,
-		skippedRows: series.skippedRows + (count - total),
-		groups,
-		droppedGroups
-	};
+    let droppedGroups = 0;
+    if (groupNames.length > MAX_LINE_GROUPS) droppedGroups = groupNames.length - MAX_LINE_GROUPS;
+
+    return {
+        ...series,
+        x,
+        y,
+        z,
+        rowIndex,
+        skippedRows: series.skippedRows + (count - total),
+        groups,
+        droppedGroups
+    };
 }
 
 /**
@@ -546,181 +753,211 @@ function orderLineSeries(
  * linear in the row count, and it does not grow with the number of axes.
  */
 export function buildPlotSeries(
-	table: ApacheArrow.Table | null | undefined,
-	plot: PlotConfig,
-	context: PlotDataContext = {}
+    table: ApacheArrow.Table | null | undefined,
+    plot: PlotConfig,
+    context: PlotDataContext = {}
 ): PlotDataResult {
-	if (!table || table.numRows === 0) {
-		return { ok: false, message: message('plot.error.noRows') };
-	}
+    if (!table || table.numRows === 0) {
+        return { ok: false, message: message("plot.error.noRows") };
+    }
 
-	if (plot.type === 'histogram') return buildHistogramSeries(table, plot);
+    if (plot.type === "histogram") return buildHistogramSeries(table, plot);
 
-	if (!plot.y.column) {
-		return { ok: false, message: message('plot.error.selectYColumn') };
-	}
+    if (!plot.y.column) {
+        return { ok: false, message: message("plot.error.selectYColumn") };
+    }
 
-	const y = readNumericColumn(table, plot.y.column);
-	if (!y) {
-		return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.y.column }) };
-	}
+    const y = readNumericColumn(table, plot.y.column);
+    if (!y) {
+        return {
+            ok: false,
+            message: message("plot.error.noNumericColumn", { column: plot.y.column })
+        };
+    }
 
-	let xValues: Float64Array;
-	let xKind: PlotColumnKind = 'number';
+    let xValues: Float64Array;
+    let xKind: PlotColumnKind = "number";
 
-	if (plot.type === 'cross-section') {
-		const distances = crossSectionDistances(
-			table,
-			context.selection,
-			context.coordinateColumns
-		);
-		if ('message' in distances) return { ok: false, message: distances.message };
-		xValues = distances.values;
-	} else {
-		if (!plot.x.column) {
-			return { ok: false, message: message('plot.error.selectXColumn') };
-		}
+    if (plot.type === "cross-section") {
+        const distances = crossSectionDistances(
+            table,
+            context.selection,
+            context.coordinateColumns
+        );
+        if ("message" in distances) return { ok: false, message: distances.message };
+        xValues = distances.values;
+    } else {
+        if (!plot.x.column) {
+            return { ok: false, message: message("plot.error.selectXColumn") };
+        }
 
-		const x = readNumericColumn(table, plot.x.column);
-		if (!x) {
-			return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.x.column }) };
-		}
+        const x = readNumericColumn(table, plot.x.column);
+        if (!x) {
+            return {
+                ok: false,
+                message: message("plot.error.noNumericColumn", { column: plot.x.column })
+            };
+        }
 
-		xValues = x.values;
-		xKind = x.kind;
-	}
+        xValues = x.values;
+        xKind = x.kind;
+    }
 
-	let zValues: Float64Array | null = null;
-	let zKind: PlotColumnKind | null = null;
+    let zValues: Float64Array | null = null;
+    let zKind: PlotColumnKind | null = null;
+    let zKeys: Array<string | null> | null = null;
 
-	// A line takes its colour from the group, so it must not drop a row because
-	// the colour column of an earlier scatter is null there.
-	if (plot.z?.column && usesZColumn(plot.type)) {
-		const z = readNumericColumn(table, plot.z.column);
-		if (!z) {
-			return { ok: false, message: message('plot.error.noNumericColumn', { column: plot.z.column }) };
-		}
+    // A line takes its colour from the group, so it must not drop a row because
+    // the colour column of an earlier scatter is null there. A text column gives
+    // one colour per value instead of a colour scale.
+    if (plot.z?.column && usesZColumn(plot.type)) {
+        const z = readNumericColumn(table, plot.z.column);
+        if (z) {
+            zValues = z.values;
+            zKind = z.kind;
+        } else {
+            zKeys = readTextKeys(table, plot.z.column);
+        }
 
-		zValues = z.values;
-		zKind = z.kind;
-	}
+        if (!z && !zKeys) {
+            return {
+                ok: false,
+                message: message("plot.error.noColumn", { column: plot.z.column })
+            };
+        }
+    }
 
-	// The group column of a line plot. It is read as text, so it also accepts a
-	// station name. `groupNames` collects the values in order of first sight, so
-	// the colour of a stroke does not jump when the row order changes.
-	let groupKeys: string[] | null = null;
+    // The group column of a line plot. It is read as text, so it also accepts a
+    // station name. `groupNames` collects the values in order of first sight, so
+    // the colour of a stroke does not jump when the row order changes.
+    let groupKeys: string[] | null = null;
 
-	if (plot.type === 'line' && plot.line.groupColumn) {
-		groupKeys = readGroupKeys(table, plot.line.groupColumn);
+    if (plot.type === "line" && plot.line.groupColumn) {
+        groupKeys = readGroupKeys(table, plot.line.groupColumn);
 
-		if (!groupKeys) {
-			return { ok: false, message: message('plot.error.noColumn', { column: plot.line.groupColumn }) };
-		}
-	}
+        if (!groupKeys) {
+            return {
+                ok: false,
+                message: message("plot.error.noColumn", { column: plot.line.groupColumn })
+            };
+        }
+    }
 
-	const rows = table.numRows;
-	const outX = new Float64Array(rows);
-	const outY = new Float64Array(rows);
+    const rows = table.numRows;
+    const outX = new Float64Array(rows);
+    const outY = new Float64Array(rows);
 
-	let outZ: Float64Array | null = null;
-	if (zValues) outZ = new Float64Array(rows);
+    let outZ: Float64Array | null = null;
+    if (zValues) outZ = new Float64Array(rows);
 
-	let outGroups: Int32Array | null = null;
-	if (groupKeys) outGroups = new Int32Array(rows);
+    let outGroups: Int32Array | null = null;
+    if (groupKeys) outGroups = new Int32Array(rows);
 
-	const groupNames: string[] = [];
-	const groupIds = new Map<string, number>();
+    const outRows = new Uint32Array(rows);
 
-	const xRange = emptyRange();
-	const yRange = emptyRange();
-	const zRange = emptyRange();
+    const groupNames: string[] = [];
+    const groupIds = new Map<string, number>();
 
-	let kept = 0;
+    const xRange = emptyRange();
+    const yRange = emptyRange();
+    const zRange = emptyRange();
 
-	for (let i = 0; i < rows; i++) {
-		const xValue = xValues[i];
-		const yValue = y.values[i];
+    let kept = 0;
 
-		if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) continue;
+    for (let i = 0; i < rows; i++) {
+        const xValue = xValues[i];
+        const yValue = y.values[i];
 
-		let zValue = 0;
-		if (zValues) {
-			zValue = zValues[i];
-			if (!Number.isFinite(zValue)) continue;
-		}
+        if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) continue;
 
-		outX[kept] = xValue;
-		outY[kept] = yValue;
+        let zValue = 0;
+        if (zValues) {
+            zValue = zValues[i];
+            if (!Number.isFinite(zValue)) continue;
+        }
 
-		if (groupKeys && outGroups) {
-			const key = groupKeys[i];
-			let id = groupIds.get(key);
+        if (zKeys && zKeys[i] === null) continue;
 
-			if (id === undefined) {
-				id = groupNames.length;
-				groupNames.push(key);
-				groupIds.set(key, id);
-			}
+        outX[kept] = xValue;
+        outY[kept] = yValue;
+        outRows[kept] = i;
 
-			outGroups[kept] = id;
-		}
+        if (groupKeys && outGroups) {
+            const key = groupKeys[i];
+            let id = groupIds.get(key);
 
-		if (xValue < xRange.min) xRange.min = xValue;
-		if (xValue > xRange.max) xRange.max = xValue;
-		if (yValue < yRange.min) yRange.min = yValue;
-		if (yValue > yRange.max) yRange.max = yValue;
+            if (id === undefined) {
+                id = groupNames.length;
+                groupNames.push(key);
+                groupIds.set(key, id);
+            }
 
-		if (outZ) {
-			outZ[kept] = zValue;
-			if (zValue < zRange.min) zRange.min = zValue;
-			if (zValue > zRange.max) zRange.max = zValue;
-		}
+            outGroups[kept] = id;
+        }
 
-		kept++;
-	}
+        if (xValue < xRange.min) xRange.min = xValue;
+        if (xValue > xRange.max) xRange.max = xValue;
+        if (yValue < yRange.min) yRange.min = yValue;
+        if (yValue > yRange.max) yRange.max = yValue;
 
-	if (kept === 0) {
-		return {
-			ok: false,
-			message: message('plot.error.nothingToDraw')
-		};
-	}
+        if (outZ) {
+            outZ[kept] = zValue;
+            if (zValue < zRange.min) zRange.min = zValue;
+            if (zValue > zRange.max) zRange.max = zValue;
+        }
 
-	let z: Float64Array | null = null;
-	if (outZ) z = outZ.subarray(0, kept);
+        kept++;
+    }
 
-	let settledZRange: PlotRange | null = null;
-	if (outZ) settledZRange = settleRange(zRange);
+    if (kept === 0) {
+        return {
+            ok: false,
+            message: message("plot.error.nothingToDraw")
+        };
+    }
 
-	const series: PlotSeries = {
-		x: outX.subarray(0, kept),
-		y: outY.subarray(0, kept),
-		z,
-		xRange: settleRange(xRange),
-		yRange: settleRange(yRange),
-		zRange: settledZRange,
-		xKind,
-		yKind: y.kind,
-		zKind,
-		skippedRows: rows - kept,
-		groups: null,
-		droppedGroups: 0,
-		binWidth: null,
-		sampledFrom: null
-	};
+    let z: Float64Array | null = null;
+    if (outZ) z = outZ.subarray(0, kept);
 
-	if (plot.type !== 'line') return { ok: true, series };
+    let settledZRange: PlotRange | null = null;
+    if (outZ) settledZRange = settleRange(zRange);
 
-	let keptGroups: Int32Array | null = null;
-	if (outGroups) keptGroups = outGroups.subarray(0, kept);
+    const rowIndex = outRows.subarray(0, kept);
 
-	const ordered = orderLineSeries(series, keptGroups, groupNames, plot.line.sortBy);
+    let categories: PlotCategories | null = null;
+    if (zKeys) categories = buildCategories(zKeys, rowIndex);
 
-	if (ordered.x.length === 0) {
-		return { ok: false, message: message('plot.error.allGroupsDropped') };
-	}
+    const series: PlotSeries = {
+        x: outX.subarray(0, kept),
+        y: outY.subarray(0, kept),
+        z,
+        xRange: settleRange(xRange),
+        yRange: settleRange(yRange),
+        zRange: settledZRange,
+        xKind,
+        yKind: y.kind,
+        zKind,
+        skippedRows: rows - kept,
+        groups: null,
+        droppedGroups: 0,
+        binWidth: null,
+        sampledFrom: null,
+        rowIndex,
+        categories
+    };
 
-	return { ok: true, series: ordered };
+    if (plot.type !== "line") return { ok: true, series };
+
+    let keptGroups: Int32Array | null = null;
+    if (outGroups) keptGroups = outGroups.subarray(0, kept);
+
+    const ordered = orderLineSeries(series, keptGroups, groupNames, plot.line.sortBy);
+
+    if (ordered.x.length === 0) {
+        return { ok: false, message: message("plot.error.allGroupsDropped") };
+    }
+
+    return { ok: true, series: ordered };
 }
 
 /**
@@ -728,12 +965,12 @@ export function buildPlotSeries(
  * of the data for the ends that they left on auto.
  */
 export function resolveRange(
-	dataRange: PlotRange,
-	min: number | null,
-	max: number | null
+    dataRange: PlotRange,
+    min: number | null,
+    max: number | null
 ): PlotRange {
-	return {
-		min: min ?? dataRange.min,
-		max: max ?? dataRange.max
-	};
+    return {
+        min: min ?? dataRange.min,
+        max: max ?? dataRange.max
+    };
 }

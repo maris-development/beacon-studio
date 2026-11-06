@@ -94,6 +94,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
   - `src/lib/query/selection-status.ts`, `src/lib/query/functions.ts`
   - `src/lib/geo/spatial-selection.ts` (drawn area, and its conversion to query filters)
   - `src/lib/geo/coordinate-columns.ts` (`detectCoordinateColumns`)
+  - `src/lib/geo/land.ts` (Natural Earth land and borders, `loadGeography`, `landMask`)
   - `src/lib/access/*` (users and roles: name check, password, access summary, multi-step creates. No Svelte and no services.)
   - `src/lib/data-browser/*` (data-browser rules: `backTarget` for the safe "← back" link, folder tree, table statements, external-table body. Shared parts in `components/data-browser/`.)
   - `src/lib/system-info/host.ts` (`readInfo`: a safe read of `GET /api/info`. `cpu_usage` is already a percentage. `system_info` is `null` unless the server runs with `BEACON_ENABLE_SYS_INFO`; the admin route returns the same data.)
@@ -163,6 +164,42 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - A block from a query with no pair (share link without a pair, JSON editor, old record) takes the pair of its geo filter (`coordinateColumnsOf`) in `makeStoredQuery` and in the load migration. Without that, a recompile moves the filter to the detected pair and changes the query.
 - `CoordinateColumnsDialog` is the one picker for the pair. The map viewer and `GeospatialFilterModal` both open it. `Modal` boxes are transformed, so render the dialog as a sibling of another modal, never inside it.
 - Terra Draw (`terra-draw` + `terra-draw-maplibre-gl-adapter`) draws the shape. After a shape is complete `MapDrawTools.svelte` clears Terra Draw and renders the ring in its own MapLibre source, so a loaded area and a new area look the same.
+
+## Chart Explorer
+- `ChartExplorerController` (`components/plots/ChartExplorerController.svelte.ts`) builds the series, the interpolated field and the contours. `PlotCanvas.svelte` owns the uPlot chart and the view. The arithmetic is in `src/lib/plots/*`.
+- One field (`buildInterpolationField`, `plots/interpolation.ts`) feeds the coloured surface and the contour lines. Do not add a second grid.
+- Two methods: Barnes (`plots/barnes.ts`) and Delaunay (`plots/delaunay.ts`). Delaunay has no values outside the hull of the points, so `extentOf` reads the extent `all` as `hull`.
+- Barnes gets its Gaussian weights from a diffusion between neighbour cells of the domain, so land blocks them. A Gaussian blur crosses land. Do not replace the diffusion with a blur.
+- On a map plot every length is in km. A degree of longitude gets shorter with the latitude, so the Barnes X sigma and the `distanceToData` X weight change per row.
+- `dataSpacing` gives the automatic radius. It triangulates the points, so the controller runs it again only for a new table, `seriesKey` or `spacingKey`. The panel reads the result through `autoLengthsOf`.
+- The renderer makes the smooth edges, not the method. `fillEdges` fills a pixel next to an empty cell. Three clips cut the edge: the coastline (`clipToDomain`), the hull and `field.valid`.
+- `validOutline` counts a cell outside the domain as valid, so the coastline cuts that edge and not the cell steps.
+- d3-contour reads NaN as -Infinity and draws a line along each gap. `buildContours` therefore fills the gaps (`fillGridGaps`) and splits each ring on the frame of the grid. The renderer clips the lines as it clips the surface.
+- `colorScalePosition` returns 0 for NaN. Test `Number.isFinite(value)` before the call, or an empty cell gets the lowest colour.
+- A plot has one Z colour range: `colourRangeOf`. The points, the surface, the contour levels, the colour bar and the tooltip all read it. With the surface on, the clip percentiles set it. Do not compute a colour range in a new place.
+- `putImageData` replaces the canvas pixels and ignores the clip. `drawInterpolationSurface` therefore puts the image on a second canvas and draws it with `drawImage`, inside the clips.
+- A text colour column gives `PlotSeries.categories`, one colour per group (`--plot-series-*` in `tailwind.css`). A text Z column gets no interpolation and no contours.
+- `controller.columns` holds no text column. `pruneMissingColumns` therefore tests the Z column against `groupColumns`.
+- `PlotSeries.rowIndex` holds the table row of each point, for the tooltip. Every reorder and every sample must keep it (`orderLineSeries`, `sampling.ts`).
+- `runPrepare` waits for the land only when the field keeps to land or sea. `prepareToken` drops a rebuild that a newer rebuild replaced.
+
+## Chart Basemap
+- Land, sea and the basemap apply only to a map plot (`isMapPlot`: a scatter of the stored coordinate pair, with values that fit the globe). The layer `auto` draws land, so every map plot loads land.
+- The land and the borders load through `world-atlas/*.json?url` and `fetch`, so TypeScript never parses the JSON. Each detail loads one time per tab and stays in memory (`loadOnce`).
+- A draw reads a loaded detail with `readyGeography` and never waits for a fetch.
+- Natural Earth rings jump at 180°. `makeLandRing` unwraps them, and closes a ring around a pole along the pole. `landMask` and the draw also test each ring one turn east and west.
+- The page loads the geography apart from the rebuild: an effect on `geographyRequest` calls `applyGeography`. A basemap change therefore does not read the rows again.
+- With the automatic detail, `PlotCanvas` loads a finer detail after a zoom in, and then draws again. The land or sea domain uses the coastline of the basemap detail (`landDetailForSpan`).
+
+## Chart Mouse Controls
+- `PlotMouse.svelte.ts` reads the mouse: drag, wheel and click on the plot, on its axes and on its edges. The arithmetic is in `plots/plot-view.ts`.
+- `PlotMouse` takes `mousedown` and `dblclick` on `.u-wrap` in the capture phase and stops them, so uPlot never sees a drag. The uPlot drag select is off (`cursor.drag`). Do not turn it on.
+- Change the view only through `setView` in `PlotCanvas`. It sets both scales in one `batch`, else uPlot fits the other axis to the data again.
+- uPlot calls the `range` function of a scale also on an explicit `setScale`. `rangeFor` therefore passes the values through while `explicit` is true. At all other times it returns the view of the user.
+- "Keep the map shape" (`basemap.fixAspect`) runs in `setView` and in the uPlot hooks `ready` and `setSize`. `fitMapShape` keeps the axis that the user changed and fits the other axis.
+- A `setScale` inside the `setSize` hook fires `setSize` again, before uPlot clears its flag. `refitMap` has a guard against that loop.
+- `SAVED_VIEWS` keeps the view of each plot id for the session. Its key holds the columns, the axis limits, the map shape and the data ranges. A rebuild and a plot switch restore the view.
+- The figure size and the hidden groups have no Apply. The canvas writes them through `onPlotChange`. `rebuildKey` leaves them out, so a change only resizes or draws again. The panel draft takes them also when it holds edits.
 
 ## Admin Server and SQL Console
 - Endpoints: `catalogs`, `table-schema`, `functions`, `list-datasets`, `dataset-schema`, `total-datasets` and `POST /api/query` need no admin. Every `/api/admin/*` endpoint needs the super-user. `GET /api/admin/check` gives 200 or 401. `/admin/api/...` is an alias of `/api/admin/...`.
@@ -309,6 +346,8 @@ message the change never reaches production.
 - The sidebar has no Data Browser item. Datasets and Data Tables are top-level items. The `/data-browser` page stays, and the breadcrumbs link to it.
 - The builder and the three result views are one sidebar item. Its `match` holds `/queries` and `/visualisations`. `QueryViewSwitch` in `QuerySelectorHeader` is the only switch between them. From the builder, it runs the query before it opens a result view. Do not add a result view to the sidebar.
 - `QuerySelectorHeader` shows the actions as icons only when their labels leave less than `MIN_GAP_REM` beside the view switch. It measures the labels, so a language change also counts. `Button` animates all properties; keep size transitions off these buttons, or the measurement reads a width in mid-animation and the state flips. Wrap the text of a new action button in `<span class="action-label">` and give the button a `title`.
+- Every option in the plot panel describes itself in an info button: `OptionLabel` (`components/plots`), the `info` prop of `PlotSlider`, or an `InfoTip` beside a checkbox label. A `p.hint` paragraph stays only for a status, for example why an option is not available.
+- Never put an `InfoTip` inside a `<label>`. A label without `for` names its first labelable child, so the info button takes the label from the control.
 - The workbench panes fill the free page height. Only the left pane sets the row height: on a wide viewport the right `.pane-body` has `contain: size`. A new child of the right pane must fill the body through flex or scroll inside it.
 - Prefer `if`/`else` over the ternary `?:` operator — it reads better. This is about
   branching, not null-handling: `??` and `?.` are fine and preferred where they fit.

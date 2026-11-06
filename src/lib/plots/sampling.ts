@@ -16,7 +16,7 @@
  * The cap comes from the `sampleAfterRows` setting. The caller reads it, so
  * these functions stay pure.
  */
-import type { PlotSeries } from './plot-data';
+import type { PlotCategories, PlotSeries } from "./plot-data";
 
 /** The seed of the shuffle. One constant, so a plot never changes under the user. */
 const SAMPLE_SEED = 1;
@@ -28,16 +28,16 @@ const SAMPLE_SEED = 1;
  * resize or a colour edit would then move every point of the plot.
  */
 function makeRandom(seed: number): () => number {
-	let state = seed >>> 0 || 1;
+    let state = seed >>> 0 || 1;
 
-	return () => {
-		state ^= state << 13;
-		state >>>= 0;
-		state ^= state >>> 17;
-		state ^= state << 5;
-		state >>>= 0;
-		return state / 4294967296;
-	};
+    return () => {
+        state ^= state << 13;
+        state >>>= 0;
+        state ^= state >>> 17;
+        state ^= state << 5;
+        state >>>= 0;
+        return state / 4294967296;
+    };
 }
 
 /**
@@ -47,21 +47,21 @@ function makeRandom(seed: number): () => number {
  * empty here: {@link buildPlotSeries} fails before it returns an empty one.
  */
 function extremeRows(series: PlotSeries): number[] {
-	const { x, y } = series;
+    const { x, y } = series;
 
-	let xMin = 0;
-	let xMax = 0;
-	let yMin = 0;
-	let yMax = 0;
+    let xMin = 0;
+    let xMax = 0;
+    let yMin = 0;
+    let yMax = 0;
 
-	for (let i = 1; i < x.length; i++) {
-		if (x[i] < x[xMin]) xMin = i;
-		if (x[i] > x[xMax]) xMax = i;
-		if (y[i] < y[yMin]) yMin = i;
-		if (y[i] > y[yMax]) yMax = i;
-	}
+    for (let i = 1; i < x.length; i++) {
+        if (x[i] < x[xMin]) xMin = i;
+        if (x[i] > x[xMax]) xMax = i;
+        if (y[i] < y[yMin]) yMin = i;
+        if (y[i] > y[yMax]) yMax = i;
+    }
 
-	return [...new Set([xMin, xMax, yMin, yMax])];
+    return [...new Set([xMin, xMax, yMin, yMax])];
 }
 
 /**
@@ -71,65 +71,122 @@ function extremeRows(series: PlotSeries): number[] {
  * identity of the result to know whether a sample happened.
  *
  * The X, Y and Z ranges of the source carry over untouched. They come from the
- * full data, and the colour bar reads `zRange`, so the palette does not move.
+ * full data, and the colours read `zRange` through `colourRangeOf`, so the
+ * palette does not move.
  */
 export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSeries {
-	const total = series.x.length;
-	if (!Number.isFinite(maxPoints) || total <= maxPoints) return series;
+    const total = series.x.length;
+    if (!Number.isFinite(maxPoints) || total <= maxPoints) return series;
 
-	const keep = Math.max(1, Math.floor(maxPoints));
+    const keep = Math.max(1, Math.floor(maxPoints));
+    if (series.categories) return sampleByGroup(series, series.categories, keep);
 
-	const order = new Uint32Array(total);
-	for (let i = 0; i < total; i++) order[i] = i;
+    const order = new Uint32Array(total);
+    for (let i = 0; i < total; i++) order[i] = i;
 
-	// Put the extreme rows in the first slots. The shuffle below starts after
-	// them, so the sample always holds the true ends of both axes.
-	let head = 0;
+    // Put the extreme rows in the first slots. The shuffle below starts after
+    // them, so the sample always holds the true ends of both axes.
+    let head = 0;
 
-	for (const row of extremeRows(series)) {
-		if (head >= keep) break;
+    for (const row of extremeRows(series)) {
+        if (head >= keep) break;
 
-		// `order[i]` still holds `i` for every slot the loop has not touched. A
-		// row that an earlier swap moved needs a search instead.
-		let slot = row;
-		if (order[slot] !== row) slot = order.indexOf(row, head);
+        // `order[i]` still holds `i` for every slot the loop has not touched. A
+        // row that an earlier swap moved needs a search instead.
+        let slot = row;
+        if (order[slot] !== row) slot = order.indexOf(row, head);
 
-		// Below `head` the row is already in the sample, and `-1` means the same.
-		if (slot < head) continue;
+        // Below `head` the row is already in the sample, and `-1` means the same.
+        if (slot < head) continue;
 
-		const swap = order[head];
-		order[head] = order[slot];
-		order[slot] = swap;
-		head++;
-	}
+        const swap = order[head];
+        order[head] = order[slot];
+        order[slot] = swap;
+        head++;
+    }
 
-	// Partial Fisher-Yates. It picks the rest uniformly and without replacement,
-	// in one pass over the slots that the sample keeps.
-	const random = makeRandom(SAMPLE_SEED);
+    // Partial Fisher-Yates. It picks the rest uniformly and without replacement,
+    // in one pass over the slots that the sample keeps.
+    const random = makeRandom(SAMPLE_SEED);
 
-	for (let i = head; i < keep; i++) {
-		const j = i + Math.floor(random() * (total - i));
-		const swap = order[i];
-		order[i] = order[j];
-		order[j] = swap;
-	}
+    for (let i = head; i < keep; i++) {
+        const j = i + Math.floor(random() * (total - i));
+        const swap = order[i];
+        order[i] = order[j];
+        order[j] = swap;
+    }
 
-	// Ascending order keeps the draw order of the plot stable, and it reads the
-	// source arrays forward instead of jumping over them.
-	const picked = order.slice(0, keep).sort();
+    // Ascending order keeps the draw order of the plot stable, and it reads the
+    // source arrays forward instead of jumping over them.
+    return pickRows(series, order.slice(0, keep).sort());
+}
 
-	const x = new Float64Array(keep);
-	const y = new Float64Array(keep);
+/**
+ * Sample a series with a text colour column. Every group keeps its share of the
+ * sample, and a small group keeps at least `keep / (2 × groups)` points, so a rare
+ * group does not disappear from the plot. The extreme rows stay as well.
+ */
+function sampleByGroup(series: PlotSeries, categories: PlotCategories, keep: number): PlotSeries {
+    const total = series.x.length;
+    const members: number[][] = categories.list.map(() => []);
+    for (let i = 0; i < total; i++) members[categories.index[i]].push(i);
 
-	let z: Float64Array | null = null;
-	if (series.z) z = new Float64Array(keep);
+    const taken = new Uint8Array(total);
+    const picked: number[] = [];
 
-	for (let i = 0; i < keep; i++) {
-		const source = picked[i];
-		x[i] = series.x[source];
-		y[i] = series.y[source];
-		if (z && series.z) z[i] = series.z[source];
-	}
+    for (const row of extremeRows(series)) {
+        taken[row] = 1;
+        picked.push(row);
+    }
 
-	return { ...series, x, y, z, sampledFrom: total };
+    const floor = Math.floor(keep / (2 * categories.list.length));
+    const random = makeRandom(SAMPLE_SEED);
+
+    for (const rows of members) {
+        const quota = Math.min(
+            rows.length,
+            Math.max(Math.floor((keep * rows.length) / total), floor)
+        );
+
+        // Partial Fisher-Yates inside the group, as in the plain sample.
+        for (let i = 0; i < quota; i++) {
+            const j = i + Math.floor(random() * (rows.length - i));
+            const swap = rows[i];
+            rows[i] = rows[j];
+            rows[j] = swap;
+
+            if (taken[rows[i]]) continue;
+            taken[rows[i]] = 1;
+            picked.push(rows[i]);
+        }
+    }
+
+    return pickRows(series, Uint32Array.from(picked).sort());
+}
+
+/** A copy of the series with only the rows in `picked`, in that order. */
+function pickRows(series: PlotSeries, picked: Uint32Array): PlotSeries {
+    const keep = picked.length;
+    const x = new Float64Array(keep);
+    const y = new Float64Array(keep);
+
+    let z: Float64Array | null = null;
+    if (series.z) z = new Float64Array(keep);
+
+    let rowIndex: Uint32Array | null = null;
+    if (series.rowIndex) rowIndex = new Uint32Array(keep);
+
+    let categories: PlotCategories | null = null;
+    if (series.categories) categories = { ...series.categories, index: new Uint32Array(keep) };
+
+    for (let i = 0; i < keep; i++) {
+        const source = picked[i];
+        x[i] = series.x[source];
+        y[i] = series.y[source];
+        if (z && series.z) z[i] = series.z[source];
+        if (rowIndex && series.rowIndex) rowIndex[i] = series.rowIndex[source];
+        if (categories && series.categories) categories.index[i] = series.categories.index[source];
+    }
+
+    return { ...series, x, y, z, rowIndex, categories, sampledFrom: series.x.length };
 }
