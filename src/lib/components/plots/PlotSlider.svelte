@@ -108,7 +108,7 @@
             justify-content: space-between;
             gap: 0.5rem;
             font-size: var(--font-size-xs);
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
 
         input[type="range"] {

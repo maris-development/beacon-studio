@@ -379,13 +379,13 @@
 
         dd {
             margin: 0;
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
 
         .hint {
             margin-top: 0.625rem;
             font-size: var(--font-size-xs);
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
     }
 </style>

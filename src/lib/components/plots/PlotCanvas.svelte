@@ -1618,11 +1618,11 @@
         place-items: center;
 
         &.figure-sized {
-            background-color: var(--secondary, #f4f4f5);
+            background-color: var(--secondary);
 
             .plot-host {
                 background-color: var(--plot-background, var(--card));
-                box-shadow: 0 0 0 1px var(--border, #e5e7eb);
+                box-shadow: 0 0 0 1px var(--border);
             }
         }
 
@@ -1673,7 +1673,7 @@
                 padding: 0.125rem 0.4375rem;
                 border-radius: 0.25rem;
                 background-color: var(--primary);
-                color: var(--primary-foreground, #ffffff);
+                color: var(--primary-foreground);
                 font-size: var(--font-size-xs);
                 font-weight: 600;
                 white-space: nowrap;
@@ -1683,9 +1683,9 @@
                 width: 14px;
                 height: 14px;
                 margin: -7px 0 0 -7px;
-                border: 2px solid var(--foreground, #111827);
+                border: 2px solid var(--foreground);
                 border-radius: 50%;
-                box-shadow: 0 0 0 2px var(--background, #ffffff);
+                box-shadow: 0 0 0 2px var(--background);
             }
         }
 
@@ -1695,10 +1695,10 @@
             max-width: 22rem;
             padding: 0.375rem 0.5rem;
             margin: 14px 0 0 14px;
-            border: 1px solid var(--border, #e5e7eb);
+            border: 1px solid var(--border);
             border-radius: 0.375rem;
-            background-color: var(--popover, #ffffff);
-            color: var(--popover-foreground, #111827);
+            background-color: var(--popover);
+            color: var(--popover-foreground);
             box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
             font-size: var(--font-size-xs);
             pointer-events: none;
@@ -1730,7 +1730,7 @@
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
-                    color: var(--muted-foreground, #6b7280);
+                    color: var(--muted-foreground);
                 }
 
                 b {
@@ -1749,7 +1749,7 @@
             .tip-separator {
                 height: 1px;
                 margin: 0.25rem 0;
-                background-color: var(--border, #e5e7eb);
+                background-color: var(--border);
             }
         }
 
@@ -1786,7 +1786,7 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
                 font-size: var(--font-size-xs);
             }
         }
@@ -1804,7 +1804,7 @@
 
             > span {
                 font-size: var(--font-size-xs);
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
             }
         }
 
@@ -1816,7 +1816,7 @@
         .hint {
             margin: 0;
             font-size: var(--font-size-xs);
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
     }
 </style>
