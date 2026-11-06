@@ -31,6 +31,12 @@
         "menu": "Language",
         "auto": "Automatic (browser language)"
     },
+    "theme": {
+        "menu": "Theme: {theme}",
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+    },
     "nav": {
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
@@ -110,6 +116,10 @@
                 "label": "Language",
                 "description": "The language of {app}. Automatic follows the language of the browser."
             },
+            "theme": {
+                "label": "Theme",
+                "description": "The colors of {app}. System follows the light or dark setting of the operating system."
+            },
             "defaultOutputFormat": {
                 "label": "Default output format",
                 "description": "The output format of a new query block."
@@ -147,8 +157,12 @@
                 "description": "The age at which a result on disk becomes stale. A stale result goes away."
             },
             "mapStyleUrl": {
-                "label": "Base map style URL",
-                "description": "The MapLibre style URL of the base map. A change applies to the next map."
+                "label": "Light base map style URL",
+                "description": "The MapLibre style URL of the base map in light mode. A change applies to the next map."
+            },
+            "mapStyleUrlDark": {
+                "label": "Dark base map style URL",
+                "description": "The MapLibre style URL of the base map in dark mode. A change applies to the next map. Leave it empty to use the light map in both themes."
             },
             "mapGroupByDecimals": {
                 "label": "Map group decimals",
@@ -811,6 +825,7 @@
             "textColor": "Text color",
             "gridlineColor": "Gridline color",
             "gridlineOpacity": "Gridline opacity",
+            "themeColors": "Use theme colors",
             "noContoursLine": "Contours need a value per point. A line has none, so they are off for this plot type.",
             "noContoursHistogram": "Contours need a value per point. A histogram has none, so they are off for this plot type.",
             "contoursNeedColour": "Contours read the colour axis. Bind a column to it in step 2 to switch them on.",

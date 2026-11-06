@@ -197,7 +197,7 @@
 
     .variant-destructive {
         background-color: var(--destructive);
-        color: white;
+        color: var(--destructive-foreground);
         box-shadow: var(--button-shadow);
 
         &:hover {

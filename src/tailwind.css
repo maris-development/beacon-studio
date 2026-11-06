@@ -69,6 +69,7 @@
     --accent: oklch(0.967 0.001 286.375);
     --accent-foreground: oklch(0.21 0.006 285.885);
     --destructive: oklch(0.577 0.245 27.325);
+    --destructive-foreground: white;
     --access-all: #16a34a;
     --access-limited: #d97706;
     --border: color-mix(in srgb, var(--primary) 25%, transparent);
@@ -112,8 +113,30 @@
     /* Checked boxes, selected cards and the active parameter card. */
     --control-active: #2563eb;
     --control-active-foreground: white;
+    /* The moving knob of a switch. */
+    --control-thumb: white;
     --input-border: #ccc;
     --overlay: rgb(0 0 0 / 0.5);
+
+    /* Good and bad states: node health, connection checks, a missing node or filter. */
+    --status-ok: MediumSeaGreen;
+    --status-error: IndianRed;
+    --status-foreground: white;
+
+    /* Text on --admin-badge-background. */
+    --admin-badge-foreground: white;
+
+    --notice-warning-background: #fef3c7;
+    --notice-warning-foreground: #92400e;
+    --notice-info-background: #dbeafe;
+    --notice-info-foreground: #1d4ed8;
+
+    --tooltip-background: #333;
+    --tooltip-foreground: #fff;
+
+    /* The avatar of a user without a role that gives admin rights. */
+    --user-local: #7c3aed;
+    --user-local-foreground: #6d28d9;
 
     --font-family-base:
         "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -152,39 +175,84 @@
     --map-draw: #2563eb;
 }
 
-.dark {
-    --background: oklch(0.141 0.005 285.823);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.21 0.006 285.885);
-    --card-foreground: oklch(0.985 0 0);
-    --card-border: oklch(1 0 0 / 10%);
-    --popover: oklch(0.21 0.006 285.885);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.92 0.004 286.32);
-    --primary-foreground: oklch(0.21 0.006 285.885);
-    --secondary: oklch(0.274 0.006 286.033);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.274 0.006 286.033);
-    --muted-foreground: oklch(0.705 0.015 286.067);
-    --accent: oklch(0.274 0.006 286.033);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --focus-ring: oklch(0.552 0.016 285.938);
+/* :root.dark outranks the :root of a brand theme. A brand sets its dark values in its own :root.dark. */
+:root.dark {
+    --app-background: #0d0d10;
+    --background: #17171b;
+    --foreground: #fafafa;
+    --card: #17171b;
+    --card-foreground: #fafafa;
+    --card-border: #2c2c30;
+    --popover: #17171b;
+    --popover-foreground: #fafafa;
+
+    --highlight: #5aa9f5;
+
+    --primary: #8ea2f5;
+    --primary-foreground: #0b1023;
+    --secondary: #262938;
+    --secondary-foreground: #e4e4e7;
+    --muted: #202026;
+    --muted-foreground: #a1a1aa;
+    --accent: #262938;
+    --accent-foreground: #fafafa;
+    --destructive: #f87171;
+    --border: #2c2c30;
+    --input: #3a3a3d;
+    --focus-ring: #8ea2f5;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.21 0.006 285.885);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.274 0.006 286.033);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.552 0.016 285.938);
+
+    --sidebar: #17171b;
+    --sidebar-foreground: #fafafa;
+    --sidebar-primary: #8ea2f5;
+    --sidebar-primary-foreground: #0b1023;
+    --sidebar-accent: #262938;
+    --sidebar-accent-foreground: #8ea2f5;
+    --sidebar-border: #2c2c30;
+    --sidebar-ring: #8ea2f5;
+
+    --selected-background: #20222c;
+    --control-active: #8ea2f5;
+    --control-active-foreground: #0b1023;
+    --control-thumb: #fafafa;
+    --input-border: #3a3a3d;
+
+    --heading-foreground: var(--foreground);
+    --link: #8ea2f5;
+
+    --status-ok: #22c55e;
+    --status-error: #f87171;
+
+    /* The mock-ups do not show the values below. They come from the same palette. */
+    --deny-background: color-mix(in srgb, #f87171 15%, #17171b);
+    --deny-foreground: #f87171;
+    --deny-border: #f87171;
+
+    --table-border: #2c2c30;
+    --table-header-background: #1c1c20;
+    --table-header-foreground: #a1a1aa;
+    --table-foreground: #e4e4e7;
+    --table-row-alternate: #1c1c20;
+    --table-row-hover: #262938;
+
+    --crumb-background: #17171b;
+    --crumb-border: #2c2c30;
+
+    --notice-warning-background: color-mix(in srgb, #f59e0b 15%, #17171b);
+    --notice-warning-foreground: #fbbf24;
+    --notice-info-background: color-mix(in srgb, #8ea2f5 15%, #17171b);
+    --notice-info-foreground: #8ea2f5;
+
+    --tooltip-background: #3a3a3d;
+    --tooltip-foreground: #fafafa;
+
+    --user-local: #a78bfa;
+    --user-local-foreground: #c4b5fd;
+
     --network-line: rgba(226, 232, 240, 0.1);
     --network-dot: rgba(45, 212, 191, 0.45);
     --network-glow-a: rgba(45, 212, 191, 0.12);

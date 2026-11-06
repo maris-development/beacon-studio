@@ -123,7 +123,7 @@
                     vertical-align: middle;
 
                     &:hover {
-                        color: #000;
+                        color: var(--foreground);
                     }
                 }
             }

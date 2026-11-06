@@ -100,7 +100,7 @@
 
         em {
             font-style: normal;
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
 
         .ends {
@@ -114,7 +114,7 @@
         input[type="range"] {
             width: 100%;
             height: 1.25rem;
-            accent-color: var(--primary, #2563eb);
+            accent-color: var(--primary);
             appearance: none;
             background: transparent;
 
@@ -123,23 +123,23 @@
                 border-radius: 999px;
                 background: linear-gradient(
                     to right,
-                    var(--primary, #2563eb) 0%,
-                    var(--primary, #2563eb) var(--slider-fill),
-                    var(--muted, #e5e7eb) var(--slider-fill),
-                    var(--muted, #e5e7eb) 100%
+                    var(--primary) 0%,
+                    var(--primary) var(--slider-fill),
+                    var(--muted) var(--slider-fill),
+                    var(--muted) 100%
                 );
             }
 
             &::-moz-range-track {
                 height: 0.25rem;
                 border-radius: 999px;
-                background: var(--muted, #e5e7eb);
+                background: var(--muted);
             }
 
             &::-moz-range-progress {
                 height: 0.25rem;
                 border-radius: 999px;
-                background: var(--primary, #2563eb);
+                background: var(--primary);
             }
 
             &::-webkit-slider-thumb {
@@ -149,7 +149,7 @@
                 appearance: none;
                 border: 0;
                 border-radius: 50%;
-                background: var(--primary, #2563eb);
+                background: var(--primary);
                 box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
                 cursor: pointer;
             }
@@ -159,7 +159,7 @@
                 height: 1rem;
                 border: 0;
                 border-radius: 50%;
-                background: var(--primary, #2563eb);
+                background: var(--primary);
                 box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
                 cursor: pointer;
             }

@@ -19,7 +19,7 @@
         padding: 0.125rem 0.625rem;
         border-radius: 99px;
         background: var(--admin-badge-background);
-        color: white;
+        color: var(--admin-badge-foreground);
         font-size: var(--font-size-xs);
         font-weight: 700;
         line-height: 1.4;

@@ -244,7 +244,7 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
-        border-bottom: 1px solid var(--border, #e5e7eb);
+        border-bottom: 1px solid var(--border);
 
         .tabs {
             display: flex;
@@ -263,12 +263,12 @@
             border-radius: 0.375rem 0.375rem 0 0;
 
             &:hover {
-                background-color: var(--accent, #f3f4f6);
+                background-color: var(--accent);
             }
 
             &.selected {
-                border-color: var(--border, #e5e7eb);
-                background-color: var(--background, #ffffff);
+                border-color: var(--border);
+                background-color: var(--background);
                 // Cover the strip border below, so the tab joins the plot area.
                 margin-bottom: -1px;
                 padding-bottom: 1px;
@@ -292,7 +292,7 @@
                 padding: 0.3125rem 0.5rem;
                 border: 1px solid var(--ring, #9ca3af);
                 border-radius: 0.25rem;
-                background: var(--background, #ffffff);
+                background: var(--background);
                 font-size: var(--font-size-sm);
                 outline: none;
             }
@@ -309,12 +309,12 @@
                 border: 0;
                 border-radius: 0.25rem;
                 background: none;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
                 cursor: pointer;
 
                 &:hover {
-                    background-color: var(--destructive, #fee2e2);
-                    color: #991b1b;
+                    background-color: var(--destructive);
+                    color: var(--destructive-foreground);
                 }
             }
 
@@ -324,11 +324,11 @@
                 padding: 0.25rem;
                 border: 0;
                 background: none;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
                 cursor: pointer;
 
                 &:hover {
-                    color: var(--foreground, #111827);
+                    color: var(--foreground);
                 }
             }
         }
@@ -344,11 +344,11 @@
             border-radius: 0.375rem;
             background: none;
             font-size: var(--font-size-sm);
-            color: var(--muted-foreground, #4b5563);
+            color: var(--muted-foreground);
             cursor: pointer;
 
             &:hover {
-                background-color: var(--accent, #f3f4f6);
+                background-color: var(--accent);
             }
 
             &.export {

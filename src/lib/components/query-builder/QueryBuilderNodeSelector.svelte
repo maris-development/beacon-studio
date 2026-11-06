@@ -192,7 +192,7 @@
         gap: 0.75rem;
         padding: 0.75rem;
         border: 1px solid var(--border);
-        border-left: 3px solid IndianRed;
+        border-left: 3px solid var(--status-error);
         background-color: var(--muted);
 
         p {
@@ -240,7 +240,7 @@
             p.node-url {
                 margin: 0;
                 font-size: var(--font-size-sm);
-                color: hsl(0, 0%, 50%);
+                color: var(--muted-foreground);
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;

@@ -46,7 +46,14 @@
     import { Input } from "$lib/components/ui/input/index.js";
     import Button from "@/components/buttons/Button.svelte";
     import CheckIcon from "@lucide/svelte/icons/check";
-    import { axisTitle, basemapLayerOf, usesZColumn, type PlotConfig } from "@/plots/plot-config";
+    import {
+        axisTitle,
+        basemapLayerOf,
+        resolvePlotColors,
+        usesZColumn,
+        type PlotConfig
+    } from "@/plots/plot-config";
+    import { resolvedTheme } from "@/services/theme";
     import {
         categoryKeyOf,
         CROSS_SECTION_AXIS_LABEL,
@@ -208,6 +215,9 @@
         chart = null;
     });
 
+    // A colour that the user did not pick follows the theme.
+    const colors = $derived(resolvePlotColors(plot.style, $resolvedTheme));
+
     /**
      * The plot without the two edits that need no rebuild: the figure size and the
      * hidden groups. The rebuild effect reads this string, so those two edits do not
@@ -221,8 +231,8 @@
         })
     );
 
-    // Rebuild the chart when the plot, the data, the contours or the palette
-    // change. The reads below are the dependencies of this effect.
+    // Rebuild the chart when the plot, the data, the contours, the palette or the
+    // theme change. The reads below are the dependencies of this effect.
     $effect(() => {
         void [
             rebuildKey,
@@ -233,7 +243,11 @@
             geography,
             map,
             palettesLoaded,
-            $t
+            $t,
+            // Strings, not the object, so a figure size or a hidden group does not rebuild.
+            colors.backgroundColor,
+            colors.gridlineColor,
+            colors.textColor
         ];
         scheduleRebuild();
     });
@@ -1162,7 +1176,7 @@
     }
 
     function buildOptions(current: PlotSeries, width: number, height: number): uPlot.Options {
-        const style = plot.style;
+        const style = { ...plot.style, ...colors };
         const grid = gridColor(style.gridlineColor, style.gridlineOpacity);
 
         const showColorBar = !!current.z && !!current.zRange && usesZColumn(plot.type);
@@ -1462,7 +1476,7 @@
     class="plot-canvas"
     class:figure-sized={figureSized}
     bind:this={room}
-    style="--plot-background: {plot.style.backgroundColor};"
+    style="--plot-background: {colors.backgroundColor};"
 >
     <div class="plot-host" bind:this={container} aria-label={plot.title || plot.name}>
         <div class="mouse-layer" aria-hidden="true">
@@ -1596,7 +1610,7 @@
         min-height: 0;
         border-radius: 0.5rem;
         overflow: hidden;
-        background-color: var(--plot-background, #ffffff);
+        background-color: var(--plot-background, var(--card));
         // A figure with a size of its own sits in the centre of the panel.
         display: grid;
         grid-template-columns: minmax(0, 1fr);
@@ -1607,7 +1621,7 @@
             background-color: var(--secondary, #f4f4f5);
 
             .plot-host {
-                background-color: var(--plot-background, #ffffff);
+                background-color: var(--plot-background, var(--card));
                 box-shadow: 0 0 0 1px var(--border, #e5e7eb);
             }
         }
@@ -1747,11 +1761,11 @@
             justify-content: center;
             padding: 2rem;
             text-align: center;
-            background-color: var(--plot-background, #ffffff);
+            background-color: var(--plot-background, var(--card));
 
             p {
                 max-width: 34rem;
-                color: var(--muted-foreground, #6b7280);
+                color: var(--muted-foreground);
             }
         }
     }

@@ -169,7 +169,7 @@
             p.table-description {
                 margin: 0;
                 font-size: var(--font-size-sm);
-                color: hsl(0, 0%, 50%);
+                color: var(--muted-foreground);
                 // Show one line only and ellipsize the rest of the text.
                 overflow: hidden;
                 text-overflow: ellipsis;

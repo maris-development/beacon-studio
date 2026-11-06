@@ -25,13 +25,21 @@ import { persisted } from "svelte-local-storage-store";
 import { TELEMETRY_BUILD_ENABLED } from "@/build-info";
 import { AUTO_LANGUAGE, SUPPORTED_LOCALES, type MessageKey } from "@/i18n";
 
-/** The localStorage key of the settings object. */
-const STORAGE_KEY = "beacon-studio.settings";
+/** The localStorage key of the settings object. The inline script in `app.html` reads it too. */
+export const SETTINGS_STORAGE_KEY = "beacon-studio.settings";
+
+/** The values of the theme setting. `system` follows the colour scheme of the OS. */
+export const THEME_SETTINGS = ["system", "light", "dark"] as const;
+export type ThemeSetting = (typeof THEME_SETTINGS)[number];
+/** The theme that the app shows, after `system` is resolved. */
+export type ResolvedTheme = "light" | "dark";
 
 export interface BeaconStudioSettings {
     // -- general --------------------------------------------------------------
     /** The language code of the app, or `auto` for the browser language. */
     language: string;
+    /** One of {@link THEME_SETTINGS}. An unknown stored value follows the OS. */
+    theme: string;
 
     // -- query ----------------------------------------------------------------
     /** The output format of a new query block. */
@@ -56,8 +64,10 @@ export interface BeaconStudioSettings {
     diskCacheMaxAgeMs: number;
 
     // -- map ------------------------------------------------------------------
-    /** The MapLibre style URL of the base map. */
+    /** The MapLibre style URL of the base map in light mode. */
     mapStyleUrl: string;
+    /** The MapLibre style URL of the base map in dark mode. Empty uses {@link mapStyleUrl}. */
+    mapStyleUrlDark: string;
     /** The decimals that the map groups latitude and longitude by. */
     mapGroupByDecimals: number;
     /** The width of a new cross section, in kilometres. */
@@ -87,6 +97,7 @@ export interface BeaconStudioSettings {
 
 export const DEFAULT_SETTINGS: BeaconStudioSettings = {
     language: AUTO_LANGUAGE,
+    theme: "system",
 
     defaultOutputFormat: "parquet",
     queryCellLimit: 10_000_000,
@@ -100,6 +111,7 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
     diskCacheMaxAgeMs: 24 * 60 * 60 * 1000,
 
     mapStyleUrl: "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json",
+    mapStyleUrlDark: "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
     mapGroupByDecimals: 3,
     crossSectionWidthKm: 5,
 
@@ -178,6 +190,12 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
             { value: AUTO_LANGUAGE, labelKey: "language.auto" },
             ...SUPPORTED_LOCALES.map((entry) => ({ value: entry.code, label: entry.name }))
         ]
+    },
+    {
+        key: "theme",
+        group: "general",
+        type: "select",
+        options: THEME_SETTINGS.map((value) => ({ value, labelKey: `theme.${value}` as const }))
     },
     {
         key: "defaultOutputFormat",
@@ -263,6 +281,12 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     },
     {
         key: "mapStyleUrl",
+        group: "map",
+        type: "text",
+        placeholder: "https://example.com/style.json"
+    },
+    {
+        key: "mapStyleUrlDark",
         group: "map",
         type: "text",
         placeholder: "https://example.com/style.json"
@@ -368,7 +392,7 @@ function clamp(key: SettingKey, value: number): number {
     return Math.min(definition.max * scale, Math.max(definition.min * scale, value));
 }
 
-const store = persisted<BeaconStudioSettings>(STORAGE_KEY, DEFAULT_SETTINGS);
+const store = persisted<BeaconStudioSettings>(SETTINGS_STORAGE_KEY, DEFAULT_SETTINGS);
 
 /**
  * The persisted settings. Use `$settings` in a component.

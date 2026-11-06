@@ -137,7 +137,7 @@
                 gap: 0.5rem;
                 padding: 0.5rem;
                 border-radius: 0.5rem;
-                background-color: white;
+                background-color: var(--card);
 
                 :global(.remove-filter) {
                     position: absolute;

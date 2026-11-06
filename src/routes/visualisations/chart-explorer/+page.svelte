@@ -348,7 +348,7 @@
             gap: 1rem;
             align-items: center;
             justify-content: center;
-            background-color: rgba(255, 255, 255, 0.6);
+            background-color: color-mix(in srgb, var(--background) 60%, transparent);
             border-radius: 0.5rem;
             z-index: 2;
         }

@@ -2,6 +2,21 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
+        <script>
+            // Set the theme before the first paint. services/theme.ts applies the same rule later.
+            try {
+                var theme = JSON.parse(
+                    localStorage.getItem("beacon-studio.settings") || "{}"
+                ).theme;
+                var dark =
+                    theme === "dark" ||
+                    (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.classList.toggle("dark", dark);
+                document.documentElement.style.colorScheme = dark ? "dark" : "light";
+            } catch (error) {
+                // No storage or no matchMedia: the app sets the theme when it starts.
+            }
+        </script>
         <link
             rel="icon"
             type="image/png"
