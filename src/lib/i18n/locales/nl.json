@@ -31,6 +31,12 @@
         "menu": "Taal",
         "auto": "Automatisch (browsertaal)"
     },
+    "theme": {
+        "menu": "Thema: {theme}",
+        "system": "Systeem",
+        "light": "Licht",
+        "dark": "Donker"
+    },
     "nav": {
         "openMenu": "Menu openen",
         "closeMenu": "Menu sluiten",
@@ -110,6 +116,10 @@
                 "label": "Taal",
                 "description": "De taal van {app}. Automatisch volgt de taal van de browser."
             },
+            "theme": {
+                "label": "Thema",
+                "description": "De kleuren van {app}. Systeem volgt de lichte of donkere instelling van het besturingssysteem."
+            },
             "defaultOutputFormat": {
                 "label": "Standaard uitvoerformaat",
                 "description": "Het uitvoerformaat van een nieuw queryblok."
@@ -147,8 +157,12 @@
                 "description": "De leeftijd waarop een resultaat op schijf verouderd is. Een verouderd resultaat verdwijnt."
             },
             "mapStyleUrl": {
-                "label": "Stijl-URL basiskaart",
-                "description": "De MapLibre-stijl-URL van de basiskaart. Een wijziging geldt voor de volgende kaart."
+                "label": "Stijl-URL lichte basiskaart",
+                "description": "De MapLibre-stijl-URL van de basiskaart in de lichte modus. Een wijziging geldt voor de volgende kaart."
+            },
+            "mapStyleUrlDark": {
+                "label": "Stijl-URL donkere basiskaart",
+                "description": "De MapLibre-stijl-URL van de basiskaart in de donkere modus. Een wijziging geldt voor de volgende kaart. Laat het veld leeg om de lichte kaart in beide thema's te gebruiken."
             },
             "mapGroupByDecimals": {
                 "label": "Groeperingsdecimalen kaart",
@@ -761,6 +775,7 @@
             "textColor": "Tekstkleur",
             "gridlineColor": "Kleur rasterlijnen",
             "gridlineOpacity": "Dekking rasterlijnen",
+            "themeColors": "Themakleuren gebruiken",
             "noContoursLine": "Contouren hebben een waarde per punt nodig. Een lijn heeft die niet, dus ze staan uit voor dit plottype.",
             "noContoursHistogram": "Contouren hebben een waarde per punt nodig. Een histogram heeft die niet, dus ze staan uit voor dit plottype.",
             "contoursNeedColour": "Contouren lezen de kleuras. Koppel er in stap 2 een kolom aan om ze aan te zetten.",

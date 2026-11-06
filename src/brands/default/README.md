@@ -48,7 +48,9 @@ export default defineBrand({
 
 ## theme.scss
 
-Override the tokens of the `:root` block in `src/tailwind.css`. Put only `:root` tokens and `@font-face` rules in this file.
+Override the tokens of the `:root` and `:root.dark` blocks in `src/tailwind.css`. Put only `:root` tokens, `:root.dark` tokens and `@font-face` rules in this file.
+
+The `:root.dark` block of `src/tailwind.css` outranks your `:root` block. In dark mode, a token that it sets ignores your `:root` value. Set your dark value in a `:root.dark` block. A token that `src/tailwind.css` does not set in `:root.dark` (for example `--map-draw`) keeps your `:root` value in both themes.
 
 ```scss
 @font-face {
@@ -64,6 +66,11 @@ Override the tokens of the `:root` block in `src/tailwind.css`. Put only `:root`
     --link: #0f766e;
     --button-radius: 999px;
     --button-text-transform: uppercase;
+}
+
+:root.dark {
+    --primary: #2dd4bf;
+    --link: #2dd4bf;
 }
 ```
 

@@ -65,7 +65,7 @@
         height: 3rem;
         border-radius: 0.75rem;
         background: var(--admin-badge-background);
-        color: white;
+        color: var(--admin-badge-foreground);
 
         // The middle of the gradient is light, so the white icon needs a shadow.
         :global(svg) {

@@ -36,6 +36,7 @@
     import SidebarCollapsibleMenu from "./SidebarCollapsibleMenu.svelte";
     import BuildVersion from "./BuildVersion.svelte";
     import LanguageMenu from "./LanguageMenu.svelte";
+    import ThemeMenu from "./ThemeMenu.svelte";
     import { settings } from "@/stores/settings";
     import { signedInNodeIds } from "@/services/admin-session";
     import { isLocked, visibleGroups, type Group, type MenuItem } from "./menu";
@@ -148,11 +149,14 @@
     let hovered = $state(false);
     let keyboardFocus = $state(false);
     let languageMenuOpen = $state(false);
+    let themeMenuOpen = $state(false);
     let peekTimer: ReturnType<typeof setTimeout> | undefined;
 
-    // A collapsed sidebar opens over the page. The open language menu keeps it open,
+    // A collapsed sidebar opens over the page. An open footer menu keeps it open,
     // because the menu is outside the sidebar.
-    const peek = $derived(collapsed && !isMobile && (hovered || keyboardFocus || languageMenuOpen));
+    const peek = $derived(
+        collapsed && !isMobile && (hovered || keyboardFocus || languageMenuOpen || themeMenuOpen)
+    );
     const compact = $derived(collapsed && !peek);
 
     function onPointerEnter(event: PointerEvent): void {
@@ -362,6 +366,7 @@
                     />
                 {/each}
                 <LanguageMenu {compact} bind:open={languageMenuOpen} />
+                <ThemeMenu {compact} bind:open={themeMenuOpen} />
                 <SidebarMenuItem
                     title={$t("nav.item.feedback")}
                     icon={SendIcon}
@@ -592,7 +597,7 @@
         z-index: 40;
         border: none;
         padding: 0;
-        background: rgba(0, 0, 0, 0.4);
+        background: var(--overlay);
         cursor: pointer;
     }
 </style>

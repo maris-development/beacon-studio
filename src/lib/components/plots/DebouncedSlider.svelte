@@ -105,7 +105,7 @@
 
         em {
             font-style: normal;
-            color: var(--muted-foreground, #6b7280);
+            color: var(--muted-foreground);
         }
 
         input[type="range"] {

@@ -31,6 +31,12 @@
         "menu": "Idioma",
         "auto": "Automático (idioma del navegador)"
     },
+    "theme": {
+        "menu": "Tema: {theme}",
+        "system": "Sistema",
+        "light": "Claro",
+        "dark": "Oscuro"
+    },
     "nav": {
         "openMenu": "Abrir menú",
         "closeMenu": "Cerrar menú",
@@ -110,6 +116,10 @@
                 "label": "Idioma",
                 "description": "El idioma de {app}. Automático sigue el idioma del navegador."
             },
+            "theme": {
+                "label": "Tema",
+                "description": "Los colores de {app}. Sistema sigue el ajuste claro u oscuro del sistema operativo."
+            },
             "defaultOutputFormat": {
                 "label": "Formato de salida predeterminado",
                 "description": "El formato de salida de un nuevo bloque de consulta."
@@ -147,8 +157,12 @@
                 "description": "La antigüedad a partir de la cual un resultado en disco caduca. Un resultado caducado se elimina."
             },
             "mapStyleUrl": {
-                "label": "URL del estilo del mapa base",
-                "description": "La URL del estilo MapLibre del mapa base. Un cambio se aplica al próximo mapa."
+                "label": "URL del estilo del mapa base claro",
+                "description": "La URL del estilo MapLibre del mapa base en el modo claro. Un cambio se aplica al próximo mapa."
+            },
+            "mapStyleUrlDark": {
+                "label": "URL del estilo del mapa base oscuro",
+                "description": "La URL del estilo MapLibre del mapa base en el modo oscuro. Un cambio se aplica al próximo mapa. Deje el campo vacío para usar el mapa claro en ambos temas."
             },
             "mapGroupByDecimals": {
                 "label": "Decimales de agrupación del mapa",
@@ -761,6 +775,7 @@
             "textColor": "Color del texto",
             "gridlineColor": "Color de las líneas de cuadrícula",
             "gridlineOpacity": "Opacidad de las líneas de cuadrícula",
+            "themeColors": "Usar colores del tema",
             "noContoursLine": "Los contornos necesitan un valor por punto. Una línea no tiene ninguno, así que están desactivados para este tipo de gráfico.",
             "noContoursHistogram": "Los contornos necesitan un valor por punto. Un histograma no tiene ninguno, así que están desactivados para este tipo de gráfico.",
             "contoursNeedColour": "Los contornos leen el eje de color. Vincula una columna a él en el paso 2 para activarlos.",

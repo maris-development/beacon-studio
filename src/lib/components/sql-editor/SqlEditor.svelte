@@ -5,6 +5,7 @@
     import { onMount, untrack } from "svelte";
     import * as monaco from "monaco-editor";
     import "@/monaco/environment";
+    import { monacoTheme } from "@/monaco/theme";
     import type { CompletionEntry, CompletionKind } from "@/sql/completion";
     import { translate } from "@/i18n";
 
@@ -69,7 +70,7 @@
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             fontSize: 13,
-            theme: "vs",
+            theme: monacoTheme(),
             placeholder
         });
 

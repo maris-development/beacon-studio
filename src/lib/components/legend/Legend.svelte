@@ -205,8 +205,8 @@
                         bottom: 125%;
                         left: 50%;
                         transform: translateX(-50%);
-                        background-color: #333;
-                        color: #fff;
+                        background-color: var(--tooltip-background);
+                        color: var(--tooltip-foreground);
                         padding: 0.3rem 0.5rem;
                         border-radius: 4px;
                         white-space: nowrap;
@@ -224,7 +224,7 @@
                         transform: translateX(-50%);
                         border-width: 5px;
                         border-style: solid;
-                        border-color: #333 transparent transparent transparent;
+                        border-color: var(--tooltip-background) transparent transparent transparent;
                         z-index: 3;
                     }
                 }

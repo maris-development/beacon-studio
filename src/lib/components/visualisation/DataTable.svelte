@@ -243,7 +243,7 @@
                             &:hover {
                                 background-color: color-mix(
                                     in srgb,
-                                    black 5%,
+                                    var(--foreground) 5%,
                                     var(--table-header-background)
                                 );
                             }

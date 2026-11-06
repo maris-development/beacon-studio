@@ -83,11 +83,11 @@
         background-color: var(--muted-foreground);
 
         &.online {
-            background-color: MediumSeaGreen;
+            background-color: var(--status-ok);
         }
 
         &.offline {
-            background-color: IndianRed;
+            background-color: var(--status-error);
         }
     }
 
@@ -104,24 +104,24 @@
             gap: 0.25rem;
             border-radius: 99px;
             padding: 0.25rem 0.5rem;
-            color: white;
+            color: var(--status-foreground);
             background-color: var(--muted-foreground);
             font-size: var(--font-size-sm);
             line-height: 1;
 
             &.online {
-                background-color: MediumSeaGreen;
+                background-color: var(--status-ok);
             }
 
             &.offline {
-                background-color: IndianRed;
+                background-color: var(--status-error);
             }
         }
 
         .inline-latency {
             opacity: 0.85;
             padding-left: 0.35rem;
-            border-left: 1px solid rgba(255, 255, 255, 0.4);
+            border-left: 1px solid color-mix(in srgb, var(--status-foreground) 40%, transparent);
             margin-left: 0.15rem;
         }
 

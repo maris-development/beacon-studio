@@ -146,7 +146,7 @@
         width: 2.25rem;
         height: 0.75rem;
         border-radius: 0.1875rem;
-        border: 1px solid rgba(0, 0, 0, 0.2);
+        border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
     }
 
     .name {

@@ -763,6 +763,6 @@
         height: 1rem;
     }
     .no-selection {
-        color: hsl(0, 0%, 50%);
+        color: var(--muted-foreground);
     }
 </style>

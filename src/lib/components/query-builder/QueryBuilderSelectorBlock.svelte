@@ -455,7 +455,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             gap: 0.25rem;
 
             &.missing {
-                color: IndianRed;
+                color: var(--status-error);
             }
         }
 
@@ -469,7 +469,7 @@ add new query blocks, duplicate blocks, close clocks, select active blocks
             text-overflow: ellipsis;
 
             &.missing {
-                color: IndianRed;
+                color: var(--status-error);
             }
         }
     }

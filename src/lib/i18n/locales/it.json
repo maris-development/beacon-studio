@@ -31,6 +31,12 @@
         "menu": "Lingua",
         "auto": "Automatica (lingua del browser)"
     },
+    "theme": {
+        "menu": "Tema: {theme}",
+        "system": "Sistema",
+        "light": "Chiaro",
+        "dark": "Scuro"
+    },
     "nav": {
         "openMenu": "Apri menu",
         "closeMenu": "Chiudi menu",
@@ -110,6 +116,10 @@
                 "label": "Lingua",
                 "description": "La lingua di {app}. Automatica segue la lingua del browser."
             },
+            "theme": {
+                "label": "Tema",
+                "description": "I colori di {app}. Sistema segue l'impostazione chiara o scura del sistema operativo."
+            },
             "defaultOutputFormat": {
                 "label": "Formato di output predefinito",
                 "description": "Il formato di output di un nuovo blocco query."
@@ -147,8 +157,12 @@
                 "description": "L'età alla quale un risultato su disco diventa obsoleto. Un risultato obsoleto viene rimosso."
             },
             "mapStyleUrl": {
-                "label": "URL dello stile della mappa di base",
-                "description": "L'URL dello stile MapLibre della mappa di base. Una modifica vale per la prossima mappa."
+                "label": "URL dello stile della mappa di base chiara",
+                "description": "L'URL dello stile MapLibre della mappa di base in modalità chiara. Una modifica vale per la prossima mappa."
+            },
+            "mapStyleUrlDark": {
+                "label": "URL dello stile della mappa di base scura",
+                "description": "L'URL dello stile MapLibre della mappa di base in modalità scura. Una modifica vale per la prossima mappa. Lascia il campo vuoto per usare la mappa chiara in entrambi i temi."
             },
             "mapGroupByDecimals": {
                 "label": "Decimali di raggruppamento mappa",
@@ -761,6 +775,7 @@
             "textColor": "Colore del testo",
             "gridlineColor": "Colore della griglia",
             "gridlineOpacity": "Opacità della griglia",
+            "themeColors": "Usa i colori del tema",
             "noContoursLine": "I contorni richiedono un valore per punto. Una linea non ne ha, quindi sono disattivati per questo tipo di grafico.",
             "noContoursHistogram": "I contorni richiedono un valore per punto. Un istogramma non ne ha, quindi sono disattivati per questo tipo di grafico.",
             "contoursNeedColour": "I contorni leggono l'asse colore. Associa una colonna a questo asse nel passo 2 per attivarli.",

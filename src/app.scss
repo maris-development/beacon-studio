@@ -157,6 +157,169 @@ textarea {
     font-size: var(--font-size-icon);
 }
 
+// MapLibre and flatpickr bring light colours. The :root.dark prefix outranks their stylesheets.
+:root.dark {
+    .maplibregl-popup-content {
+        background: var(--popover);
+        color: var(--popover-foreground);
+    }
+
+    // The tip is a border triangle. Its coloured side points at the content box.
+    .maplibregl-popup-anchor-top,
+    .maplibregl-popup-anchor-top-left,
+    .maplibregl-popup-anchor-top-right {
+        .maplibregl-popup-tip {
+            border-bottom-color: var(--popover);
+        }
+    }
+
+    .maplibregl-popup-anchor-bottom,
+    .maplibregl-popup-anchor-bottom-left,
+    .maplibregl-popup-anchor-bottom-right {
+        .maplibregl-popup-tip {
+            border-top-color: var(--popover);
+        }
+    }
+
+    .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+        border-right-color: var(--popover);
+    }
+
+    .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+        border-left-color: var(--popover);
+    }
+
+    .maplibregl-popup-close-button {
+        color: var(--popover-foreground);
+    }
+
+    .maplibregl-ctrl-group {
+        background: var(--card);
+
+        button + button {
+            border-top-color: var(--card-border);
+        }
+    }
+
+    // The control icons are dark SVG images.
+    .maplibregl-ctrl-icon,
+    .maplibregl-ctrl-attrib-button {
+        filter: invert(1);
+    }
+
+    .maplibregl-ctrl.maplibregl-ctrl-attrib {
+        background-color: color-mix(in srgb, var(--card) 50%, transparent);
+    }
+
+    .maplibregl-ctrl-attrib.maplibregl-compact {
+        background-color: var(--card);
+        color: var(--foreground);
+    }
+
+    .maplibregl-ctrl-attrib a {
+        color: var(--muted-foreground);
+    }
+
+    .flatpickr-calendar {
+        background: var(--popover);
+        color: var(--popover-foreground);
+        box-shadow:
+            0 0 0 1px var(--card-border),
+            0 3px 13px var(--overlay);
+
+        &.arrowTop::before {
+            border-bottom-color: var(--card-border);
+        }
+
+        &.arrowTop::after {
+            border-bottom-color: var(--popover);
+        }
+
+        &.arrowBottom::before {
+            border-top-color: var(--card-border);
+        }
+
+        &.arrowBottom::after {
+            border-top-color: var(--popover);
+        }
+
+        &.hasTime .flatpickr-time {
+            border-top-color: var(--card-border);
+        }
+    }
+
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-months .flatpickr-prev-month,
+    .flatpickr-months .flatpickr-next-month {
+        color: var(--popover-foreground);
+        fill: var(--popover-foreground);
+    }
+
+    .flatpickr-current-month .flatpickr-monthDropdown-months {
+        background: var(--popover);
+    }
+
+    span.flatpickr-weekday {
+        color: var(--muted-foreground);
+    }
+
+    .flatpickr-day {
+        color: var(--popover-foreground);
+
+        &:hover,
+        &:focus,
+        &.prevMonthDay:hover,
+        &.nextMonthDay:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        &.today {
+            border-color: var(--muted-foreground);
+        }
+
+        &.prevMonthDay,
+        &.nextMonthDay,
+        &.flatpickr-disabled,
+        &.flatpickr-disabled:hover {
+            color: color-mix(in srgb, var(--popover-foreground) 30%, transparent);
+        }
+
+        &.selected,
+        &.startRange,
+        &.endRange {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--primary-foreground);
+        }
+    }
+
+    .flatpickr-time {
+        input,
+        .flatpickr-am-pm,
+        .flatpickr-time-separator {
+            color: var(--popover-foreground);
+        }
+
+        input:hover,
+        input:focus,
+        .flatpickr-am-pm:hover,
+        .flatpickr-am-pm:focus {
+            background: var(--accent);
+        }
+    }
+
+    .numInputWrapper span {
+        &.arrowUp::after {
+            border-bottom-color: var(--muted-foreground);
+        }
+
+        &.arrowDown::after {
+            border-top-color: var(--muted-foreground);
+        }
+    }
+}
+
 // Code-like values only: SQL, column types, storage paths. Names stay in the base font.
 .mono {
     font-family: var(--font-family-mono);
