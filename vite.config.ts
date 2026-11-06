@@ -40,6 +40,10 @@ function buildInfo() {
 		// No git repository and no env vars: the app shows an unknown commit.
 	}
 
+	const url = repoUrl && commit ? `${repoUrl.replace(/\.git$/, '')}/commit/${commit}` : '';
+	console.log(`[beacon-studio] commit: ${url}`);
+
+
 	return {
 		__GIT_COMMIT__: JSON.stringify(commit),
 		__GIT_BRANCH__: JSON.stringify(branch),
