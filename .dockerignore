@@ -1,0 +1,14 @@
+.git
+node_modules
+build
+.svelte-kit
+src-tauri/target
+.env
+.env.*
+.claude
+.playwright-mcp
+.superpowers
+*.parquet
+*.geoparquet
+Dockerfile
+.dockerignore

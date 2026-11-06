@@ -80,6 +80,50 @@ Preview the web production build locally:
 npm run preview
 ```
 
+## Docker
+
+The image builds the app from this folder and serves it with nginx on port 80.
+
+```bash
+docker build -t beacon-studio .
+docker run -p 8080:80 beacon-studio
+```
+
+Open `http://localhost:8080`.
+
+The build takes these arguments:
+
+| Argument | Default | Effect |
+|---|---|---|
+| `BASE_PATH` | empty | Serves the app from a subdirectory, for example `/studio`. |
+| `STUDIO_TELEMETRY` | `off` | `on` sends usage events to beacon-datalake.org. |
+| `STUDIO_BRAND` | `default` | The brand folder in `src/brands/`. |
+| `GIT_COMMIT`, `GIT_BRANCH` | empty | The commit link in the app. The image has no `.git` folder. |
+
+Example for `https://example.org/studio`:
+
+```bash
+docker build --build-arg BASE_PATH=/studio -t beacon-studio .
+```
+
+In Git Bash, put `MSYS_NO_PATHCONV=1` before the command. Otherwise Git Bash changes `/studio` into a Windows path, and the build fails. The `//studio` form from the npm build does not work in a Docker argument.
+
+```bash
+MSYS_NO_PATHCONV=1 docker build --build-arg BASE_PATH=/studio -t beacon-studio .
+```
+
+Telemetry stays off unless you add `--build-arg STUDIO_TELEMETRY=on`.
+
+Run it, and open `http://localhost:8080/studio/`:
+
+```bash
+docker run -p 8080:80 beacon-studio
+```
+
+The build writes these values into the app. To change a value, build the image again. `docker run -e` has no effect on them.
+
+Add `--pull` to the build to get the latest patched `node` and `nginx` images.
+
 ## Quality Checks
 
 ```bash
