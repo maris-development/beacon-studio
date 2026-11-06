@@ -157,8 +157,12 @@
                 "description": "L'età alla quale un risultato su disco diventa obsoleto. Un risultato obsoleto viene rimosso."
             },
             "mapStyleUrl": {
-                "label": "URL dello stile della mappa di base",
-                "description": "L'URL dello stile MapLibre della mappa di base. Una modifica vale per la prossima mappa. In modalità scura, la mappa predefinita usa la sua versione scura."
+                "label": "URL dello stile della mappa di base chiara",
+                "description": "L'URL dello stile MapLibre della mappa di base in modalità chiara. Una modifica vale per la prossima mappa."
+            },
+            "mapStyleUrlDark": {
+                "label": "URL dello stile della mappa di base scura",
+                "description": "L'URL dello stile MapLibre della mappa di base in modalità scura. Una modifica vale per la prossima mappa. Lascia il campo vuoto per usare la mappa chiara in entrambi i temi."
             },
             "mapGroupByDecimals": {
                 "label": "Decimali di raggruppamento mappa",

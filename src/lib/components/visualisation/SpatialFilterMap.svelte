@@ -16,7 +16,7 @@
     import { get } from "svelte/store";
     import { getSettings } from "@/stores/settings";
     import { resolvedTheme } from "@/services/theme";
-    import { basemapUrl, followBasemapTheme } from "@/geo/basemap";
+    import { basemapUrl, basemapUrlsOf, followBasemapTheme } from "@/geo/basemap";
     import type { Bounds } from "@/geo/spatial-selection";
     import { mapLibreLocale } from "@/geo/map-locale";
 
@@ -49,10 +49,10 @@
         const target = container;
         if (!target || instance) return;
 
-        const styleUrl = getSettings().mapStyleUrl;
+        const urls = basemapUrlsOf(getSettings());
         const created = new maplibregl.Map({
             container: target,
-            style: basemapUrl(styleUrl, get(resolvedTheme)),
+            style: basemapUrl(urls, get(resolvedTheme)),
             center: [0.45, 51.47],
             zoom: 1,
             attributionControl: false,
@@ -60,7 +60,7 @@
         });
 
         created.addControl(new NavigationControl());
-        stopBasemapTheme = followBasemapTheme(created, styleUrl, resolvedTheme);
+        stopBasemapTheme = followBasemapTheme(created, urls, resolvedTheme);
 
         if (bounds) {
             created.fitBounds(

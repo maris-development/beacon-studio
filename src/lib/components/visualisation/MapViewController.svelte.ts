@@ -32,7 +32,7 @@ import { isSqlRunQuery, type RunQuery } from "@/query/run-query";
 import { ApacheArrowUtils } from "@/arrow-utils";
 import { getSettings } from "@/stores/settings";
 import { resolvedTheme } from "@/services/theme";
-import { basemapUrl, followBasemapTheme } from "@/geo/basemap";
+import { basemapUrl, basemapUrlsOf, followBasemapTheme } from "@/geo/basemap";
 import { get } from "svelte/store";
 import { addToast } from "@/stores/toasts";
 import { describeQuery, track } from "@/telemetry";
@@ -240,10 +240,10 @@ export class MapViewController {
     // ---------------------------------------------------------------- map setup
 
     init(container: HTMLDivElement): void {
-        const styleUrl = getSettings().mapStyleUrl;
+        const urls = basemapUrlsOf(getSettings());
         const map = new maplibregl.Map({
             container,
-            style: basemapUrl(styleUrl, get(resolvedTheme)),
+            style: basemapUrl(urls, get(resolvedTheme)),
             center: [0.45, 51.47],
             zoom: 1,
             bearing: 0,
@@ -252,7 +252,7 @@ export class MapViewController {
         });
 
         map.addControl(new NavigationControl());
-        this.stopBasemapTheme = followBasemapTheme(map, styleUrl, resolvedTheme);
+        this.stopBasemapTheme = followBasemapTheme(map, urls, resolvedTheme);
 
         // Follow the camera, so the page can persist it. `moveend` fires one time
         // at the end of a pan, a zoom or a `fitBounds`, and not on every frame.

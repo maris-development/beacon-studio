@@ -64,8 +64,10 @@ export interface BeaconStudioSettings {
     diskCacheMaxAgeMs: number;
 
     // -- map ------------------------------------------------------------------
-    /** The MapLibre style URL of the base map. */
+    /** The MapLibre style URL of the base map in light mode. */
     mapStyleUrl: string;
+    /** The MapLibre style URL of the base map in dark mode. Empty uses {@link mapStyleUrl}. */
+    mapStyleUrlDark: string;
     /** The decimals that the map groups latitude and longitude by. */
     mapGroupByDecimals: number;
     /** The width of a new cross section, in kilometres. */
@@ -109,6 +111,7 @@ export const DEFAULT_SETTINGS: BeaconStudioSettings = {
     diskCacheMaxAgeMs: 24 * 60 * 60 * 1000,
 
     mapStyleUrl: "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json",
+    mapStyleUrlDark: "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
     mapGroupByDecimals: 3,
     crossSectionWidthKm: 5,
 
@@ -278,6 +281,12 @@ export const SETTING_DEFINITIONS: SettingDefinition[] = [
     },
     {
         key: "mapStyleUrl",
+        group: "map",
+        type: "text",
+        placeholder: "https://example.com/style.json"
+    },
+    {
+        key: "mapStyleUrlDark",
         group: "map",
         type: "text",
         placeholder: "https://example.com/style.json"

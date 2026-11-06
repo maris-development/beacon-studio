@@ -157,8 +157,12 @@
                 "description": "The age at which a result on disk becomes stale. A stale result goes away."
             },
             "mapStyleUrl": {
-                "label": "Base map style URL",
-                "description": "The MapLibre style URL of the base map. A change applies to the next map. In dark mode, the default map uses its dark version."
+                "label": "Light base map style URL",
+                "description": "The MapLibre style URL of the base map in light mode. A change applies to the next map."
+            },
+            "mapStyleUrlDark": {
+                "label": "Dark base map style URL",
+                "description": "The MapLibre style URL of the base map in dark mode. A change applies to the next map. Leave it empty to use the light map in both themes."
             },
             "mapGroupByDecimals": {
                 "label": "Map group decimals",

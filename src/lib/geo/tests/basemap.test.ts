@@ -3,15 +3,17 @@ import { writable } from "svelte/store";
 import { describe, expect, it, vi } from "vitest";
 import {
     basemapUrl,
-    DARK_MAP_STYLE_URL,
+    basemapUrlsOf,
     followBasemapTheme,
     keepAppLayers,
-    SELECTION_PREVIEW_SOURCE
+    SELECTION_PREVIEW_SOURCE,
+    type BasemapUrls
 } from "../basemap";
 import { DEFAULT_SETTINGS, type ResolvedTheme } from "@/stores/settings";
 
-const DEFAULT_URL = DEFAULT_SETTINGS.mapStyleUrl;
-const CUSTOM_URL = "https://example.com/style.json";
+const LIGHT_URL = "https://example.com/light.json";
+const DARK_URL = "https://example.com/dark.json";
+const URLS: BasemapUrls = { light: LIGHT_URL, dark: DARK_URL };
 
 function style(sources: string[], layers: LayerSpecification[]): StyleSpecification {
     return {
@@ -30,15 +32,39 @@ function lineLayer(id: string, source: string): LayerSpecification {
     return { id, type: "line", source };
 }
 
-describe("basemapUrl", () => {
-    it("uses the dark version of the default map in dark mode", () => {
-        expect(basemapUrl(DEFAULT_URL, "dark")).toBe(DARK_MAP_STYLE_URL);
-        expect(basemapUrl(DEFAULT_URL, "light")).toBe(DEFAULT_URL);
+describe("basemapUrlsOf", () => {
+    it("reads the default URL of each theme", () => {
+        expect(basemapUrlsOf(DEFAULT_SETTINGS)).toEqual({
+            light: DEFAULT_SETTINGS.mapStyleUrl,
+            dark: DEFAULT_SETTINGS.mapStyleUrlDark
+        });
     });
 
-    it("keeps a custom map in both themes", () => {
-        expect(basemapUrl(CUSTOM_URL, "dark")).toBe(CUSTOM_URL);
-        expect(basemapUrl(CUSTOM_URL, "light")).toBe(CUSTOM_URL);
+    it("trims each URL", () => {
+        expect(
+            basemapUrlsOf({ mapStyleUrl: ` ${LIGHT_URL} `, mapStyleUrlDark: ` ${DARK_URL}\n` })
+        ).toEqual(URLS);
+    });
+
+    it("uses the light map in dark mode when the dark URL is empty", () => {
+        expect(basemapUrlsOf({ mapStyleUrl: LIGHT_URL, mapStyleUrlDark: " " })).toEqual({
+            light: LIGHT_URL,
+            dark: LIGHT_URL
+        });
+    });
+
+    it("uses the default light map when the light URL is empty", () => {
+        expect(basemapUrlsOf({ mapStyleUrl: "", mapStyleUrlDark: "" })).toEqual({
+            light: DEFAULT_SETTINGS.mapStyleUrl,
+            dark: DEFAULT_SETTINGS.mapStyleUrl
+        });
+    });
+});
+
+describe("basemapUrl", () => {
+    it("gives the URL of the theme", () => {
+        expect(basemapUrl(URLS, "light")).toBe(LIGHT_URL);
+        expect(basemapUrl(URLS, "dark")).toBe(DARK_URL);
     });
 });
 
@@ -85,14 +111,14 @@ describe("followBasemapTheme", () => {
         };
     }
 
-    it("switches the default map when the theme changes", () => {
+    it("switches the map when the theme changes", () => {
         const theme = writable<ResolvedTheme>("light");
         const map = fakeMap();
-        const stop = followBasemapTheme(map, DEFAULT_URL, theme);
+        const stop = followBasemapTheme(map, URLS, theme);
 
         expect(map.setStyle).not.toHaveBeenCalled();
         theme.set("dark");
-        expect(map.setStyle).toHaveBeenCalledWith(DARK_MAP_STYLE_URL, {
+        expect(map.setStyle).toHaveBeenCalledWith(DARK_URL, {
             transformStyle: keepAppLayers
         });
 
@@ -101,10 +127,10 @@ describe("followBasemapTheme", () => {
         expect(map.setStyle).toHaveBeenCalledTimes(1);
     });
 
-    it("leaves a custom map alone", () => {
+    it("leaves the map alone when both themes use one URL", () => {
         const theme = writable<ResolvedTheme>("light");
         const map = fakeMap();
-        followBasemapTheme(map, CUSTOM_URL, theme);
+        followBasemapTheme(map, { light: LIGHT_URL, dark: LIGHT_URL }, theme);
         theme.set("dark");
         expect(map.setStyle).not.toHaveBeenCalled();
     });

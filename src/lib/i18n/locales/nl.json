@@ -157,8 +157,12 @@
                 "description": "De leeftijd waarop een resultaat op schijf verouderd is. Een verouderd resultaat verdwijnt."
             },
             "mapStyleUrl": {
-                "label": "Stijl-URL basiskaart",
-                "description": "De MapLibre-stijl-URL van de basiskaart. Een wijziging geldt voor de volgende kaart. In de donkere modus gebruikt de standaardkaart de donkere versie."
+                "label": "Stijl-URL lichte basiskaart",
+                "description": "De MapLibre-stijl-URL van de basiskaart in de lichte modus. Een wijziging geldt voor de volgende kaart."
+            },
+            "mapStyleUrlDark": {
+                "label": "Stijl-URL donkere basiskaart",
+                "description": "De MapLibre-stijl-URL van de basiskaart in de donkere modus. Een wijziging geldt voor de volgende kaart. Laat het veld leeg om de lichte kaart in beide thema's te gebruiken."
             },
             "mapGroupByDecimals": {
                 "label": "Groeperingsdecimalen kaart",

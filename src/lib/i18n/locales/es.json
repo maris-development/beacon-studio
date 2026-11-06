@@ -157,8 +157,12 @@
                 "description": "La antigüedad a partir de la cual un resultado en disco caduca. Un resultado caducado se elimina."
             },
             "mapStyleUrl": {
-                "label": "URL del estilo del mapa base",
-                "description": "La URL del estilo MapLibre del mapa base. Un cambio se aplica al próximo mapa. En el modo oscuro, el mapa predeterminado usa su versión oscura."
+                "label": "URL del estilo del mapa base claro",
+                "description": "La URL del estilo MapLibre del mapa base en el modo claro. Un cambio se aplica al próximo mapa."
+            },
+            "mapStyleUrlDark": {
+                "label": "URL del estilo del mapa base oscuro",
+                "description": "La URL del estilo MapLibre del mapa base en el modo oscuro. Un cambio se aplica al próximo mapa. Deje el campo vacío para usar el mapa claro en ambos temas."
             },
             "mapGroupByDecimals": {
                 "label": "Decimales de agrupación del mapa",
