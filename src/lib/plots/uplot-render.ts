@@ -632,8 +632,14 @@ export function drawCategoryLegend(u: uPlot, options: CategoryLegendOptions): Le
         const off = options.hidden.has(entry.key);
         const count = options.formatCount(entry.rows);
         const countWidth = ctx.measureText(count).width;
+        let swatchAlpha = 1;
+        let countAlpha = 0.6;
+        if (off) {
+            swatchAlpha = 0.3;
+            countAlpha = 0.25;
+        }
 
-        ctx.globalAlpha = off ? 0.3 : 1;
+        ctx.globalAlpha = swatchAlpha;
         ctx.fillStyle = entry.color;
         ctx.beginPath();
         ctx.arc(x0 + swatch / 2, y, swatch / 2, 0, TAU);
@@ -647,7 +653,7 @@ export function drawCategoryLegend(u: uPlot, options: CategoryLegendOptions): Le
             y
         );
 
-        ctx.globalAlpha = off ? 0.25 : 0.6;
+        ctx.globalAlpha = countAlpha;
         ctx.textAlign = "right";
         ctx.fillText(count, x1, y);
 
@@ -1130,7 +1136,8 @@ export function drawInterpolationSurface(u: uPlot, options: InterpolationDrawOpt
     const imageWidth = Math.max(Math.round(width), 1);
     const imageHeight = Math.max(Math.round(height), 1);
     const image = ctx.createImageData(imageWidth, imageHeight);
-    const colourCount = result.renderMode === "continuous" ? 256 : bandCount;
+    let colourCount = bandCount;
+    if (result.renderMode === "continuous") colourCount = 256;
     const colours = interpolationColours(colorOf, range, options.scale, colourCount);
     const xSpan = sx.max - sx.min || 1;
     const ySpan = sy.max - sy.min || 1;

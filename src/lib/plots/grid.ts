@@ -281,7 +281,8 @@ export function distanceToData(
 
     for (let row = 0; row < ny; row++) {
         for (let column = 0; column < nx; column++) {
-            line[column] = occupied[row * nx + column] ? 0 : FAR;
+            line[column] = FAR;
+            if (occupied[row * nx + column]) line[column] = 0;
         }
         distanceTransform1d(line, nx, xWeight[row], result, scratch);
         for (let column = 0; column < nx; column++) distance[row * nx + column] = result[column];

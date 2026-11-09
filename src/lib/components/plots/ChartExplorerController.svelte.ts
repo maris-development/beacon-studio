@@ -406,8 +406,9 @@ export class ChartExplorerController {
      */
     readonly geographyRequest = $derived.by((): string | null => {
         const plot = this.activePlot;
-        const ranges = plot ? this.rangesOf(plot) : null;
-        if (!plot || !ranges || !this.mapPlot) return null;
+        if (!plot || !this.mapPlot) return null;
+        const ranges = this.rangesOf(plot);
+        if (!ranges) return null;
 
         const analysis =
             usesZColumn(plot.type) && (plot.interpolation.enabled || plot.contour.enabled);

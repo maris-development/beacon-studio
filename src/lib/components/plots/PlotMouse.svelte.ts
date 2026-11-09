@@ -185,7 +185,8 @@ export class PlotMouse {
             const scale = u.scales[axis];
             const min = scale.min ?? 0;
             const max = scale.max ?? 1;
-            const size = axis === "x" ? over.offsetWidth : over.offsetHeight;
+            let size = over.offsetHeight;
+            if (axis === "x") size = over.offsetWidth;
 
             return (pixel) => {
                 let t = pixel / size;
