@@ -424,12 +424,31 @@ export class ChartExplorerController {
 
         try {
             const geography = await loadGeography(detail as LandDetail, borders === "borders");
+            this.clearLandError(geography.detail);
             if (token === this.geographyToken) this.geography = geography;
         } catch (error) {
             if (token !== this.geographyToken) return;
             this.geography = null;
-            addToast({ key: "plot.error.basemapFailed", message: String(error), type: "error" });
+            this.reportLandError(detail as LandDetail, "plot.error.basemapFailed", error);
         }
+    }
+
+    /** The land detail of the failed load that a toast reported. A success clears it. */
+    private landErrorShown: LandDetail | null = null;
+
+    /** Show one toast per failure: the basemap and the land or sea domain load the same files. */
+    private reportLandError(
+        detail: LandDetail,
+        key: "plot.error.basemapFailed" | "plot.error.coastlinesFailed",
+        error: unknown
+    ): void {
+        if (this.landErrorShown === detail) return;
+        this.landErrorShown = detail;
+        addToast({ key, message: String(error), type: "error" });
+    }
+
+    private clearLandError(detail: LandDetail): void {
+        if (this.landErrorShown === detail) this.landErrorShown = null;
     }
 
     /** Why the plot cannot draw, or null. */
@@ -528,7 +547,7 @@ export class ChartExplorerController {
             const yRange = resolveRange(series.yRange, plot.y.min, plot.y.max);
             const map = this.isMapPlot(plot, series);
             let land: Land | null = null;
-            if (map) land = await this.landFor(plot, xRange, yRange);
+            if (map) land = await this.landFor(plot, xRange, yRange, token);
             if (token !== this.prepareToken) return;
 
             // The spacing walks the points, so it runs one time per result, series and axes.
@@ -581,23 +600,26 @@ export class ChartExplorerController {
 
     /**
      * The land polygons for a map plot that keeps to the land or the sea, or
-     * null. The domain takes the coast of the basemap detail.
+     * null. The domain takes the coast of the basemap detail. `token` is the
+     * rebuild that asks: a replaced rebuild reports no failure.
      */
     private async landFor(
         plot: PlotConfig,
         xRange: PlotRange,
-        yRange: PlotRange
+        yRange: PlotRange,
+        token: number
     ): Promise<Land | null> {
         if (plot.interpolation.domain === "all") return null;
 
+        const detail = this.landDetailOf(plot, xRange, yRange);
         try {
-            return await loadLand(this.landDetailOf(plot, xRange, yRange));
+            const land = await loadLand(detail);
+            this.clearLandError(detail);
+            return land;
         } catch (error) {
-            addToast({
-                key: "plot.error.coastlinesFailed",
-                message: String(error),
-                type: "error"
-            });
+            if (token === this.prepareToken) {
+                this.reportLandError(detail, "plot.error.coastlinesFailed", error);
+            }
             return null;
         }
     }
