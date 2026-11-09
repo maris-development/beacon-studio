@@ -144,21 +144,62 @@ function crossesOutside(
         return Math.floor(v * yResolution) * xResolution + Math.floor(u * xResolution);
     };
 
+    const clipped = clipToUnitSquare(a, b);
+    if (!clipped) return false;
+
+    const [t0, t1] = clipped;
+    const du = b.u - a.u;
+    const dv = b.v - a.v;
     const startCell = cellAt(a.u, a.v);
     const endCell = cellAt(b.u, b.v);
-    // Two samples per cell along the edge.
+    // Two samples per cell along the part of the edge inside the grid.
     const steps = Math.ceil(
-        2 * Math.max(Math.abs(b.u - a.u) * xResolution, Math.abs(b.v - a.v) * yResolution)
+        2 * (t1 - t0) * Math.max(Math.abs(du) * xResolution, Math.abs(dv) * yResolution)
     );
 
-    for (let s = 1; s < steps; s++) {
-        const f = s / steps;
-        const cell = cellAt(a.u + f * (b.u - a.u), a.v + f * (b.v - a.v));
+    for (let s = 0; s <= steps; s++) {
+        const f = t0 + ((t1 - t0) * s) / Math.max(steps, 1);
+        const cell = cellAt(a.u + f * du, a.v + f * dv);
         if (cell < 0 || cell === startCell || cell === endCell) continue;
         if (!domain[cell]) return true;
     }
 
     return false;
+}
+
+/**
+ * The part of the edge from `a` to `b` inside the unit square, as fractions `[t0, t1]` of the edge.
+ * Null when the edge misses the square. Liang-Barsky clipping.
+ */
+function clipToUnitSquare(a: ScaledPoint, b: ScaledPoint): [number, number] | null {
+    const du = b.u - a.u;
+    const dv = b.v - a.v;
+    const sides: Array<[number, number]> = [
+        [-du, a.u],
+        [du, 1 - a.u],
+        [-dv, a.v],
+        [dv, 1 - a.v]
+    ];
+
+    let t0 = 0;
+    let t1 = 1;
+    for (const [p, q] of sides) {
+        if (p === 0) {
+            if (q < 0) return null;
+            continue;
+        }
+
+        const t = q / p;
+        if (p < 0) {
+            if (t > t1) return null;
+            t0 = Math.max(t0, t);
+        } else {
+            if (t < t0) return null;
+            t1 = Math.min(t1, t);
+        }
+    }
+
+    return [t0, t1];
 }
 
 /** Walk from a start triangle to the triangle that holds the point, and mix its corners. */
