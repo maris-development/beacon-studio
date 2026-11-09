@@ -317,13 +317,15 @@ export class ChartExplorerController {
      * The settings that decide the interpolated field, as one string. The
      * surface and the contour lines both trace this field.
      *
-     * The axis ranges are in the key: they set the extent of the grid. The
-     * basemap detail is in it too, because the land or sea domain uses its coast.
+     * The axis ranges are in the key: they set the extent of the grid. A land or
+     * sea domain also puts the basemap detail in it, because it uses that coast.
      */
     private fieldKey(plot: PlotConfig): string {
         const settings = plot.interpolation;
         let domain = "all";
-        if (this.isMapPlot(plot)) domain = `${settings.domain}:${plot.basemap.detail}`;
+        if (this.isMapPlot(plot) && settings.domain !== "all") {
+            domain = `${settings.domain}:${plot.basemap.detail}`;
+        }
 
         return [
             plot.id,
