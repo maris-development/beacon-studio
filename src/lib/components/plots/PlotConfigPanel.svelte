@@ -23,9 +23,12 @@
     import * as Select from "$lib/components/ui/select/index.js";
     import { Checkbox } from "$lib/components/ui/checkbox/index.js";
     import { Input } from "$lib/components/ui/input/index.js";
-    import { Label } from "$lib/components/ui/label/index.js";
+    import { InfoTip } from "$lib/components/ui/info-tip/index.js";
     import CheckIcon from "@lucide/svelte/icons/check";
     import Undo2Icon from "@lucide/svelte/icons/undo-2";
+    import MaximizeIcon from "@lucide/svelte/icons/maximize";
+    import ScanIcon from "@lucide/svelte/icons/scan";
+    import OptionLabel from "./OptionLabel.svelte";
     import PlotSection from "./PlotSection.svelte";
     import PlotSlider from "./PlotSlider.svelte";
     import PlotTypeCards from "./PlotTypeCards.svelte";
@@ -36,10 +39,20 @@
     import { resolvedTheme } from "@/services/theme";
     import {
         axisTitle,
+        BASEMAP_DETAILS,
+        BASEMAP_LAYERS,
+        COLOUR_MODES,
         DEFAULT_STYLE,
+        extentOf,
+        INTERPOLATION_EXTENTS,
         makeAxisConfig,
+        MAX_GRID_CELLS,
+        MAX_SMOOTHNESS,
+        MIN_GRID_CELLS,
+        MIN_SMOOTHNESS,
         PLOT_TYPES,
         resolvePlotColors,
+        usesColourBands,
         usesXColumn,
         usesYColumn,
         usesZColumn,
@@ -48,18 +61,33 @@
         type PlotContourConfig,
         type PlotHistogramConfig,
         type PlotInterpolationConfig,
+        type PlotBasemapConfig,
+        type PlotBasemapDetail,
+        type PlotBasemapLayer,
+        type PlotColourMode,
+        type PlotInterpolationDomain,
+        type PlotInterpolationExtent,
         type PlotInterpolationMethod,
         type PlotLineConfig,
         type PlotStyleConfig,
         type PlotType,
         type ColorScale
     } from "@/plots/plot-config";
+    import { MIN_FIGURE } from "@/plots/plot-view";
     import { CROSS_SECTION_AXIS_LABEL, HISTOGRAM_AXIS_LABEL } from "@/plots/plot-data";
+    import { scaleLengthsOf } from "@/plots/interpolation";
     import { DEFAULT_SOLID_PALETTE_ID, getColormap } from "@/colors/palettes";
     import { Utils } from "@/utils";
     import { t, type MessageKey } from "@/i18n";
 
-    let { controller }: { controller: ChartExplorerController } = $props();
+    let {
+        controller,
+        onFitFigure = null
+    }: {
+        controller: ChartExplorerController;
+        /** Give the figure the shape of the data on a map. Absent while the canvas is not ready. */
+        onFitFigure?: (() => void) | null;
+    } = $props();
 
     /** Which axis a control edits. */
     type AxisName = "x" | "y" | "z";
@@ -109,8 +137,24 @@
             }
 
             // The same plot changed under the panel. Follow it, unless the user has
-            // edits of their own: theirs win.
-            if (!userEdited) draft = Utils.cloneObject(plot);
+            // edits of their own: theirs win. The figure size and the hidden groups
+            // change on the canvas with no Apply, so the draft takes them in both cases.
+            if (!userEdited) {
+                draft = Utils.cloneObject(plot);
+                return;
+            }
+
+            const edited = draft;
+            if (!edited) return;
+            draft = {
+                ...edited,
+                style: {
+                    ...edited.style,
+                    figureWidth: plot.style.figureWidth,
+                    figureHeight: plot.style.figureHeight
+                },
+                categories: { hidden: [...plot.categories.hidden] }
+            };
         });
     });
 
@@ -161,6 +205,12 @@
         if (!draft) return;
         userEdited = true;
         draft = { ...draft, interpolation: { ...draft.interpolation, ...patch } };
+    }
+
+    function patchBasemap(patch: Partial<PlotBasemapConfig>) {
+        if (!draft) return;
+        userEdited = true;
+        draft = { ...draft, basemap: { ...draft.basemap, ...patch } };
     }
 
     function patchLine(patch: Partial<PlotLineConfig>) {
@@ -280,16 +330,117 @@
 
     function interpolationMethodLabel(method: PlotInterpolationMethod): MessageKey {
         if (method === "delaunay-barycentric") return "plot.panel.methodDelaunay";
-        return "plot.panel.methodGaussian";
+        return "plot.panel.methodBarnes";
     }
 
-    function interpolationSmoothingLabel(method: PlotInterpolationMethod): MessageKey {
-        if (method === "delaunay-barycentric") return "plot.panel.outsideSmoothing";
-        return "plot.panel.gaussianSigma";
+    const INTERPOLATION_DOMAINS: ReadonlyArray<PlotInterpolationDomain> = ["all", "sea", "land"];
+
+    const DOMAIN_LABELS: Record<PlotInterpolationDomain, MessageKey> = {
+        all: "plot.panel.domainAll",
+        sea: "plot.panel.domainSea",
+        land: "plot.panel.domainLand"
+    };
+
+    const DOMAIN_HINTS: Record<PlotInterpolationDomain, MessageKey> = {
+        all: "plot.panel.domainAllHint",
+        sea: "plot.panel.domainSeaHint",
+        land: "plot.panel.domainLandHint"
+    };
+
+    const BASEMAP_LAYER_LABELS: Record<PlotBasemapLayer, MessageKey> = {
+        auto: "plot.panel.basemapLayerAuto",
+        none: "plot.panel.basemapLayerNone",
+        coast: "plot.panel.basemapLayerCoast",
+        land: "plot.panel.basemapLayerLand",
+        borders: "plot.panel.basemapLayerBorders"
+    };
+
+    const BASEMAP_DETAIL_LABELS: Record<PlotBasemapDetail, MessageKey> = {
+        auto: "plot.panel.basemapDetailAuto",
+        "110m": "plot.panel.basemapDetail110m",
+        "50m": "plot.panel.basemapDetail50m",
+        "10m": "plot.panel.basemapDetail10m"
+    };
+
+    const EXTENT_LABELS: Record<PlotInterpolationExtent, MessageKey> = {
+        near: "plot.panel.extentNear",
+        hull: "plot.panel.extentHull",
+        all: "plot.panel.extentAll"
+    };
+
+    const EXTENT_HINTS: Record<PlotInterpolationExtent, MessageKey> = {
+        near: "plot.panel.extentNearHint",
+        hull: "plot.panel.extentHullHint",
+        all: "plot.panel.extentAllHint"
+    };
+
+    const COLOUR_MODE_LABELS: Record<PlotColourMode, MessageKey> = {
+        auto: "plot.panel.colourModeAuto",
+        continuous: "plot.panel.colourModeContinuous",
+        bands: "plot.panel.colourModeBands"
+    };
+
+    /** The extents that the method of the draft can draw. Delaunay never draws outside the hull. */
+    const extents = $derived(
+        INTERPOLATION_EXTENTS.filter(
+            (extent) => extent !== "all" || draft?.interpolation.method === "barnes"
+        )
+    );
+
+    /** True for a map whose values fit the globe: then each length is one value in km. */
+    const draftIsMap = $derived(!!draft && controller.isMapData(draft));
+
+    /** The radius and the maximum distance of the draft, once a rebuild with its axes found the spacing. */
+    const draftLengths = $derived.by(() => {
+        if (!draft) return null;
+        const auto = controller.autoLengthsOf(draft);
+        if (!auto) return null;
+        return scaleLengthsOf(draft.interpolation, auto, draftIsMap);
+    });
+
+    const autoGrid = $derived.by(() => {
+        if (!draft) return null;
+        return controller.autoGridCellsOf(draft);
+    });
+
+    /** The Barnes radius in words: one value in km on a map, one value per axis otherwise. */
+    const radiusText = $derived.by(() => {
+        if (!draftLengths) return $t("plot.panel.lengthAuto");
+        const { radius } = draftLengths;
+        if (draftIsMap) return $t("plot.panel.radiusKm", { value: formatLength(radius.x) });
+        return $t("plot.panel.radiusAxes", {
+            x: formatLength(radius.x),
+            y: formatLength(radius.y)
+        });
+    });
+
+    /** A length field: empty means automatic, which the model stores as null. */
+    function lengthValue(value: string): number | null {
+        const parsed = numberOrNull(value);
+        if (parsed === null || parsed <= 0) return null;
+        return parsed;
     }
 
-    const MIN_GRID_RESOLUTION = 20;
-    const MAX_GRID_RESOLUTION = 300;
+    /** The placeholder of a length field: the automatic length, when the series is known. */
+    function lengthPlaceholder(value: number | null | undefined): string {
+        if (value === null || value === undefined) return $t("plot.panel.lengthAuto");
+        return $t("plot.panel.lengthAutoValue", { value: formatLength(value) });
+    }
+
+    function formatLength(value: number): string {
+        return Number(value.toPrecision(2)).toString();
+    }
+
+    /** The placeholder of a grid size field: the automatic size, when the series is known. */
+    function gridPlaceholder(value: number | undefined): string {
+        if (value === undefined) return $t("plot.panel.lengthAuto");
+        return $t("plot.panel.lengthAutoValue", { value });
+    }
+
+    /** The name of an axis column for a length field, or the axis letter. */
+    function axisName(axis: "x" | "y"): string {
+        return draft?.[axis].column ?? axis.toUpperCase();
+    }
 
     // -- value helpers -------------------------------------------------------
 
@@ -302,29 +453,37 @@
         return parsed;
     }
 
-    function gridResolutionValue(value: string, current: number): number {
-        const parsed = Number(value);
-        if (!Number.isFinite(parsed)) return current;
+    /** A grid size field: empty means automatic, which the model stores as null. */
+    function gridCellsValue(value: string): number | null {
+        const parsed = numberOrNull(value);
+        if (parsed === null) return null;
 
-        if (parsed < MIN_GRID_RESOLUTION) {
+        if (parsed < MIN_GRID_CELLS) {
             addToast({
                 key: "plot.panel.inputTooLow",
-                values: { min: MIN_GRID_RESOLUTION },
+                values: { min: MIN_GRID_CELLS },
                 type: "error"
             });
-            return MIN_GRID_RESOLUTION;
+            return MIN_GRID_CELLS;
         }
 
-        if (parsed > MAX_GRID_RESOLUTION) {
+        if (parsed > MAX_GRID_CELLS) {
             addToast({
                 key: "plot.panel.inputTooHigh",
-                values: { max: MAX_GRID_RESOLUTION },
+                values: { max: MAX_GRID_CELLS },
                 type: "error"
             });
-            return MAX_GRID_RESOLUTION;
+            return MAX_GRID_CELLS;
         }
 
         return Math.round(parsed);
+    }
+
+    /** A figure side from a field: whole pixels, at least `min`. An empty field fills the panel. */
+    function figureSide(value: string, min: number): number | null {
+        const parsed = numberOrNull(value);
+        if (parsed === null || parsed <= 0) return null;
+        return Math.max(Math.round(parsed), min);
     }
 
     /** An empty field means "use the column name", which the model stores as null. */
@@ -375,6 +534,9 @@
         return summary;
     });
 
+    /** True when the colour column holds text: one colour per group, and no colour scale. */
+    const zIsText = $derived(controller.isTextColumn(draft?.z?.column));
+
     /**
      * The palette the points take with no colour column: the stored one while it
      * is a single colour, and solid blue otherwise. A gradient stays stored, so
@@ -392,6 +554,7 @@
 
         let palette = draft.style.palette;
         if (usesZColumn(draft.type) && !draft.z?.column) palette = solidPalette;
+        if (usesZColumn(draft.type) && zIsText) palette = $t("plot.panel.groupColours");
 
         return `${palette} · ${$t("plot.panel.pixels", { size: draft.style.pointRadius })}`;
     });
@@ -399,14 +562,15 @@
     const advancedAnalysisSummary = $derived.by(() => {
         if (draft && !usesZColumn(draft.type)) return $t("plot.summary.notForType");
         if (!draft?.z?.column) return $t("plot.summary.needsColour");
+        if (zIsText) return $t("plot.summary.needsNumbers");
         if (!draft.interpolation.enabled && !draft.contour.enabled) return $t("common.off");
 
         const parts: string[] = [];
         if (draft.interpolation.enabled) {
             const method = $t(interpolationMethodLabel(draft.interpolation.method));
-            if (draft.interpolation.method === "gaussian") {
+            if (usesColourBands(draft.interpolation)) {
                 parts.push(
-                    $t("plot.summary.gaussianBands", {
+                    $t("plot.summary.methodBands", {
                         method,
                         count: draft.interpolation.bandCount
                     })
@@ -419,6 +583,15 @@
             parts.push($t("plot.summary.contourLines", { count: draft.contour.levelCount }));
         }
         return parts.join(" · ");
+    });
+
+    const paletteHint = $derived.by((): MessageKey => {
+        if (draft?.type === "line") {
+            if (draft.line.groupColumn) return "plot.panel.strokePalette";
+            return "plot.panel.groupForColours";
+        }
+        if (draft?.type === "histogram") return "plot.panel.histogramPaletteHint";
+        return "plot.panel.paletteHint";
     });
 
     const colorScaleError = $derived.by(() => {
@@ -458,7 +631,12 @@
         >
             <div class="axis-group">
                 <div class="axis-header">
-                    <span class="axis-title">{xFieldLabel}</span>
+                    <OptionLabel
+                        text={xFieldLabel}
+                        info={draft.type === "cross-section"
+                            ? $t("plot.panel.xAxisSectionHint")
+                            : $t("plot.panel.xAxisHint")}
+                    />
                     <label class="switch-field">
                         <span>{$t("plot.panel.invert")}</span>
                         <input
@@ -530,7 +708,12 @@
 
             <div class="axis-group">
                 <div class="axis-header">
-                    <span class="axis-title">{$t("plot.panel.yAxis")}</span>
+                    <OptionLabel
+                        text={$t("plot.panel.yAxis")}
+                        info={usesYColumn(draft.type)
+                            ? $t("plot.panel.yAxisHint")
+                            : $t("plot.panel.yAxisCountHint")}
+                    />
                     <label class="switch-field">
                         <span>{$t("plot.panel.invert")}</span>
                         <input
@@ -602,7 +785,11 @@
 
             {#if draft.type === "line"}
                 <div class="field">
-                    <Label for="plotGroupColumn">{$t("plot.panel.groupBy")}</Label>
+                    <OptionLabel
+                        for="plotGroupColumn"
+                        text={$t("plot.panel.groupBy")}
+                        info={$t("plot.panel.groupHint")}
+                    />
                     <Select.Root
                         type="single"
                         value={draft.line.groupColumn ?? NO_COLUMN}
@@ -625,15 +812,17 @@
                         </Select.Content>
                     </Select.Root>
                 </div>
-
-                <p class="hint">{$t("plot.panel.groupHint")}</p>
             {/if}
 
             {#if usesZColumn(draft.type)}
                 <div class="axis-group z-group">
                     <h4 class="axis-heading">{$t("plot.panel.zAxis")}</h4>
                     <div class="field">
-                        <Label for="plotZColumn">{$t("plot.panel.colourColumn")}</Label>
+                        <OptionLabel
+                            for="plotZColumn"
+                            text={$t("plot.panel.colourColumn")}
+                            info={$t("plot.panel.colourColumnHint")}
+                        />
                         <Select.Root
                             type="single"
                             value={draft.z?.column ?? NO_COLUMN}
@@ -647,12 +836,25 @@
                                     <Select.Item value={NO_COLUMN} label={$t("common.none")}
                                         >{$t("common.none")}</Select.Item
                                     >
+                                </Select.Group>
+                                <Select.Group>
+                                    <Select.Label>{$t("plot.panel.numberColumns")}</Select.Label>
                                     {#each controller.columns as column (column.name)}
                                         <Select.Item value={column.name} label={column.name}>
                                             {column.name}
                                         </Select.Item>
                                     {/each}
                                 </Select.Group>
+                                {#if controller.textColumns.length > 0}
+                                    <Select.Group>
+                                        <Select.Label>{$t("plot.panel.textColumns")}</Select.Label>
+                                        {#each controller.textColumns as name (name)}
+                                            <Select.Item value={name} label={name}>
+                                                {name}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                {/if}
                             </Select.Content>
                         </Select.Root>
                     </div>
@@ -663,14 +865,13 @@
                 <PlotSlider
                     id="histogramBins"
                     label={$t("plot.panel.bins")}
+                    info={$t("plot.panel.binsHint")}
                     min={2}
                     max={120}
                     step={1}
                     value={draft.histogram.binCount}
                     onCommit={(value) => patchHistogram({ binCount: value })}
                 />
-
-                <p class="hint">{$t("plot.panel.binsHint")}</p>
             {/if}
         </PlotSection>
 
@@ -681,22 +882,31 @@
             open={openSection === 3}
             onOpenChange={(isOpen) => openConfigSection(3, isOpen)}
         >
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.titlesAndLabels")}</summary>
                 <div class="subsection-body">
                     <div class="property-row">
-                        <label class="field">
-                            <span>{$t("plot.panel.plotTitle")}</span>
+                        <div class="field">
+                            <OptionLabel
+                                for="plotTitle"
+                                text={$t("plot.panel.plotTitle")}
+                                info={$t("plot.panel.plotTitleHint")}
+                            />
                             <Input
+                                id="plotTitle"
                                 type="text"
                                 value={draft.title}
                                 placeholder={$t("plot.panel.noTitle")}
                                 oninput={(event) =>
                                     patchDraft({ title: event.currentTarget.value })}
                             />
-                        </label>
+                        </div>
                         <div class="field">
-                            <span>{$t("plot.panel.titleSize")}</span>
+                            <OptionLabel
+                                for="plotTitleSize"
+                                text={$t("plot.panel.titleSize")}
+                                info={$t("plot.panel.titleSizeHint")}
+                            />
                             <Select.Root
                                 type="single"
                                 value={String(draft.style.titleFontSize)}
@@ -722,7 +932,7 @@
                             </Select.Root>
                         </div>
 
-                        <div class="field">
+                        <div class="option-row">
                             <label class="checkbox-field">
                                 <Checkbox
                                     checked={draft.style.showCaption}
@@ -731,12 +941,23 @@
                                 />
                                 <span>{$t("plot.panel.showCaption")}</span>
                             </label>
+                            <InfoTip
+                                label={$t("plot.panel.about", {
+                                    option: $t("plot.panel.showCaption")
+                                })}
+                                text={$t("plot.panel.showCaptionHint")}
+                            />
                         </div>
                     </div>
 
                     <div class="property-row">
-                        <label class="field"
-                            ><span>{$t("plot.panel.xAxisLabel")}</span><Input
+                        <div class="field">
+                            <OptionLabel
+                                for="plotXAxisLabel"
+                                text={$t("plot.panel.xAxisLabel")}
+                                info={$t("plot.panel.xAxisLabelHint")}
+                            /><Input
+                                id="plotXAxisLabel"
                                 type="text"
                                 value={draft.x.label ?? ""}
                                 placeholder={draft.type === "cross-section"
@@ -746,10 +967,14 @@
                                     patchAxis("x", {
                                         label: textOrNull(event.currentTarget.value)
                                     })}
-                            /></label
-                        >
+                            />
+                        </div>
                         <div class="field">
-                            <span>{$t("plot.panel.size")}</span><Select.Root
+                            <OptionLabel
+                                for="plotXAxisTitleSize"
+                                text={$t("plot.panel.size")}
+                                info={$t("plot.panel.xAxisLabelSizeHint")}
+                            /><Select.Root
                                 type="single"
                                 value={String(draft.style.xAxisTitleFontSize)}
                                 onValueChange={(value) =>
@@ -771,8 +996,13 @@
                         </div>
                     </div>
                     <div class="property-row">
-                        <label class="field"
-                            ><span>{$t("plot.panel.yAxisLabel")}</span><Input
+                        <div class="field">
+                            <OptionLabel
+                                for="plotYAxisLabel"
+                                text={$t("plot.panel.yAxisLabel")}
+                                info={$t("plot.panel.yAxisLabelHint")}
+                            /><Input
+                                id="plotYAxisLabel"
                                 type="text"
                                 value={draft.y.label ?? ""}
                                 placeholder={draft.type === "histogram"
@@ -782,10 +1012,14 @@
                                     patchAxis("y", {
                                         label: textOrNull(event.currentTarget.value)
                                     })}
-                            /></label
-                        >
+                            />
+                        </div>
                         <div class="field">
-                            <span>{$t("plot.panel.size")}</span><Select.Root
+                            <OptionLabel
+                                for="plotYAxisTitleSize"
+                                text={$t("plot.panel.size")}
+                                info={$t("plot.panel.yAxisLabelSizeHint")}
+                            /><Select.Root
                                 type="single"
                                 value={String(draft.style.yAxisTitleFontSize)}
                                 onValueChange={(value) =>
@@ -807,17 +1041,26 @@
                         </div>
                     </div>
                     <div class="property-row">
-                        <label class="field"
-                            ><span>{$t("plot.panel.legend")}</span><Input
+                        <div class="field">
+                            <OptionLabel
+                                for="plotLegendTitle"
+                                text={$t("plot.panel.legend")}
+                                info={$t("plot.panel.legendHint")}
+                            /><Input
+                                id="plotLegendTitle"
                                 type="text"
                                 value={draft.style.legendTitle}
                                 placeholder={$t("plot.panel.legendDefault")}
                                 oninput={(event) =>
                                     patchStyle({ legendTitle: event.currentTarget.value })}
-                            /></label
-                        >
+                            />
+                        </div>
                         <div class="field">
-                            <span>{$t("plot.panel.size")}</span><Select.Root
+                            <OptionLabel
+                                for="plotLegendTitleSize"
+                                text={$t("plot.panel.size")}
+                                info={$t("plot.panel.legendSizeHint")}
+                            /><Select.Root
                                 type="single"
                                 value={String(draft.style.legendTitleFontSize)}
                                 onValueChange={(value) =>
@@ -839,7 +1082,11 @@
                         </div>
                     </div>
                     <div class="field">
-                        <span>{$t("plot.panel.tickSize")}</span><Select.Root
+                        <OptionLabel
+                            for="plotTickSize"
+                            text={$t("plot.panel.tickSize")}
+                            info={$t("plot.panel.tickSizeHint")}
+                        /><Select.Root
                             type="single"
                             value={String(draft.style.tickFontSize)}
                             onValueChange={(value) => patchStyle({ tickFontSize: Number(value) })}
@@ -861,49 +1108,55 @@
                 </div>
             </details>
 
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.dataAndColor")}</summary>
                 <div class="subsection-body">
-                    {#if draft.type === "line" || draft.type === "histogram" || draft.z?.column}
+                    {#if usesZColumn(draft.type) && zIsText}
+                        <p class="hint">{$t("plot.panel.groupColoursHint")}</p>
+                    {:else if draft.type === "line" || draft.type === "histogram" || draft.z?.column}
                         <div class="field">
-                            <Label for="plotPalette">{$t("palette.label")}</Label><PalettePicker
+                            <OptionLabel
+                                for="plotPalette"
+                                text={$t("palette.label")}
+                                info={$t(paletteHint)}
+                            /><PalettePicker
                                 id="plotPalette"
                                 value={draft.style.palette}
                                 reverse={draft.z?.column ? draft.z.reverse : false}
                                 onSelect={(id) => patchStyle({ palette: id })}
                             />
                         </div>
-                        {#if draft.type === "line"}<p class="hint">
-                                {draft.line.groupColumn
-                                    ? $t("plot.panel.strokePalette")
-                                    : $t("plot.panel.groupForColours")}
-                            </p>{:else if draft.type === "histogram"}<p class="hint">
-                                {$t("plot.panel.histogramPaletteHint")}
-                            </p>{/if}
                     {:else}<div class="field">
-                            <Label for="plotPointColor">{$t("plot.panel.pointColour")}</Label
-                            ><PalettePicker
+                            <OptionLabel
+                                for="plotPointColor"
+                                text={$t("plot.panel.pointColour")}
+                                info={$t("plot.panel.pointColourHint")}
+                            /><PalettePicker
                                 id="plotPointColor"
                                 value={solidPalette}
                                 showGradients={false}
                                 onSelect={(id) => patchStyle({ palette: id })}
                             />
+                        </div>{/if}
+                    {#if draft.z?.column && !zIsText}
+                        <div class="option-row">
+                            <label class="checkbox-field"
+                                ><Checkbox
+                                    checked={draft.z.reverse}
+                                    onCheckedChange={(checked) =>
+                                        patchAxis("z", { reverse: !!checked })}
+                                /><span>{$t("palette.reverse")}</span></label
+                            ><InfoTip
+                                label={$t("plot.panel.about", { option: $t("palette.reverse") })}
+                                text={$t("plot.panel.reversePaletteHint")}
+                            />
                         </div>
-                        <p class="hint">
-                            {$t("plot.panel.pointColourHint")}
-                        </p>{/if}
-                    {#if draft.z?.column}
-                        <label class="checkbox-field"
-                            ><Checkbox
-                                checked={draft.z.reverse}
-                                onCheckedChange={(checked) =>
-                                    patchAxis("z", { reverse: !!checked })}
-                            /><span>{$t("palette.reverse")}</span></label
-                        >
                         <div class="field">
-                            <span id="zRangeLabel"
-                                >{$t("plot.panel.colourRange", { axis: axisTitle(draft.z) })}</span
-                            >
+                            <OptionLabel
+                                id="zRangeLabel"
+                                text={$t("plot.panel.colourRange", { axis: axisTitle(draft.z) })}
+                                info={$t("plot.panel.colourRangeHint")}
+                            />
                             <div class="pair" role="group" aria-labelledby="zRangeLabel">
                                 <Input
                                     type="number"
@@ -925,8 +1178,11 @@
                             </div>
                         </div>
                         <div class="field">
-                            <Label for="plotColorScale">{$t("plot.panel.colorScale")}</Label
-                            ><Select.Root
+                            <OptionLabel
+                                for="plotColorScale"
+                                text={$t("plot.panel.colorScale")}
+                                info={$t("plot.panel.colorScaleHint")}
+                            /><Select.Root
                                 type="single"
                                 value={draft.z.scale}
                                 onValueChange={(value) => setColorScale(value as ColorScale)}
@@ -956,13 +1212,16 @@
                 </div>
             </details>
 
-            <details class="property-subsection" open>
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.markers")}</summary>
                 <div class="subsection-body">
                     {#if draft.type === "line"}
                         <div class="field">
-                            <Label for="plotLineSort">{$t("plot.panel.drawAlong")}</Label
-                            ><Select.Root
+                            <OptionLabel
+                                for="plotLineSort"
+                                text={$t("plot.panel.drawAlong")}
+                                info={$t("plot.panel.drawAlongHint")}
+                            /><Select.Root
                                 type="single"
                                 value={draft.line.sortBy}
                                 onValueChange={(value) =>
@@ -982,21 +1241,41 @@
                                 ></Select.Root
                             >
                         </div>
-                        <label class="checkbox-field"
-                            ><Checkbox
-                                checked={draft.line.showPoints}
-                                onCheckedChange={(checked) => patchLine({ showPoints: !!checked })}
-                            /><span>{$t("plot.panel.markRows")}</span></label
-                        >
-                    {:else if draft.type !== "histogram"}<label class="checkbox-field"
-                            ><Checkbox
-                                checked={draft.style.showPoints}
-                                onCheckedChange={(checked) => patchStyle({ showPoints: !!checked })}
-                            /><span>{$t("plot.panel.drawPoints")}</span></label
-                        >{/if}
+                        <div class="option-row">
+                            <label class="checkbox-field"
+                                ><Checkbox
+                                    checked={draft.line.showPoints}
+                                    onCheckedChange={(checked) =>
+                                        patchLine({ showPoints: !!checked })}
+                                /><span>{$t("plot.panel.markRows")}</span></label
+                            ><InfoTip
+                                label={$t("plot.panel.about", {
+                                    option: $t("plot.panel.markRows")
+                                })}
+                                text={$t("plot.panel.markRowsHint")}
+                            />
+                        </div>
+                    {:else if draft.type !== "histogram"}<div class="option-row">
+                            <label class="checkbox-field"
+                                ><Checkbox
+                                    checked={draft.style.showPoints}
+                                    onCheckedChange={(checked) =>
+                                        patchStyle({ showPoints: !!checked })}
+                                /><span>{$t("plot.panel.drawPoints")}</span></label
+                            ><InfoTip
+                                label={$t("plot.panel.about", {
+                                    option: $t("plot.panel.drawPoints")
+                                })}
+                                text={$t("plot.panel.drawPointsHint")}
+                            />
+                        </div>{/if}
                     {#if draft.type !== "histogram" && (draft.type === "line" ? draft.line.showPoints : draft.style.showPoints)}
                         <div class="field">
-                            <span>{$t("plot.panel.markerSize")}</span><Select.Root
+                            <OptionLabel
+                                for="plotPointRadius"
+                                text={$t("plot.panel.markerSize")}
+                                info={$t("plot.panel.markerSizeHint")}
+                            /><Select.Root
                                 type="single"
                                 value={String(draft.style.pointRadius)}
                                 onValueChange={(value) =>
@@ -1020,6 +1299,7 @@
                     <PlotSlider
                         id="plotPointOpacity"
                         label={$t("plot.panel.markerOpacity")}
+                        info={$t("plot.panel.markerOpacityHint")}
                         min={0.05}
                         max={1}
                         step={0.05}
@@ -1029,17 +1309,181 @@
                 </div>
             </details>
 
-            <details class="property-subsection" open>
+            {#if draft.type === "scatter"}
+                <details class="property-subsection">
+                    <summary>{$t("plot.panel.basemap")}</summary>
+                    <div class="subsection-body">
+                        {#if controller.isMapPlot(draft)}
+                            <div class="field">
+                                <OptionLabel
+                                    for="basemapLayer"
+                                    text={$t("plot.panel.basemapLayers")}
+                                    info={$t("plot.panel.basemapLayersHint")}
+                                />
+                                <Select.Root
+                                    type="single"
+                                    value={draft.basemap.layer}
+                                    onValueChange={(value) =>
+                                        patchBasemap({ layer: value as PlotBasemapLayer })}
+                                >
+                                    <Select.Trigger id="basemapLayer">
+                                        {$t(BASEMAP_LAYER_LABELS[draft.basemap.layer])}
+                                    </Select.Trigger>
+                                    <Select.Content>
+                                        <Select.Group>
+                                            {#each BASEMAP_LAYERS as layer (layer)}
+                                                <Select.Item
+                                                    value={layer}
+                                                    label={$t(BASEMAP_LAYER_LABELS[layer])}
+                                                >
+                                                    {$t(BASEMAP_LAYER_LABELS[layer])}
+                                                </Select.Item>
+                                            {/each}
+                                        </Select.Group>
+                                    </Select.Content>
+                                </Select.Root>
+                            </div>
+                            <div class="field">
+                                <OptionLabel
+                                    for="basemapDetail"
+                                    text={$t("plot.panel.basemapDetail")}
+                                    info={$t("plot.panel.basemapDetailHint")}
+                                />
+                                <Select.Root
+                                    type="single"
+                                    value={draft.basemap.detail}
+                                    onValueChange={(value) =>
+                                        patchBasemap({ detail: value as PlotBasemapDetail })}
+                                >
+                                    <Select.Trigger id="basemapDetail">
+                                        {$t(BASEMAP_DETAIL_LABELS[draft.basemap.detail])}
+                                    </Select.Trigger>
+                                    <Select.Content>
+                                        <Select.Group>
+                                            {#each BASEMAP_DETAILS as detail (detail)}
+                                                <Select.Item
+                                                    value={detail}
+                                                    label={$t(BASEMAP_DETAIL_LABELS[detail])}
+                                                >
+                                                    {$t(BASEMAP_DETAIL_LABELS[detail])}
+                                                </Select.Item>
+                                            {/each}
+                                        </Select.Group>
+                                    </Select.Content>
+                                </Select.Root>
+                            </div>
+                            <div class="option-row">
+                                <label class="checkbox-field">
+                                    <Checkbox
+                                        checked={draft.basemap.fixAspect}
+                                        onCheckedChange={(checked) =>
+                                            patchBasemap({ fixAspect: !!checked })}
+                                    />
+                                    <span>{$t("plot.panel.keepMapShape")}</span>
+                                </label>
+                                <InfoTip
+                                    label={$t("plot.panel.about", {
+                                        option: $t("plot.panel.keepMapShape")
+                                    })}
+                                    text={$t("plot.panel.keepMapShapeHint")}
+                                />
+                            </div>
+                            {#if draft.basemap.fixAspect && onFitFigure}
+                                <div class="button-row">
+                                    <Button
+                                        variant="outline"
+                                        size="xs"
+                                        title={$t("plot.panel.fitFigureTitle")}
+                                        onclick={onFitFigure}
+                                    >
+                                        <ScanIcon size={13} />{$t("plot.panel.fitFigure")}
+                                    </Button>
+                                </div>
+                            {/if}
+                        {:else}
+                            <p class="hint">{$t("plot.panel.basemapNeedsMap")}</p>
+                        {/if}
+                    </div>
+                </details>
+            {/if}
+
+            <details class="property-subsection">
                 <summary>{$t("plot.panel.canvas")}</summary>
                 <div class="subsection-body">
-                    <label class="checkbox-field"
-                        ><Checkbox
-                            checked={draft.style.gridlines}
-                            onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
-                        /><span>{$t("plot.panel.showGridlines")}</span></label
-                    >
+                    <div class="field">
+                        <OptionLabel
+                            id="figureSizeLabel"
+                            text={$t("plot.panel.figureSize")}
+                            info={$t("plot.panel.figureSizeHint")}
+                        />
+                        <div class="pair" role="group" aria-labelledby="figureSizeLabel">
+                            <label class="range-field">
+                                <span>{$t("plot.panel.figureWidth")}</span>
+                                <Input
+                                    type="number"
+                                    min={MIN_FIGURE.width}
+                                    step={10}
+                                    value={draft.style.figureWidth ?? ""}
+                                    placeholder={$t("plot.panel.figureFill")}
+                                    oninput={(event) =>
+                                        patchStyle({
+                                            figureWidth: figureSide(
+                                                event.currentTarget.value,
+                                                MIN_FIGURE.width
+                                            )
+                                        })}
+                                />
+                            </label>
+                            <label class="range-field">
+                                <span>{$t("plot.panel.figureHeight")}</span>
+                                <Input
+                                    type="number"
+                                    min={MIN_FIGURE.height}
+                                    step={10}
+                                    value={draft.style.figureHeight ?? ""}
+                                    placeholder={$t("plot.panel.figureFill")}
+                                    oninput={(event) =>
+                                        patchStyle({
+                                            figureHeight: figureSide(
+                                                event.currentTarget.value,
+                                                MIN_FIGURE.height
+                                            )
+                                        })}
+                                />
+                            </label>
+                        </div>
+                    </div>
+                    {#if draft.style.figureWidth !== null || draft.style.figureHeight !== null}
+                        <div class="button-row">
+                            <Button
+                                variant="outline"
+                                size="xs"
+                                onclick={() =>
+                                    patchStyle({ figureWidth: null, figureHeight: null })}
+                            >
+                                <MaximizeIcon size={13} />{$t("plot.panel.fillPanel")}
+                            </Button>
+                        </div>
+                    {/if}
+                    <div class="option-row">
+                        <label class="checkbox-field"
+                            ><Checkbox
+                                checked={draft.style.gridlines}
+                                onCheckedChange={(checked) => patchStyle({ gridlines: !!checked })}
+                            /><span>{$t("plot.panel.showGridlines")}</span></label
+                        ><InfoTip
+                            label={$t("plot.panel.about", {
+                                option: $t("plot.panel.showGridlines")
+                            })}
+                            text={$t("plot.panel.showGridlinesHint")}
+                        />
+                    </div>
                     <div class="field color-field">
-                        <span>{$t("plot.panel.backgroundColor")}</span><input
+                        <OptionLabel
+                            for="plotBackgroundColour"
+                            text={$t("plot.panel.backgroundColor")}
+                            info={$t("plot.panel.backgroundColorHint")}
+                        /><input
                             id="plotBackgroundColour"
                             type="color"
                             value={shownColors.backgroundColor}
@@ -1049,7 +1493,11 @@
                         />
                     </div>
                     <div class="field color-field">
-                        <span>{$t("plot.panel.textColor")}</span><input
+                        <OptionLabel
+                            for="plotTextColour"
+                            text={$t("plot.panel.textColor")}
+                            info={$t("plot.panel.textColorHint")}
+                        /><input
                             id="plotTextColour"
                             type="color"
                             value={shownColors.textColor}
@@ -1059,7 +1507,11 @@
                         />
                     </div>
                     <div class="field color-field">
-                        <span>{$t("plot.panel.gridlineColor")}</span><input
+                        <OptionLabel
+                            for="plotGridlineColour"
+                            text={$t("plot.panel.gridlineColor")}
+                            info={$t("plot.panel.gridlineColorHint")}
+                        /><input
                             id="plotGridlineColour"
                             type="color"
                             value={shownColors.gridlineColor}
@@ -1085,6 +1537,7 @@
                     <PlotSlider
                         id="plotGridlineOpacity"
                         label={$t("plot.panel.gridlineOpacity")}
+                        info={$t("plot.panel.gridlineOpacityHint")}
                         min={0}
                         max={1}
                         step={0.05}
@@ -1111,6 +1564,8 @@
                 </p>
             {:else if !draft.z?.column}
                 <p class="hint">{$t("plot.panel.contoursNeedColour")}</p>
+            {:else if zIsText}
+                <p class="hint">{$t("plot.panel.contoursNeedNumbers")}</p>
             {:else}
                 <details class="analysis-subsection">
                     <summary class="analysis-header">
@@ -1118,28 +1573,38 @@
                     </summary>
 
                     <div class="analysis-body">
-                        <label class="switch-field">
-                            <span>{$t("plot.panel.interpolate")}</span>
-                            <input
-                                type="checkbox"
-                                class="switch-input"
-                                checked={draft.interpolation.enabled}
-                                onchange={(event) =>
-                                    patchInterpolation({ enabled: event.currentTarget.checked })}
-                                aria-label={$t("plot.panel.interpolate")}
+                        <div class="option-row">
+                            <OptionLabel
+                                for="interpolationEnabled"
+                                text={$t("plot.panel.interpolate")}
+                                info={$t("plot.panel.interpolateHint")}
                             />
-                            <span class="switch-track" aria-hidden="true"
-                                ><span class="switch-thumb"></span></span
-                            >
-                        </label>
-                        <p class="hint">{$t("plot.panel.interpolateHint")}</p>
-
-                        {#if draft.interpolation.method === "delaunay-barycentric"}
-                            <p class="hint">{$t("plot.panel.delaunayHint")}</p>
-                        {/if}
+                            <label class="switch-field">
+                                <input
+                                    id="interpolationEnabled"
+                                    type="checkbox"
+                                    class="switch-input"
+                                    checked={draft.interpolation.enabled}
+                                    onchange={(event) =>
+                                        patchInterpolation({
+                                            enabled: event.currentTarget.checked
+                                        })}
+                                    aria-label={$t("plot.panel.interpolate")}
+                                />
+                                <span class="switch-track" aria-hidden="true"
+                                    ><span class="switch-thumb"></span></span
+                                >
+                            </label>
+                        </div>
 
                         <div class="field">
-                            <Label for="interpolationMethod">{$t("plot.panel.method")}</Label>
+                            <OptionLabel
+                                for="interpolationMethod"
+                                text={$t("plot.panel.method")}
+                                info={draft.interpolation.method === "delaunay-barycentric"
+                                    ? $t("plot.panel.delaunayHint")
+                                    : $t("plot.panel.barnesHint")}
+                            />
                             <Select.Root
                                 type="single"
                                 value={draft.interpolation.method}
@@ -1154,10 +1619,10 @@
                                 <Select.Content>
                                     <Select.Group>
                                         <Select.Item
-                                            value="gaussian"
-                                            label={$t("plot.panel.methodGaussian")}
+                                            value="barnes"
+                                            label={$t("plot.panel.methodBarnes")}
                                         >
-                                            {$t("plot.panel.methodGaussian")}
+                                            {$t("plot.panel.methodBarnes")}
                                         </Select.Item>
                                         <Select.Item
                                             value="delaunay-barycentric"
@@ -1170,65 +1635,218 @@
                             </Select.Root>
                         </div>
 
+                        {#if draft.interpolation.method === "barnes"}
+                            {#if draft.interpolation.scaleLength === null && draft.interpolation.scaleLengthY === null}
+                                <PlotSlider
+                                    id="interpolationSmoothness"
+                                    label={$t("plot.panel.smoothness")}
+                                    info={$t("plot.panel.smoothnessHint")}
+                                    min={MIN_SMOOTHNESS}
+                                    max={MAX_SMOOTHNESS}
+                                    step={0.5}
+                                    value={draft.interpolation.smoothness}
+                                    display={radiusText}
+                                    minLabel={$t("plot.panel.smoothnessDetail")}
+                                    maxLabel={$t("plot.panel.smoothnessSmooth")}
+                                    onCommit={(value) => patchInterpolation({ smoothness: value })}
+                                />
+                            {:else}
+                                <p class="hint">{$t("plot.panel.radiusExact")}</p>
+                            {/if}
+                        {/if}
+
                         <div class="field">
-                            <span>{$t("plot.panel.gridResolution")}</span>
-                            <div
-                                class="pair"
-                                role="group"
-                                aria-label={$t("plot.panel.gridResolution")}
+                            <OptionLabel
+                                for="interpolationExtent"
+                                text={$t("plot.panel.extent")}
+                                info={$t(EXTENT_HINTS[extentOf(draft.interpolation)])}
+                            />
+                            <Select.Root
+                                type="single"
+                                value={extentOf(draft.interpolation)}
+                                onValueChange={(value) =>
+                                    patchInterpolation({
+                                        extent: value as PlotInterpolationExtent
+                                    })}
                             >
-                                <label class="range-field" for="interpolationGridX">
-                                    <span>x:</span>
-                                    <Input
-                                        id="interpolationGridX"
-                                        type="number"
-                                        min={MIN_GRID_RESOLUTION}
-                                        max={MAX_GRID_RESOLUTION}
-                                        step={1}
-                                        value={draft.interpolation.xGridResolution}
-                                        onchange={(event) =>
-                                            patchInterpolation({
-                                                xGridResolution: gridResolutionValue(
-                                                    event.currentTarget.value,
-                                                    draft.interpolation.xGridResolution
-                                                )
-                                            })}
-                                    />
-                                </label>
-                                <label class="range-field" for="interpolationGridY">
-                                    <span>y:</span>
-                                    <Input
-                                        id="interpolationGridY"
-                                        type="number"
-                                        min={MIN_GRID_RESOLUTION}
-                                        max={MAX_GRID_RESOLUTION}
-                                        step={1}
-                                        value={draft.interpolation.yGridResolution}
-                                        onchange={(event) =>
-                                            patchInterpolation({
-                                                yGridResolution: gridResolutionValue(
-                                                    event.currentTarget.value,
-                                                    draft.interpolation.yGridResolution
-                                                )
-                                            })}
-                                    />
-                                </label>
-                            </div>
+                                <Select.Trigger id="interpolationExtent">
+                                    {$t(EXTENT_LABELS[extentOf(draft.interpolation)])}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        {#each extents as extent (extent)}
+                                            <Select.Item
+                                                value={extent}
+                                                label={$t(EXTENT_LABELS[extent])}
+                                            >
+                                                {$t(EXTENT_LABELS[extent])}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
                         </div>
 
-                        <PlotSlider
-                            id="interpolationSigma"
-                            label={$t(interpolationSmoothingLabel(draft.interpolation.method))}
-                            min={0}
-                            max={8}
-                            step={0.1}
-                            value={draft.interpolation.gaussianSigma}
-                            onCommit={(value) => patchInterpolation({ gaussianSigma: value })}
-                        />
+                        {#if extentOf(draft.interpolation) === "near"}
+                            {#if draftIsMap}
+                                <div class="range-field">
+                                    <OptionLabel
+                                        for="interpolationDistance"
+                                        text={$t("plot.panel.maxDistanceKm")}
+                                        info={$t("plot.panel.maxDistanceHint")}
+                                    />
+                                    <Input
+                                        id="interpolationDistance"
+                                        type="number"
+                                        min={0}
+                                        step="any"
+                                        value={draft.interpolation.maxDistance ?? ""}
+                                        placeholder={lengthPlaceholder(draftLengths?.maxDistance.x)}
+                                        onchange={(event) =>
+                                            patchInterpolation({
+                                                maxDistance: lengthValue(event.currentTarget.value)
+                                            })}
+                                    />
+                                </div>
+                            {:else}
+                                <div class="field">
+                                    <OptionLabel
+                                        text={$t("plot.panel.maxDistance")}
+                                        info={$t("plot.panel.maxDistanceHint")}
+                                    />
+                                    <div
+                                        class="pair"
+                                        role="group"
+                                        aria-label={$t("plot.panel.maxDistance")}
+                                    >
+                                        <label class="range-field" for="interpolationDistanceX">
+                                            <span>{axisName("x")}</span>
+                                            <Input
+                                                id="interpolationDistanceX"
+                                                type="number"
+                                                min={0}
+                                                step="any"
+                                                value={draft.interpolation.maxDistance ?? ""}
+                                                placeholder={lengthPlaceholder(
+                                                    draftLengths?.maxDistance.x
+                                                )}
+                                                onchange={(event) =>
+                                                    patchInterpolation({
+                                                        maxDistance: lengthValue(
+                                                            event.currentTarget.value
+                                                        )
+                                                    })}
+                                            />
+                                        </label>
+                                        <label class="range-field" for="interpolationDistanceY">
+                                            <span>{axisName("y")}</span>
+                                            <Input
+                                                id="interpolationDistanceY"
+                                                type="number"
+                                                min={0}
+                                                step="any"
+                                                value={draft.interpolation.maxDistanceY ?? ""}
+                                                placeholder={lengthPlaceholder(
+                                                    draftLengths?.maxDistance.y
+                                                )}
+                                                onchange={(event) =>
+                                                    patchInterpolation({
+                                                        maxDistanceY: lengthValue(
+                                                            event.currentTarget.value
+                                                        )
+                                                    })}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            {/if}
+                        {/if}
+
+                        {#if draftIsMap}
+                            <div class="field">
+                                <OptionLabel
+                                    for="interpolationDomain"
+                                    text={$t("plot.panel.domain")}
+                                    info={$t(DOMAIN_HINTS[draft.interpolation.domain])}
+                                />
+                                <Select.Root
+                                    type="single"
+                                    value={draft.interpolation.domain}
+                                    onValueChange={(value) =>
+                                        patchInterpolation({
+                                            domain: value as PlotInterpolationDomain
+                                        })}
+                                >
+                                    <Select.Trigger id="interpolationDomain">
+                                        {$t(DOMAIN_LABELS[draft.interpolation.domain])}
+                                    </Select.Trigger>
+                                    <Select.Content>
+                                        <Select.Group>
+                                            {#each INTERPOLATION_DOMAINS as domain (domain)}
+                                                <Select.Item
+                                                    value={domain}
+                                                    label={$t(DOMAIN_LABELS[domain])}
+                                                >
+                                                    {$t(DOMAIN_LABELS[domain])}
+                                                </Select.Item>
+                                            {/each}
+                                        </Select.Group>
+                                    </Select.Content>
+                                </Select.Root>
+                            </div>
+                        {:else}
+                            <p class="hint">{$t("plot.panel.domainNeedsMap")}</p>
+                        {/if}
+
+                        <div class="field">
+                            <OptionLabel
+                                for="interpolationColours"
+                                text={$t("plot.panel.colourMode")}
+                                info={$t("plot.panel.colourModeHint")}
+                            />
+                            <Select.Root
+                                type="single"
+                                value={draft.interpolation.colourMode}
+                                onValueChange={(value) =>
+                                    patchInterpolation({ colourMode: value as PlotColourMode })}
+                            >
+                                <Select.Trigger id="interpolationColours">
+                                    {$t(COLOUR_MODE_LABELS[draft.interpolation.colourMode])}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Group>
+                                        {#each COLOUR_MODES as mode (mode)}
+                                            <Select.Item
+                                                value={mode}
+                                                label={$t(COLOUR_MODE_LABELS[mode])}
+                                            >
+                                                {$t(COLOUR_MODE_LABELS[mode])}
+                                            </Select.Item>
+                                        {/each}
+                                    </Select.Group>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        {#if usesColourBands(draft.interpolation)}
+                            <PlotSlider
+                                id="interpolationBands"
+                                label={$t("plot.panel.colourBands")}
+                                info={$t("plot.panel.colourBandsHint")}
+                                min={2}
+                                max={50}
+                                step={1}
+                                value={draft.interpolation.bandCount}
+                                onCommit={(value) => patchInterpolation({ bandCount: value })}
+                            />
+                        {/if}
 
                         <div class="clip-range field">
                             <div class="clip-range-header">
-                                <span>{$t("plot.panel.clipLimits")}</span><span
+                                <OptionLabel
+                                    text={$t("plot.panel.clipLimits")}
+                                    info={$t("plot.panel.clipLimitsHint")}
+                                /><span
                                     >{draft.interpolation.percentileMin}% - {draft.interpolation
                                         .percentileMax}%</span
                                 >
@@ -1277,17 +1895,146 @@
                             </div>
                         </div>
 
-                        {#if draft.interpolation.method === "gaussian"}
-                            <PlotSlider
-                                id="interpolationBands"
-                                label={$t("plot.panel.colourBands")}
-                                min={2}
-                                max={50}
-                                step={1}
-                                value={draft.interpolation.bandCount}
-                                onCommit={(value) => patchInterpolation({ bandCount: value })}
-                            />
-                        {/if}
+                        <details class="advanced-settings">
+                            <summary>{$t("plot.panel.advanced")}</summary>
+                            <div class="advanced-body">
+                                {#if draft.interpolation.method === "barnes"}
+                                    {#if draftIsMap}
+                                        <div class="range-field">
+                                            <OptionLabel
+                                                for="interpolationRadius"
+                                                text={$t("plot.panel.radiusExactKm")}
+                                                info={$t("plot.panel.exactRadiusHint")}
+                                            />
+                                            <Input
+                                                id="interpolationRadius"
+                                                type="number"
+                                                min={0}
+                                                step="any"
+                                                value={draft.interpolation.scaleLength ?? ""}
+                                                placeholder={lengthPlaceholder(
+                                                    draftLengths?.radius.x
+                                                )}
+                                                onchange={(event) =>
+                                                    patchInterpolation({
+                                                        scaleLength: lengthValue(
+                                                            event.currentTarget.value
+                                                        )
+                                                    })}
+                                            />
+                                        </div>
+                                    {:else}
+                                        <div class="field">
+                                            <OptionLabel
+                                                text={$t("plot.panel.radiusExactAxes")}
+                                                info={$t("plot.panel.exactRadiusHint")}
+                                            />
+                                            <div
+                                                class="pair"
+                                                role="group"
+                                                aria-label={$t("plot.panel.radiusExactAxes")}
+                                            >
+                                                <label
+                                                    class="range-field"
+                                                    for="interpolationRadiusX"
+                                                >
+                                                    <span>{axisName("x")}</span>
+                                                    <Input
+                                                        id="interpolationRadiusX"
+                                                        type="number"
+                                                        min={0}
+                                                        step="any"
+                                                        value={draft.interpolation.scaleLength ??
+                                                            ""}
+                                                        placeholder={lengthPlaceholder(
+                                                            draftLengths?.radius.x
+                                                        )}
+                                                        onchange={(event) =>
+                                                            patchInterpolation({
+                                                                scaleLength: lengthValue(
+                                                                    event.currentTarget.value
+                                                                )
+                                                            })}
+                                                    />
+                                                </label>
+                                                <label
+                                                    class="range-field"
+                                                    for="interpolationRadiusY"
+                                                >
+                                                    <span>{axisName("y")}</span>
+                                                    <Input
+                                                        id="interpolationRadiusY"
+                                                        type="number"
+                                                        min={0}
+                                                        step="any"
+                                                        value={draft.interpolation.scaleLengthY ??
+                                                            ""}
+                                                        placeholder={lengthPlaceholder(
+                                                            draftLengths?.radius.y
+                                                        )}
+                                                        onchange={(event) =>
+                                                            patchInterpolation({
+                                                                scaleLengthY: lengthValue(
+                                                                    event.currentTarget.value
+                                                                )
+                                                            })}
+                                                    />
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {/if}
+                                {/if}
+
+                                <div class="field">
+                                    <OptionLabel
+                                        text={$t("plot.panel.gridResolution")}
+                                        info={$t("plot.panel.gridResolutionHint")}
+                                    />
+                                    <div
+                                        class="pair"
+                                        role="group"
+                                        aria-label={$t("plot.panel.gridResolution")}
+                                    >
+                                        <label class="range-field" for="interpolationGridX">
+                                            <span>x:</span>
+                                            <Input
+                                                id="interpolationGridX"
+                                                type="number"
+                                                min={MIN_GRID_CELLS}
+                                                max={MAX_GRID_CELLS}
+                                                step={1}
+                                                value={draft.interpolation.xGridCells ?? ""}
+                                                placeholder={gridPlaceholder(autoGrid?.x)}
+                                                onchange={(event) =>
+                                                    patchInterpolation({
+                                                        xGridCells: gridCellsValue(
+                                                            event.currentTarget.value
+                                                        )
+                                                    })}
+                                            />
+                                        </label>
+                                        <label class="range-field" for="interpolationGridY">
+                                            <span>y:</span>
+                                            <Input
+                                                id="interpolationGridY"
+                                                type="number"
+                                                min={MIN_GRID_CELLS}
+                                                max={MAX_GRID_CELLS}
+                                                step={1}
+                                                value={draft.interpolation.yGridCells ?? ""}
+                                                placeholder={gridPlaceholder(autoGrid?.y)}
+                                                onchange={(event) =>
+                                                    patchInterpolation({
+                                                        yGridCells: gridCellsValue(
+                                                            event.currentTarget.value
+                                                        )
+                                                    })}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
                     </div>
                 </details>
 
@@ -1297,25 +2044,32 @@
                     </summary>
 
                     <div class="analysis-body">
-                        <label class="switch-field">
-                            <span>{$t("plot.panel.drawContours")}</span>
-                            <input
-                                type="checkbox"
-                                class="switch-input"
-                                checked={draft.contour.enabled}
-                                onchange={(event) =>
-                                    patchContour({ enabled: event.currentTarget.checked })}
-                                aria-label={$t("plot.panel.drawContourLines")}
+                        <div class="option-row">
+                            <OptionLabel
+                                for="contourEnabled"
+                                text={$t("plot.panel.drawContours")}
+                                info={$t("plot.panel.contourHint")}
                             />
-                            <span class="switch-track" aria-hidden="true"
-                                ><span class="switch-thumb"></span></span
-                            >
-                        </label>
-                        <p class="hint">{$t("plot.panel.contourHint")}</p>
+                            <label class="switch-field">
+                                <input
+                                    id="contourEnabled"
+                                    type="checkbox"
+                                    class="switch-input"
+                                    checked={draft.contour.enabled}
+                                    onchange={(event) =>
+                                        patchContour({ enabled: event.currentTarget.checked })}
+                                    aria-label={$t("plot.panel.drawContourLines")}
+                                />
+                                <span class="switch-track" aria-hidden="true"
+                                    ><span class="switch-thumb"></span></span
+                                >
+                            </label>
+                        </div>
 
                         <PlotSlider
                             id="contourLevels"
                             label={$t("plot.panel.levels")}
+                            info={$t("plot.panel.levelsHint")}
                             min={2}
                             max={30}
                             step={1}
@@ -1323,18 +2077,12 @@
                             onCommit={(value) => patchContour({ levelCount: value })}
                         />
 
-                        <PlotSlider
-                            id="contourGrid"
-                            label={$t("plot.panel.gridDetail")}
-                            min={20}
-                            max={300}
-                            step={10}
-                            value={draft.contour.gridResolution}
-                            onCommit={(value) => patchContour({ gridResolution: value })}
-                        />
-
                         <div class="field">
-                            <span>{$t("plot.panel.lineWidth")}</span><Select.Root
+                            <OptionLabel
+                                for="contourLineWidth"
+                                text={$t("plot.panel.lineWidth")}
+                                info={$t("plot.panel.lineWidthHint")}
+                            /><Select.Root
                                 type="single"
                                 value={String(draft.contour.lineWidth)}
                                 onValueChange={(value) =>
@@ -1355,18 +2103,30 @@
                             >
                         </div>
 
-                        <label class="checkbox-field">
-                            <Checkbox
-                                checked={draft.contour.showLabels}
-                                onCheckedChange={(checked) =>
-                                    patchContour({ showLabels: !!checked })}
+                        <div class="option-row">
+                            <label class="checkbox-field">
+                                <Checkbox
+                                    checked={draft.contour.showLabels}
+                                    onCheckedChange={(checked) =>
+                                        patchContour({ showLabels: !!checked })}
+                                />
+                                <span>{$t("plot.panel.addLabel")}</span>
+                            </label>
+                            <InfoTip
+                                label={$t("plot.panel.about", {
+                                    option: $t("plot.panel.addLabel")
+                                })}
+                                text={$t("plot.panel.addLabelHint")}
                             />
-                            <span>{$t("plot.panel.addLabel")}</span>
-                        </label>
+                        </div>
 
                         {#if draft.contour.showLabels}
                             <div class="field">
-                                <span>{$t("plot.panel.labelSize")}</span><Select.Root
+                                <OptionLabel
+                                    for="contourLabelSize"
+                                    text={$t("plot.panel.labelSize")}
+                                    info={$t("plot.panel.labelSizeHint")}
+                                /><Select.Root
                                     type="single"
                                     value={String(draft.contour.labelFontSize)}
                                     onValueChange={(value) =>
@@ -1509,8 +2269,7 @@
             gap: 0.3125rem;
 
             // The Label component renders the element, so the rule reaches through it.
-            :global([data-slot="label"]),
-            > span {
+            :global([data-slot="label"]) {
                 display: flex;
                 justify-content: space-between;
                 gap: 0.5rem;
@@ -1522,6 +2281,13 @@
                 color: var(--muted-foreground);
                 padding: 0.375rem 0;
             }
+        }
+
+        // An option with a control and an info button side by side.
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
         }
 
         .axis-group {
@@ -1634,6 +2400,21 @@
             flex-direction: column;
             gap: 0.75rem;
             padding: 0.125rem 0 0.875rem;
+        }
+
+        .advanced-settings {
+            > summary {
+                font-size: var(--font-size-sm);
+                font-weight: 600;
+                cursor: pointer;
+            }
+
+            .advanced-body {
+                display: flex;
+                flex-direction: column;
+                gap: 0.75rem;
+                padding-top: 0.625rem;
+            }
         }
 
         .clip-range-header,
@@ -1749,7 +2530,6 @@
             gap: 0.75rem;
         }
 
-        .axis-title,
         .axis-heading {
             font-size: var(--font-size-sm);
             font-weight: 500;
@@ -1835,6 +2615,12 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.5rem;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
         }
 
         .hint {

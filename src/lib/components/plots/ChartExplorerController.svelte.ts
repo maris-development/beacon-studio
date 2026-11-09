@@ -37,6 +37,7 @@ import {
     pruneMissingColumns,
     usesXColumn,
     usesYColumn,
+    basemapLayerOf,
     usesZColumn,
     type ChartViewState,
     type PlotConfig
@@ -45,13 +46,36 @@ import {
     buildPlotSeries,
     formatSeriesCaption,
     groupableColumns,
+    isMapPlot,
     plottableColumns,
+    readRowCells,
     resolveRange,
+    textColumns,
     type PlotDataResult,
+    type PlotRange,
+    type PlotRowCell,
     type PlotSeries
 } from "@/plots/plot-data";
 import { buildContours, type ContourResult } from "@/plots/contour";
-import { buildInterpolationSurface, type InterpolationResult } from "@/plots/interpolation";
+import {
+    buildInterpolationField,
+    autoGridCells,
+    dataSpacing,
+    fieldRanges,
+    scaleLengthsOf,
+    buildInterpolationSurface,
+    colourRangeOf,
+    type AxisLengths,
+    type InterpolationResult
+} from "@/plots/interpolation";
+import {
+    landDetailForSpan,
+    loadGeography,
+    loadLand,
+    type Geography,
+    type Land,
+    type LandDetail
+} from "@/geo/land";
 import { samplePlotSeries } from "@/plots/sampling";
 import { getSettings } from "@/stores/settings";
 import { describeQuery, track } from "@/telemetry";
@@ -90,6 +114,24 @@ export class ChartExplorerController {
      * {@link columns}: a station name is text, and it still labels a stroke.
      */
     readonly groupColumns = $derived(groupableColumns(this.table));
+
+    /** The columns of text that can colour a scatter, one colour per value. */
+    readonly textColumns = $derived(textColumns(this.table));
+
+    /** True when the column holds text, so it colours by group and not by a colour scale. */
+    isTextColumn(name: string | null | undefined): boolean {
+        return !!name && this.textColumns.includes(name);
+    }
+
+    /**
+     * The cells of one row of the result, for the hover tooltip. `skip` holds the
+     * columns that the tooltip shows already.
+     */
+    rowCells(row: number, skip: ReadonlyArray<string>, limit: number): PlotRowCell[] {
+        const table = this.table;
+        if (!table) return [];
+        return readRowCells(table, row, skip, limit);
+    }
 
     readonly plots = $derived<ReadonlyArray<PlotConfig>>(this.view?.plots ?? []);
 
@@ -180,25 +222,144 @@ export class ChartExplorerController {
     });
 
     /**
+     * True when the plot is a map: longitude on X and latitude on Y. Only a map
+     * plot draws a basemap, and keeps its interpolation on the land or the sea side.
+     *
+     * The panel passes its draft and no series, so the choice shows before Apply.
+     * With a series, the values must also fit the globe.
+     */
+    isMapPlot(plot: PlotConfig, series: PlotSeries | null = null): boolean {
+        return isMapPlot(
+            plot,
+            this.coordinateColumns,
+            this.columns.map((column) => column.name),
+            series
+        );
+    }
+
+    /** True when the plot is a map and the values of the active series fit the globe. */
+    isMapData(plot: PlotConfig): boolean {
+        return this.isMapPlot(plot, this.series);
+    }
+
+    /** True when the active plot is a map, checked on its values too. */
+    readonly mapPlot = $derived.by(() => {
+        const plot = this.activePlot;
+        const series = this.series;
+        return !!plot && !!series && this.isMapPlot(plot, series);
+    });
+
+    /** The axis ranges of a plot over the active series, or null before the series. */
+    private rangesOf(plot: PlotConfig): { x: PlotRange; y: PlotRange } | null {
+        const series = this.series;
+        if (!series) return null;
+
+        return {
+            x: resolveRange(series.xRange, plot.x.min, plot.x.max),
+            y: resolveRange(series.yRange, plot.y.min, plot.y.max)
+        };
+    }
+
+    /**
+     * The radius from the spacing of the points, by the axes it came from. The
+     * rebuild finds it, and the panel reads it for its automatic values.
+     */
+    private spacing = $state.raw<{ key: string; lengths: AxisLengths } | null>(null);
+    /** The result and the series choices that {@link spacing} came from. */
+    private spacingSource: { table: DatasetEntry["table"]; seriesKey: string | null } | null = null;
+
+    /** The axes that decide the spacing of the points, as one string. */
+    private spacingKey(plot: PlotConfig, map: boolean): string {
+        return [
+            plot.x.column,
+            plot.y.column,
+            plot.x.min,
+            plot.x.max,
+            plot.y.min,
+            plot.y.max,
+            map
+        ].join("|");
+    }
+
+    /**
+     * The automatic radius of a plot: in km on a map, in axis units otherwise.
+     * Null until a rebuild with these axes found it.
+     */
+    autoLengthsOf(plot: PlotConfig): AxisLengths | null {
+        const spacing = this.spacing;
+        if (!spacing || spacing.key !== this.spacingKey(plot, this.isMapData(plot))) return null;
+        return spacing.lengths;
+    }
+
+    /** The automatic grid size of a plot. Null until the automatic radius is known. */
+    autoGridCellsOf(plot: PlotConfig): { x: number; y: number } | null {
+        const series = this.series;
+        const auto = this.autoLengthsOf(plot);
+        const ranges = this.rangesOf(plot);
+        if (!series || !auto || !ranges) return null;
+
+        const map = this.isMapData(plot);
+        let base = auto;
+        if (plot.interpolation.method === "barnes") {
+            base = scaleLengthsOf(plot.interpolation, auto, map).radius;
+        }
+        const grid = fieldRanges(series, plot.interpolation, ranges.x, ranges.y);
+        return autoGridCells(base, grid.x, grid.y, map);
+    }
+
+    /** The Natural Earth detail of a map plot: the chosen one, or one from the size of the map. */
+    private landDetailOf(plot: PlotConfig, xRange: PlotRange, yRange: PlotRange): LandDetail {
+        if (plot.basemap.detail !== "auto") return plot.basemap.detail;
+        return landDetailForSpan(Math.max(xRange.max - xRange.min, yRange.max - yRange.min));
+    }
+
+    /**
+     * The settings that decide the interpolated field, as one string. The
+     * surface and the contour lines both trace this field.
+     *
+     * The axis ranges are in the key: they set the extent of the grid. A land or
+     * sea domain also puts the basemap detail in it, because it uses that coast.
+     */
+    private fieldKey(plot: PlotConfig): string {
+        const settings = plot.interpolation;
+        let domain = "all";
+        if (this.isMapPlot(plot) && settings.domain !== "all") {
+            domain = `${settings.domain}:${plot.basemap.detail}`;
+        }
+
+        return [
+            plot.id,
+            settings.method,
+            settings.xGridCells,
+            settings.yGridCells,
+            settings.smoothness,
+            settings.scaleLength,
+            settings.scaleLengthY,
+            settings.extent,
+            settings.maxDistance,
+            settings.maxDistanceY,
+            domain,
+            plot.x.min,
+            plot.x.max,
+            plot.y.min,
+            plot.y.max
+        ].join("|");
+    }
+
+    /**
      * The settings that decide the contour lines, as one string. Null while the
      * plot draws none.
      *
-     * The axis ranges are in the key: they set the extent of the grid, so a change
-     * to them moves every line. The palette and the line width are not: those
-     * change how a line looks, and the plugin reads them at draw time.
+     * The palette and the line width are not in the key: those change how a line
+     * looks, and the plugin reads them at draw time.
      */
     readonly contourKey = $derived.by(() => {
         const plot = this.activePlot;
         if (!plot?.contour.enabled || !usesZColumn(plot.type)) return null;
 
         return [
-            plot.id,
+            this.fieldKey(plot),
             plot.contour.levelCount,
-            plot.contour.gridResolution,
-            plot.x.min,
-            plot.x.max,
-            plot.y.min,
-            plot.y.max,
             plot.z?.min,
             plot.z?.max,
             plot.z?.scale
@@ -210,18 +371,11 @@ export class ChartExplorerController {
         if (!plot?.interpolation.enabled || !usesZColumn(plot.type)) return null;
 
         return [
-            plot.id,
-            plot.interpolation.method,
-            plot.interpolation.xGridResolution,
-            plot.interpolation.yGridResolution,
-            plot.interpolation.gaussianSigma,
+            this.fieldKey(plot),
             plot.interpolation.percentileMin,
             plot.interpolation.percentileMax,
+            plot.interpolation.colourMode,
             plot.interpolation.bandCount,
-            plot.x.min,
-            plot.x.max,
-            plot.y.min,
-            plot.y.max,
             plot.z?.min,
             plot.z?.max,
             plot.z?.scale
@@ -236,6 +390,77 @@ export class ChartExplorerController {
 
     /** The interpolated value field of the active plot, in data coordinates. */
     interpolation = $state.raw<InterpolationResult | null>(null);
+
+    /**
+     * The land and borders of a map plot. The canvas draws the basemap from it,
+     * and clips to the land or sea domain with it. Null while the plot needs none.
+     */
+    geography = $state.raw<Geography | null>(null);
+
+    /**
+     * The geography that the active plot needs, as `detail` or `detail+borders`,
+     * or null. A map loads it for its basemap, and for a land or sea domain.
+     *
+     * The page loads it with {@link applyGeography}, apart from the rebuild: a
+     * basemap switch must not walk the rows again.
+     */
+    readonly geographyRequest = $derived.by((): string | null => {
+        const plot = this.activePlot;
+        if (!plot || !this.mapPlot) return null;
+        const ranges = this.rangesOf(plot);
+        if (!ranges) return null;
+
+        const analysis =
+            usesZColumn(plot.type) && (plot.interpolation.enabled || plot.contour.enabled);
+        const layer = basemapLayerOf(plot);
+        if (layer === "none" && !(analysis && plot.interpolation.domain !== "all")) return null;
+
+        const detail = this.landDetailOf(plot, ranges.x, ranges.y);
+        if (layer === "borders") return `${detail}+borders`;
+        return detail;
+    });
+
+    private geographyToken = 0;
+
+    /** Load the geography of {@link geographyRequest}, or clear it for null. A newer call wins. */
+    async applyGeography(request: string | null): Promise<void> {
+        const token = ++this.geographyToken;
+
+        if (!request) {
+            this.geography = null;
+            return;
+        }
+
+        const [detail, borders] = request.split("+");
+
+        try {
+            const geography = await loadGeography(detail as LandDetail, borders === "borders");
+            this.clearLandError(geography.detail);
+            if (token === this.geographyToken) this.geography = geography;
+        } catch (error) {
+            if (token !== this.geographyToken) return;
+            this.geography = null;
+            this.reportLandError(detail as LandDetail, "plot.error.basemapFailed", error);
+        }
+    }
+
+    /** The land detail of the failed load that a toast reported. A success clears it. */
+    private landErrorShown: LandDetail | null = null;
+
+    /** Show one toast per failure: the basemap and the land or sea domain load the same files. */
+    private reportLandError(
+        detail: LandDetail,
+        key: "plot.error.basemapFailed" | "plot.error.coastlinesFailed",
+        error: unknown
+    ): void {
+        if (this.landErrorShown === detail) return;
+        this.landErrorShown = detail;
+        addToast({ key, message: String(error), type: "error" });
+    }
+
+    private clearLandError(detail: LandDetail): void {
+        if (this.landErrorShown === detail) this.landErrorShown = null;
+    }
 
     /** Why the plot cannot draw, or null. */
     readonly message = $derived.by((): Message | null => {
@@ -262,6 +487,9 @@ export class ChartExplorerController {
 
     private prepareHandle: number | null = null;
 
+    /** The number of the newest rebuild. A rebuild that waits for the coastlines checks it. */
+    private prepareToken = 0;
+
     /**
      * Rebuild the numbers of the plot, after the browser has painted.
      *
@@ -280,7 +508,7 @@ export class ChartExplorerController {
 
         this.prepareHandle = requestAnimationFrame(() => {
             this.prepareHandle = null;
-            setTimeout(() => this.runPrepare(), 0);
+            setTimeout(() => void this.runPrepare(), 0);
         });
     }
 
@@ -296,9 +524,11 @@ export class ChartExplorerController {
         this.canvasBusy = busy;
     }
 
-    private runPrepare(): void {
+    private async runPrepare(): Promise<void> {
+        const token = ++this.prepareToken;
         const table = this.table;
         const plot = this.activePlot;
+        const seriesKey = this.seriesKey;
 
         if (!table || !plot) {
             this.data = null;
@@ -309,37 +539,66 @@ export class ChartExplorerController {
             return;
         }
 
-        this.data = buildPlotSeries(table, plot, {
+        const data = buildPlotSeries(table, plot, {
             selection: this.selection,
             coordinateColumns: this.coordinateColumns
         });
 
         let series: PlotSeries | null = null;
-        if (this.data.ok) series = this.data.series;
+        if (data.ok) series = data.series;
 
-        if (series && plot.interpolation.enabled && usesZColumn(plot.type)) {
-            this.interpolation = buildInterpolationSurface(
-                series,
-                plot,
-                resolveRange(series.xRange, plot.x.min, plot.x.max),
-                resolveRange(series.yRange, plot.y.min, plot.y.max)
-            );
-        } else {
-            this.interpolation = null;
+        let interpolation: InterpolationResult | null = null;
+        let contours: ContourResult | null = null;
+        const needsField =
+            usesZColumn(plot.type) && (plot.interpolation.enabled || plot.contour.enabled);
+
+        // A text colour column has groups, not values, so nothing can grid it.
+        if (series && !series.categories && needsField) {
+            const xRange = resolveRange(series.xRange, plot.x.min, plot.x.max);
+            const yRange = resolveRange(series.yRange, plot.y.min, plot.y.max);
+            const map = this.isMapPlot(plot, series);
+            let land: Land | null = null;
+            if (map) land = await this.landFor(plot, xRange, yRange, token);
+            if (token !== this.prepareToken) return;
+
+            // The spacing walks the points, so it runs one time per result, series and axes.
+            const key = this.spacingKey(plot, map);
+            const source = this.spacingSource;
+            let auto: AxisLengths | null = null;
+            if (
+                this.spacing?.key === key &&
+                source?.table === table &&
+                source.seriesKey === seriesKey
+            ) {
+                auto = this.spacing.lengths;
+            }
+            if (!auto) {
+                auto = dataSpacing(series, xRange, yRange, map);
+                this.spacingSource = { table, seriesKey };
+                this.spacing = { key, lengths: auto };
+            }
+
+            const field = buildInterpolationField(series, plot.interpolation, xRange, yRange, {
+                land,
+                map,
+                auto
+            });
+
+            if (field && plot.interpolation.enabled) {
+                interpolation = buildInterpolationSurface(field, series, plot);
+            }
+
+            const colours = colourRangeOf(series, plot, interpolation);
+            if (field && colours && plot.contour.enabled) {
+                contours = buildContours(field, plot, colours);
+            }
         }
 
-        if (series && plot.contour.enabled && usesZColumn(plot.type)) {
-            this.contours = buildContours(
-                series,
-                plot,
-                resolveRange(series.xRange, plot.x.min, plot.x.max),
-                resolveRange(series.yRange, plot.y.min, plot.y.max)
-            );
-        } else {
-            this.contours = null;
-        }
+        this.data = data;
+        this.interpolation = interpolation;
+        this.contours = contours;
 
-        // Last, so the two steps above still read every row. The setting is read
+        // Last, so the steps above still read every row. The setting is read
         // here and not at module load, so a change to it reaches the next rebuild.
         if (series && needsSampling(plot.type)) {
             this.displaySeries = samplePlotSeries(series, getSettings().sampleAfterRows);
@@ -348,6 +607,32 @@ export class ChartExplorerController {
         }
 
         this.isPreparing = false;
+    }
+
+    /**
+     * The land polygons for a map plot that keeps to the land or the sea, or
+     * null. The domain takes the coast of the basemap detail. `token` is the
+     * rebuild that asks: a replaced rebuild reports no failure.
+     */
+    private async landFor(
+        plot: PlotConfig,
+        xRange: PlotRange,
+        yRange: PlotRange,
+        token: number
+    ): Promise<Land | null> {
+        if (plot.interpolation.domain === "all") return null;
+
+        const detail = this.landDetailOf(plot, xRange, yRange);
+        try {
+            const land = await loadLand(detail);
+            this.clearLandError(detail);
+            return land;
+        } catch (error) {
+            if (token === this.prepareToken) {
+                this.reportLandError(detail, "plot.error.coastlinesFailed", error);
+            }
+            return null;
+        }
     }
 
     /**

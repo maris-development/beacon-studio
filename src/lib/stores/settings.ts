@@ -66,7 +66,7 @@ export interface BeaconStudioSettings {
     // -- map ------------------------------------------------------------------
     /** The MapLibre style URL of the base map in light mode. */
     mapStyleUrl: string;
-    /** The MapLibre style URL of the base map in dark mode. Empty uses {@link mapStyleUrl}. */
+    /** The MapLibre style URL of the base map in dark mode. Empty uses the default dark map. */
     mapStyleUrlDark: string;
     /** The decimals that the map groups latitude and longitude by. */
     mapGroupByDecimals: number;

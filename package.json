@@ -42,7 +42,7 @@
 		"@tauri-apps/cli": "^2.11.2",
 		"@types/d3-contour": "^3.0.6",
 		"@types/d3-delaunay": "^6.0.4",
-		"@types/d3-polygon": "^3.0.2",
+		"@types/topojson-client": "^3.1.5",
 		"bits-ui": "^2.8.10",
 		"clsx": "^2.1.1",
 		"eslint": "^9.18.0",
@@ -83,7 +83,6 @@
 		"d3": "^7.9.0",
 		"d3-contour": "^4.0.2",
 		"d3-delaunay": "^6.0.4",
-		"d3-polygon": "^3.0.1",
 		"d3-scale": "^4.0.2",
 		"d3-scale-chromatic": "^3.1.0",
 		"date-fns": "^4.1.0",
@@ -99,6 +98,8 @@
 		"terra-draw": "^1.32.2",
 		"terra-draw-maplibre-gl-adapter": "^1.4.1",
 		"tom-select": "^2.4.3",
-		"uplot": "^1.6.32"
+		"topojson-client": "^3.1.0",
+		"uplot": "^1.6.32",
+		"world-atlas": "^2.0.2"
 	}
 }

@@ -1,8 +1,8 @@
 /**
  * The base map of the theme.
  *
- * Each theme has its own style URL setting. An empty dark URL uses the light map
- * in both themes.
+ * Each theme has its own style URL setting. An empty URL uses the default map of
+ * that theme.
  *
  * `map.setStyle` removes every source and layer that the app added. Terra Draw
  * and the area preview then lose their sources, and Terra Draw throws on its next
@@ -28,14 +28,14 @@ export const SELECTION_PREVIEW_SOURCE = "spatial-selection-preview";
 export const APP_LAYER_PREFIXES = ["td-", "spatial-selection-"] as const;
 
 /**
- * The base map URLs of the settings. An empty light URL gives the default map.
- * An empty dark URL gives the light map.
+ * The base map URLs of the settings. An empty URL gives the default map of that
+ * theme.
  */
 export function basemapUrlsOf(
     settings: Pick<BeaconStudioSettings, "mapStyleUrl" | "mapStyleUrlDark">
 ): BasemapUrls {
     const light = settings.mapStyleUrl.trim() || DEFAULT_SETTINGS.mapStyleUrl;
-    const dark = settings.mapStyleUrlDark.trim() || light;
+    const dark = settings.mapStyleUrlDark.trim() || DEFAULT_SETTINGS.mapStyleUrlDark;
     return { light, dark };
 }
 

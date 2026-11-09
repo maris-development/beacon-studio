@@ -26,10 +26,24 @@ import { Utils } from "@/utils";
 import { DEFAULT_PALETTE_ID, isPaletteId, type PaletteId } from "@/colors/palettes";
 import type { MessageKey } from "@/i18n";
 import type { ResolvedTheme } from "@/stores/settings";
+import { MIN_FIGURE } from "./plot-view";
 
 export type PlotType = "scatter" | "cross-section" | "line" | "histogram";
 export type ColorScale = "linear" | "logarithmic" | "exponential";
-export type PlotInterpolationMethod = "gaussian" | "delaunay-barycentric";
+export type PlotInterpolationMethod = "barnes" | "delaunay-barycentric";
+/** Where a map plot interpolates: everywhere, or only on the sea or the land side of the coastline. */
+export type PlotInterpolationDomain = "all" | "sea" | "land";
+/** What a map plot draws below and above the data. `auto` draws land and coastlines. */
+export type PlotBasemapLayer = "auto" | "none" | "coast" | "land" | "borders";
+/** The Natural Earth detail of a basemap. `auto` follows the size of the map. */
+export type PlotBasemapDetail = "auto" | "110m" | "50m" | "10m";
+/**
+ * Where the interpolated surface shows: near the points, inside their convex hull, or on the whole
+ * grid. Delaunay never draws outside the hull, so it reads `all` as `hull`.
+ */
+export type PlotInterpolationExtent = "near" | "hull" | "all";
+/** How the surface takes its colours. `auto` gives bands to Barnes and a continuous scale to Delaunay. */
+export type PlotColourMode = "auto" | "continuous" | "bands";
 export type PlotTypeConfig = { id: PlotType; labelKey: MessageKey; descriptionKey: MessageKey };
 
 export const PLOT_TYPES: ReadonlyArray<PlotTypeConfig> = [
@@ -101,12 +115,11 @@ export interface PlotAxisConfig {
     scale: ColorScale;
 }
 
+/** The contour lines trace the field of the interpolation settings, also when the surface is off. */
 export interface PlotContourConfig {
     enabled: boolean;
     /** How many contour levels to draw over the range of the Z values. */
     levelCount: number;
-    /** Cells per axis of the grid that the contour algorithm reads. */
-    gridResolution: number;
     lineWidth: number;
     showLabels: boolean;
     labelFontSize: number;
@@ -116,17 +129,40 @@ export interface PlotInterpolationConfig {
     enabled: boolean;
     /** The algorithm that fills the interpolation grid. */
     method: PlotInterpolationMethod;
-    /** Cells along the X axis of the interpolation grid. */
-    xGridResolution: number;
-    /** Cells along the Y axis of the interpolation grid. */
-    yGridResolution: number;
-    /** Gaussian blur radius, in grid cells. */
-    gaussianSigma: number;
+    /** Cells along the X axis of the grid. Null means automatic, from the radius. */
+    xGridCells: number | null;
+    /** Cells along the Y axis of the grid. Null means automatic, from the radius. */
+    yGridCells: number | null;
+    /**
+     * The Barnes radius is the automatic radius times 2 to the power of this value, from
+     * {@link MIN_SMOOTHNESS} to {@link MAX_SMOOTHNESS}. The automatic radius follows the spacing
+     * of the points.
+     */
+    smoothness: number;
+    /**
+     * An exact Barnes radius, the Gaussian sigma: in km on a map, in X axis units otherwise. Null
+     * means the automatic radius and the smoothness.
+     */
+    scaleLength: number | null;
+    /** The exact radius along the Y axis, in Y axis units. A map does not read it. */
+    scaleLengthY: number | null;
+    /** Where the surface shows. */
+    extent: PlotInterpolationExtent;
+    /**
+     * How far from the data a `near` surface shows: in km on a map, in X axis units otherwise.
+     * Null means two radii.
+     */
+    maxDistance: number | null;
+    /** The maximum distance along the Y axis, in Y axis units. A map does not read it. */
+    maxDistanceY: number | null;
+    /** Only a map plot reads this. */
+    domain: PlotInterpolationDomain;
     /** Lower percentile for colour clipping. */
     percentileMin: number;
     /** Upper percentile for colour clipping. */
     percentileMax: number;
-    /** Filled colour bands that approximate the interpolated surface. */
+    colourMode: PlotColourMode;
+    /** The number of colour bands of a banded surface. */
     bandCount: number;
 }
 
@@ -180,6 +216,27 @@ export interface PlotStyleConfig {
     gridlineOpacity: number;
     /** CSS colour of the title, the axis titles and the tick labels. Empty follows the theme. */
     textColor: string;
+    /** The width of the figure in CSS pixels. Null fills the panel. Export PNG uses this size. */
+    figureWidth: number | null;
+    /** The height of the figure in CSS pixels. Null fills the panel. */
+    figureHeight: number | null;
+}
+
+/**
+ * The groups of a text colour column. Every group gets one series colour, up to
+ * {@link CATEGORY_SLOTS}. The smaller groups share the grey "Other" group.
+ */
+export interface PlotCategoriesConfig {
+    /** The groups that the plot does not draw. "Other" has the key {@link OTHER_GROUP}. */
+    hidden: string[];
+}
+
+/** The basemap of a map plot: longitude on X and latitude on Y. Other plots do not read it. */
+export interface PlotBasemapConfig {
+    layer: PlotBasemapLayer;
+    detail: PlotBasemapDetail;
+    /** One km has the same length on both axes, so the coast keeps its true shape. */
+    fixAspect: boolean;
 }
 
 export interface PlotConfig {
@@ -196,9 +253,11 @@ export interface PlotConfig {
     z: PlotAxisConfig | null;
     contour: PlotContourConfig;
     interpolation: PlotInterpolationConfig;
+    basemap: PlotBasemapConfig;
     line: PlotLineConfig;
     histogram: PlotHistogramConfig;
     style: PlotStyleConfig;
+    categories: PlotCategoriesConfig;
 }
 
 /** The display state of the chart explorer for one query. */
@@ -212,22 +271,77 @@ export interface ChartViewState {
 export const DEFAULT_CONTOUR: PlotContourConfig = {
     enabled: false,
     levelCount: 10,
-    gridResolution: 120,
     lineWidth: 1,
     showLabels: true,
     labelFontSize: 10
 };
 
+/** The limits of {@link PlotInterpolationConfig.smoothness}: a quarter to four times the radius. */
+export const MIN_SMOOTHNESS = -2;
+export const MAX_SMOOTHNESS = 2;
+
+/** The limits of a grid size that the user sets. */
+export const MIN_GRID_CELLS = 20;
+export const MAX_GRID_CELLS = 300;
+
+export const INTERPOLATION_EXTENTS: ReadonlyArray<PlotInterpolationExtent> = [
+    "near",
+    "hull",
+    "all"
+];
+export const COLOUR_MODES: ReadonlyArray<PlotColourMode> = ["auto", "continuous", "bands"];
+
 export const DEFAULT_INTERPOLATION: PlotInterpolationConfig = {
     enabled: false,
-    method: "gaussian",
-    xGridResolution: 120,
-    yGridResolution: 120,
-    gaussianSigma: 1.2,
+    method: "barnes",
+    xGridCells: null,
+    yGridCells: null,
+    smoothness: 0,
+    scaleLength: null,
+    scaleLengthY: null,
+    extent: "near",
+    maxDistance: null,
+    maxDistanceY: null,
+    domain: "all",
     percentileMin: 1,
     percentileMax: 99,
+    colourMode: "auto",
     bandCount: 25
 };
+
+/** True when the surface draws in bands, and false for a continuous colour scale. */
+export function usesColourBands(settings: PlotInterpolationConfig): boolean {
+    if (settings.colourMode === "auto") return settings.method === "barnes";
+    return settings.colourMode === "bands";
+}
+
+/** The extent that a method draws: Delaunay has no values outside the hull of the points. */
+export function extentOf(settings: PlotInterpolationConfig): PlotInterpolationExtent {
+    if (settings.method === "delaunay-barycentric" && settings.extent === "all") return "hull";
+    return settings.extent;
+}
+
+export const DEFAULT_BASEMAP: PlotBasemapConfig = {
+    layer: "auto",
+    detail: "auto",
+    fixAspect: true
+};
+
+export const BASEMAP_LAYERS: ReadonlyArray<PlotBasemapLayer> = [
+    "auto",
+    "none",
+    "coast",
+    "land",
+    "borders"
+];
+
+export const BASEMAP_DETAILS: ReadonlyArray<PlotBasemapDetail> = ["auto", "110m", "50m", "10m"];
+
+/** The layer that a basemap draws: `auto` draws land and coastlines. */
+export function basemapLayerOf(plot: PlotConfig): Exclude<PlotBasemapLayer, "auto"> {
+    if (plot.basemap.layer === "auto") return "land";
+    return plot.basemap.layer;
+}
 
 export const DEFAULT_LINE: PlotLineConfig = {
     groupColumn: null,
@@ -259,8 +373,16 @@ export const DEFAULT_STYLE: PlotStyleConfig = {
     backgroundColor: "",
     gridlineColor: "",
     gridlineOpacity: 0.15,
-    textColor: ""
+    textColor: "",
+    figureWidth: null,
+    figureHeight: null
 };
+
+/** The groups of a text colour column that get a colour of their own. */
+export const CATEGORY_SLOTS = 8;
+
+/** The key of the grey group that holds the groups without a colour of their own. */
+export const OTHER_GROUP = "__other__";
 
 /** The colours of a plot that follows the theme. */
 export type PlotThemeColors = Pick<
@@ -275,6 +397,22 @@ export type PlotThemeColors = Pick<
 export const PLOT_THEME_COLORS: Record<ResolvedTheme, PlotThemeColors> = {
     light: { backgroundColor: "#ffffff", gridlineColor: "#1f2937", textColor: "#1f2937" },
     dark: { backgroundColor: "#17171b", gridlineColor: "#e4e4e7", textColor: "#e4e4e7" }
+};
+
+/** The colours of the basemap on a map plot. */
+export interface BasemapColors {
+    land: string;
+    coast: string;
+    border: string;
+}
+
+/**
+ * The basemap colours of each theme. A canvas cannot read a CSS variable, so these are hex. The
+ * dark land sits just above the dark plot background.
+ */
+export const BASEMAP_THEME_COLORS: Record<ResolvedTheme, BasemapColors> = {
+    light: { land: "#e9e7e1", coast: "#8d8a82", border: "#b9b6ae" },
+    dark: { land: "#2a2a31", coast: "#71717a", border: "#52525b" }
 };
 
 /** The colours to paint: a colour that the user picked, else the colour of the theme. */
@@ -316,9 +454,11 @@ export function makePlotConfig(overrides: Partial<PlotConfig> = {}): PlotConfig 
         z: null,
         contour: { ...DEFAULT_CONTOUR },
         interpolation: { ...DEFAULT_INTERPOLATION },
+        basemap: { ...DEFAULT_BASEMAP },
         line: { ...DEFAULT_LINE },
         histogram: { ...DEFAULT_HISTOGRAM },
         style: { ...DEFAULT_STYLE },
+        categories: { hidden: [] },
         ...overrides
     };
 }
@@ -346,9 +486,11 @@ export function clonePlotConfig(
         z,
         contour: { ...source.contour },
         interpolation: { ...source.interpolation },
+        basemap: { ...source.basemap },
         line: { ...source.line },
         histogram: { ...source.histogram },
         style: { ...source.style },
+        categories: { hidden: [...source.categories.hidden] },
         ...overrides
     };
 }
@@ -398,8 +540,8 @@ export function isPlotRenderable(plot: PlotConfig | null | undefined): boolean {
  * It returns the same object when nothing changed. Therefore a caller can use
  * the identity of the result to decide whether to write to storage.
  *
- * `groupColumns` is the wider list that the group column of a line plot draws
- * from: that one may hold text, so it is not in `columns`.
+ * `groupColumns` is the wider list that the group column of a line plot and the
+ * colour column draw from: those may hold text, so they are not in `columns`.
  */
 export function pruneMissingColumns(
     plot: PlotConfig,
@@ -410,7 +552,7 @@ export function pruneMissingColumns(
 
     const keepX = !usesXColumn(plot.type) || exists(plot.x.column);
     const keepY = !usesYColumn(plot.type) || exists(plot.y.column);
-    const keepZ = !plot.z || exists(plot.z.column);
+    const keepZ = !plot.z || (!!plot.z.column && groupColumns.includes(plot.z.column));
 
     const group = plot.line.groupColumn;
     const keepGroup = !group || groupColumns.includes(group);
@@ -470,7 +612,55 @@ function asColorScale(value: unknown): ColorScale {
 
 function asInterpolationMethod(value: unknown): PlotInterpolationMethod {
     if (value === "delaunay-barycentric") return value;
-    return "gaussian";
+    return "barnes";
+}
+
+function asInterpolationDomain(value: unknown): PlotInterpolationDomain {
+    if (value === "sea" || value === "land") return value;
+    return "all";
+}
+
+/** A positive length, or null for automatic. */
+function asPositiveOrNull(value: unknown): number | null {
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+    return null;
+}
+
+/** A figure side in whole pixels, at least `min`, or null to fill the panel. */
+function asFigureSide(value: unknown, min: number): number | null {
+    const side = asPositiveOrNull(value);
+    if (side === null) return null;
+    return Math.max(Math.round(side), min);
+}
+
+/** A grid size inside its limits, or null for automatic. */
+function asGridCells(value: unknown): number | null {
+    const cells = asPositiveOrNull(value);
+    if (cells === null) return null;
+    return clamp(Math.round(cells), MIN_GRID_CELLS, MAX_GRID_CELLS);
+}
+
+/** One of the allowed values, or the fallback. */
+function asOneOf<T extends string>(value: unknown, allowed: ReadonlyArray<T>, fallback: T): T {
+    if (allowed.some((entry) => entry === value)) return value as T;
+    return fallback;
+}
+
+function normaliseBasemap(raw: unknown): PlotBasemapConfig {
+    const record = asRecord(raw);
+    if (!record) return { ...DEFAULT_BASEMAP };
+
+    let layer: PlotBasemapLayer = DEFAULT_BASEMAP.layer;
+    if (BASEMAP_LAYERS.some((entry) => entry === record.layer)) {
+        layer = record.layer as PlotBasemapLayer;
+    }
+
+    let detail: PlotBasemapDetail = DEFAULT_BASEMAP.detail;
+    if (BASEMAP_DETAILS.some((entry) => entry === record.detail)) {
+        detail = record.detail as PlotBasemapDetail;
+    }
+
+    return { layer, detail, fixAspect: asBoolean(record.fixAspect, DEFAULT_BASEMAP.fixAspect) };
 }
 
 function asString(value: unknown, fallback: string): string {
@@ -514,11 +704,6 @@ function normaliseContour(raw: unknown): PlotContourConfig {
             2,
             50
         ),
-        gridResolution: clamp(
-            Math.round(asNumber(record.gridResolution, DEFAULT_CONTOUR.gridResolution)),
-            10,
-            500
-        ),
         lineWidth: clamp(asNumber(record.lineWidth, DEFAULT_CONTOUR.lineWidth), 0.25, 10),
         showLabels: asBoolean(record.showLabels, DEFAULT_CONTOUR.showLabels),
         labelFontSize: clamp(asNumber(record.labelFontSize, DEFAULT_CONTOUR.labelFontSize), 6, 48)
@@ -548,33 +733,22 @@ function normaliseInterpolation(raw: unknown): PlotInterpolationConfig {
     return {
         enabled: asBoolean(record.enabled, DEFAULT_INTERPOLATION.enabled),
         method: asInterpolationMethod(record.method),
-        xGridResolution: clamp(
-            Math.round(
-                asNumber(
-                    record.xGridResolution,
-                    asNumber(record.gridResolution, DEFAULT_INTERPOLATION.xGridResolution)
-                )
-            ),
-            20,
-            300
+        xGridCells: asGridCells(record.xGridCells),
+        yGridCells: asGridCells(record.yGridCells),
+        smoothness: clamp(
+            asNumber(record.smoothness, DEFAULT_INTERPOLATION.smoothness),
+            MIN_SMOOTHNESS,
+            MAX_SMOOTHNESS
         ),
-        yGridResolution: clamp(
-            Math.round(
-                asNumber(
-                    record.yGridResolution,
-                    asNumber(record.gridResolution, DEFAULT_INTERPOLATION.yGridResolution)
-                )
-            ),
-            20,
-            300
-        ),
-        gaussianSigma: clamp(
-            asNumber(record.gaussianSigma, DEFAULT_INTERPOLATION.gaussianSigma),
-            0,
-            20
-        ),
+        scaleLength: asPositiveOrNull(record.scaleLength),
+        scaleLengthY: asPositiveOrNull(record.scaleLengthY),
+        extent: asOneOf(record.extent, INTERPOLATION_EXTENTS, DEFAULT_INTERPOLATION.extent),
+        maxDistance: asPositiveOrNull(record.maxDistance),
+        maxDistanceY: asPositiveOrNull(record.maxDistanceY),
+        domain: asInterpolationDomain(record.domain),
         percentileMin,
         percentileMax,
+        colourMode: asOneOf(record.colourMode, COLOUR_MODES, DEFAULT_INTERPOLATION.colourMode),
         bandCount: clamp(
             Math.round(asNumber(record.bandCount, DEFAULT_INTERPOLATION.bandCount)),
             2,
@@ -657,8 +831,18 @@ function normaliseStyle(raw: unknown): PlotStyleConfig {
             0,
             1
         ),
-        textColor: asThemeColor(record.textColor, PLOT_THEME_COLORS.light.textColor)
+        textColor: asThemeColor(record.textColor, PLOT_THEME_COLORS.light.textColor),
+        figureWidth: asFigureSide(record.figureWidth, MIN_FIGURE.width),
+        figureHeight: asFigureSide(record.figureHeight, MIN_FIGURE.height)
     };
+}
+
+function normaliseCategories(raw: unknown): PlotCategoriesConfig {
+    const record = asRecord(raw);
+    if (!record || !Array.isArray(record.hidden)) return { hidden: [] };
+
+    const hidden = record.hidden.filter((key): key is string => typeof key === "string");
+    return { hidden: [...new Set(hidden)] };
 }
 
 /** Repair one stored plot. Returns null when the value is not an object at all. */
@@ -684,9 +868,11 @@ export function normalisePlotConfig(raw: unknown): PlotConfig | null {
         z,
         contour: normaliseContour(record.contour),
         interpolation: normaliseInterpolation(record.interpolation),
+        basemap: normaliseBasemap(record.basemap),
         line: normaliseLine(record.line),
         histogram: normaliseHistogram(record.histogram),
-        style: normaliseStyle(record.style)
+        style: normaliseStyle(record.style),
+        categories: normaliseCategories(record.categories)
     };
 }
 
