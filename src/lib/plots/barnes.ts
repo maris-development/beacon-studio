@@ -42,11 +42,10 @@ export function barnesAnalysis(
     const limit = MAX_SIGMA_GRIDS * Math.max(xResolution, yResolution);
     const firstX = sigmaX.map((sigma) => Math.min(sigma, limit));
     const firstY = Math.min(sigmaY, limit);
-    const peaks = new PeakTable();
 
     const weight = diffuse(count, grid, domain, firstX, firstY);
     const weightedSum = diffuse(sum, grid, domain, firstX, firstY);
-    const peak = firstX.map((sigma) => peaks.of(sigma) * peaks.of(firstY));
+    const peak = firstX.map((sigma) => diffusionPeak(sigma) * diffusionPeak(firstY));
 
     const values = new Float64Array(cells);
     const misfit = new Float64Array(cells);
@@ -62,7 +61,7 @@ export function barnesAnalysis(
     const secondY = firstY * scale;
     const secondWeight = diffuse(count, grid, domain, secondX, secondY);
     const secondSum = diffuse(misfit, grid, domain, secondX, secondY);
-    const secondPeak = secondX.map((sigma) => peaks.of(sigma) * peaks.of(secondY));
+    const secondPeak = secondX.map((sigma) => diffusionPeak(sigma) * diffusionPeak(secondY));
 
     for (let i = 0; i < cells; i++) {
         if (domain && !domain[i]) {
@@ -189,22 +188,20 @@ function solveRun(
     }
 }
 
-/** The value that one unit at a cell keeps after the diffusion along one open axis, by sigma. */
-class PeakTable {
-    private peaks = new Map<number, number>();
+/** From this sigma, in cells, the closed-form peak is within 1 % of the diffusion. */
+const CLOSED_PEAK_SIGMA = 4;
 
-    of(sigma: number): number {
-        let peak = this.peaks.get(sigma);
-        if (peak === undefined) {
-            peak = impulsePeak(sigma);
-            this.peaks.set(sigma, peak);
-        }
-        return peak;
-    }
-}
-
-function impulsePeak(sigma: number): number {
+/**
+ * The value that one unit at a cell keeps after the diffusion along one open axis, by sigma in
+ * cells. A small sigma diffuses one impulse on a short line. A large sigma takes the Gaussian peak,
+ * with the excess kurtosis 3 / steps of the implicit steps as an Edgeworth term.
+ */
+export function diffusionPeak(sigma: number): number {
     if (!(sigma > 0)) return 1;
+
+    if (sigma >= CLOSED_PEAK_SIGMA) {
+        return (1 + 3 / (8 * DIFFUSION_STEPS)) / (sigma * Math.sqrt(2 * Math.PI));
+    }
 
     const half = Math.ceil(8 * sigma) + 4;
     const length = 2 * half + 1;
