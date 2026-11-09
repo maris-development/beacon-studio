@@ -205,6 +205,30 @@ export function autoGridCells(
 }
 
 /**
+ * The ranges that the grid of a field covers: the axis ranges, cut to the data for the `hull`
+ * extent. The automatic grid size of the panel reads the same ranges.
+ */
+export function fieldRanges(
+    series: PlotSeries,
+    settings: PlotInterpolationConfig,
+    xRange: PlotRange,
+    yRange: PlotRange
+): { x: PlotRange; y: PlotRange } {
+    if (extentOf(settings) !== "hull") return { x: xRange, y: yRange };
+
+    return {
+        x: {
+            min: Math.max(xRange.min, series.xRange.min),
+            max: Math.min(xRange.max, series.xRange.max)
+        },
+        y: {
+            min: Math.max(yRange.min, series.yRange.min),
+            max: Math.min(yRange.max, series.yRange.max)
+        }
+    };
+}
+
+/**
  * The interpolated field of a series over the axis ranges.
  *
  * `land` applies the land or sea domain of the settings, and `map` says that X and Y are longitude
@@ -223,21 +247,10 @@ export function buildInterpolationField(
     const extent = extentOf(settings);
     const barnes = settings.method === "barnes";
 
-    // Inside the hull: the grid covers the data only, and the surface stops at the hull.
-    let xr = xRange;
-    let yr = yRange;
+    const { x: xr, y: yr } = fieldRanges(series, settings, xRange, yRange);
+    // Inside the hull the surface stops at the hull.
     let outline: ContourRing = [];
-    if (extent === "hull") {
-        xr = {
-            min: Math.max(xRange.min, series.xRange.min),
-            max: Math.min(xRange.max, series.xRange.max)
-        };
-        yr = {
-            min: Math.max(yRange.min, series.yRange.min),
-            max: Math.min(yRange.max, series.yRange.max)
-        };
-        outline = hullOf(series);
-    }
+    if (extent === "hull") outline = hullOf(series);
     if (!(xr.max > xr.min) || !(yr.max > yr.min)) return null;
 
     const autoLengths = auto ?? dataSpacing(series, xRange, yRange, map);

@@ -61,6 +61,7 @@ import {
     buildInterpolationField,
     autoGridCells,
     dataSpacing,
+    fieldRanges,
     scaleLengthsOf,
     buildInterpolationSurface,
     colourRangeOf,
@@ -292,16 +293,18 @@ export class ChartExplorerController {
 
     /** The automatic grid size of a plot. Null until the automatic radius is known. */
     autoGridCellsOf(plot: PlotConfig): { x: number; y: number } | null {
+        const series = this.series;
         const auto = this.autoLengthsOf(plot);
         const ranges = this.rangesOf(plot);
-        if (!auto || !ranges) return null;
+        if (!series || !auto || !ranges) return null;
 
         const map = this.isMapData(plot);
         let base = auto;
         if (plot.interpolation.method === "barnes") {
             base = scaleLengthsOf(plot.interpolation, auto, map).radius;
         }
-        return autoGridCells(base, ranges.x, ranges.y, map);
+        const grid = fieldRanges(series, plot.interpolation, ranges.x, ranges.y);
+        return autoGridCells(base, grid.x, grid.y, map);
     }
 
     /** The Natural Earth detail of a map plot: the chosen one, or one from the size of the map. */
