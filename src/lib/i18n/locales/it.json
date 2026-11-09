@@ -162,7 +162,7 @@
             },
             "mapStyleUrlDark": {
                 "label": "URL dello stile della mappa di base scura",
-                "description": "L'URL dello stile MapLibre della mappa di base in modalità scura. Una modifica vale per la prossima mappa. Lascia il campo vuoto per usare la mappa chiara in entrambi i temi."
+                "description": "L'URL dello stile MapLibre della mappa di base in modalità scura. Una modifica vale per la prossima mappa. Lascia il campo vuoto per usare la mappa scura predefinita."
             },
             "mapGroupByDecimals": {
                 "label": "Decimali di raggruppamento mappa",

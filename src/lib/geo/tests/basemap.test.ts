@@ -46,17 +46,17 @@ describe("basemapUrlsOf", () => {
         ).toEqual(URLS);
     });
 
-    it("uses the light map in dark mode when the dark URL is empty", () => {
+    it("uses the default dark map when the dark URL is empty", () => {
         expect(basemapUrlsOf({ mapStyleUrl: LIGHT_URL, mapStyleUrlDark: " " })).toEqual({
             light: LIGHT_URL,
-            dark: LIGHT_URL
+            dark: DEFAULT_SETTINGS.mapStyleUrlDark
         });
     });
 
-    it("uses the default light map when the light URL is empty", () => {
+    it("uses the default map of each theme when both URLs are empty", () => {
         expect(basemapUrlsOf({ mapStyleUrl: "", mapStyleUrlDark: "" })).toEqual({
             light: DEFAULT_SETTINGS.mapStyleUrl,
-            dark: DEFAULT_SETTINGS.mapStyleUrl
+            dark: DEFAULT_SETTINGS.mapStyleUrlDark
         });
     });
 });

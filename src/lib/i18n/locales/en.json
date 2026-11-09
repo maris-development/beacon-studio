@@ -162,7 +162,7 @@
             },
             "mapStyleUrlDark": {
                 "label": "Dark base map style URL",
-                "description": "The MapLibre style URL of the base map in dark mode. A change applies to the next map. Leave it empty to use the light map in both themes."
+                "description": "The MapLibre style URL of the base map in dark mode. A change applies to the next map. Leave it empty to use the default dark map."
             },
             "mapGroupByDecimals": {
                 "label": "Map group decimals",

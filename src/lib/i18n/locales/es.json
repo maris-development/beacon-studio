@@ -162,7 +162,7 @@
             },
             "mapStyleUrlDark": {
                 "label": "URL del estilo del mapa base oscuro",
-                "description": "La URL del estilo MapLibre del mapa base en el modo oscuro. Un cambio se aplica al próximo mapa. Deje el campo vacío para usar el mapa claro en ambos temas."
+                "description": "La URL del estilo MapLibre del mapa base en el modo oscuro. Un cambio se aplica al próximo mapa. Deje el campo vacío para usar el mapa oscuro predeterminado."
             },
             "mapGroupByDecimals": {
                 "label": "Decimales de agrupación del mapa",
