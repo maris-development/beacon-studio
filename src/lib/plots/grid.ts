@@ -120,7 +120,36 @@ export function hullOf(series: PlotSeries): ContourRing {
         series.y[index]
     ]);
     ring.push(ring[0]);
+
+    // d3-delaunay moves points on one line a little, so their hull has a tiny area.
+    if (ringArea(ring) <= 1e-9 * boxArea(ring)) return [];
     return ring;
+}
+
+/** The area of a closed ring, by the shoelace formula. */
+function ringArea(ring: ContourRing): number {
+    let twice = 0;
+    for (let i = 1; i < ring.length; i++) {
+        twice += ring[i - 1][0] * ring[i][1] - ring[i][0] * ring[i - 1][1];
+    }
+    return Math.abs(twice) / 2;
+}
+
+/** The area of the bounding box of a ring. */
+function boxArea(ring: ContourRing): number {
+    let xMin = Infinity;
+    let xMax = -Infinity;
+    let yMin = Infinity;
+    let yMax = -Infinity;
+
+    for (const [x, y] of ring) {
+        xMin = Math.min(xMin, x);
+        xMax = Math.max(xMax, x);
+        yMin = Math.min(yMin, y);
+        yMax = Math.max(yMax, y);
+    }
+
+    return (xMax - xMin) * (yMax - yMin);
 }
 
 /**
