@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildContours } from "../contour";
 import { buildInterpolationField } from "../interpolation";
-import { DEFAULT_INTERPOLATION, makePlotConfig, type PlotInterpolationExtent } from "../plot-config";
+import {
+    DEFAULT_INTERPOLATION,
+    makePlotConfig,
+    type PlotInterpolationExtent
+} from "../plot-config";
 import type { PlotSeries } from "../plot-data";
 
 /** A 10 by 10 grid of points with z = x + y. */
