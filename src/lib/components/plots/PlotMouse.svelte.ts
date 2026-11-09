@@ -42,6 +42,9 @@ const CLICK_SLOP = 3;
 /** The wait before a click on an axis opens the editor. A double click within it resets the axis. */
 const CLICK_DELAY = 260;
 
+/** The browser menu stays closed this long after the release of a right drag, in milliseconds. */
+const MENU_BLOCK_MS = 500;
+
 type Side = -1 | 0 | 1;
 
 type Zone =
@@ -472,6 +475,24 @@ export class PlotMouse {
             end(event, true);
         };
 
+        // A right drag blocks the browser menu until just after the release, or until a new press.
+        let rightHeld = false;
+        let menuBlockedUntil = 0;
+
+        const onAnyDown = () => {
+            rightHeld = false;
+        };
+
+        const onAnyUp = (event: MouseEvent) => {
+            if (event.button !== 2 || !rightHeld) return;
+            rightHeld = false;
+            menuBlockedUntil = performance.now() + MENU_BLOCK_MS;
+        };
+
+        const onAnyMenu = (event: MouseEvent) => {
+            if (rightHeld || performance.now() < menuBlockedUntil) event.preventDefault();
+        };
+
         const onDown = (event: MouseEvent) => {
             if (event.button > 2) return;
 
@@ -488,13 +509,7 @@ export class PlotMouse {
             event.preventDefault();
             event.stopPropagation();
 
-            // The browser menu stays closed after a right drag.
-            if (event.button === 2) {
-                document.addEventListener("contextmenu", (menu) => menu.preventDefault(), {
-                    once: true,
-                    capture: true
-                });
-            }
+            if (event.button === 2) rightHeld = true;
 
             const area = box();
             let pan = mode === "pan";
@@ -626,6 +641,9 @@ export class PlotMouse {
         wrap.addEventListener("mouseleave", onLeave);
         wrap.addEventListener("wheel", onWheel, { passive: false });
         wrap.addEventListener("dblclick", onDoubleClick, true);
+        document.addEventListener("mousedown", onAnyDown, true);
+        document.addEventListener("mouseup", onAnyUp, true);
+        document.addEventListener("contextmenu", onAnyMenu, true);
 
         this.detach = () => {
             clearTimeout(clickTimer);
@@ -640,6 +658,9 @@ export class PlotMouse {
             wrap.removeEventListener("mouseleave", onLeave);
             wrap.removeEventListener("wheel", onWheel);
             wrap.removeEventListener("dblclick", onDoubleClick, true);
+            document.removeEventListener("mousedown", onAnyDown, true);
+            document.removeEventListener("mouseup", onAnyUp, true);
+            document.removeEventListener("contextmenu", onAnyMenu, true);
         };
     }
 
