@@ -122,46 +122,75 @@ export function samplePlotSeries(series: PlotSeries, maxPoints: number): PlotSer
 }
 
 /**
- * Sample a series with a text colour column. Every group keeps its share of the
- * sample, and a small group keeps at least `keep / (2 × groups)` points, so a rare
- * group does not disappear from the plot. The extreme rows stay as well.
+ * Sample a series with a text colour column. The sample holds `keep` rows,
+ * the extreme rows included.
+ *
+ * Each colour of the legend is one bucket, and the groups in "Other" share one
+ * bucket. Every bucket keeps its share of half the sample, plus a floor of
+ * `keep / (2 × buckets)` points, so a rare colour does not disappear from the
+ * plot. Random rows fill the rest of the sample.
  */
 function sampleByGroup(series: PlotSeries, categories: PlotCategories, keep: number): PlotSeries {
     const total = series.x.length;
-    const members: number[][] = categories.list.map(() => []);
-    for (let i = 0; i < total; i++) members[categories.index[i]].push(i);
-
     const taken = new Uint8Array(total);
-    const picked: number[] = [];
+    const picked = extremeRows(series).slice(0, keep);
+    for (const row of picked) taken[row] = 1;
 
-    for (const row of extremeRows(series)) {
-        taken[row] = 1;
-        picked.push(row);
+    const other = categories.legend.length;
+    const buckets: number[][] = Array.from({ length: other + 1 }, () => []);
+
+    for (let i = 0; i < total; i++) {
+        if (taken[i]) continue;
+
+        let bucket = categories.slotOf[categories.index[i]];
+        if (bucket < 0) bucket = other;
+        buckets[bucket].push(i);
     }
 
-    const floor = Math.floor(keep / (2 * categories.list.length));
+    const used = buckets.filter((rows) => rows.length > 0);
+    const rest = total - picked.length;
+    const budget = keep - picked.length;
+    const floor = Math.floor(budget / (2 * used.length));
     const random = makeRandom(SAMPLE_SEED);
 
-    for (const rows of members) {
+    // The floors use at most half the budget, and the shares the other half.
+    for (const rows of used) {
         const quota = Math.min(
             rows.length,
-            Math.max(Math.floor((keep * rows.length) / total), floor)
+            floor + Math.floor(((budget / 2) * rows.length) / rest)
         );
+        pickRandom(rows, quota, random, taken, picked);
+    }
 
-        // Partial Fisher-Yates inside the group, as in the plain sample.
-        for (let i = 0; i < quota; i++) {
-            const j = i + Math.floor(random() * (rows.length - i));
-            const swap = rows[i];
-            rows[i] = rows[j];
-            rows[j] = swap;
-
-            if (taken[rows[i]]) continue;
-            taken[rows[i]] = 1;
-            picked.push(rows[i]);
+    // The quotas round down, and a small bucket can hold fewer rows than its quota.
+    if (picked.length < keep) {
+        const remainder: number[] = [];
+        for (let i = 0; i < total; i++) {
+            if (!taken[i]) remainder.push(i);
         }
+        pickRandom(remainder, keep - picked.length, random, taken, picked);
     }
 
     return pickRows(series, Uint32Array.from(picked).sort());
+}
+
+/** Move `count` random rows of `rows` into `picked`, with a partial Fisher-Yates. */
+function pickRandom(
+    rows: number[],
+    count: number,
+    random: () => number,
+    taken: Uint8Array,
+    picked: number[]
+): void {
+    for (let i = 0; i < count; i++) {
+        const j = i + Math.floor(random() * (rows.length - i));
+        const swap = rows[i];
+        rows[i] = rows[j];
+        rows[j] = swap;
+
+        taken[rows[i]] = 1;
+        picked.push(rows[i]);
+    }
 }
 
 /** A copy of the series with only the rows in `picked`, in that order. */
