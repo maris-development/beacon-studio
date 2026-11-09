@@ -1004,13 +1004,10 @@ export function drawCaption(u: uPlot, options: CaptionOptions): void {
 
 export interface ContourDrawOptions {
     result: ContourResult;
-    palette: string;
-    reverse: boolean;
-    scale: ColorScale;
     lineWidth: number;
     showLabels: boolean;
     labelFontSize: number;
-    /** The plot background. A label clears a gap in the line with it. */
+    /** The plot background. It gives the halo of each line and the box of each label. */
     backgroundColor: string;
     textColor: string;
     /** Clips the canvas to the land or sea domain. Null for everywhere. */
@@ -1019,6 +1016,30 @@ export interface ContourDrawOptions {
 
 /** A line shorter than this, in pixels, gets no label. The text would not fit. */
 const MIN_LABELLED_RING = 80;
+
+/** The extra width of the halo around a contour line, in CSS pixels. */
+const CONTOUR_HALO = 2;
+
+/** One pass of a contour line: a colour and a width in canvas pixels. */
+export interface ContourStroke {
+    color: string;
+    width: number;
+}
+
+/**
+ * The passes that draw a contour line: a halo in the background colour, then the line in the text
+ * colour. A line in the palette colour has the colour of the surface at its level, and disappears.
+ */
+export function contourStrokes(
+    lineWidth: number,
+    dpr: number,
+    colors: { backgroundColor: string; textColor: string }
+): ContourStroke[] {
+    return [
+        { color: colors.backgroundColor, width: (lineWidth + CONTOUR_HALO) * dpr },
+        { color: colors.textColor, width: lineWidth * dpr }
+    ];
+}
 
 /**
  * Draw the contour lines over the points.
@@ -1030,14 +1051,7 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     const { ctx } = u;
     const dpr = dprOf(u);
 
-    const { levels, outline, valid, range } = options.result;
-    const colorOf = makePaletteScale(
-        options.palette,
-        range.min,
-        range.max,
-        options.reverse,
-        options.scale
-    );
+    const { levels, outline, valid } = options.result;
 
     const toPixelX = (x: number): number => u.valToPos(x, "x", true);
     const toPixelY = (y: number): number => u.valToPos(y, "y", true);
@@ -1048,25 +1062,30 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     if (outline.length >= 3) clipToRings(u, [outline]);
     if (valid) clipToRings(u, valid);
 
-    ctx.lineWidth = options.lineWidth * dpr;
     ctx.lineJoin = "round";
 
-    for (const level of levels) {
-        ctx.strokeStyle = colorOf(level.value);
-        ctx.beginPath();
+    const paths = levels.map((level) => {
+        const path = new Path2D();
 
         for (const line of level.lines) {
             const points = line.points;
-            ctx.moveTo(toPixelX(points[0][0]), toPixelY(points[0][1]));
+            path.moveTo(toPixelX(points[0][0]), toPixelY(points[0][1]));
 
             for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(toPixelX(points[i][0]), toPixelY(points[i][1]));
+                path.lineTo(toPixelX(points[i][0]), toPixelY(points[i][1]));
             }
 
-            if (line.closed) ctx.closePath();
+            if (line.closed) path.closePath();
         }
 
-        ctx.stroke();
+        return path;
+    });
+
+    // All halos go first, so a halo never covers a line where two lines meet.
+    for (const stroke of contourStrokes(options.lineWidth, dpr, options)) {
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = stroke.width;
+        for (const path of paths) ctx.stroke(path);
     }
 
     if (options.showLabels) {

@@ -35,14 +35,14 @@ export interface ContourResult {
     valid: ContourRing[] | null;
     /** The outline of the field. The lines stop at it, as the surface does. */
     outline: ContourRing;
-    /** The Z range that the levels span. The colour of a level comes from it. */
+    /** The Z range that the levels span. */
     range: PlotRange;
 }
 
 /**
  * The contour lines of a field. The levels span `range`, the colour range of the plot
- * (`colourRangeOf`), so each line has the colour of the surface below it. Returns null when there
- * is no level to draw.
+ * (`colourRangeOf`), so the levels match the colour bar. Returns null when there is no level to
+ * draw.
  */
 export function buildContours(
     field: InterpolationField,

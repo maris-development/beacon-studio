@@ -1345,9 +1345,6 @@
                         if (contours && plot.contour.enabled && usesZColumn(plot.type)) {
                             drawContours(u, {
                                 result: contours,
-                                palette: style.palette,
-                                reverse: plot.z?.reverse ?? false,
-                                scale: plot.z?.scale ?? "linear",
                                 lineWidth: plot.contour.lineWidth,
                                 showLabels: plot.contour.showLabels,
                                 labelFontSize: plot.contour.labelFontSize,
