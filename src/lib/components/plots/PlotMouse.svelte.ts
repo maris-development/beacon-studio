@@ -383,6 +383,8 @@ export class PlotMouse {
             };
 
             if (current.box) {
+                // The pending frame is cancelled, so the box of the last frame can lag the release.
+                if (point && current.moved) current.rect = zoomBoxOf(current.start, point, box());
                 const chosen = current.rect;
                 if (
                     !cancel &&
