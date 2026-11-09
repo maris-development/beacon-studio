@@ -11,7 +11,7 @@
 
     let { label, text }: Props = $props();
 
-    // bits-ui gives the content no id, so the trigger has nothing to point aria-describedby at.
+    // The closed tooltip is not in the DOM, so aria-describedby points to a hidden copy of the text.
     const uid = $props.id();
     const contentId = `info-tip-${uid}`;
 </script>
@@ -20,18 +20,25 @@
     <Tooltip.Root disableCloseOnTriggerClick>
         <Tooltip.Trigger>
             {#snippet child({ props })}
-                <button {...props} type="button" class="trigger" aria-label={label}>
+                <button
+                    {...props}
+                    type="button"
+                    class="trigger"
+                    aria-label={label}
+                    aria-describedby={contentId}
+                >
                     <InfoIcon size={14} aria-hidden="true" />
                 </button>
             {/snippet}
         </Tooltip.Trigger>
+        <span id={contentId} hidden>{text}</span>
         <!-- A scroll container around the button would clip the text, so it goes to the body. -->
         <Tooltip.Portal>
             <Tooltip.Content side="top" sideOffset={6} collisionPadding={8}>
                 {#snippet child({ wrapperProps, props, open })}
                     {#if open}
                         <div {...wrapperProps}>
-                            <div {...props} id={contentId} role="tooltip" class="content">
+                            <div {...props} role="tooltip" class="content">
                                 {text}
                             </div>
                         </div>
