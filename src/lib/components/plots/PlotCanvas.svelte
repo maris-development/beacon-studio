@@ -990,34 +990,49 @@
 
     let fromInput = $state<HTMLInputElement | null>(null);
 
+    // The shown text is rounded. A field that the user did not change applies the exact value.
+    let shownLimits = { fromText: "", toText: "", from: 0, to: 1 };
+
+    function fillEditor(axis: ViewAxis, time: boolean) {
+        const u = chart;
+        if (!u) return;
+
+        const scale = u.scales[axis];
+        const from = scale.min ?? 0;
+        const to = scale.max ?? 1;
+
+        fromText = formatAxisLimit(from, time);
+        toText = formatAxisLimit(to, time);
+        shownLimits = { fromText, toText, from, to };
+    }
+
     function openAxisEditor(axis: ViewAxis, anchor: HTMLElement) {
         const u = chart;
         if (!u || !anchor.isConnected) return;
 
-        const scale = u.scales[axis];
-        const time = !!scale.time;
-
-        fromText = formatAxisLimit(scale.min ?? 0, time);
-        toText = formatAxisLimit(scale.max ?? 1, time);
+        const time = !!u.scales[axis].time;
+        fillEditor(axis, time);
         editor = { axis, anchor, time };
     }
 
     /** The fields follow the view while the editor is open, for example after Apply on a map. */
     function syncEditor() {
-        const u = chart;
-        if (!u || !editor) return;
+        if (!editor) return;
+        fillEditor(editor.axis, editor.time);
+    }
 
-        const scale = u.scales[editor.axis];
-        fromText = formatAxisLimit(scale.min ?? 0, editor.time);
-        toText = formatAxisLimit(scale.max ?? 1, editor.time);
+    /** The value of an editor field: the exact limit when the text did not change. */
+    function editorLimit(text: string, shownText: string, exact: number, time: boolean): number {
+        if (text === shownText) return exact;
+        return parseAxisLimit(text, time);
     }
 
     function applyEditor() {
         const u = chart;
         if (!u || !editor) return;
 
-        const a = parseAxisLimit(fromText, editor.time);
-        const b = parseAxisLimit(toText, editor.time);
+        const a = editorLimit(fromText, shownLimits.fromText, shownLimits.from, editor.time);
+        const b = editorLimit(toText, shownLimits.toText, shownLimits.to, editor.time);
 
         if (!Number.isFinite(a) || !Number.isFinite(b) || a === b) {
             let key: "plot.axisEditor.invalidNumbers" | "plot.axisEditor.invalidTimes" =

@@ -189,10 +189,19 @@ export function dragFigureSide(start: number, move: number, min: number, room: n
     return clamp(start + 2 * move, Math.min(min, room), room);
 }
 
-/** The text of an axis limit in the axis editor. A time is UTC, as on the time axis. */
+/**
+ * The text of an axis limit in the axis editor. A time is UTC, as on the time axis.
+ * A time shows its seconds and milliseconds only when they are not zero.
+ */
 export function formatAxisLimit(value: number, time: boolean): string {
-    if (time) return new Date(value).toISOString().slice(0, 16).replace("T", " ");
-    return String(Number(value.toPrecision(7)));
+    if (!time) return String(Number(value.toPrecision(7)));
+
+    const date = new Date(value);
+    let length = 16;
+    if (date.getUTCMilliseconds() !== 0) length = 23;
+    else if (date.getUTCSeconds() !== 0) length = 19;
+
+    return date.toISOString().slice(0, length).replace("T", " ");
 }
 
 /** Read an axis limit from the axis editor. Returns NaN for a text that is no value. */
