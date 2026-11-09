@@ -3,17 +3,17 @@
  *
  * The lines trace the same field as the coloured surface, so the two always agree. The tracer needs
  * a value in each cell, so it gets a copy with each gap filled from its neighbours. The renderer
- * then clips the lines to the coastline, to the hull of the points and to the outline of the valid
- * cells, as it clips the surface.
+ * then clips the lines to the coastline, to the outline of the field and to the outline of the
+ * valid cells, as it clips the surface.
  *
  * The output is in data coordinates. The chart owns the scales, so the lines survive a resize.
  */
 import { contours as d3Contours } from "d3-contour";
 import { colorScaleValue } from "@/colors/color-scale";
-import { fillGridGaps, hullOf, type ContourRing } from "./grid";
+import { fillGridGaps, type ContourRing } from "./grid";
 import type { InterpolationField } from "./interpolation";
 import type { PlotConfig } from "./plot-config";
-import type { PlotRange, PlotSeries } from "./plot-data";
+import type { PlotRange } from "./plot-data";
 
 /** One isoline. A ring that ran on the edge of the grid splits there into open lines. */
 export interface ContourLine {
@@ -33,8 +33,8 @@ export interface ContourResult {
     domain: "sea" | "land" | null;
     /** The rings around the cells with a value, or null when each cell has one. */
     valid: ContourRing[] | null;
-    /** The convex hull of the points. The lines stay inside the area that the points cover. */
-    hull: ContourRing;
+    /** The outline of the field. The lines stop at it, as the surface does. */
+    outline: ContourRing;
     /** The Z range that the levels span. The colour of a level comes from it. */
     range: PlotRange;
 }
@@ -46,7 +46,6 @@ export interface ContourResult {
  */
 export function buildContours(
     field: InterpolationField,
-    series: PlotSeries,
     plot: PlotConfig,
     range: PlotRange
 ): ContourResult | null {
@@ -103,7 +102,7 @@ export function buildContours(
     }
 
     if (levels.length === 0) return null;
-    return { levels, domain: field.domain, valid: field.valid, hull: hullOf(series), range };
+    return { levels, domain: field.domain, valid: field.valid, outline: field.outline, range };
 }
 
 /** The open pieces of a ring between its edges on the frame, or null when it has no such edge. */

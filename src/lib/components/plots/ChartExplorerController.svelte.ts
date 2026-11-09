@@ -560,7 +560,7 @@ export class ChartExplorerController {
 
             const colours = colourRangeOf(series, plot, interpolation);
             if (field && colours && plot.contour.enabled) {
-                contours = buildContours(field, series, plot, colours);
+                contours = buildContours(field, plot, colours);
             }
         }
 

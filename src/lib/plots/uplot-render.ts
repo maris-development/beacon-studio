@@ -1017,13 +1017,13 @@ const MIN_LABELLED_RING = 80;
  * Draw the contour lines over the points.
  *
  * The lines arrive in data coordinates, so this converts them with the scales. They stop at the
- * plot area, the domain, the hull of the points and the outline of the cells with a value.
+ * plot area, the domain, the outline of the field and the outline of the cells with a value.
  */
 export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     const { ctx } = u;
     const dpr = dprOf(u);
 
-    const { levels, hull, valid, range } = options.result;
+    const { levels, outline, valid, range } = options.result;
     const colorOf = makePaletteScale(
         options.palette,
         range.min,
@@ -1038,7 +1038,7 @@ export function drawContours(u: uPlot, options: ContourDrawOptions): void {
     ctx.save();
     clipToPlot(u);
     options.clip?.();
-    if (hull.length >= 3) clipToRings(u, [hull]);
+    if (outline.length >= 3) clipToRings(u, [outline]);
     if (valid) clipToRings(u, valid);
 
     ctx.lineWidth = options.lineWidth * dpr;
