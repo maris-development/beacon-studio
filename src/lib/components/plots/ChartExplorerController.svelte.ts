@@ -236,6 +236,11 @@ export class ChartExplorerController {
         );
     }
 
+    /** True when the plot is a map and the values of the active series fit the globe. */
+    isMapData(plot: PlotConfig): boolean {
+        return this.isMapPlot(plot, this.series);
+    }
+
     /** True when the active plot is a map, checked on its values too. */
     readonly mapPlot = $derived.by(() => {
         const plot = this.activePlot;
@@ -263,7 +268,7 @@ export class ChartExplorerController {
     private spacingSource: { table: DatasetEntry["table"]; seriesKey: string | null } | null = null;
 
     /** The axes that decide the spacing of the points, as one string. */
-    private spacingKey(plot: PlotConfig): string {
+    private spacingKey(plot: PlotConfig, map: boolean): string {
         return [
             plot.x.column,
             plot.y.column,
@@ -271,7 +276,7 @@ export class ChartExplorerController {
             plot.x.max,
             plot.y.min,
             plot.y.max,
-            this.isMapPlot(plot)
+            map
         ].join("|");
     }
 
@@ -281,7 +286,7 @@ export class ChartExplorerController {
      */
     autoLengthsOf(plot: PlotConfig): AxisLengths | null {
         const spacing = this.spacing;
-        if (!spacing || spacing.key !== this.spacingKey(plot)) return null;
+        if (!spacing || spacing.key !== this.spacingKey(plot, this.isMapData(plot))) return null;
         return spacing.lengths;
     }
 
@@ -291,7 +296,7 @@ export class ChartExplorerController {
         const ranges = this.rangesOf(plot);
         if (!auto || !ranges) return null;
 
-        const map = this.isMapPlot(plot);
+        const map = this.isMapData(plot);
         let base = auto;
         if (plot.interpolation.method === "barnes") {
             base = scaleLengthsOf(plot.interpolation, auto, map).radius;
@@ -551,7 +556,7 @@ export class ChartExplorerController {
             if (token !== this.prepareToken) return;
 
             // The spacing walks the points, so it runs one time per result, series and axes.
-            const key = this.spacingKey(plot);
+            const key = this.spacingKey(plot, map);
             const source = this.spacingSource;
             let auto: AxisLengths | null = null;
             if (

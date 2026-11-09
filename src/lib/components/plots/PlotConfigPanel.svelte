@@ -387,8 +387,8 @@
         )
     );
 
-    /** True when the draft is a map: then each length is one value in km. */
-    const draftIsMap = $derived(!!draft && controller.isMapPlot(draft));
+    /** True for a map whose values fit the globe: then each length is one value in km. */
+    const draftIsMap = $derived(!!draft && controller.isMapData(draft));
 
     /** The radius and the maximum distance of the draft, once a rebuild with its axes found the spacing. */
     const draftLengths = $derived.by(() => {
