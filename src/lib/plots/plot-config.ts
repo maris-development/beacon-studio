@@ -399,6 +399,22 @@ export const PLOT_THEME_COLORS: Record<ResolvedTheme, PlotThemeColors> = {
     dark: { backgroundColor: "#17171b", gridlineColor: "#e4e4e7", textColor: "#e4e4e7" }
 };
 
+/** The colours of the basemap on a map plot. */
+export interface BasemapColors {
+    land: string;
+    coast: string;
+    border: string;
+}
+
+/**
+ * The basemap colours of each theme. A canvas cannot read a CSS variable, so these are hex. The
+ * dark land sits just above the dark plot background.
+ */
+export const BASEMAP_THEME_COLORS: Record<ResolvedTheme, BasemapColors> = {
+    light: { land: "#e9e7e1", coast: "#8d8a82", border: "#b9b6ae" },
+    dark: { land: "#2a2a31", coast: "#71717a", border: "#52525b" }
+};
+
 /** The colours to paint: a colour that the user picked, else the colour of the theme. */
 export function resolvePlotColors(style: PlotThemeColors, theme: ResolvedTheme): PlotThemeColors {
     const themed = PLOT_THEME_COLORS[theme];

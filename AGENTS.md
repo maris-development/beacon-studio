@@ -187,6 +187,7 @@ A project changes the look through one folder, `src/brands/<name>/`. Guide: `src
 - Land, sea and the basemap apply only to a map plot (`isMapPlot`: a scatter of the stored coordinate pair, with values that fit the globe). The layer `auto` draws land, so every map plot loads land.
 - The land and the borders load through `world-atlas/*.json?url` and `fetch`, so TypeScript never parses the JSON. Each detail loads one time per tab and stays in memory (`loadOnce`).
 - A draw reads a loaded detail with `readyGeography` and never waits for a fetch.
+- The land, coast and border colours come from `BASEMAP_THEME_COLORS` (`plots/plot-config.ts`), by `resolvedTheme`. A canvas cannot read a CSS variable, so they are hex.
 - Natural Earth rings jump at 180°. `makeLandRing` unwraps them, and closes a ring around a pole along the pole. `landMask` and the draw also test each ring one turn east and west.
 - The page loads the geography apart from the rebuild: an effect on `geographyRequest` calls `applyGeography`. A basemap change therefore does not read the rows again.
 - With the automatic detail, `PlotCanvas` loads a finer detail after a zoom in, and then draws again. The land or sea domain uses the coastline of the basemap detail (`landDetailForSpan`).

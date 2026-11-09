@@ -48,6 +48,7 @@
     import CheckIcon from "@lucide/svelte/icons/check";
     import {
         axisTitle,
+        BASEMAP_THEME_COLORS,
         basemapLayerOf,
         resolvePlotColors,
         usesZColumn,
@@ -217,6 +218,7 @@
 
     // A colour that the user did not pick follows the theme.
     const colors = $derived(resolvePlotColors(plot.style, $resolvedTheme));
+    const basemapColors = $derived(BASEMAP_THEME_COLORS[$resolvedTheme]);
 
     /**
      * The plot without the two edits that need no rebuild: the figure size and the
@@ -247,7 +249,8 @@
             // Strings, not the object, so a figure size or a hidden group does not rebuild.
             colors.backgroundColor,
             colors.gridlineColor,
-            colors.textColor
+            colors.textColor,
+            basemapColors
         ];
         scheduleRebuild();
     });
@@ -1310,7 +1313,9 @@
                             // above the surface and the points.
                             const geo = viewGeography(u);
                             const layer = mapLayer(geo);
-                            if (geo && (layer === "land" || layer === "borders")) drawLand(u, geo);
+                            if (geo && (layer === "land" || layer === "borders")) {
+                                drawLand(u, geo, basemapColors);
+                            }
 
                             if (
                                 interpolation &&
@@ -1333,7 +1338,7 @@
                                 drawPoints(u, current, plot, colourRange, seriesColors);
                             }
                             if (geo && layer !== "none") {
-                                drawCoastlines(u, geo, layer === "borders");
+                                drawCoastlines(u, geo, layer === "borders", basemapColors);
                             }
                         }
 

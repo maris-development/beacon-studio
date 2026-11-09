@@ -27,7 +27,12 @@ import {
 import { colorScalePosition, colorScaleValue } from "@/colors/color-scale";
 import type { ColorScale } from "./plot-config";
 import { categoryKeyOf, type PlotCategories, type PlotRange, type PlotSeries } from "./plot-data";
-import { DEFAULT_POINT_COLOR, OTHER_GROUP, type PlotConfig } from "./plot-config";
+import {
+    DEFAULT_POINT_COLOR,
+    OTHER_GROUP,
+    type BasemapColors,
+    type PlotConfig
+} from "./plot-config";
 import { translate } from "@/i18n";
 import type { ContourResult } from "./contour";
 import type { InterpolationResult } from "./interpolation";
@@ -99,21 +104,18 @@ export function drawBackground(u: uPlot, color: string): void {
 
 // -- basemap -----------------------------------------------------------------
 
-/** The colours of the basemap. They suit a light plot background. */
-const BASEMAP_COLORS = { land: "#e9e7e1", coast: "#8d8a82", border: "#b9b6ae" };
-
 /** A point closer than this to the last drawn point, in CSS pixels, drops out of a basemap path. */
 const BASEMAP_MIN_STEP = 0.6;
 
 /** Fill the land of a map plot. This runs below the surface and the points. */
-export function drawLand(u: uPlot, geography: Geography): void {
+export function drawLand(u: uPlot, geography: Geography, colors: BasemapColors): void {
     const mapper = pixelMapper(u);
     if (!mapper) return;
 
     const { ctx } = u;
     ctx.save();
     clipToPlot(u);
-    ctx.fillStyle = BASEMAP_COLORS.land;
+    ctx.fillStyle = colors.land;
     ctx.beginPath();
     traceRings(u, mapper, geography.land, true);
     // The rings of lakes are holes in the land.
@@ -125,7 +127,12 @@ export function drawLand(u: uPlot, geography: Geography): void {
  * Stroke the coastlines, and the country borders when asked. This runs above the surface and the
  * points.
  */
-export function drawCoastlines(u: uPlot, geography: Geography, borders: boolean): void {
+export function drawCoastlines(
+    u: uPlot,
+    geography: Geography,
+    borders: boolean,
+    colors: BasemapColors
+): void {
     const mapper = pixelMapper(u);
     if (!mapper) return;
 
@@ -136,14 +143,14 @@ export function drawCoastlines(u: uPlot, geography: Geography, borders: boolean)
     ctx.lineJoin = "round";
 
     if (borders && geography.borders.length > 0) {
-        ctx.strokeStyle = BASEMAP_COLORS.border;
+        ctx.strokeStyle = colors.border;
         ctx.lineWidth = 0.8 * dpr;
         ctx.beginPath();
         traceRings(u, mapper, geography.borders, false);
         ctx.stroke();
     }
 
-    ctx.strokeStyle = BASEMAP_COLORS.coast;
+    ctx.strokeStyle = colors.coast;
     ctx.lineWidth = dpr;
     ctx.beginPath();
     traceRings(u, mapper, geography.land, false);
