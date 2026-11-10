@@ -181,6 +181,15 @@
     --toast-warning: #ff8f5c;
     --toast-error: IndianRed;
 
+    /* The title block of the home page. A brand can put an image in the background with a relative url(). */
+    --home-header-background: none;
+    --home-header-padding: 0 0 3rem;
+    --home-header-margin: 0;
+    --home-header-radius: 0;
+    --home-title-foreground: var(--heading-foreground);
+    --home-title-highlight: var(--highlight);
+    --home-subtitle-foreground: var(--foreground);
+
     --network-line: rgba(51, 65, 85, 0.1);
     --network-dot: rgba(45, 212, 191, 0.55);
     --network-glow-a: rgba(45, 212, 191, 0.16);
