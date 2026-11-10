@@ -449,6 +449,8 @@
 
                     .app-name {
                         flex-grow: 1;
+                        // The text fills the free space only. A long text wraps or cuts, and never widens the sidebar.
+                        contain: inline-size;
                         font-size: var(--font-size-md);
                         font-weight: 600;
                         line-height: 1.5rem;
