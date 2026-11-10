@@ -20,7 +20,7 @@
     </button>
     <a class="header-link" href={resolve("/")}>
         <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
-        <span class="app-name">{BRAND.name}</span>
+        <span class="app-name">{$t("app.logoText")}</span>
     </a>
 </header>
 
@@ -33,7 +33,8 @@
         align-items: center;
         gap: 0.5rem;
         padding: 0.5rem;
-        background: var(--sidebar);
+        background: var(--page-header-background);
+        color: var(--sidebar-header-foreground);
         border-bottom: 1px solid var(--sidebar-border);
 
         @media (max-width: 767px) {
@@ -58,7 +59,7 @@
             }
 
             &:hover {
-                background-color: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
+                background-color: var(--sidebar-header-hover);
             }
         }
 
@@ -69,9 +70,11 @@
             text-decoration: none;
             color: inherit;
 
+            // The width follows the logo shape, so a wide brand logo needs only a height.
             .beacon-logo {
-                width: 1.5rem;
-                height: 1.5rem;
+                flex-shrink: 0;
+                width: auto;
+                height: var(--page-header-logo-height);
             }
 
             .app-name {

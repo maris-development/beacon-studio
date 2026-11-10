@@ -171,11 +171,21 @@
         }
 
         .header {
-            padding-bottom: 3rem;
+            padding: var(--home-header-padding);
+            margin: var(--home-header-margin);
+            border-radius: var(--home-header-radius);
+            background: var(--home-header-background);
+
             .title {
+                color: var(--home-title-foreground);
+
                 .highlight {
-                    color: var(--highlight);
+                    color: var(--home-title-highlight);
                 }
+            }
+
+            .subtitle {
+                color: var(--home-subtitle-foreground);
             }
         }
 

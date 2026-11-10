@@ -301,7 +301,7 @@
             <div class="logo-wrapper">
                 <a class="header-link" href={resolve("/")} title={compact ? BRAND.name : undefined}>
                     <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
-                    <span class="app-name">{BRAND.name}</span>
+                    <span class="app-name">{$t("app.logoText")}</span>
                 </a>
                 <button
                     class="collapse-toggle"
@@ -419,13 +419,16 @@
             flex-shrink: 0;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--sidebar-border);
+            color: var(--sidebar-header-foreground);
 
             .logo-wrapper {
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
-                // No side padding: the logo then lines up with the menu icons.
-                padding: 0.5rem 0;
+                // The band reaches the sidebar edges. The logo stays in line with the menu icons.
+                margin: -0.5rem -0.5rem 0;
+                padding: 1rem 0.5rem 0.5rem;
+                background: var(--sidebar-header-background);
 
                 .header-link {
                     flex-grow: 1;
@@ -434,32 +437,33 @@
                     gap: 0.5rem;
                     text-decoration: none;
                     color: inherit;
-                    border-radius: 0.5rem;
+                    border-radius: var(--menu-item-radius);
 
+                    // The width follows the logo shape, so a wide brand logo needs only a height.
                     .beacon-logo {
-                        width: 1.75rem;
-                        height: 1.75rem;
-                        // padding: 0.5rem;
+                        flex-shrink: 0;
+                        width: auto;
+                        height: var(--sidebar-logo-height);
                         margin: 0.25rem;
                     }
 
                     .app-name {
                         flex-grow: 1;
+                        // The text fills the free space only. A long text wraps or cuts, and never widens the sidebar.
+                        contain: inline-size;
                         font-size: var(--font-size-md);
                         font-weight: 600;
                         line-height: 1.5rem;
                         margin: 0;
                         overflow: hidden;
                         text-overflow: ellipsis;
-                        white-space: nowrap;
+                        white-space: var(--sidebar-name-white-space);
+                        border-left: var(--sidebar-name-divider);
+                        padding-left: var(--sidebar-name-indent);
                     }
 
                     &:hover {
-                        background-color: color-mix(
-                            in srgb,
-                            var(--background) 90%,
-                            var(--primary) 10%
-                        );
+                        background-color: var(--sidebar-header-hover);
                     }
                 }
 
@@ -481,11 +485,7 @@
                     }
 
                     &:hover {
-                        background-color: color-mix(
-                            in srgb,
-                            var(--background) 90%,
-                            var(--primary) 10%
-                        );
+                        background-color: var(--sidebar-header-hover);
                     }
                 }
             }

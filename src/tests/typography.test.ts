@@ -5,6 +5,9 @@ import { describe, expect, it } from "vitest";
 const SRC = join(process.cwd(), "src");
 const STYLE_FILE = /\.(svelte|scss|css)$/;
 
+// A brand theme sets the font tokens, and its @font-face rules name the brand fonts.
+const SKIPPED = [/^brands\//];
+
 // The rem base in app.scss, and the @font-face names in font.scss.
 const ALLOWED = new Set([
     "app.scss: font-size: 14px",
@@ -34,6 +37,9 @@ function violations(pattern: RegExp, token: RegExp): string[] {
     const found: string[] = [];
     for (const file of styleFiles(SRC)) {
         const name = relative(SRC, file).replaceAll("\\", "/");
+        if (SKIPPED.some((pattern) => pattern.test(name))) {
+            continue;
+        }
         const lines = readFileSync(file, "utf8").split("\n");
         lines.forEach((line, index) => {
             for (const match of line.matchAll(pattern)) {

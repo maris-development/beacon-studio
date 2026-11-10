@@ -92,7 +92,7 @@
                 gap: 0.5rem;
                 cursor: pointer;
                 padding: 0.25rem 0.5rem;
-                border-radius: 0.5rem;
+                border-radius: var(--menu-item-radius);
                 border-left: 2px solid transparent;
                 text-decoration: none;
                 color: inherit;
