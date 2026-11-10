@@ -20,7 +20,7 @@
     </button>
     <a class="header-link" href={resolve("/")}>
         <img src={BRAND.logo} alt={$t("app.logoAlt")} class="beacon-logo" />
-        <span class="app-name">{BRAND.name}</span>
+        <span class="app-name">{$t("app.logoText")}</span>
     </a>
 </header>
 
