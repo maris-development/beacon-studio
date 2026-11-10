@@ -46,7 +46,7 @@
     .card {
         display: flex;
         flex-direction: column;
-        border-radius: 0.75rem;
+        border-radius: var(--card-radius);
         padding: 1rem;
         background-color: var(--card);
         border: 1px solid var(--card-border);
