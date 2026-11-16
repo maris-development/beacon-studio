@@ -1121,13 +1121,9 @@
             "empty": "No Beacon node is configured.",
             "manage": "Manage Nodes"
         },
-        "launchpad": {
-            "title": "Launchpad",
-            "workbench": {
-                "title": "Query Workbench",
-                "description": "Write queries, filter data and search millions of records.",
-                "action": "New Query"
-            }
+        "start": {
+            "explore": "Start exploring",
+            "addNode": "Add a Beacon node"
         },
         "guide": {
             "title": "How it works",
@@ -1136,23 +1132,25 @@
             "show": "Show guide",
             "select": {
                 "title": "Select node and table",
-                "body": "Open the Query Workbench. Pick a connected node, then pick one data table on that node."
+                "body": "Pick a connected node in the Data Explorer, then pick one data table on that node.",
+                "action": "Open the Data Explorer"
             },
             "filter": {
                 "title": "Filter and query",
-                "body": "Add the columns you need, then filter them. Set a depth range and time bounds. To limit the result to a region, draw the area with the Map Viewer tools."
+                "body": "Add the columns you need, then filter them. Set a depth range and time bounds. To limit the result to a region, draw the area in the Map view."
             },
             "explore": {
                 "title": "Explore, export and share",
-                "body": "Download the result or view it in the Map Viewer. Check the values in the Table Explorer, or build a chart. Share the query to collaborate or to continue in another workspace."
+                "body": "Download the result or view it in the Map view. Check the values in the Table view, or build a chart in the Chart view. Share the query to collaborate or to continue in another workspace."
             }
         },
         "examples": {
             "title": "Quick start examples",
-            "lead": "Three real queries. Open one to review the query in the query workbench and plot it on the map.",
-            "imageAlt": "The result of the {title} query in the Map Viewer",
+            "lead": "Three real queries. Open one to review the query in the Data Explorer and plot it on the map.",
+            "imageAlt": "The result of the {title} query in the Map view",
             "metricHint": "Measured on a reference run. Your run can differ.",
-            "check": "Check query",
+            "open": "Open in Data Explorer",
+            "ownQuery": "Build your own query",
             "loadFailed": "Could not load the Quick start examples."
         }
     },

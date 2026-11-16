@@ -7,7 +7,9 @@
     import BeaconNodeStatus from "@/components/BeaconNodeStatus.svelte";
     import HowItWorks from "@/components/home/HowItWorks.svelte";
     import QuickStartExamples from "@/components/home/QuickStartExamples.svelte";
-    import BracesIcon from "@lucide/svelte/icons/braces";
+    import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+    import PlusIcon from "@lucide/svelte/icons/plus";
+    import { openNodesSettled } from "@/services/open-nodes-import";
     import { onMount } from "svelte";
     import { fade } from "svelte/transition";
     import Button from "@/components/buttons/Button.svelte";
@@ -15,7 +17,7 @@
     import { t } from "@/i18n";
     import { BRAND } from "@/brand";
 
-    import { asset, resolve } from "$app/paths";
+    import { resolve } from "$app/paths";
 
     const BETA_TOAST_STORAGE_KEY = "beacon-studio.home.beta-toast-shown";
 
@@ -33,6 +35,9 @@
 
     /** The node the Connected Nodes card shows now, or `null` if none is configured. */
     let displayedNode = $derived($nodes.length > 0 ? $nodes[cycleIndex % $nodes.length] : null);
+
+    // A first visit has no node until the public list lands, so wait for it.
+    let needsNode = $derived($openNodesSettled && $nodes.length === 0);
 
     onMount(() => {
         // The app can run on the same host as a Beacon node. Add that node once.
@@ -60,15 +65,7 @@
 
 <HeroNetwork />
 
-<div class="page-wrapper">
-    <div class="header">
-        <h1 class="title">
-            {$t("home.title.beforeHighlight")}
-            <span class="highlight">{$t("home.title.highlight")}</span>
-        </h1>
-        <p class="subtitle">{$t("home.subtitle")}</p>
-    </div>
-
+{#snippet connectedNodes()}
     <section class="home-section">
         <h2>{$t("home.nodes.title", { count: $nodes.length })}</h2>
 
@@ -100,66 +97,45 @@
             </Card>
         </div>
     </section>
+{/snippet}
 
-    <section class="home-section">
-        <HowItWorks />
-    </section>
+<div class="page-wrapper">
+    <div class="header">
+        <h1 class="title">
+            {$t("home.title.beforeHighlight")}
+            <span class="highlight">{$t("home.title.highlight")}</span>
+        </h1>
+        <p class="subtitle">{$t("home.subtitle")}</p>
+        <div class="start">
+            {#if needsNode}
+                <Button size="lg" href={resolve("/beacon-nodes")}>
+                    <PlusIcon />
+                    {$t("home.start.addNode")}
+                </Button>
+            {:else}
+                <Button size="lg" href={resolve("/queries/workbench")}>
+                    {$t("home.start.explore")}
+                    <ArrowRightIcon />
+                </Button>
+            {/if}
+        </div>
+    </div>
+
+    {#if needsNode}
+        {@render connectedNodes()}
+    {/if}
 
     <section class="home-section">
         <QuickStartExamples />
     </section>
 
     <section class="home-section">
-        <h2>{$t("home.launchpad.title")}</h2>
-
-        <div class="launchpad-cards">
-            <Card class="query-workbench">
-                <img
-                    class="shot"
-                    src={asset("/images/small-query-workbench.png")}
-                    alt={$t("home.launchpad.workbench.title")}
-                />
-                <div class="body">
-                    <h3>{$t("home.launchpad.workbench.title")}</h3>
-                    <p class="description">{$t("home.launchpad.workbench.description")}</p>
-                    <div class="actions">
-                        <Button variant="outline" href={resolve("/queries/workbench")}>
-                            <BracesIcon />
-                            {$t("home.launchpad.workbench.action")}
-                        </Button>
-                    </div>
-                </div>
-            </Card>
-
-            <!-- for later updates -->
-
-            <!-- <Card class="map-explorer">
-				<img class="shot" src={asset('/images/small-map-viewer.png')} alt="Map Viewer" />
-				<div class="body">
-					<h3>Map Explorer</h3>
-					<p class="description">Visualize spatial distributions and point observations on an interactive map.</p>
-					<div class="actions">
-						<Button variant="outline" href={resolve('/visualisations/map-viewer')}
-							>Go to Map Viewer</Button
-						>
-					</div>
-				</div>
-			</Card>
-
-			<Card class="chart-explorer">
-				<img class="shot" src={asset('/images/small-chart-explorer.png')} alt="Chart Explorer" />
-				<div class="body">
-					<h3>Chart Explorer</h3>
-					<p class="description">Write queries, filter data and search millions of records.</p>
-					<div class="actions">
-						<Button variant="outline" href={resolve('/visualisations/chart-explorer')}
-							>Build a chart</Button
-						>
-					</div>
-				</div>
-			</Card> -->
-        </div>
+        <HowItWorks />
     </section>
+
+    {#if !needsNode}
+        {@render connectedNodes()}
+    {/if}
 </div>
 
 <style lang="scss">
@@ -176,6 +152,10 @@
                 .highlight {
                     color: var(--highlight);
                 }
+            }
+
+            .start {
+                margin-top: 1.5rem;
             }
         }
 
@@ -225,73 +205,6 @@
                     .url {
                         color: var(--primary);
                     }
-                }
-            }
-        }
-
-        .launchpad-cards {
-            display: grid;
-            gap: 1rem;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-
-            // The screenshot reaches the card edge, so the card holds no padding of
-            // its own. The body below it supplies the padding instead.
-            :global(.card) {
-                padding: 0;
-                overflow: hidden;
-                height: 100%;
-                max-width: 32.7%;
-            }
-
-            // `Card` puts every child inside this wrapper. The wrapper must fill the
-            // card, else `flex` on the body below it has nothing to divide.
-            :global(.card-content) {
-                display: flex;
-                flex-direction: column;
-                flex: 1;
-            }
-
-            :global(.shot) {
-                display: block;
-                width: 100%;
-                height: auto;
-                aspect-ratio: 16 / 9;
-                object-fit: cover;
-                object-position: center;
-                border-bottom: 1px solid var(--card-border);
-                background-color: var(--muted);
-            }
-
-            :global(.body) {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-                padding: 1rem;
-                // The card stretches to the tallest of the row. This pushes the
-                // actions of every card to the same edge.
-                flex: 1;
-
-                :global(h3) {
-                    margin: 0;
-                }
-
-                :global(.description) {
-                    margin: 0;
-                    // The descriptions differ in length. This keeps the action rows of
-                    // the cards on one line.
-                    flex: 1;
-                }
-            }
-
-            :global(.actions) {
-                display: flex;
-                flex-direction: row;
-                gap: 0.5rem;
-                width: 100%;
-                margin-top: 0.25rem;
-
-                > :global(.btn) {
-                    flex: 1;
                 }
             }
         }

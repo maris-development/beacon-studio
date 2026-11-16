@@ -2,13 +2,14 @@
  QuickStartExamples — three real queries on the home page.
 
  Each card opens a share link. The payload carries the query, the name and the
- node, so the workbench needs no second parameter.
+ node, so the explorer needs no second parameter.
 -->
 
 <script lang="ts">
     import { asset, resolve } from "$app/paths";
     import BracesIcon from "@lucide/svelte/icons/braces";
     import GlobeIcon from "@lucide/svelte/icons/globe";
+    import PlusIcon from "@lucide/svelte/icons/plus";
     import Button from "@/components/buttons/Button.svelte";
     import Card from "@/components/card/Card.svelte";
     import { Badge } from "@/components/ui/badge/index.js";
@@ -26,6 +27,10 @@
 <div class="section-head">
     <h2>{$t("home.examples.title")}</h2>
     <p class="lead">{$t("home.examples.lead")}</p>
+    <Button variant="outline" href={resolve("/queries/workbench")}>
+        <PlusIcon />
+        {$t("home.examples.ownQuery")}
+    </Button>
     <!-- <span class="pending" title={PENDING_HINT}>
 		<Button variant="link" disabled>View all examples</Button>
 	</span> -->
@@ -75,7 +80,7 @@
                             })}
                     >
                         <BracesIcon />
-                        {$t("home.examples.check")}
+                        {$t("home.examples.open")}
                     </Button>
                 </div>
             </div>
@@ -87,7 +92,8 @@
     .section-head {
         display: flex;
         flex-direction: row;
-        align-items: baseline;
+        flex-wrap: wrap;
+        align-items: center;
         gap: 0.75rem;
         margin-bottom: 1rem;
 
