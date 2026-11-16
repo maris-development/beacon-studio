@@ -154,17 +154,16 @@
         // The header reacts to its own width, so it also adapts to the sidebar.
         container: query-header / inline-size;
 
-        // The tab strip. The active tab covers its bottom line.
+        // The strip of the view switch and the actions.
         .action-bar-wrapper {
             display: flex;
             flex-direction: row;
-            // The tabs stay on the bottom line when the actions need a row of their own.
+            // The view switch stays on the bottom line when the actions need a row of their own.
             flex-wrap: wrap-reverse;
             justify-content: space-between;
-            // `end` is the bottom edge. `flex-end` is the top edge under `wrap-reverse`.
-            align-items: end;
+            align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 0.5rem 0;
+            padding: 0.5rem;
             background: var(--muted);
             border-bottom: 1px solid var(--border);
             border-radius: inherit;
