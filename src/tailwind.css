@@ -144,6 +144,21 @@
     --heading-foreground: var(--foreground);
     --link: #007bff;
 
+    --card-radius: 0.75rem;
+    --input-radius: 0.5rem;
+    --menu-item-radius: 0.5rem;
+
+    /* The logo and the app name: the sidebar header, and the phone bar (page header). */
+    --sidebar-header-background: transparent;
+    --page-header-background: var(--sidebar);
+    --sidebar-header-foreground: var(--foreground);
+    --sidebar-header-hover: color-mix(in srgb, var(--background) 90%, var(--primary) 10%);
+    --sidebar-logo-height: 1.75rem;
+    --page-header-logo-height: 1.5rem;
+    --sidebar-name-white-space: nowrap;
+    --sidebar-name-divider: none;
+    --sidebar-name-indent: 0;
+
     --button-radius: calc(var(--radius) - 2px);
     --button-font-weight: 500;
     --button-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -165,6 +180,15 @@
     --toast-success: MediumSeaGreen;
     --toast-warning: #ff8f5c;
     --toast-error: IndianRed;
+
+    /* The title block of the home page. A brand can put an image in the background with a relative url(). */
+    --home-header-background: none;
+    --home-header-padding: 0 0 3rem;
+    --home-header-margin: 0;
+    --home-header-radius: 0;
+    --home-title-foreground: var(--heading-foreground);
+    --home-title-highlight: var(--highlight);
+    --home-subtitle-foreground: var(--foreground);
 
     --network-line: rgba(51, 65, 85, 0.1);
     --network-dot: rgba(45, 212, 191, 0.55);

@@ -74,11 +74,21 @@ The `:root.dark` block of `src/tailwind.css` outranks your `:root` block. In dar
 }
 ```
 
-- Use a relative `url()`. Then Vite hashes the file and adds the base path.
+- Use a relative `url()`. Then Vite hashes the file and adds the base path. This also works in a token value, for example an image in `--home-header-background`.
 - `--map-draw` must be a hex color. The map draw tools read it in code.
 - To change a component, change a token. If no token fits, add the token to `src/tailwind.css` first, with the current value as default.
 
-Useful token groups: colors (`--primary`, `--highlight`, `--app-background`), fonts (`--font-family-*`, `--heading-foreground`, `--link`), buttons (`--button-*`), controls (`--control-active`, `--input-border`), tables (`--table-*`), toasts (`--toast-*`) and the home page background (`--network-*`).
+Useful token groups: colors (`--primary`, `--highlight`, `--app-background`), fonts (`--font-family-*`, `--heading-foreground`, `--link`), buttons (`--button-*`), controls (`--control-active`, `--input-border`), corners (`--radius`, `--card-radius`, `--input-radius`, `--menu-item-radius`), tables (`--table-*`), toasts (`--toast-*`) and the home page background (`--network-*`).
+
+Logo and header tokens:
+
+- `--sidebar-header-background` colors a band behind the logo at the top of the sidebar. `--page-header-background` colors the bar of a phone screen. Use both for a light logo.
+- `--sidebar-header-foreground` and `--sidebar-header-hover` set the text and the hover color in both places.
+- `--sidebar-logo-height` and `--page-header-logo-height` set the logo height. The width follows the logo shape, so a wide logo needs no width.
+- `--sidebar-name-white-space`, `--sidebar-name-divider` and `--sidebar-name-indent` set the text beside the logo. Use `normal` to let a long text take two lines.
+- `--home-header-*`, `--home-title-*` and `--home-subtitle-foreground` style the title block of the home page.
+
+The text beside the logo is the key `app.logoText`. Its default is the app name. A brand with the project name in its logo can set a shorter text in `locales.ts`.
 
 ## locales.ts
 

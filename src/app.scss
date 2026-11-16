@@ -46,7 +46,7 @@ body {
 .page-container {
     background: var(--card);
     padding: 0.75rem;
-    border-radius: 0.75rem;
+    border-radius: var(--card-radius);
     border: 1px solid var(--card-border);
     color: var(--foreground);
 
@@ -139,7 +139,7 @@ textarea {
     // width: 100%;
     padding: 0.5rem;
     border: 1px solid var(--input-border);
-    border-radius: 0.5rem;
+    border-radius: var(--input-radius);
     font: inherit;
     // margin-bottom: 0.5rem;
 

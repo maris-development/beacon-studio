@@ -1,6 +1,7 @@
 {
     "app": {
         "logoAlt": "Logo {app}",
+        "logoText": "{app}",
         "pageTitle": "{page} - {app}"
     },
     "common": {
