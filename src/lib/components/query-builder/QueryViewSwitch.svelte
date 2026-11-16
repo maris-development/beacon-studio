@@ -142,7 +142,7 @@
         gap: 0.25rem;
         padding: 0.25rem;
         border: 1px solid var(--border);
-        border-radius: 0.625rem;
+        border-radius: var(--radius);
         background: var(--card);
 
         // The arrow from the query to its result views.
@@ -163,7 +163,7 @@
             padding: 0.25rem 0.875rem 0.25rem 0.25rem;
             border: 0;
             // The rail radius less the rail padding, so the corners run parallel.
-            border-radius: 0.375rem;
+            border-radius: calc(var(--radius) - 0.25rem);
             background: none;
             color: var(--foreground);
             font-size: var(--font-size-md);
