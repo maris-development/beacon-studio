@@ -78,7 +78,7 @@ The `:root.dark` block of `src/tailwind.css` outranks your `:root` block. In dar
 - `--map-draw` must be a hex color. The map draw tools read it in code.
 - To change a component, change a token. If no token fits, add the token to `src/tailwind.css` first, with the current value as default.
 
-Useful token groups: colors (`--primary`, `--highlight`, `--app-background`), fonts (`--font-family-*`, `--heading-foreground`, `--link`), buttons (`--button-*`), controls (`--control-active`, `--input-border`), corners (`--radius`, `--card-radius`, `--input-radius`, `--menu-item-radius`), tables (`--table-*`), toasts (`--toast-*`) and the home page background (`--network-*`).
+Useful token groups: colors (`--primary`, `--highlight`, `--app-background`), fonts (`--font-family-*`, `--heading-foreground`, `--link`), buttons (`--button-*`), controls (`--control-active`, `--input-border`), corners (`--radius`, `--card-radius`, `--input-radius`, `--menu-item-radius`), tables (`--table-*`), toasts (`--toast-*`), the view switch of the explorer (`--view-switch-*`) and the home page background (`--network-*`).
 
 Logo and header tokens:
 

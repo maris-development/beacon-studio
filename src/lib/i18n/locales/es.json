@@ -42,13 +42,12 @@
         "openMenu": "Abrir menú",
         "closeMenu": "Cerrar menú",
         "group": {
-            "explore": "Explorar datos",
-            "nodeManagement": "Gestión de nodos",
-            "studio": "{app}"
+            "data": "Datos",
+            "administration": "Administración"
         },
         "item": {
             "queries": "Consultas",
-            "queryBuilder": "Workbench",
+            "explorer": "Explorador de datos",
             "dataBrowser": "Navegador de datos",
             "datasets": "Conjuntos de datos",
             "dataTables": "Tablas de datos",
@@ -376,7 +375,7 @@
         }
     },
     "workbench": {
-        "title": "Banco de trabajo de consultas",
+        "title": "Explorador de datos",
         "untitledBlock": "Sin título ({number})",
         "copyName": "{name} (copia)",
         "thisNode": "este nodo",
@@ -402,7 +401,7 @@
             "chart": "Gráfico"
         },
         "panes": {
-            "builder": "Banco de trabajo de consultas",
+            "builder": "Crea tu consulta",
             "collapseBuilder": "Contraer el constructor",
             "expandBuilder": "Expandir el constructor",
             "code": "Código",
@@ -1123,13 +1122,9 @@
             "empty": "No hay ningún nodo Beacon configurado.",
             "manage": "Gestionar nodos"
         },
-        "launchpad": {
-            "title": "Plataforma de inicio",
-            "workbench": {
-                "title": "Banco de trabajo de consultas",
-                "description": "Escribe consultas, filtra datos y busca entre millones de registros.",
-                "action": "Nueva consulta"
-            }
+        "start": {
+            "explore": "Empezar a explorar",
+            "addNode": "Añadir un nodo Beacon"
         },
         "guide": {
             "title": "Cómo funciona",
@@ -1138,23 +1133,25 @@
             "show": "Mostrar guía",
             "select": {
                 "title": "Seleccionar nodo y tabla",
-                "body": "Abre el banco de trabajo de consultas. Elige un nodo conectado y después una tabla de datos de ese nodo."
+                "body": "Elige un nodo conectado en el Explorador de datos y después una tabla de datos de ese nodo.",
+                "action": "Abrir el Explorador de datos"
             },
             "filter": {
                 "title": "Filtrar y consultar",
-                "body": "Añade las columnas que necesitas y fíltralas. Define un rango de profundidad y límites de tiempo. Para limitar el resultado a una región, dibuja el área con las herramientas del visor de mapas."
+                "body": "Añade las columnas que necesitas y fíltralas. Define un rango de profundidad y límites de tiempo. Para limitar el resultado a una región, dibuja el área en la vista Mapa."
             },
             "explore": {
                 "title": "Explorar, exportar y compartir",
-                "body": "Descarga el resultado o míralo en el visor de mapas. Comprueba los valores en el explorador de tablas o crea un gráfico. Comparte la consulta para colaborar o para continuar en otro espacio de trabajo."
+                "body": "Descarga el resultado o míralo en la vista Mapa. Comprueba los valores en la vista Tabla o crea un gráfico en la vista Gráfico. Comparte la consulta para colaborar o para continuar en otro espacio de trabajo."
             }
         },
         "examples": {
             "title": "Ejemplos de inicio rápido",
-            "lead": "Tres consultas reales. Abre una para revisarla en el banco de trabajo de consultas y representarla en el mapa.",
-            "imageAlt": "El resultado de la consulta {title} en el visor de mapas",
+            "lead": "Tres consultas reales. Abre una para revisarla en el Explorador de datos y representarla en el mapa.",
+            "imageAlt": "El resultado de la consulta {title} en la vista Mapa",
             "metricHint": "Medido en una ejecución de referencia. Tu ejecución puede variar.",
-            "check": "Ver consulta",
+            "open": "Abrir en el Explorador de datos",
+            "ownQuery": "Crea tu propia consulta",
             "loadFailed": "No se pudieron cargar los ejemplos de inicio rápido."
         }
     },

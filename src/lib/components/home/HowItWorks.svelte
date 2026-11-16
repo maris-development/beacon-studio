@@ -11,6 +11,7 @@
     import Card from "@/components/card/Card.svelte";
     import Button from "@/components/buttons/Button.svelte";
     import { t, type MessageKey } from "@/i18n";
+    import { resolve } from "$app/paths";
 
     const STORAGE_KEY = "beacon-studio.home.guide-open";
 
@@ -19,13 +20,16 @@
         number: string;
         title: MessageKey;
         body: MessageKey;
+        /** A link under the body, with its label. */
+        link?: { label: MessageKey; href: string };
     };
 
     const STEPS: Step[] = [
         {
             number: "01",
             title: "home.guide.select.title",
-            body: "home.guide.select.body"
+            body: "home.guide.select.body",
+            link: { label: "home.guide.select.action", href: resolve("/queries/workbench") }
         },
         {
             number: "02",
@@ -71,6 +75,12 @@
                     <h3>{$t(step.title)}</h3>
                 </div>
                 <p>{$t(step.body)}</p>
+                {#if step.link}
+                    <a class="step-link" href={step.link.href}>
+                        {$t(step.link.label)}
+                        <ArrowRightIcon />
+                    </a>
+                {/if}
             </Card>
 
             {#if index < STEPS.length - 1}
@@ -111,6 +121,25 @@
 
         :global(.card.step) {
             height: 100%;
+        }
+
+        .step-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+
+            :global(svg) {
+                width: 1rem;
+                height: 1rem;
+            }
+
+            &:hover {
+                text-decoration: underline;
+            }
         }
 
         .step-head {

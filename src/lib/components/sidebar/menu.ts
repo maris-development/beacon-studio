@@ -14,7 +14,12 @@ export type MenuItem = {
     adminOnly?: boolean;
 };
 
-export type Group = { title: MessageKey; items: MenuItem[] };
+export type Group = {
+    title: MessageKey;
+    items: MenuItem[];
+    /** The title opens and closes the group. The group starts closed. */
+    collapsible?: boolean;
+};
 
 /** The menu without admin items while admin features are off. A group with no items goes too. */
 export function visibleGroups(groups: Group[], adminFeatures: boolean): Group[] {
@@ -55,6 +60,18 @@ export function isItemActive(
     }
 
     return isPathActive(pathname, item.url);
+}
+
+/** True when the page of `pathname` is an item of the group. */
+export function hasActiveItem(pathname: string, group: Group): boolean {
+    return group.items.some((item) => isItemActive(pathname, item));
+}
+
+/** A group with no `collapsible` is always open. A collapsible group is closed until `openGroups` names it. */
+export function isGroupOpen(group: Group, openGroups: Record<string, boolean>): boolean {
+    if (!group.collapsible) return true;
+
+    return openGroups[group.title] === true;
 }
 
 /** An admin item shows a lock while the current node has no admin session. */

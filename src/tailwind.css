@@ -23,6 +23,12 @@
 
     --highlight: #087cdf;
 
+    /* The view switch of the explorer. It follows the primary colour in both themes. */
+    --view-switch-active: var(--primary);
+    --view-switch-active-foreground: var(--primary-foreground);
+    --view-switch-glow: color-mix(in srgb, var(--primary) 35%, transparent);
+    --view-switch-icon: var(--primary);
+
     /* The beacon-datalake.org header gradient. */
     --admin-badge-background: linear-gradient(
         120deg,

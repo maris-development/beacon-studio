@@ -42,13 +42,12 @@
         "openMenu": "Apri menu",
         "closeMenu": "Chiudi menu",
         "group": {
-            "explore": "Esplora i dati",
-            "nodeManagement": "Gestione nodi",
-            "studio": "{app}"
+            "data": "Dati",
+            "administration": "Amministrazione"
         },
         "item": {
             "queries": "Query",
-            "queryBuilder": "Workbench",
+            "explorer": "Esploratore dati",
             "dataBrowser": "Browser dati",
             "datasets": "Dataset",
             "dataTables": "Tabelle dati",
@@ -376,7 +375,7 @@
         }
     },
     "workbench": {
-        "title": "Banco di lavoro query",
+        "title": "Esploratore dati",
         "untitledBlock": "Senza titolo ({number})",
         "copyName": "{name} (copia)",
         "thisNode": "questo nodo",
@@ -402,7 +401,7 @@
             "chart": "Grafico"
         },
         "panes": {
-            "builder": "Banco di lavoro query",
+            "builder": "Crea la tua query",
             "collapseBuilder": "Comprimi generatore",
             "expandBuilder": "Espandi generatore",
             "code": "Codice",
@@ -1123,13 +1122,9 @@
             "empty": "Nessun nodo Beacon configurato.",
             "manage": "Gestisci nodi"
         },
-        "launchpad": {
-            "title": "Punto di partenza",
-            "workbench": {
-                "title": "Banco di lavoro query",
-                "description": "Scrivi query, filtra i dati e cerca tra milioni di record.",
-                "action": "Nuova query"
-            }
+        "start": {
+            "explore": "Inizia a esplorare",
+            "addNode": "Aggiungi un nodo Beacon"
         },
         "guide": {
             "title": "Come funziona",
@@ -1138,23 +1133,25 @@
             "show": "Mostra guida",
             "select": {
                 "title": "Seleziona nodo e tabella",
-                "body": "Apri il Banco di lavoro query. Scegli un nodo connesso, poi scegli una tabella dati su quel nodo."
+                "body": "Scegli un nodo connesso nell'Esploratore dati, poi scegli una tabella dati su quel nodo.",
+                "action": "Apri l'Esploratore dati"
             },
             "filter": {
                 "title": "Filtra e interroga",
-                "body": "Aggiungi le colonne che ti servono, poi filtrale. Imposta un intervallo di profondità e dei limiti temporali. Per limitare il risultato a una regione, disegna l'area con gli strumenti del Visualizzatore mappa."
+                "body": "Aggiungi le colonne che ti servono, poi filtrale. Imposta un intervallo di profondità e dei limiti temporali. Per limitare il risultato a una regione, disegna l'area nella vista Mappa."
             },
             "explore": {
                 "title": "Esplora, esporta e condividi",
-                "body": "Scarica il risultato o visualizzalo nel Visualizzatore mappa. Controlla i valori in Esplora tabelle, oppure crea un grafico. Condividi la query per collaborare o per continuare in un altro spazio di lavoro."
+                "body": "Scarica il risultato o visualizzalo nella vista Mappa. Controlla i valori nella vista Tabella, oppure crea un grafico nella vista Grafico. Condividi la query per collaborare o per continuare in un altro spazio di lavoro."
             }
         },
         "examples": {
             "title": "Esempi per iniziare",
-            "lead": "Tre query reali. Aprine una per esaminare la query nel banco di lavoro query e tracciarla sulla mappa.",
-            "imageAlt": "Il risultato della query {title} nel Visualizzatore mappa",
+            "lead": "Tre query reali. Aprine una per esaminare la query nell'Esploratore dati e tracciarla sulla mappa.",
+            "imageAlt": "Il risultato della query {title} nella vista Mappa",
             "metricHint": "Misurato su un'esecuzione di riferimento. La tua esecuzione può variare.",
-            "check": "Esamina query",
+            "open": "Apri in Esploratore dati",
+            "ownQuery": "Crea la tua query",
             "loadFailed": "Impossibile caricare gli esempi di avvio rapido."
         }
     },
