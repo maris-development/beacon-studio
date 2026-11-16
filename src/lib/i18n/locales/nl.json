@@ -41,13 +41,12 @@
         "openMenu": "Menu openen",
         "closeMenu": "Menu sluiten",
         "group": {
-            "explore": "Data verkennen",
-            "nodeManagement": "Nodebeheer",
-            "studio": "{app}"
+            "data": "Data",
+            "administration": "Beheer"
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Workbench",
+            "explorer": "Dataverkenner",
             "dataBrowser": "Databrowser",
             "datasets": "Datasets",
             "dataTables": "Datatabellen",
@@ -375,7 +374,7 @@
         }
     },
     "workbench": {
-        "title": "Query-werkbank",
+        "title": "Dataverkenner",
         "untitledBlock": "Naamloos ({number})",
         "copyName": "{name} (kopie)",
         "thisNode": "deze node",
@@ -401,7 +400,7 @@
             "chart": "Grafiek"
         },
         "panes": {
-            "builder": "Query-werkbank",
+            "builder": "Bouw je query",
             "collapseBuilder": "Bouwer inklappen",
             "expandBuilder": "Bouwer uitklappen",
             "code": "Code",

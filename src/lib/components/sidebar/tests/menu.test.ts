@@ -1,9 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { isItemActive, isLocked, isPathActive, visibleGroups, type Group } from "../menu";
+import {
+    hasActiveItem,
+    isGroupOpen,
+    isItemActive,
+    isLocked,
+    isPathActive,
+    visibleGroups,
+    type Group
+} from "../menu";
 
 const groups: Group[] = [
     {
-        title: "nav.group.nodeManagement",
+        title: "nav.group.administration",
+        collapsible: true,
         items: [
             {
                 title: "nav.item.dataBrowser",
@@ -18,7 +27,7 @@ const groups: Group[] = [
         ]
     },
     {
-        title: "nav.group.studio",
+        title: "nav.group.data",
         items: [{ title: "nav.item.settings", url: "/settings", icon: null, adminOnly: true }]
     }
 ];
@@ -57,13 +66,13 @@ describe("isItemActive", () => {
         expect(isItemActive("/data-browser/datasets/detail", dataBrowser)).toBe(true);
     });
 
-    it("marks Query Workbench active on every /queries route", () => {
+    it("marks Data Explorer active on every /queries route", () => {
         for (const path of ["/queries/workbench", "/queries/history"]) {
             expect(isItemActive(path, workbench)).toBe(true);
         }
     });
 
-    it("marks Query Workbench active on all three result views", () => {
+    it("marks Data Explorer active on all three result views", () => {
         for (const path of [
             "/visualisations/map-viewer",
             "/visualisations/table-explorer",
@@ -73,12 +82,49 @@ describe("isItemActive", () => {
         }
     });
 
-    it("keeps Query Workbench inactive outside its roots", () => {
+    it("keeps Data Explorer inactive outside its roots", () => {
         expect(isItemActive("/data-browser", workbench)).toBe(false);
     });
 
     it("does not match a path that only shares a prefix", () => {
         expect(isPathActive("/settings-old", "/settings")).toBe(false);
+    });
+});
+
+describe("isGroupOpen", () => {
+    const [administration, data] = groups;
+
+    it("keeps a group with no collapsible flag open", () => {
+        expect(isGroupOpen(data, {})).toBe(true);
+        expect(isGroupOpen(data, { [data.title]: false })).toBe(true);
+    });
+
+    it("starts a collapsible group closed", () => {
+        expect(isGroupOpen(administration, {})).toBe(false);
+    });
+
+    it("opens a collapsible group that the record names", () => {
+        expect(isGroupOpen(administration, { [administration.title]: true })).toBe(true);
+    });
+
+    it("reads a stored value that is not true as closed", () => {
+        const stored = { [administration.title]: "yes" } as unknown as Record<string, boolean>;
+
+        expect(isGroupOpen(administration, stored)).toBe(false);
+    });
+});
+
+describe("hasActiveItem", () => {
+    const [administration, data] = groups;
+
+    it("finds the page of an item and of a child", () => {
+        expect(hasActiveItem("/system-info", administration)).toBe(true);
+        expect(hasActiveItem("/data-browser/datasets", administration)).toBe(true);
+    });
+
+    it("finds no item on a page of another group", () => {
+        expect(hasActiveItem("/settings", administration)).toBe(false);
+        expect(hasActiveItem("/system-info", data)).toBe(false);
     });
 });
 

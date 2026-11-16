@@ -41,13 +41,12 @@
         "openMenu": "Apri menu",
         "closeMenu": "Chiudi menu",
         "group": {
-            "explore": "Esplora i dati",
-            "nodeManagement": "Gestione nodi",
-            "studio": "{app}"
+            "data": "Dati",
+            "administration": "Amministrazione"
         },
         "item": {
             "queries": "Query",
-            "queryBuilder": "Workbench",
+            "explorer": "Esploratore dati",
             "dataBrowser": "Browser dati",
             "datasets": "Dataset",
             "dataTables": "Tabelle dati",
@@ -375,7 +374,7 @@
         }
     },
     "workbench": {
-        "title": "Banco di lavoro query",
+        "title": "Esploratore dati",
         "untitledBlock": "Senza titolo ({number})",
         "copyName": "{name} (copia)",
         "thisNode": "questo nodo",
@@ -401,7 +400,7 @@
             "chart": "Grafico"
         },
         "panes": {
-            "builder": "Banco di lavoro query",
+            "builder": "Crea la tua query",
             "collapseBuilder": "Comprimi generatore",
             "expandBuilder": "Espandi generatore",
             "code": "Codice",

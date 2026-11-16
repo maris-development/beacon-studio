@@ -41,13 +41,12 @@
         "openMenu": "Open menu",
         "closeMenu": "Close menu",
         "group": {
-            "explore": "Explore data",
-            "nodeManagement": "Node Management",
-            "studio": "{app}"
+            "data": "Data",
+            "administration": "Administration"
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Workbench",
+            "explorer": "Data Explorer",
             "dataBrowser": "Data Browser",
             "datasets": "Datasets",
             "dataTables": "Data Tables",
@@ -375,7 +374,7 @@
         }
     },
     "workbench": {
-        "title": "Query workbench",
+        "title": "Data Explorer",
         "untitledBlock": "Untitled ({number})",
         "copyName": "{name} (copy)",
         "thisNode": "this node",
@@ -401,7 +400,7 @@
             "chart": "Chart"
         },
         "panes": {
-            "builder": "Query workbench",
+            "builder": "Build your query",
             "collapseBuilder": "Collapse builder",
             "expandBuilder": "Expand builder",
             "code": "Code",
