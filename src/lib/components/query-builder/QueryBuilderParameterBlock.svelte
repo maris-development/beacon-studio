@@ -249,6 +249,9 @@
         client
             .getCachedSchema(table)
             .then((schema) => {
+                // The user picked another table while this answer was on its way.
+                if (table !== table_name) return;
+
                 fields = schema.fields.map((field) => ({
                     name: field.name,
                     type: field.data_type
@@ -261,6 +264,8 @@
                 }
             })
             .catch((error) => {
+                if (table !== table_name) return;
+
                 // A node answers 404 for a table it does not have. The parent already
                 // falls back to the default table, so this is the rest of the guard.
                 // Without the catch the browser reports an unhandled rejection, and

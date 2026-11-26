@@ -200,6 +200,11 @@
         workspace.updateActiveDraft(draft, pair);
     }
 
+    /** Start the query of the active block again on the picked table. */
+    function handleTablePick(table: string) {
+        workspace.pickActiveTable(table);
+    }
+
     /** Put a node on the active block. The workspace empties the draft. */
     function handleNodeChange(node: BeaconNode) {
         // The workspace asks the user first, so the call answers later.
@@ -286,6 +291,7 @@
                         pendingSeed={QueryWorkspace.seedFor(workspace.activeBlock)}
                         coordinateColumns={workspace.activeBlock?.coordinateColumns ?? null}
                         onDraftChange={handleDraftChange}
+                        onTablePick={handleTablePick}
                         workbenchActions={queryActions}
                     />
                 {/key}

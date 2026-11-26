@@ -14,51 +14,71 @@
  * longer need a separate `pendingSeed` field.
  */
 
-import { get } from 'svelte/store';
-import { persisted } from 'svelte-local-storage-store';
-import { createQueryCollection } from '@/stores/query-collection';
-import type { StoredQuery } from '@/stores/stored-query';
+import { get } from "svelte/store";
+import { persisted } from "svelte-local-storage-store";
+import { makeEmptyDraft } from "@/query/draft";
+import { createQueryCollection } from "@/stores/query-collection";
+import type { StoredQuery } from "@/stores/stored-query";
 
 /** The persisted list of open workbench blocks, in display order. */
 export const queryBlocks = createQueryCollection({
-	storageKey: 'beacon-query-library.blocks',
-	role: 'block',
-	identity: 'id'
+    storageKey: "beacon-query-library.blocks",
+    role: "block",
+    identity: "id"
 });
 
 /** The selection state and the name counter for the block list. */
 export interface QueryBlocksState {
-	activeBlockId: string | null;
-	/** The counter for default block names ("Query 1", "Query 2", …). It only grows. */
-	counter: number;
+    activeBlockId: string | null;
+    /** The counter for default block names ("Query 1", "Query 2", …). It only grows. */
+    counter: number;
 }
 
-export const queryBlocksState = persisted<QueryBlocksState>('beacon-query-library.blocks-state', {
-	activeBlockId: null,
-	counter: 0
+export const queryBlocksState = persisted<QueryBlocksState>("beacon-query-library.blocks-state", {
+    activeBlockId: null,
+    counter: 0
 });
 
 export function getBlocksState(): QueryBlocksState {
-	return get(queryBlocksState);
+    return get(queryBlocksState);
 }
 
 export function setActiveBlockId(id: string | null): void {
-	queryBlocksState.update((state) => ({ ...state, activeBlockId: id }));
+    queryBlocksState.update((state) => ({ ...state, activeBlockId: id }));
 }
 
 /** Add 1 to the name counter and return the new value. */
 export function nextBlockNumber(): number {
-	const next = getBlocksState().counter + 1;
-	queryBlocksState.update((state) => ({ ...state, counter: next }));
-	return next;
+    const next = getBlocksState().counter + 1;
+    queryBlocksState.update((state) => ({ ...state, counter: next }));
+    return next;
 }
 
 /** Hold the counter at `value` or higher. The app calls this when it restores state. */
 export function ensureBlockCounter(value: number): void {
-	queryBlocksState.update((state) => ({ ...state, counter: Math.max(state.counter, value) }));
+    queryBlocksState.update((state) => ({ ...state, counter: Math.max(state.counter, value) }));
 }
 
 /** True when the builder must still fill the draft of a block from its compiled query. */
 export function needsDraftSeed(block: StoredQuery | null | undefined): boolean {
-	return !!block && block.draft === null && block.compiled !== null;
+    return !!block && block.draft === null && block.compiled !== null;
+}
+
+/**
+ * The fields that start the query of a block again on `tableName`. A table pick
+ * and a node switch use it. The seed, the coordinate pair and the result link go,
+ * because they name columns of the old table. The output format stays.
+ */
+export function emptyQueryPatch(block: StoredQuery, tableName: string): Partial<StoredQuery> {
+    const draft = makeEmptyDraft();
+    draft.tableName = tableName;
+    draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
+
+    return {
+        draft,
+        compiled: null,
+        coordinateColumns: null,
+        datasetKey: null,
+        rowCount: null
+    };
 }

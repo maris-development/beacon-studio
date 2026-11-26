@@ -53,6 +53,7 @@ import {
 } from "@/geo/spatial-selection";
 import {
     ensureBlockCounter,
+    emptyQueryPatch,
     getBlocksState,
     needsDraftSeed,
     nextBlockNumber,
@@ -362,18 +363,7 @@ export class QueryWorkspace {
                 rowCount: null
             });
         } else {
-            const draft = makeEmptyDraft();
-            draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
-
-            queryBlocks.update(id, {
-                node: snapshotNode(node),
-                draft,
-                compiled: null,
-                // The pair names columns of the old tables.
-                coordinateColumns: null,
-                datasetKey: null,
-                rowCount: null
-            });
+            queryBlocks.update(id, { node: snapshotNode(node), ...emptyQueryPatch(current, "") });
         }
 
         // The user chose this node. It is no longer a guess of the app.
@@ -387,6 +377,21 @@ export class QueryWorkspace {
     setActiveNode(node: BeaconNode): Promise<boolean> {
         if (!this.activeBlockId) return Promise.resolve(false);
         return this.setBlockNode(this.activeBlockId, node);
+    }
+
+    /**
+     * Start the query of the active block again on the table that the user picked.
+     * The seed and the coordinate pair go as well, because they name columns of the
+     * old table. The table selector asks the user first.
+     *
+     * Only a pick calls this method. The builder also restores a table on load, and
+     * that must change nothing.
+     */
+    pickActiveTable(table: string): void {
+        const block = this.activeBlock;
+        if (!block || queryModeOf(block) === "sql") return;
+
+        queryBlocks.update(block.id, emptyQueryPatch(block, table));
     }
 
     /**
