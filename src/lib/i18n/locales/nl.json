@@ -42,13 +42,12 @@
         "openMenu": "Menu openen",
         "closeMenu": "Menu sluiten",
         "group": {
-            "explore": "Data verkennen",
-            "nodeManagement": "Nodebeheer",
-            "studio": "{app}"
+            "data": "Data",
+            "administration": "Beheer"
         },
         "item": {
             "queries": "Queries",
-            "queryBuilder": "Workbench",
+            "explorer": "Dataverkenner",
             "dataBrowser": "Databrowser",
             "datasets": "Datasets",
             "dataTables": "Datatabellen",
@@ -376,7 +375,7 @@
         }
     },
     "workbench": {
-        "title": "Query-werkbank",
+        "title": "Dataverkenner",
         "untitledBlock": "Naamloos ({number})",
         "copyName": "{name} (kopie)",
         "thisNode": "deze node",
@@ -402,7 +401,7 @@
             "chart": "Grafiek"
         },
         "panes": {
-            "builder": "Query-werkbank",
+            "builder": "Bouw je query",
             "collapseBuilder": "Bouwer inklappen",
             "expandBuilder": "Bouwer uitklappen",
             "code": "Code",
@@ -1123,13 +1122,9 @@
             "empty": "Er is geen Beacon-node geconfigureerd.",
             "manage": "Nodes beheren"
         },
-        "launchpad": {
-            "title": "Startpunt",
-            "workbench": {
-                "title": "Query-werkbank",
-                "description": "Schrijf queries, filter data en doorzoek miljoenen records.",
-                "action": "Nieuwe query"
-            }
+        "start": {
+            "explore": "Begin met verkennen",
+            "addNode": "Voeg een Beacon-node toe"
         },
         "guide": {
             "title": "Hoe het werkt",
@@ -1138,23 +1133,25 @@
             "show": "Uitleg tonen",
             "select": {
                 "title": "Kies node en tabel",
-                "body": "Open de Query-werkbank. Kies een verbonden node, en kies daarna één datatabel op die node."
+                "body": "Kies een verbonden node in de Dataverkenner, en kies daarna één datatabel op die node.",
+                "action": "Open de Dataverkenner"
             },
             "filter": {
                 "title": "Filteren en bevragen",
-                "body": "Voeg de kolommen toe die je nodig hebt, en filter ze. Stel een dieptebereik en tijdgrenzen in. Teken het gebied met de tools van de Kaartviewer om het resultaat tot een regio te beperken."
+                "body": "Voeg de kolommen toe die je nodig hebt, en filter ze. Stel een dieptebereik en tijdgrenzen in. Teken het gebied in de weergave Kaart om het resultaat tot een regio te beperken."
             },
             "explore": {
                 "title": "Verkennen, exporteren en delen",
-                "body": "Download het resultaat of bekijk het in de Kaartviewer. Controleer de waarden in de Tabelverkenner, of maak een grafiek. Deel de query om samen te werken of om verder te gaan in een andere werkruimte."
+                "body": "Download het resultaat of bekijk het in de weergave Kaart. Controleer de waarden in de weergave Tabel, of maak een grafiek in de weergave Grafiek. Deel de query om samen te werken of om verder te gaan in een andere werkruimte."
             }
         },
         "examples": {
             "title": "Voorbeelden om snel te starten",
-            "lead": "Drie echte queries. Open er een om de query in de query-werkbank te bekijken en op de kaart te plotten.",
-            "imageAlt": "Het resultaat van de query {title} in de Kaartviewer",
+            "lead": "Drie echte queries. Open er een om de query in de Dataverkenner te bekijken en op de kaart te plotten.",
+            "imageAlt": "Het resultaat van de query {title} in de Kaartweergave",
             "metricHint": "Gemeten bij een referentierun. Jouw run kan afwijken.",
-            "check": "Query bekijken",
+            "open": "Openen in Dataverkenner",
+            "ownQuery": "Bouw je eigen query",
             "loadFailed": "De snelstartvoorbeelden konden niet worden geladen."
         }
     },

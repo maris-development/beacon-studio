@@ -30,6 +30,7 @@
     import PanelLeftCloseIcon from "@lucide/svelte/icons/panel-left-close";
     import PanelLeftOpenIcon from "@lucide/svelte/icons/panel-left-open";
     import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
+    import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
 
     // Components
     import SidebarMenuItem from "./SidebarMenuItem.svelte";
@@ -39,24 +40,26 @@
     import ThemeMenu from "./ThemeMenu.svelte";
     import { settings } from "@/stores/settings";
     import { signedInNodeIds } from "@/services/admin-session";
-    import { isLocked, visibleGroups, type Group, type MenuItem } from "./menu";
+    import {
+        hasActiveItem,
+        isGroupOpen,
+        isLocked,
+        visibleGroups,
+        type Group,
+        type MenuItem
+    } from "./menu";
 
     const groups: Group[] = [
         {
-            title: "nav.group.explore",
+            title: "nav.group.data",
             items: [
                 {
-                    title: "nav.item.queryBuilder",
+                    title: "nav.item.explorer",
                     url: resolve("/queries/workbench"),
-                    // The result views belong to the workbench. The header switch opens them.
+                    // The result views belong to the explorer. The header switch opens them.
                     match: [resolve("/queries"), resolve("/visualisations")],
                     icon: TextSearchIcon
-                }
-            ]
-        },
-        {
-            title: "nav.group.nodeManagement",
-            items: [
+                },
                 {
                     title: "nav.item.datasets",
                     url: resolve("/data-browser/datasets"),
@@ -67,6 +70,13 @@
                     url: resolve("/data-browser/data-tables"),
                     icon: Table2Icon
                 },
+                { title: "nav.item.beaconNodes", url: resolve("/beacon-nodes"), icon: LinkIcon }
+            ]
+        },
+        {
+            title: "nav.group.administration",
+            collapsible: true,
+            items: [
                 {
                     title: "nav.item.sqlConsole",
                     url: resolve("/sql-editor"),
@@ -86,13 +96,6 @@
                     adminOnly: true
                 },
                 { title: "nav.item.systemInfo", url: resolve("/system-info"), icon: CpuIcon }
-            ]
-        },
-        {
-            title: "nav.group.studio",
-            items: [
-                { title: "nav.item.beaconNodes", url: resolve("/beacon-nodes"), icon: LinkIcon },
-                { title: "nav.item.settings", url: resolve("/settings"), icon: Settings2Icon }
             ]
         }
     ];
@@ -119,6 +122,28 @@
     ];
 
     let shownGroups = $derived(visibleGroups(groups, $settings.adminFeatures));
+
+    const OPEN_GROUPS_KEY = "beacon-studio.sidebar-groups.open";
+
+    function readOpenGroups(): Record<string, boolean> {
+        try {
+            const saved: unknown = JSON.parse(localStorage.getItem(OPEN_GROUPS_KEY) ?? "{}");
+            if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+                return saved as Record<string, boolean>;
+            }
+        } catch {
+            // A broken value reads as no value.
+        }
+
+        return {};
+    }
+
+    let openGroups = $state(readOpenGroups());
+
+    function toggleGroup(group: Group): void {
+        openGroups = { ...openGroups, [group.title]: !isGroupOpen(group, openGroups) };
+        localStorage.setItem(OPEN_GROUPS_KEY, JSON.stringify(openGroups));
+    }
 
     let hasSession = $derived(!!$currentNode && $signedInNodeIds.has($currentNode.id));
 
@@ -273,8 +298,16 @@
     });
 
     // Close the overlay sidebar after navigating on mobile
-    afterNavigate(() => {
+    afterNavigate((navigation) => {
         if (isMobile) collapsed = true;
+
+        // Show the active item of a closed group. The stored choice of the user stays.
+        const pathname = navigation.to?.url.pathname ?? page.url.pathname;
+        for (const group of groups) {
+            if (group.collapsible && hasActiveItem(pathname, group)) {
+                openGroups = { ...openGroups, [group.title]: true };
+            }
+        }
     });
 </script>
 
@@ -324,38 +357,60 @@
 
         <div class="sidebar-content">
             {#each shownGroups as group (group.title)}
+                {@const open = isGroupOpen(group, openGroups)}
                 <div class="menu-group">
-                    <span class="menu-title">{$t(group.title)}</span>
-                    {#each group.items as item (item.url)}
-                        {#if item.children?.length}
-                            <SidebarCollapsibleMenu
-                                title={$t(item.title)}
-                                url={item.url}
-                                match={item.match}
-                                icon={item.icon}
-                                items={item.children.map((child) => ({
-                                    title: $t(child.title),
-                                    url: child.url
-                                }))}
-                                {compact}
-                            />
-                        {:else}
-                            <SidebarMenuItem
-                                title={$t(item.title)}
-                                url={item.url}
-                                match={item.match}
-                                icon={item.icon}
-                                lock={lockOf(item)}
-                                {compact}
-                            />
-                        {/if}
-                    {/each}
+                    {#if group.collapsible}
+                        <button
+                            type="button"
+                            class="menu-title group-toggle"
+                            class:open
+                            aria-expanded={open}
+                            onclick={() => toggleGroup(group)}
+                        >
+                            <span class="group-name">{$t(group.title)}</span>
+                            <ChevronDownIcon />
+                        </button>
+                    {:else}
+                        <span class="menu-title">{$t(group.title)}</span>
+                    {/if}
+                    {#if open}
+                        {#each group.items as item (item.url)}
+                            {#if item.children?.length}
+                                <SidebarCollapsibleMenu
+                                    title={$t(item.title)}
+                                    url={item.url}
+                                    match={item.match}
+                                    icon={item.icon}
+                                    items={item.children.map((child) => ({
+                                        title: $t(child.title),
+                                        url: child.url
+                                    }))}
+                                    {compact}
+                                />
+                            {:else}
+                                <SidebarMenuItem
+                                    title={$t(item.title)}
+                                    url={item.url}
+                                    match={item.match}
+                                    icon={item.icon}
+                                    lock={lockOf(item)}
+                                    {compact}
+                                />
+                            {/if}
+                        {/each}
+                    {/if}
                 </div>
             {/each}
         </div>
 
         <div class="sidebar-footer">
             <div class="menu-group">
+                <SidebarMenuItem
+                    title={$t("nav.item.settings")}
+                    url={resolve("/settings")}
+                    icon={Settings2Icon}
+                    {compact}
+                />
                 {#each shownFooterLinks as item (item.url)}
                     <SidebarMenuItem
                         title={$t(item.title)}
@@ -521,6 +576,42 @@
                 color: var(--foreground);
             }
 
+            .group-toggle {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 0.5rem;
+                width: 100%;
+                padding: 0;
+                border: none;
+                border-radius: var(--menu-item-radius);
+                background: none;
+                font-family: inherit;
+                text-align: left;
+                cursor: pointer;
+
+                :global(svg) {
+                    flex-shrink: 0;
+                    width: 1rem;
+                    height: 1rem;
+                    margin-right: 0.5rem;
+                    transition: transform 0.2s ease;
+                }
+
+                &.open :global(svg) {
+                    transform: rotate(180deg);
+                }
+
+                &:hover {
+                    color: var(--primary);
+                }
+
+                &:focus-visible {
+                    outline: 2px solid var(--primary);
+                    outline-offset: 2px;
+                }
+            }
+
             :global(> .menu-item > .item-title),
             :global(.submenu-title) {
                 font-weight: var(--sidebar-bold-font-weight);
@@ -569,6 +660,10 @@
                 color: transparent;
                 background: linear-gradient(var(--sidebar-border), var(--sidebar-border)) center /
                     100% 1px no-repeat;
+
+                :global(svg) {
+                    visibility: hidden;
+                }
             }
         }
 
