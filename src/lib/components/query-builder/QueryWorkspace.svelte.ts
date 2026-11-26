@@ -53,8 +53,8 @@ import {
 } from "@/geo/spatial-selection";
 import {
     ensureBlockCounter,
+    emptyQueryPatch,
     getBlocksState,
-    blockTable,
     needsDraftSeed,
     nextBlockNumber,
     queryBlocks,
@@ -363,18 +363,7 @@ export class QueryWorkspace {
                 rowCount: null
             });
         } else {
-            const draft = makeEmptyDraft();
-            draft.outputFormat = current.draft?.outputFormat ?? draft.outputFormat;
-
-            queryBlocks.update(id, {
-                node: snapshotNode(node),
-                draft,
-                compiled: null,
-                // The pair names columns of the old tables.
-                coordinateColumns: null,
-                datasetKey: null,
-                rowCount: null
-            });
+            queryBlocks.update(id, { node: snapshotNode(node), ...emptyQueryPatch(current, "") });
         }
 
         // The user chose this node. It is no longer a guess of the app.
@@ -388,6 +377,21 @@ export class QueryWorkspace {
     setActiveNode(node: BeaconNode): Promise<boolean> {
         if (!this.activeBlockId) return Promise.resolve(false);
         return this.setBlockNode(this.activeBlockId, node);
+    }
+
+    /**
+     * Start the query of the active block again on the table that the user picked.
+     * The seed and the coordinate pair go as well, because they name columns of the
+     * old table. The table selector asks the user first.
+     *
+     * Only a pick calls this method. The builder also restores a table on load, and
+     * that must change nothing.
+     */
+    pickActiveTable(table: string): void {
+        const block = this.activeBlock;
+        if (!block || queryModeOf(block) === "sql") return;
+
+        queryBlocks.update(block.id, emptyQueryPatch(block, table));
     }
 
     /**
@@ -776,11 +780,8 @@ export class QueryWorkspace {
      * drops it. A draft with content is a real edit of the user, and that edit
      * takes the block over.
      *
-     * A draft on another table is a real edit as well. It replaces the seed.
-     *
      * Pass `pair` to store a new coordinate pair in the same write. Undefined
-     * keeps the stored pair, except on a table change: the stored pair names
-     * columns of the old table. See {@link updateActiveCoordinateColumns}.
+     * keeps the stored pair. See {@link updateActiveCoordinateColumns}.
      */
     updateActiveDraft(draft: QueryDraft, pair?: CoordinatePair | null): void {
         const block = this.activeBlock;
@@ -791,19 +792,11 @@ export class QueryWorkspace {
             return;
         }
 
-        const previousTable = blockTable(block);
-        const tableChanged =
-            !!previousTable && !!draft.tableName && draft.tableName !== previousTable;
-
         let coordinateColumns = block.coordinateColumns ?? null;
-        if (pair !== undefined) {
-            coordinateColumns = pair && { ...pair };
-        } else if (tableChanged) {
-            coordinateColumns = null;
-        }
+        if (pair !== undefined) coordinateColumns = pair && { ...pair };
 
         const compiled = compileDraft(draft, coordinateColumns);
-        if (!compiled && needsDraftSeed(block) && !tableChanged) return;
+        if (!compiled && needsDraftSeed(block)) return;
 
         queryBlocks.update(block.id, {
             draft: Utils.cloneObject(draft),

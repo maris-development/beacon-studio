@@ -29,6 +29,7 @@
         coordinateColumns = null,
         onDraftChange,
         onTableChange,
+        onTablePick,
         status = $bindable<QuerySelectionStatus>({
             dataTable: "",
             columns: 0,
@@ -63,6 +64,11 @@
         /** Called on every draft edit. The pair comes with an edit that changes it. */
         onDraftChange?: (draft: QueryDraft, pair?: CoordinatePair | null) => void;
         onTableChange?: (tableName: string) => void;
+        /**
+         * Called when the user picks a table. The parent must start the query again
+         * on that table and drop the seed, else a blocked seed hydrates on that table.
+         */
+        onTablePick: (tableName: string) => void;
         status?: QuerySelectionStatus;
         /** Bound to the parent. The builder puts `compileQuery` here. */
         actions?: QueryActions;
@@ -92,7 +98,7 @@
      * True when this node does not hold the table of the seed. The seed of one
      * node does not fit the schema of another, so the builder must not hydrate
      * it. The block keeps its compiled query. The user then picks another node,
-     * or edits the query. See {@link handleDraftChange}.
+     * or a table. See {@link handleTablePick}.
      */
     let seedBlocked = $state(false);
 
@@ -166,21 +172,6 @@
     }
 
     /**
-     * Pass a draft of the builder to the parent.
-     *
-     * A blocked seed needs one guard. A draft with no table compiles to nothing,
-     * and the parent then drops the compiled query of the block. Therefore drop
-     * such a draft while the seed is blocked. A blocked seed selects no table, so
-     * a draft with a table is a pick of the user, and that pick takes the block
-     * over. `seedBlocked` stays true, so the seed never hydrates on that table.
-     */
-    function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
-        if (seedBlocked && !draft.tableName) return;
-
-        onDraftChange?.(draft, pair);
-    }
-
-    /**
      * The seed for the parameter block. A blocked seed passes nothing, so the
      * block hydrates no column of another schema. See {@link loadTables}.
      */
@@ -214,11 +205,17 @@
     });
 
     /**
-     * Reports a table that the user picks. The loader also writes
+     * Start the query again on a table that the user picks. The loader also writes
      * `selected_table_name`, for a draft, a seed or the default table. Those are
      * no choice of the user, so the selector calls this and an effect does not.
+     *
+     * The parent drops the seed in the same tick. Clear `seedBlocked` only with that
+     * call, else the seed hydrates on the new table.
      */
     function handleTablePick(table_name: string): void {
+        seedBlocked = false;
+        onTablePick(table_name);
+
         track("builder.table.select", {
             nodeHost: node?.url,
             props: { table: table_name, tables: table_names.length }
@@ -281,7 +278,7 @@
     {initialDraft}
     pendingSeed={activeSeed}
     {coordinateColumns}
-    onDraftChange={handleDraftChange}
+    {onDraftChange}
     {onSeedMismatch}
     bind:status
     bind:actions={queryActions}

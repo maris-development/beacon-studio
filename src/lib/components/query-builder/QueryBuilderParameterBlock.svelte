@@ -259,10 +259,7 @@
 
                 // Hydrate a one-time deep-link seed once the schema is available.
                 if (pendingSeed && !hasHydratedSeed) {
-                    // The user picked another table before the seed loaded. That pick replaces the seed.
-                    if (typeof pendingSeed.from !== "string" || pendingSeed.from === table) {
-                        hydrateFromSeed(table);
-                    }
+                    hydrateFromSeed(table);
                     hasHydratedSeed = true;
                 }
             })

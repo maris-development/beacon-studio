@@ -16,6 +16,7 @@
 
 import { get } from "svelte/store";
 import { persisted } from "svelte-local-storage-store";
+import { makeEmptyDraft } from "@/query/draft";
 import { createQueryCollection } from "@/stores/query-collection";
 import type { StoredQuery } from "@/stores/stored-query";
 
@@ -64,14 +65,20 @@ export function needsDraftSeed(block: StoredQuery | null | undefined): boolean {
 }
 
 /**
- * The table of a block: the table of its draft, else the table of its seed.
- * Empty when the block has no table, or when the seed reads a file.
+ * The fields that start the query of a block again on `tableName`. A table pick
+ * and a node switch use it. The seed, the coordinate pair and the result link go,
+ * because they name columns of the old table. The output format stays.
  */
-export function blockTable(block: StoredQuery | null | undefined): string {
-    if (block?.draft) return block.draft.tableName;
+export function emptyQueryPatch(block: StoredQuery, tableName: string): Partial<StoredQuery> {
+    const draft = makeEmptyDraft();
+    draft.tableName = tableName;
+    draft.outputFormat = block.draft?.outputFormat ?? draft.outputFormat;
 
-    const from = block?.compiled?.from;
-    if (typeof from === "string") return from;
-
-    return "";
+    return {
+        draft,
+        compiled: null,
+        coordinateColumns: null,
+        datasetKey: null,
+        rowCount: null
+    };
 }
