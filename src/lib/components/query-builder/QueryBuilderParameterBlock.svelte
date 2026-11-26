@@ -249,6 +249,9 @@
         client
             .getCachedSchema(table)
             .then((schema) => {
+                // The user picked another table while this answer was on its way.
+                if (table !== table_name) return;
+
                 fields = schema.fields.map((field) => ({
                     name: field.name,
                     type: field.data_type
@@ -256,11 +259,16 @@
 
                 // Hydrate a one-time deep-link seed once the schema is available.
                 if (pendingSeed && !hasHydratedSeed) {
-                    hydrateFromSeed(table);
+                    // The user picked another table before the seed loaded. That pick replaces the seed.
+                    if (typeof pendingSeed.from !== "string" || pendingSeed.from === table) {
+                        hydrateFromSeed(table);
+                    }
                     hasHydratedSeed = true;
                 }
             })
             .catch((error) => {
+                if (table !== table_name) return;
+
                 // A node answers 404 for a table it does not have. The parent already
                 // falls back to the default table, so this is the rest of the guard.
                 // Without the catch the browser reports an unhandled rejection, and

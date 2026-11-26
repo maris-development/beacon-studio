@@ -54,6 +54,7 @@ import {
 import {
     ensureBlockCounter,
     getBlocksState,
+    blockTable,
     needsDraftSeed,
     nextBlockNumber,
     queryBlocks,
@@ -775,8 +776,11 @@ export class QueryWorkspace {
      * drops it. A draft with content is a real edit of the user, and that edit
      * takes the block over.
      *
+     * A draft on another table is a real edit as well. It replaces the seed.
+     *
      * Pass `pair` to store a new coordinate pair in the same write. Undefined
-     * keeps the stored pair. See {@link updateActiveCoordinateColumns}.
+     * keeps the stored pair, except on a table change: the stored pair names
+     * columns of the old table. See {@link updateActiveCoordinateColumns}.
      */
     updateActiveDraft(draft: QueryDraft, pair?: CoordinatePair | null): void {
         const block = this.activeBlock;
@@ -787,11 +791,19 @@ export class QueryWorkspace {
             return;
         }
 
+        const previousTable = blockTable(block);
+        const tableChanged =
+            !!previousTable && !!draft.tableName && draft.tableName !== previousTable;
+
         let coordinateColumns = block.coordinateColumns ?? null;
-        if (pair !== undefined) coordinateColumns = pair && { ...pair };
+        if (pair !== undefined) {
+            coordinateColumns = pair && { ...pair };
+        } else if (tableChanged) {
+            coordinateColumns = null;
+        }
 
         const compiled = compileDraft(draft, coordinateColumns);
-        if (!compiled && needsDraftSeed(block)) return;
+        if (!compiled && needsDraftSeed(block) && !tableChanged) return;
 
         queryBlocks.update(block.id, {
             draft: Utils.cloneObject(draft),

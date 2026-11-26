@@ -168,17 +168,14 @@
     /**
      * Pass a draft of the builder to the parent.
      *
-     * A blocked seed needs one guard. The parameter block emits an empty draft at
-     * its mount, and that draft compiles to nothing. The parent then drops the
-     * compiled query of the block. Therefore drop an empty draft while the seed is
-     * blocked. The first real edit of the user has columns, and that edit takes
-     * the block over.
+     * A blocked seed needs one guard. A draft with no table compiles to nothing,
+     * and the parent then drops the compiled query of the block. Therefore drop
+     * such a draft while the seed is blocked. A blocked seed selects no table, so
+     * a draft with a table is a pick of the user, and that pick takes the block
+     * over. `seedBlocked` stays true, so the seed never hydrates on that table.
      */
     function handleDraftChange(draft: QueryDraft, pair?: CoordinatePair | null): void {
-        if (seedBlocked) {
-            if (draft.selectedFields.length === 0) return;
-            seedBlocked = false;
-        }
+        if (seedBlocked && !draft.tableName) return;
 
         onDraftChange?.(draft, pair);
     }

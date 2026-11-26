@@ -62,3 +62,16 @@ export function ensureBlockCounter(value: number): void {
 export function needsDraftSeed(block: StoredQuery | null | undefined): boolean {
     return !!block && block.draft === null && block.compiled !== null;
 }
+
+/**
+ * The table of a block: the table of its draft, else the table of its seed.
+ * Empty when the block has no table, or when the seed reads a file.
+ */
+export function blockTable(block: StoredQuery | null | undefined): string {
+    if (block?.draft) return block.draft.tableName;
+
+    const from = block?.compiled?.from;
+    if (typeof from === "string") return from;
+
+    return "";
+}
