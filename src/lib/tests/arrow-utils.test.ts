@@ -124,3 +124,42 @@ describe("groupByCoordinate", () => {
         expect(rows.map((row) => row.temp)).toEqual([1, 3]);
     });
 });
+
+describe("coordinateKey", () => {
+    it("rounds both coordinates", () => {
+        expect(ApacheArrowUtils.coordinateKey(1.00049, -2.5, 3)).toBe("1.000,-2.500");
+    });
+
+    it("gives null for a missing or non-finite coordinate", () => {
+        expect(ApacheArrowUtils.coordinateKey(null, 2, 3)).toBeNull();
+        expect(ApacheArrowUtils.coordinateKey(1, undefined, 3)).toBeNull();
+        expect(ApacheArrowUtils.coordinateKey(NaN, 2, 3)).toBeNull();
+        expect(ApacheArrowUtils.coordinateKey(1, Infinity, 3)).toBeNull();
+    });
+});
+
+describe("groupByCoordinate with missing values", () => {
+    const table = new ApacheArrow.Table({
+        lat: ApacheArrow.vectorFromArray([null, 1, 1, NaN], new ApacheArrow.Float64()),
+        lon: ApacheArrow.vectorFromArray([2, 2, 2, 2], new ApacheArrow.Float64()),
+        empty: ApacheArrow.vectorFromArray([null, null, null, null], new ApacheArrow.Float64()),
+        temp: ApacheArrow.vectorFromArray([9, null, 3, 8], new ApacheArrow.Float64())
+    });
+
+    it("leaves out a row without a coordinate", () => {
+        const rows = ApacheArrowUtils.groupByCoordinate(table, "lat", "lon", 3)
+            .toArray()
+            .map((row) => row.toJSON());
+
+        expect(rows).toEqual([{ lat: 1, lon: 2, empty: null, temp: 3 }]);
+    });
+
+    it("finds no rows for a missing search coordinate, and skips rows without one", () => {
+        expect(ApacheArrowUtils.findSimilarRowsByLatLon(table, [NaN, 2], 3, "lat", "lon")).toEqual(
+            []
+        );
+        expect(
+            ApacheArrowUtils.findSimilarRowsByLatLon(table, [1, 2], 3, "lat", "lon")
+        ).toHaveLength(2);
+    });
+});

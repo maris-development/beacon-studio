@@ -6,7 +6,7 @@ import * as ApacheArrow from "apache-arrow";
  * Off-main-thread Arrow processing worker.
  *
  * Tables are loaded once by key via the `loadTable` action and cached in-worker,
- * so subsequent operations (sort, dedup, min/max, ...) reference the table by
+ * so subsequent operations (sort, min/max, map points, ...) reference the table by
  * `key` instead of re-transferring the whole IPC payload on every call. The main
  * thread ({@link ArrowProcessingWorkerManager}) owns the load/unload lifecycle.
  */
@@ -80,25 +80,6 @@ type OrderTableByColumnResponse = {
     result: Uint8Array; // IPC format of the ordered table
 };
 
-// -- deduplicate table ------------------------------------------------------
-type DeduplicateTableRequestPayload = {
-    key: string;
-    latitudeColumnName?: string;
-    longitudeColumnName?: string;
-    amountOfRows?: number;
-    decimals?: number;
-};
-type DeduplicateTableRequest = {
-    id: number;
-    action: "deduplicateTable";
-    payload: DeduplicateTableRequestPayload;
-};
-type DeduplicateTableResponse = {
-    id: number;
-    action: "deduplicateTable";
-    result: Uint8Array; // IPC format of the deduplicated table
-};
-
 // -- build map point table (group by lat/lon, then add geoarrow point geometry) --
 type BuildMapPointTableRequestPayload = {
     key: string;
@@ -166,7 +147,6 @@ export type WorkerRequest =
     | FindSimilarRowByLatLonRequest
     | OrderTableByColumnRequest
     | GetColumnMinMaxRequest
-    | DeduplicateTableRequest
     | BuildMapPointTableRequest
     | CountPointsInRingRequest;
 
@@ -176,7 +156,6 @@ export type WorkerResponse =
     | FindSimilarRowByLatLonResponse
     | OrderTableByColumnResponse
     | GetColumnMinMaxResponse
-    | DeduplicateTableResponse
     | BuildMapPointTableResponse
     | CountPointsInRingResponse
     | ErrorResponse;
@@ -218,22 +197,6 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
                     action,
                     result: ApacheArrow.tableToIPC(result)
                 } satisfies OrderTableByColumnResponse);
-                break;
-            }
-
-            case "deduplicateTable": {
-                const result = ApacheArrowUtils.deduplicateTable(
-                    getTable(payload.key),
-                    payload.latitudeColumnName,
-                    payload.longitudeColumnName,
-                    payload.amountOfRows,
-                    payload.decimals
-                );
-                self.postMessage({
-                    id,
-                    action,
-                    result: ApacheArrow.tableToIPC(result)
-                } satisfies DeduplicateTableResponse);
                 break;
             }
 

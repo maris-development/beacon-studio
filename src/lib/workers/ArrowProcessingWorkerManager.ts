@@ -71,7 +71,6 @@ export class ArrowProcessingWorkerManager {
                     task.resolve(event.data.result);
                     break;
                 case "orderTableByColumn":
-                case "deduplicateTable":
                 case "buildMapPointTable":
                     task.resolve(ApacheArrow.tableFromIPC(event.data.result));
                     break;
@@ -190,21 +189,6 @@ export class ArrowProcessingWorkerManager {
         });
     }
 
-    async deduplicateTable(
-        key: string,
-        table: ApacheArrow.Table,
-        latitudeColumnName = "Latitude",
-        longitudeColumnName = "Longitude",
-        amountOfRows: number = undefined,
-        decimals: number = 3
-    ): Promise<ApacheArrow.Table> {
-        await this.ensureLoaded(key, table);
-        return this.sendTask({
-            action: "deduplicateTable",
-            payload: { key, latitudeColumnName, longitudeColumnName, amountOfRows, decimals }
-        });
-    }
-
     async findSimilarRowsByLatLon(
         key: string,
         table: ApacheArrow.Table,
@@ -229,7 +213,7 @@ export class ArrowProcessingWorkerManager {
     }
 
     /**
-     * Deduplicates by lat/lon and appends a GeoArrow point geometry column, ready
+     * Groups the rows by lat/lon and appends a GeoArrow point geometry column, ready
      * for `@geoarrow/deck.gl-layers`. One round-trip against the loaded table.
      */
     async buildMapPointTable(
