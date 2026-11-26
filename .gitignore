@@ -27,3 +27,7 @@ vite.config.ts.timestamp-*
 # Playwright MCP
 .playwright-mcp/
 .claude/
+
+# Claude
+CLAUDE.md
+CLAUDE.local.md
