@@ -594,6 +594,80 @@ export class ApacheArrowUtils {
     }
 
     /**
+     * Groups the rows of a table by their rounded latitude and longitude, one row per group.
+     *
+     * Each column of a group row holds the first present value of that column in the group.
+     * Null, undefined and NaN count as missing. A column with no present value in the group
+     * stays null. The group key is the same as in {@link deduplicateTable}.
+     *
+     * @param table - The table to group.
+     * @param latitudeColumnName - The name of the latitude column.
+     * @param longitudeColumnName - The name of the longitude column.
+     * @param decimals - The decimals to round the coordinates to.
+     * @returns A new table with one row per coordinate group, in the order of the first row of each group.
+     */
+    static groupByCoordinate<T extends ApacheArrow.TypeMap>(
+        table: ApacheArrow.Table<T>,
+        latitudeColumnName: string = "Latitude",
+        longitudeColumnName: string = "Longitude",
+        decimals: number = 3
+    ): ApacheArrow.Table<T> {
+        const latCol = table.getChild(latitudeColumnName);
+        const lonCol = table.getChild(longitudeColumnName);
+        const rowCount = table.numRows;
+
+        const groupIds = new Int32Array(rowCount);
+        const groupOf = new Map<string, number>();
+
+        for (let i = 0; i < rowCount; i++) {
+            const lat: number = latCol?.get(i);
+            const lon: number = lonCol?.get(i);
+            const key = `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
+
+            let group = groupOf.get(key);
+            if (group === undefined) {
+                group = groupOf.size;
+                groupOf.set(key, group);
+            }
+            groupIds[i] = group;
+        }
+
+        const groupCount = groupOf.size;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const groupedColumns: Record<string, any> = {};
+
+        for (const field of table.schema.fields) {
+            const col = table.getChild(field.name)!;
+            const values: unknown[] = new Array(groupCount).fill(null);
+            const filled = new Uint8Array(groupCount);
+            let filledCount = 0;
+
+            // Stop the scan when every group has a value.
+            for (let i = 0; i < rowCount && filledCount < groupCount; i++) {
+                const group = groupIds[i];
+                if (filled[group]) continue;
+
+                const value = col.get(i);
+                if (value === null || value === undefined) continue;
+                if (typeof value === "number" && Number.isNaN(value)) continue;
+
+                values[group] = value;
+                filled[group] = 1;
+                filledCount++;
+            }
+
+            groupedColumns[field.name] = ApacheArrow.vectorFromArray(values, field.type);
+        }
+
+        const grouped = ApacheArrow.tableFromArrays(groupedColumns);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (grouped as any).schema = table.schema;
+
+        return grouped as unknown as ApacheArrow.Table<T>;
+    }
+
+    /**
      * Returns a copy of the table with an added GeoArrow "point" geometry column
      * derived from its latitude/longitude columns.
      *

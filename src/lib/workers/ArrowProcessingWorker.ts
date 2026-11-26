@@ -99,7 +99,7 @@ type DeduplicateTableResponse = {
     result: Uint8Array; // IPC format of the deduplicated table
 };
 
-// -- build map point table (dedup by lat/lon, then add geoarrow point geometry) --
+// -- build map point table (group by lat/lon, then add geoarrow point geometry) --
 type BuildMapPointTableRequestPayload = {
     key: string;
     latitudeColumnName: string;
@@ -115,7 +115,7 @@ type BuildMapPointTableRequest = {
 type BuildMapPointTableResponse = {
     id: number;
     action: "buildMapPointTable";
-    result: Uint8Array; // IPC format of the deduplicated table with a geometry column
+    result: Uint8Array; // IPC format of the grouped table with a geometry column
 };
 
 // -- count points inside a drawn ring ---------------------------------------
@@ -250,15 +250,14 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
             }
 
             case "buildMapPointTable": {
-                const deduped = ApacheArrowUtils.deduplicateTable(
+                const grouped = ApacheArrowUtils.groupByCoordinate(
                     getTable(payload.key),
                     payload.latitudeColumnName,
                     payload.longitudeColumnName,
-                    undefined,
                     payload.groupByDecimals
                 );
                 const withGeometry = ApacheArrowUtils.addPointGeometryColumn(
-                    deduped,
+                    grouped,
                     payload.latitudeColumnName,
                     payload.longitudeColumnName,
                     payload.geometryColumnName

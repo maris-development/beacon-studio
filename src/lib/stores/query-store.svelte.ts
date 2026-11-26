@@ -571,8 +571,9 @@ class QueryStore {
     }
 
     /**
-     * Returns the map display table for a dataset: deduplicated by lat/lon and with
-     * a GeoArrow point geometry column added. Memoized per dataset + lat/lon +
+     * Returns the map display table for a dataset: one row per rounded lat/lon, with
+     * the first present value of each column, and a GeoArrow point geometry column
+     * added. Memoized per dataset + lat/lon +
      * grouping precision, so revisiting the map viewer reuses it without recompute.
      */
     mapTable(
