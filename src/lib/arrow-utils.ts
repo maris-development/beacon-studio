@@ -43,6 +43,20 @@ export class ApacheArrowUtils {
     }
 
     /**
+     * Returns the key of a coordinate pair, rounded to `decimals`. Every lat/lon match and group uses this key.
+     *
+     * @param lat - The latitude.
+     * @param lon - The longitude.
+     * @param decimals - The decimals to round the coordinates to.
+     * @returns The key, or `null` when a coordinate is not a finite number.
+     */
+    static coordinateKey(lat: unknown, lon: unknown, decimals: number): string | null {
+        if (typeof lat !== "number" || typeof lon !== "number") return null;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        return `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
+    }
+
+    /**
      * Finds and returns rows from an Apache Arrow table whose latitude and longitude values
      * match the provided coordinates, rounded to a specified number of decimal places.
      *
@@ -64,10 +78,6 @@ export class ApacheArrowUtils {
         longitudeColumnName: string = "Longitude",
         maxRows: number = 100
     ): unknown[] {
-        const toKey = (lat: number, lon: number): string => {
-            return `${lat.toFixed(groupByDecimals)},${lon.toFixed(groupByDecimals)}`;
-        };
-
         const latCol = table.getChild(latitudeColumnName);
         const lonCol = table.getChild(longitudeColumnName);
         const rows = table.numRows;
@@ -77,13 +87,18 @@ export class ApacheArrowUtils {
         }
 
         const results: unknown[] = [];
-        const searchKey = toKey(latLon[0], latLon[1]);
+        const searchKey = ApacheArrowUtils.coordinateKey(latLon[0], latLon[1], groupByDecimals);
+        if (searchKey === null) {
+            return results;
+        }
         const amounfOfFields = table.schema.fields.filter((f) => f.name !== "geometry").length;
 
         for (let i = 0; i < rows; i++) {
-            const rowLat = latCol.get(i);
-            const rowLon = lonCol.get(i);
-            const rowKey = toKey(rowLat, rowLon);
+            const rowKey = ApacheArrowUtils.coordinateKey(
+                latCol.get(i),
+                lonCol.get(i),
+                groupByDecimals
+            );
 
             if (rowKey === searchKey) {
                 const rowData = table.get(i).toArray().copyWithin(amounfOfFields, 0);
@@ -526,71 +541,82 @@ export class ApacheArrowUtils {
     }
 
     /**
-     * Deduplicates rows in an Apache Arrow Table based on latitude and longitude columns.
+     * Groups the rows of a table by their rounded latitude and longitude, one row per group.
      *
+     * Each column of a group row holds the first present value of that column in the group.
+     * Null, undefined and NaN count as missing. A column with no present value in the group
+     * stays null. The group key is {@link coordinateKey}. A row without a finite latitude and
+     * longitude is in no group.
      *
-     * This method scans the specified number of rows (or all rows if not specified) and removes duplicates
-     * where the latitude and longitude values (rounded to two decimal places) are the same.
-     * The resulting table preserves the original schema and contains only the first occurrence of each unique coordinate pair.
-     *
-     * @typeParam T - The Apache Arrow TypeMap for the table.
-     * @param table - The Apache Arrow Table to deduplicate.
-     * @param latitudeColumnName - The name of the latitude column. Defaults to 'Latitude'.
-     * @param longitudeColumnName - The name of the longitude column. Defaults to 'Longitude'.
-     * @param amountOfRows - The number of rows to consider for deduplication. If undefined, all rows are considered.
-     * @returns A new Apache Arrow Table with duplicate rows (based on latitude and longitude) removed.
+     * @param table - The table to group.
+     * @param latitudeColumnName - The name of the latitude column.
+     * @param longitudeColumnName - The name of the longitude column.
+     * @param decimals - The decimals to round the coordinates to.
+     * @returns A new table with one row per coordinate group, in the order of the first row of each group.
      */
-    static deduplicateTable<T extends ApacheArrow.TypeMap>(
+    static groupByCoordinate<T extends ApacheArrow.TypeMap>(
         table: ApacheArrow.Table<T>,
         latitudeColumnName: string = "Latitude",
         longitudeColumnName: string = "Longitude",
-        amountOfRows: number = undefined,
         decimals: number = 3
     ): ApacheArrow.Table<T> {
-        if (!amountOfRows) {
-            amountOfRows = table.numRows;
-        }
-
         const latCol = table.getChild(latitudeColumnName);
         const lonCol = table.getChild(longitudeColumnName);
+        const rowCount = table.numRows;
 
-        const seen = new Set<string>();
-        const keepIndexes: number[] = [];
+        const groupIds = new Int32Array(rowCount);
+        const groupOf = new Map<string, number>();
 
-        // Efficiently iterate column-wise
-        for (let i = 0; i < amountOfRows; i++) {
-            const lat: number = latCol?.get(i);
-            const lon: number = lonCol?.get(i);
-
-            // Optional: round coordinates to avoid floating-point noise
-            const key = `${lat.toFixed(decimals)},${lon.toFixed(decimals)}`;
-
-            if (!seen.has(key)) {
-                seen.add(key);
-                keepIndexes.push(i);
+        for (let i = 0; i < rowCount; i++) {
+            const key = ApacheArrowUtils.coordinateKey(latCol?.get(i), lonCol?.get(i), decimals);
+            if (key === null) {
+                groupIds[i] = -1;
+                continue;
             }
+
+            let group = groupOf.get(key);
+            if (group === undefined) {
+                group = groupOf.size;
+                groupOf.set(key, group);
+            }
+            groupIds[i] = group;
         }
 
-        // console.log(`Deduplicated from ${amountOfRows} to ${keepIndexes.length} rows (${latitudeColumnName}, ${longitudeColumnName})`,);
-
-        // 3. Rebuild each column as a JS array of the kept values
+        const groupCount = groupOf.size;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dedupColumns: Record<string, any> = {};
+        const groupedColumns: Record<string, any> = {};
 
         for (const field of table.schema.fields) {
-            const name = field.name;
-            const col = table.getChild(name)!;
-            const values = keepIndexes.map((idx) => col.get(idx));
-            // For every row‐index in keepIdx, pull out col.get(idx)
-            dedupColumns[name] = ApacheArrow.vectorFromArray(values, field.type);
+            const col = table.getChild(field.name)!;
+            const values: unknown[] = new Array(groupCount).fill(null);
+            const filled = new Uint8Array(groupCount);
+            // An all-null column needs no scan.
+            let filledCount = col.nullCount === col.length ? groupCount : 0;
+
+            // Stop the scan when every group has a value.
+            for (let i = 0; i < rowCount && filledCount < groupCount; i++) {
+                const group = groupIds[i];
+                if (group < 0 || filled[group]) continue;
+                if (!col.isValid(i)) continue;
+
+                const value = col.get(i);
+                if (value === null || value === undefined) continue;
+                if (typeof value === "number" && Number.isNaN(value)) continue;
+
+                values[group] = value;
+                filled[group] = 1;
+                filledCount++;
+            }
+
+            groupedColumns[field.name] = ApacheArrow.vectorFromArray(values, field.type);
         }
 
-        const deduped = ApacheArrow.tableFromArrays(dedupColumns);
+        const grouped = ApacheArrow.tableFromArrays(groupedColumns);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (deduped as any).schema = table.schema; // Preserve original schema
+        (grouped as any).schema = table.schema;
 
-        return deduped as unknown as ApacheArrow.Table<T>; //ignore ts errors
+        return grouped as unknown as ApacheArrow.Table<T>;
     }
 
     /**

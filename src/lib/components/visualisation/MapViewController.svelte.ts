@@ -401,7 +401,7 @@ export class MapViewController {
      */
     /**
      * Reports one map view. The call comes after the render, so `renderMs` holds
-     * the time that the map itself took: the dedup pass and the geometry build.
+     * the time that the map itself took: the coordinate groups and the geometry build.
      */
     private reportVisualise(query: RunQuery, node: BeaconNode, readyAt: number): void {
         track("query.visualise", {

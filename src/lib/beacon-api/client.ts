@@ -47,7 +47,7 @@ const schemaCache = new Map<string, Promise<Schema>>();
  * Prefer this facade for anything that talks to a Beacon node; do not import
  * `@maris-development/beacon-client` directly from app code.
  *
- * Transforms of a fetched result (sort, dedup, min/max, geometry) are *not* here.
+ * Transforms of a fetched result (sort, min/max, coordinate groups, geometry) are *not* here.
  * They do no I/O, and they key the worker's loaded tables by the dataset cache
  * key, so they live on `queryStore` (`@/stores/query-store.svelte`). Call it
  * directly for those.

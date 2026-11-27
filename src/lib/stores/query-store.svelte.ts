@@ -12,8 +12,8 @@
  * Two tiers: this in-memory LRU of decoded tables (RAM-bound, small), backed by an
  * OPFS cache of the raw compressed Arrow IPC bytes (`stores/opfs-arrow-cache.ts`)
  * that survives reloads and app restarts — a memory miss rehydrates locally
- * instead of re-executing the query. Heavy transforms (sort / dedup / min-max /
- * geometry) are delegated to a shared worker.
+ * instead of re-executing the query. Heavy transforms (sort / min-max / coordinate
+ * groups / geometry) are delegated to a shared worker.
  *
  * Every method that touches a node takes the {@link BeaconNode} as an
  * argument. The store reads no app-wide selection. A query record owns its node,
@@ -146,7 +146,7 @@ class QueryStore {
      * time, so a run of another query aborts this one first. See {@link ensure}.
      */
     private activeRun: { key: string; controller: AbortController } | null = null;
-    /** Memoized map display tables (dedup + geometry), keyed by dataset + lat/lon + decimals. */
+    /** Memoized map display tables (coordinate groups + geometry), keyed by dataset + lat/lon + decimals. */
     private mapTableCache = new Map<string, Promise<ApacheArrow.Table>>();
 
     /**
@@ -532,24 +532,6 @@ class QueryStore {
         );
     }
 
-    /** Deduplicates a cached dataset by lat/lon, returning a new Arrow table. */
-    dedup(
-        entry: DatasetEntry,
-        latitudeColumnName?: string,
-        longitudeColumnName?: string,
-        amountOfRows?: number,
-        decimals?: number
-    ): Promise<ApacheArrow.Table> {
-        return getArrowWorker().deduplicateTable(
-            entry.key,
-            entry.table,
-            latitudeColumnName,
-            longitudeColumnName,
-            amountOfRows,
-            decimals
-        );
-    }
-
     /** Finds rows near a lat/lon in a cached dataset. */
     findSimilar(
         entry: DatasetEntry,
@@ -571,8 +553,9 @@ class QueryStore {
     }
 
     /**
-     * Returns the map display table for a dataset: deduplicated by lat/lon and with
-     * a GeoArrow point geometry column added. Memoized per dataset + lat/lon +
+     * Returns the map display table for a dataset: one row per rounded lat/lon, with
+     * the first present value of each column, and a GeoArrow point geometry column
+     * added. Memoized per dataset + lat/lon +
      * grouping precision, so revisiting the map viewer reuses it without recompute.
      */
     mapTable(
